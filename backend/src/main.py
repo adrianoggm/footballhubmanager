@@ -16,6 +16,7 @@ from uvicorn import run
 
 from app.config import config as app_config
 from app.module import db_config, engine
+from api.module import api_router
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -79,9 +80,8 @@ async def health_check():
 # from auth.auth import get_current_user
 # app.dependency_overrides[get_current_user] = get_current_user
 
-# Include routers (to be added)
-# from routes.players import router as players_router
-# app.include_router(players_router, prefix="/v1/players", tags=["players"])
+# Include routers
+app.include_router(api_router)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
