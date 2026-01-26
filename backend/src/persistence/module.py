@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from persistence.domain.entity import Base
-from persistence.persistence.config import initialize_config
+from persistence.config import initialize_config
 from persistence.infrastructure.repository.db.repository import BaseRepository
 
 # Initialize config
