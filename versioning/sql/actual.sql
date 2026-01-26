@@ -51,7 +51,7 @@ create table if not exists season (
     on delete cascade on update cascade
 ) engine=innodb;
 
-create table if not exists `match` (
+create table if not exists football_match (
   id            int auto_increment primary key,
   id_home_team  int not null,
   id_away_team  int not null,
@@ -68,11 +68,11 @@ create table if not exists team (
   id_match  int null,
   key idx_team_match (id_match),
   constraint fk_team_match
-    foreign key (id_match) references `match`(id)
+    foreign key (id_match) references football_match(id)
     on delete set null on update cascade
 ) engine=innodb;
 
-alter table `match`
+alter table football_match
   add constraint fk_match_home_team
     foreign key (id_home_team) references team(id)
     on delete restrict on update cascade,
