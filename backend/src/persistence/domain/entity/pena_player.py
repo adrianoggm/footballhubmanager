@@ -1,10 +1,10 @@
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base
+from .base import Base, GuidMixin
 
 
-class PenaPlayer(Base):
+class PenaPlayer(GuidMixin, Base):
     __tablename__ = "pena_player"
 
     id: Mapped[int] = mapped_column(primary_key=True)

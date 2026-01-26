@@ -1,10 +1,10 @@
 from sqlalchemy import ForeignKey, Index, PrimaryKeyConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base
+from .base import Base, GuidMixin
 
 
-class SeasonPlayer(Base):
+class SeasonPlayer(GuidMixin, Base):
     __tablename__ = "season_player"
 
     id_player: Mapped[int] = mapped_column(ForeignKey("player.id"))
