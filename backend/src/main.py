@@ -6,6 +6,12 @@ from contextlib import asynccontextmanager
 # Add src to path
 sys.path.append(os.path.dirname(__file__))
 
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
