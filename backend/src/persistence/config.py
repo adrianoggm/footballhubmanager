@@ -1,6 +1,5 @@
-import os
 import logging
-from typing import Optional
+import os
 
 
 class Configuration:
@@ -13,7 +12,7 @@ class Configuration:
         self.DB_NAME: str = os.getenv('DB_NAME', 'footballhub')
         self.DB_USER: str = os.getenv('DB_USER', 'footballuser')
         self.DB_PASSWORD: str = os.getenv('DB_PASSWORD', 'footballpass')
-        self.DB_PROVIDER: str = 'mysql'
+        self.DB_PROVIDER: str = os.getenv('DB_PROVIDER', 'mysql+pymysql')
 
 
 def initialize_config() -> Configuration:
