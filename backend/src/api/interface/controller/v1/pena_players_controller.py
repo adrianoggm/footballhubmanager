@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from auth.dependencies import authorize_pena_access
 from persistence.application.use_cases import (
     GetPenaPlayersUseCase,
     PenaPlayerFilters,
@@ -52,6 +53,7 @@ def get_pena_players(
     position: str | None = Query(default=None),
     search: str | None = Query(default=None),
     db: Session = Depends(get_db),
+    _session=Depends(authorize_pena_access),
 ):
     filters = PenaPlayerFilters(
         name=_clean(name),
