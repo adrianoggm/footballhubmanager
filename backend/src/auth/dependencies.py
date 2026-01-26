@@ -79,3 +79,42 @@ def authorize_pena_access(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Invalid session type",
     )
+
+
+def authorize_player_access(
+    player_guid: str,
+    session: SessionData = Depends(get_current_session),
+    db: Session = Depends(get_db),
+) -> SessionData:
+    if session.user_type == "user":
+        own_player = db.execute(
+            select(Player.id).where(
+                Player.guid == player_guid,
+                Player.id_player_account == session.user_id,
+            )
+        ).first()
+        if own_player:
+            return session
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User cannot access this player",
+        )
+
+    if session.user_type == "admin":
+        managed = db.execute(
+            select(Player.id)
+            .join(PenaPlayer, PenaPlayer.id_player == Player.id)
+            .join(Pena, Pena.id == PenaPlayer.id_pena)
+            .where(Player.guid == player_guid, Pena.id_admin == session.user_id)
+        ).first()
+        if managed:
+            return session
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin cannot access this player",
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid session type",
+    )
