@@ -1,0 +1,8 @@
+[MASTER]
+disable=C0114,C0115,C0116  # Disable docstring warnings for simplicity
+
+[FORMAT]
+max-line-length=100
+
+[MESSAGES CONTROL]
+disable=import-error,unused-import
