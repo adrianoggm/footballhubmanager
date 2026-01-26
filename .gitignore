@@ -218,7 +218,7 @@ logs/
 
 # MySQL
 # No specific files, but if there are local DB files or dumps
-*.sql
+
 *.dump
 
 # Docker
@@ -232,3 +232,4 @@ logs/
 .Trashes
 ehthumbs.db
 Thumbs.db
+.vscode/*
