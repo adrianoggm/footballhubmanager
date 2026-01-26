@@ -3,10 +3,10 @@ from datetime import date
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base
+from .base import Base, GuidMixin
 
 
-class FootballMatch(Base):
+class FootballMatch(GuidMixin, Base):
     __tablename__ = "football_match"
 
     id: Mapped[int] = mapped_column(primary_key=True)
