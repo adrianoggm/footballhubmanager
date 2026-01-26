@@ -136,6 +136,19 @@ create table if not exists team_player (
     on delete cascade on update cascade
 ) engine=innodb;
 
+
+create table if not exists schema_migrations (
+  version            varchar(50)  not null,
+  description        varchar(255) not null,
+  checksum           char(64)     null,
+  installed_by       varchar(100) not null default current_user(),
+  installed_on       timestamp    not null default current_timestamp,
+  execution_time_ms  int          null,
+  success            tinyint(1)   not null default 1,
+  primary key (version)
+) engine=innodb;
+
+
 set foreign_key_checks = 1;
 
 insert into schema_migrations (version, description, success)
