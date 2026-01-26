@@ -1,11 +1,17 @@
-from dataclasses import dataclass
+from sqlalchemy import ForeignKey, PrimaryKeyConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .base import Base
 
 
-@dataclass
-class TeamPlayer:
-    id_team: int
-    id_player: int
-    goals: int
-    assists: int
-    rating: float
-    saves: int
+class TeamPlayer(Base):
+    __tablename__ = "team_player"
+
+    id_team: Mapped[int] = mapped_column(ForeignKey("team.id"))
+    id_player: Mapped[int] = mapped_column(ForeignKey("player.id"))
+    goals: Mapped[int] = mapped_column(default=0)
+    assists: Mapped[int] = mapped_column(default=0)
+    rating: Mapped[float] = mapped_column(default=0.00)
+    saves: Mapped[int] = mapped_column(default=0)
+
+    __table_args__ = (PrimaryKeyConstraint("id_team", "id_player"),)

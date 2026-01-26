@@ -1,9 +1,12 @@
-from dataclasses import dataclass
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .base import Base
 
 
-@dataclass
-class PlayerAccount:
-    id: int
-    username: str
-    password: str
-    name: str
+class PlayerAccount(Base):
+    __tablename__ = "player_account"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(unique=True)
+    password: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column()

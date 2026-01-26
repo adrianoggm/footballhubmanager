@@ -1,11 +1,16 @@
-from dataclasses import dataclass
 from datetime import date
 
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
-@dataclass
-class FootballMatch:  # Renamed from Match to avoid reserved keyword
-    id: int
-    id_home_team: int
-    id_away_team: int
-    match_date: date
-    id_season: int
+from .base import Base
+
+
+class FootballMatch(Base):
+    __tablename__ = "football_match"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    id_home_team: Mapped[int] = mapped_column(ForeignKey("team.id"))
+    id_away_team: Mapped[int] = mapped_column(ForeignKey("team.id"))
+    match_date: Mapped[date] = mapped_column()
+    id_season: Mapped[int] = mapped_column(ForeignKey("season.id"))
