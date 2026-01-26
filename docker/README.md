@@ -18,12 +18,11 @@ This directory contains the Docker Compose configuration to run the FootballHubM
 - Port: 8000
 - Depends on MySQL
 
-### Frontend (Commented)
-- Web application
-- Port: 3000
-- Depends on Backend
+### Notas importantes
+- La tabla `match` fue renombrada a `football_match` para evitar conflictos con palabras reservadas en MySQL.
+- Usa `football_match` en tus consultas.
 
-## Usage
+## Future Versions
 
 1. Ensure Docker and Docker Compose are installed.
 
