@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: footballhub_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: footballhub
+      MYSQL_USER: footballuser
+      MYSQL_PASSWORD: footballpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - ../versioning/sql/actual.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - footballhub_network
+
+  # backend:
+  #   build:
+  #     context: ../backend
+  #     dockerfile: Dockerfile
+  #   container_name: footballhub_backend
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - mysql
+  #   environment:
+  #     - DATABASE_URL=mysql://footballuser:footballpass@mysql:3306/footballhub
+  #   networks:
+  #     - footballhub_network
+
+  # frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: Dockerfile
+  #   container_name: footballhub_frontend
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - footballhub_network
+
+networks:
+  footballhub_network:
+    driver: bridge
