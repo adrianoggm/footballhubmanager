@@ -1,3 +1,4 @@
+from .base import Base
 from .player import Player
 from .team import Team
 from .football_match import FootballMatch
@@ -10,6 +11,7 @@ from .season_player import SeasonPlayer
 from .team_player import TeamPlayer
 
 __all__ = [
+    "Base",
     "Player",
     "Team",
     "FootballMatch",

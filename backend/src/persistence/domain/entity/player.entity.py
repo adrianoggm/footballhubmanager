@@ -1,12 +1,15 @@
-from dataclasses import dataclass
-from typing import Optional
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .base import Base
 
 
-@dataclass
-class Player:
-    id: int
-    name: str
-    surname1: str
-    surname2: Optional[str]
-    nationality: str
-    id_player_account: Optional[int]
+class Player(Base):
+    __tablename__ = "player"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column()
+    surname1: Mapped[str] = mapped_column()
+    surname2: Mapped[str | None] = mapped_column()
+    nationality: Mapped[str] = mapped_column()
+    id_player_account: Mapped[int | None] = mapped_column(ForeignKey("player_account.id"))
