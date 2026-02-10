@@ -1,6 +1,7 @@
-import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material'
-import { useState } from 'react'
+import { Alert, Box, Button, Card, CardContent, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
+import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
   username: '',
@@ -19,6 +20,7 @@ const initialAdmin = {
 
 export default function AuthPanel() {
   const auth = useAuth()
+  const [nationalities, setNationalities] = useState([])
   const [userLogin, setUserLogin] = useState({ username: '', password: '' })
   const [adminLogin, setAdminLogin] = useState({ username: '', password: '' })
   const [userRegister, setUserRegister] = useState(initialUser)
@@ -36,6 +38,18 @@ export default function AuthPanel() {
       // handled in hook state
     }
   }
+
+  useEffect(() => {
+    const loadNationalities = async () => {
+      try {
+        const items = await httpClient.get('/api/v1/catalogs/nationalities')
+        setNationalities(items)
+      } catch {
+        setNationalities([])
+      }
+    }
+    loadNationalities()
+  }, [])
 
   return (
     <Stack spacing={3}>
@@ -85,7 +99,19 @@ export default function AuthPanel() {
               <TextField label="Name" name="name" value={userRegister.name} onChange={onField(setUserRegister)} />
               <TextField label="Surname 1" name="surname1" value={userRegister.surname1} onChange={onField(setUserRegister)} />
               <TextField label="Surname 2" name="surname2" value={userRegister.surname2} onChange={onField(setUserRegister)} />
-              <TextField label="Nationality" name="nationality" value={userRegister.nationality} onChange={onField(setUserRegister)} />
+              <TextField
+                select
+                label="Nationality"
+                name="nationality"
+                value={userRegister.nationality}
+                onChange={onField(setUserRegister)}
+              >
+                {nationalities.map((nationality) => (
+                  <MenuItem key={nationality} value={nationality}>
+                    {nationality}
+                  </MenuItem>
+                ))}
+              </TextField>
               <Button
                 variant="outlined"
                 onClick={handle(() => auth.registerUser(userRegister))}

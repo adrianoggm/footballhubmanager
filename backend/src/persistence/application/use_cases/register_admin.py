@@ -11,6 +11,10 @@ class UsernameAlreadyExistsError(Exception):
     pass
 
 
+class InvalidAdminRegistrationDataError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class AdminRegistration:
     username: str
@@ -29,11 +33,15 @@ class RegisterAdminUseCase:
         self.repository = repository
 
     def execute(self, data: AdminRegistration) -> RegisteredAdmin:
+        username = data.username.strip()
+        name = data.name.strip()
+        if not username or not name:
+            raise InvalidAdminRegistrationDataError()
         try:
             registered = self.repository.register_admin(
-                username=data.username,
+                username=username,
                 password_hash=hash_password(data.password),
-                name=data.name,
+                name=name,
             )
         except DuplicateUsernameError as exc:
             raise UsernameAlreadyExistsError() from exc

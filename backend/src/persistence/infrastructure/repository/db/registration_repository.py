@@ -4,11 +4,12 @@ from sqlalchemy.orm import Session
 from persistence.application.ports.registration_repository import (
     AdminRegistrationRepository,
     DuplicateUsernameError,
+    InvalidNationalityError,
     RegisteredAdminResult,
     RegisteredUserResult,
     UserRegistrationRepository,
 )
-from persistence.domain.entity import AdminAccounts, Player, PlayerAccount
+from persistence.domain.entity import AdminAccounts, Pena, Player, PlayerAccount
 
 
 class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistrationRepository):
@@ -52,6 +53,8 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
             )
         except IntegrityError as exc:
             self.session.rollback()
+            if "fk_player_nationality" in str(exc.orig).lower():
+                raise InvalidNationalityError() from exc
             raise DuplicateUsernameError() from exc
 
     def register_admin(
@@ -64,6 +67,14 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
                 name=name,
             )
             self.session.add(admin)
+            self.session.flush()
+
+            # Business rule: each admin owns a default pena created at registration.
+            pena = Pena(
+                name=name,
+                id_admin=admin.id,
+            )
+            self.session.add(pena)
             self.session.commit()
             self.session.refresh(admin)
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
