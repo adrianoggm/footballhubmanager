@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from sqlalchemy import or_, select, func
-from sqlalchemy.orm import Session
-
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from persistence.application.ports.pena_player_query_repository import (
+    PenaPlayerQueryRepository,
+    PenaPlayersPageResult,
+)
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,8 @@ class PenaPlayersPage:
 
 
 class GetPenaPlayersUseCase:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, repository: PenaPlayerQueryRepository):
+        self.repository = repository
 
     def execute(
         self,
@@ -48,67 +48,36 @@ class GetPenaPlayersUseCase:
         page: int = 1,
         page_size: int = 20,
     ) -> PenaPlayersPage:
-        stmt = (
-            select(Player, PenaPlayer)
-            .join(PenaPlayer, PenaPlayer.id_player == Player.id)
-            .join(Pena, Pena.id == PenaPlayer.id_pena)
-            .where(Pena.guid == pena_guid)
+        result = self.repository.find_by_pena_guid(
+            pena_guid,
+            name=filters.name if filters else None,
+            surname1=filters.surname1 if filters else None,
+            surname2=filters.surname2 if filters else None,
+            nationality=filters.nationality if filters else None,
+            nickname=filters.nickname if filters else None,
+            position=filters.position if filters else None,
+            search=filters.search if filters else None,
+            page=page,
+            page_size=page_size,
         )
-        stmt = self._apply_filters(stmt, filters)
-
-        total_stmt = (
-            select(func.count())
-            .select_from(Player)
-            .join(PenaPlayer, PenaPlayer.id_player == Player.id)
-            .join(Pena, Pena.id == PenaPlayer.id_pena)
-            .where(Pena.guid == pena_guid)
-        )
-        total_stmt = self._apply_filters(total_stmt, filters)
-
-        stmt = stmt.order_by(Player.surname1, Player.surname2, Player.name)
-        stmt = stmt.limit(page_size).offset((page - 1) * page_size)
-
-        rows = self.session.execute(stmt).all()
-        items = [
-            PenaPlayerInfo(
-                guid=player.guid,
-                name=player.name,
-                surname1=player.surname1,
-                surname2=player.surname2,
-                nationality=player.nationality,
-                nickname=link.nickname,
-                position=link.position,
-            )
-            for player, link in rows
-        ]
-        total = int(self.session.execute(total_stmt).scalar() or 0)
-        return PenaPlayersPage(items=items, page=page, page_size=page_size, total=total)
+        return self._to_page(result)
 
     @staticmethod
-    def _apply_filters(stmt, filters: PenaPlayerFilters | None):
-        if not filters:
-            return stmt
-
-        if filters.name:
-            stmt = stmt.where(Player.name.ilike(f"%{filters.name}%"))
-        if filters.surname1:
-            stmt = stmt.where(Player.surname1.ilike(f"%{filters.surname1}%"))
-        if filters.surname2:
-            stmt = stmt.where(Player.surname2.ilike(f"%{filters.surname2}%"))
-        if filters.nationality:
-            stmt = stmt.where(Player.nationality.ilike(f"%{filters.nationality}%"))
-        if filters.nickname:
-            stmt = stmt.where(PenaPlayer.nickname.ilike(f"%{filters.nickname}%"))
-        if filters.position:
-            stmt = stmt.where(PenaPlayer.position.ilike(f"%{filters.position}%"))
-        if filters.search:
-            pattern = f"%{filters.search}%"
-            stmt = stmt.where(
-                or_(
-                    Player.name.ilike(pattern),
-                    Player.surname1.ilike(pattern),
-                    Player.surname2.ilike(pattern),
-                    PenaPlayer.nickname.ilike(pattern),
+    def _to_page(result: PenaPlayersPageResult) -> PenaPlayersPage:
+        return PenaPlayersPage(
+            items=[
+                PenaPlayerInfo(
+                    guid=item.guid,
+                    name=item.name,
+                    surname1=item.surname1,
+                    surname2=item.surname2,
+                    nationality=item.nationality,
+                    nickname=item.nickname,
+                    position=item.position,
                 )
-            )
-        return stmt
+                for item in result.items
+            ],
+            page=result.page,
+            page_size=result.page_size,
+            total=result.total,
+        )

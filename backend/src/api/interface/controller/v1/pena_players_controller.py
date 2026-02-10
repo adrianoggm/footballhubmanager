@@ -10,6 +10,9 @@ from persistence.application.use_cases import (
     GetPenaPlayersUseCase,
     PenaPlayerFilters,
 )
+from persistence.infrastructure.repository.db.pena_player_query_repository import (
+    SqlAlchemyPenaPlayerQueryRepository,
+)
 from persistence.module import get_db
 
 router = APIRouter()
@@ -64,7 +67,8 @@ def get_pena_players(
         position=_clean(position),
         search=_clean(search),
     )
-    use_case = GetPenaPlayersUseCase(db)
+    repository = SqlAlchemyPenaPlayerQueryRepository(db)
+    use_case = GetPenaPlayersUseCase(repository)
     result = use_case.execute(pena_guid, filters=filters, page=page, page_size=page_size)
 
     total_pages = math.ceil(result.total / page_size) if result.total else 0

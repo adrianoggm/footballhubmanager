@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from persistence.application.ports.player_profile_repository import (
+    PlayerProfileRepository,
+    PlayerProfileResult,
+)
 
 
 @dataclass(frozen=True)
@@ -23,37 +23,28 @@ class PlayerProfile:
 
 
 class GetPlayerProfileUseCase:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, repository: PlayerProfileRepository):
+        self.repository = repository
 
     def execute_by_guid(self, player_guid: str) -> PlayerProfile | None:
-        player = self.session.execute(
-            select(Player).where(Player.guid == player_guid)
-        ).scalar_one_or_none()
-        if not player:
+        profile = self.repository.find_by_guid(player_guid)
+        if not profile:
             return None
-        return self._build_profile(player)
+        return self._to_profile(profile)
 
     def execute_by_account_id(self, account_id: int) -> PlayerProfile | None:
-        player = self.session.execute(
-            select(Player).where(Player.id_player_account == account_id)
-        ).scalar_one_or_none()
-        if not player:
+        profile = self.repository.find_by_account_id(account_id)
+        if not profile:
             return None
-        return self._build_profile(player)
+        return self._to_profile(profile)
 
-    def _build_profile(self, player: Player) -> PlayerProfile:
-        penas = self.session.execute(
-            select(Pena)
-            .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
-            .where(PenaPlayer.id_player == player.id)
-            .order_by(Pena.name)
-        ).scalars().all()
+    @staticmethod
+    def _to_profile(profile: PlayerProfileResult) -> PlayerProfile:
         return PlayerProfile(
-            guid=player.guid,
-            name=player.name,
-            surname1=player.surname1,
-            surname2=player.surname2,
-            nationality=player.nationality,
-            penas=[PenaInfo(guid=pena.guid, name=pena.name) for pena in penas],
+            guid=profile.guid,
+            name=profile.name,
+            surname1=profile.surname1,
+            surname2=profile.surname2,
+            nationality=profile.nationality,
+            penas=[PenaInfo(guid=pena.guid, name=pena.name) for pena in profile.penas],
         )

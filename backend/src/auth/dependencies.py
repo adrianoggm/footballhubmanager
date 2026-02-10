@@ -1,9 +1,16 @@
 from fastapi import Depends, Header, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from auth.application.use_cases.authorize_access import (
+    AccessDeniedError,
+    AuthorizePenaAccessUseCase,
+    AuthorizePlayerAccessUseCase,
+    InvalidSessionTypeError,
+)
+from auth.infrastructure.repositories.sqlalchemy_access_repository import (
+    SqlAlchemyAccessRepository,
+)
 from auth.session import SessionData, get_session
-from persistence.domain.entity import Pena, PenaPlayer, Player
 from persistence.module import get_db
 
 
@@ -51,35 +58,21 @@ def authorize_pena_access(
     session: SessionData = Depends(get_current_session),
     db: Session = Depends(get_db),
 ) -> SessionData:
-    if session.user_type == "admin":
-        owns_pena = db.execute(
-            select(Pena.id).where(Pena.guid == pena_guid, Pena.id_admin == session.user_id)
-        ).first()
-        if owns_pena:
-            return session
+    repository = SqlAlchemyAccessRepository(db)
+    use_case = AuthorizePenaAccessUseCase(repository)
+    try:
+        use_case.execute(pena_guid=pena_guid, session=session)
+        return session
+    except AccessDeniedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
+            detail=str(exc),
         )
-
-    if session.user_type == "user":
-        membership = db.execute(
-            select(Pena.id)
-            .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
-            .join(Player, Player.id == PenaPlayer.id_player)
-            .where(Pena.guid == pena_guid, Player.id_player_account == session.user_id)
-        ).first()
-        if membership:
-            return session
+    except InvalidSessionTypeError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not belong to this pena",
+            detail="Invalid session type",
         )
-
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Invalid session type",
-    )
 
 
 def authorize_player_access(
@@ -87,35 +80,18 @@ def authorize_player_access(
     session: SessionData = Depends(get_current_session),
     db: Session = Depends(get_db),
 ) -> SessionData:
-    if session.user_type == "user":
-        own_player = db.execute(
-            select(Player.id).where(
-                Player.guid == player_guid,
-                Player.id_player_account == session.user_id,
-            )
-        ).first()
-        if own_player:
-            return session
+    repository = SqlAlchemyAccessRepository(db)
+    use_case = AuthorizePlayerAccessUseCase(repository)
+    try:
+        use_case.execute(player_guid=player_guid, session=session)
+        return session
+    except AccessDeniedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User cannot access this player",
+            detail=str(exc),
         )
-
-    if session.user_type == "admin":
-        managed = db.execute(
-            select(Player.id)
-            .join(PenaPlayer, PenaPlayer.id_player == Player.id)
-            .join(Pena, Pena.id == PenaPlayer.id_pena)
-            .where(Player.guid == player_guid, Pena.id_admin == session.user_id)
-        ).first()
-        if managed:
-            return session
+    except InvalidSessionTypeError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin cannot access this player",
+            detail="Invalid session type",
         )
-
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Invalid session type",
-    )

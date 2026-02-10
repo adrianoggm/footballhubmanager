@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from auth.security import hash_password
-from persistence.domain.entity import Player, PlayerAccount
+from persistence.application.ports.registration_repository import (
+    DuplicateUsernameError,
+    UserRegistrationRepository,
+)
 
 
 class UsernameAlreadyExistsError(Exception):
@@ -30,41 +29,23 @@ class RegisteredUser:
 
 
 class RegisterUserUseCase:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, repository: UserRegistrationRepository):
+        self.repository = repository
 
     def execute(self, data: UserRegistration) -> RegisteredUser:
-        exists = self.session.execute(
-            select(PlayerAccount.id).where(PlayerAccount.username == data.username)
-        ).first()
-        if exists:
-            raise UsernameAlreadyExistsError()
-
         try:
-            account = PlayerAccount(
+            registered = self.repository.register_user(
                 username=data.username,
-                password=hash_password(data.password),
-                name=data.name,
-            )
-            self.session.add(account)
-            self.session.flush()
-
-            player = Player(
+                password_hash=hash_password(data.password),
                 name=data.name,
                 surname1=data.surname1,
                 surname2=data.surname2,
                 nationality=data.nationality,
-                id_player_account=account.id,
             )
-            self.session.add(player)
-            self.session.commit()
-            self.session.refresh(account)
-            self.session.refresh(player)
-        except IntegrityError as exc:
-            self.session.rollback()
+        except DuplicateUsernameError as exc:
             raise UsernameAlreadyExistsError() from exc
         return RegisteredUser(
-            account_id=account.id,
-            account_guid=account.guid,
-            player_guid=player.guid,
+            account_id=registered.account_id,
+            account_guid=registered.account_guid,
+            player_guid=registered.player_guid,
         )
