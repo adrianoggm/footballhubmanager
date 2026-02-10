@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -35,12 +36,16 @@ class RegisterAdminUseCase:
         if exists:
             raise UsernameAlreadyExistsError()
 
-        admin = AdminAccounts(
-            username=data.username,
-            password=hash_password(data.password),
-            name=data.name,
-        )
-        self.session.add(admin)
-        self.session.commit()
-        self.session.refresh(admin)
+        try:
+            admin = AdminAccounts(
+                username=data.username,
+                password=hash_password(data.password),
+                name=data.name,
+            )
+            self.session.add(admin)
+            self.session.commit()
+            self.session.refresh(admin)
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise UsernameAlreadyExistsError() from exc
         return RegisteredAdmin(admin_id=admin.id, admin_guid=admin.guid)

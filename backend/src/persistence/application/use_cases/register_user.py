@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -39,25 +40,29 @@ class RegisterUserUseCase:
         if exists:
             raise UsernameAlreadyExistsError()
 
-        account = PlayerAccount(
-            username=data.username,
-            password=hash_password(data.password),
-            name=data.name,
-        )
-        self.session.add(account)
-        self.session.flush()
+        try:
+            account = PlayerAccount(
+                username=data.username,
+                password=hash_password(data.password),
+                name=data.name,
+            )
+            self.session.add(account)
+            self.session.flush()
 
-        player = Player(
-            name=data.name,
-            surname1=data.surname1,
-            surname2=data.surname2,
-            nationality=data.nationality,
-            id_player_account=account.id,
-        )
-        self.session.add(player)
-        self.session.commit()
-        self.session.refresh(account)
-        self.session.refresh(player)
+            player = Player(
+                name=data.name,
+                surname1=data.surname1,
+                surname2=data.surname2,
+                nationality=data.nationality,
+                id_player_account=account.id,
+            )
+            self.session.add(player)
+            self.session.commit()
+            self.session.refresh(account)
+            self.session.refresh(player)
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise UsernameAlreadyExistsError() from exc
         return RegisteredUser(
             account_id=account.id,
             account_guid=account.guid,

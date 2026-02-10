@@ -5,6 +5,8 @@ import os
 class Configuration:
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.APP_ENV: str = os.getenv('APP_ENV', 'development')
+        self.SQL_ECHO: str | None = os.getenv('SQL_ECHO')
 
         # MySQL Configuration
         self.DB_HOST: str = os.getenv('DB_HOST', 'localhost')
