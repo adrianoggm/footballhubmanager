@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from persistence.application.ports.pena_query_repository import (
+    PenaQueryRepository,
+    PenaSummary,
+    PenasPageResult,
+)
 
 
 @dataclass(frozen=True)
@@ -21,8 +22,8 @@ class PenasPage:
 
 
 class GetPenasUseCase:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, repository: PenaQueryRepository):
+        self.repository = repository
 
     def execute_for_admin(
         self,
@@ -32,24 +33,10 @@ class GetPenasUseCase:
         page_size: int = 20,
         search: str | None = None,
     ) -> PenasPage:
-        stmt = select(Pena).where(Pena.id_admin == admin_id)
-        if search:
-            stmt = stmt.where(Pena.name.ilike(f"%{search}%"))
-
-        total_stmt = select(func.count()).select_from(Pena).where(Pena.id_admin == admin_id)
-        if search:
-            total_stmt = total_stmt.where(Pena.name.ilike(f"%{search}%"))
-
-        stmt = stmt.order_by(Pena.name).limit(page_size).offset((page - 1) * page_size)
-
-        penas = self.session.execute(stmt).scalars().all()
-        total = int(self.session.execute(total_stmt).scalar() or 0)
-        return PenasPage(
-            items=[PenaInfo(guid=pena.guid, name=pena.name) for pena in penas],
-            page=page,
-            page_size=page_size,
-            total=total,
+        result = self.repository.find_for_admin(
+            admin_id, page=page, page_size=page_size, search=search
         )
+        return self._to_page(result)
 
     def execute_for_user(
         self,
@@ -59,39 +46,22 @@ class GetPenasUseCase:
         page_size: int = 20,
         search: str | None = None,
     ) -> PenasPage:
-        stmt = (
-            select(Pena)
-            .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
-            .join(Player, Player.id == PenaPlayer.id_player)
-            .where(Player.id_player_account == account_id)
-            .distinct()
+        result = self.repository.find_for_user(
+            account_id, page=page, page_size=page_size, search=search
         )
-        if search:
-            stmt = stmt.where(Pena.name.ilike(f"%{search}%"))
-
-        total_stmt = (
-            select(func.count(func.distinct(Pena.id)))
-            .select_from(Pena)
-            .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
-            .join(Player, Player.id == PenaPlayer.id_player)
-            .where(Player.id_player_account == account_id)
-        )
-        if search:
-            total_stmt = total_stmt.where(Pena.name.ilike(f"%{search}%"))
-
-        stmt = stmt.order_by(Pena.name).limit(page_size).offset((page - 1) * page_size)
-
-        penas = self.session.execute(stmt).scalars().all()
-        total = int(self.session.execute(total_stmt).scalar() or 0)
-        return PenasPage(
-            items=[PenaInfo(guid=pena.guid, name=pena.name) for pena in penas],
-            page=page,
-            page_size=page_size,
-            total=total,
-        )
+        return self._to_page(result)
 
     def execute_by_guid(self, pena_guid: str) -> PenaInfo | None:
-        pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
+        pena = self.repository.find_by_guid(pena_guid)
         if not pena:
             return None
         return PenaInfo(guid=pena.guid, name=pena.name)
+
+    @staticmethod
+    def _to_page(result: PenasPageResult) -> PenasPage:
+        return PenasPage(
+            items=[PenaInfo(guid=item.guid, name=item.name) for item in result.items],
+            page=result.page,
+            page_size=result.page_size,
+            total=result.total,
+        )

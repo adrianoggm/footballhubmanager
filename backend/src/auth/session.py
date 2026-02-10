@@ -1,9 +1,12 @@
 import os
-import threading
 import time
 import uuid
 from dataclasses import dataclass
 
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
+
+from persistence.domain.entity import UserSession
 
 @dataclass(frozen=True)
 class SessionData:
@@ -14,8 +17,6 @@ class SessionData:
     expires_at: int
 
 
-_LOCK = threading.Lock()
-_SESSIONS: dict[str, SessionData] = {}
 _DEFAULT_TTL_SECONDS = 60 * 60
 
 
@@ -30,43 +31,45 @@ def _get_ttl_seconds() -> int:
         return _DEFAULT_TTL_SECONDS
 
 
-def _cleanup_expired(now_ts: int | None = None) -> None:
+def _cleanup_expired(db: Session, now_ts: int | None = None) -> None:
     now_ts = now_ts or _now_ts()
-    expired = [token for token, data in _SESSIONS.items() if data.expires_at <= now_ts]
-    for token in expired:
-        _SESSIONS.pop(token, None)
+    db.execute(delete(UserSession).where(UserSession.expires_at <= now_ts))
 
 
-def create_session(*, user_id: int, user_guid: str, user_type: str) -> SessionData:
+def create_session(
+    db: Session, *, user_id: int, user_guid: str, user_type: str
+) -> SessionData:
     ttl = _get_ttl_seconds()
     now_ts = _now_ts()
     expires_at = now_ts + ttl
     token = str(uuid.uuid4())
-    data = SessionData(
-        token=token,
-        user_id=user_id,
-        user_guid=user_guid,
-        user_type=user_type,
-        expires_at=expires_at,
+    row = UserSession(
+        token=token, user_id=user_id, user_guid=user_guid, user_type=user_type, expires_at=expires_at
     )
-    with _LOCK:
-        _cleanup_expired(now_ts)
-        _SESSIONS[token] = data
-    return data
+    _cleanup_expired(db, now_ts)
+    db.add(row)
+    db.commit()
+    return SessionData(token=token, user_id=user_id, user_guid=user_guid, user_type=user_type, expires_at=expires_at)
 
 
-def get_session(token: str) -> SessionData | None:
+def get_session(db: Session, token: str) -> SessionData | None:
     now_ts = _now_ts()
-    with _LOCK:
-        data = _SESSIONS.get(token)
-        if not data:
-            return None
-        if data.expires_at <= now_ts:
-            _SESSIONS.pop(token, None)
-            return None
-        return data
+    row = db.execute(select(UserSession).where(UserSession.token == token)).scalar_one_or_none()
+    if not row:
+        return None
+    if row.expires_at <= now_ts:
+        db.execute(delete(UserSession).where(UserSession.token == token))
+        db.commit()
+        return None
+    return SessionData(
+        token=row.token,
+        user_id=row.user_id,
+        user_guid=row.user_guid,
+        user_type=row.user_type,
+        expires_at=row.expires_at,
+    )
 
 
-def invalidate_session(token: str) -> None:
-    with _LOCK:
-        _SESSIONS.pop(token, None)
+def invalidate_session(db: Session, token: str) -> None:
+    db.execute(delete(UserSession).where(UserSession.token == token))
+    db.commit()
