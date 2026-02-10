@@ -2,13 +2,19 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_session
-from auth.security import verify_password
+from auth.application.use_cases.login import (
+    InvalidCredentialsError,
+    LoginAdminUseCase,
+    LoginPayload,
+    LoginUserUseCase,
+)
+from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
+    SqlAlchemyAuthAccountRepository,
+)
 from auth.session import create_session, invalidate_session
-from persistence.domain.entity import AdminAccounts, PlayerAccount
 from persistence.application.use_cases import (
     AdminRegistration,
     AdminUsernameExistsError,
@@ -54,17 +60,18 @@ class RegisterAdminRequest(BaseModel):
 @router.post("/auth/login", response_model=LoginResponse)
 def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
     logger.info("User login attempt: %s", payload.username)
-    user = db.execute(
-        select(PlayerAccount).where(PlayerAccount.username == payload.username)
-    ).scalar_one_or_none()
-    if not user or not verify_password(payload.password, user.password):
+    repo = SqlAlchemyAuthAccountRepository(db)
+    use_case = LoginUserUseCase(repo)
+    try:
+        user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    except InvalidCredentialsError:
         logger.warning("User login failed: %s", payload.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
-    session = create_session(user_id=user.id, user_guid=user.guid, user_type="user")
+    session = create_session(db, user_id=user.id, user_guid=user.guid, user_type="user")
     logger.info("User login ok: %s", user.guid)
     return LoginResponse(
         token=session.token,
@@ -78,17 +85,18 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/auth/admin/login", response_model=LoginResponse)
 def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
     logger.info("Admin login attempt: %s", payload.username)
-    admin = db.execute(
-        select(AdminAccounts).where(AdminAccounts.username == payload.username)
-    ).scalar_one_or_none()
-    if not admin or not verify_password(payload.password, admin.password):
+    repo = SqlAlchemyAuthAccountRepository(db)
+    use_case = LoginAdminUseCase(repo)
+    try:
+        admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    except InvalidCredentialsError:
         logger.warning("Admin login failed: %s", payload.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
-    session = create_session(user_id=admin.id, user_guid=admin.guid, user_type="admin")
+    session = create_session(db, user_id=admin.id, user_guid=admin.guid, user_type="admin")
     logger.info("Admin login ok: %s", admin.guid)
     return LoginResponse(
         token=session.token,
@@ -119,6 +127,7 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
 
     session = create_session(
+        db,
         user_id=registered.account_id,
         user_guid=registered.account_guid,
         user_type="user",
@@ -150,6 +159,7 @@ def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
 
     session = create_session(
+        db,
         user_id=registered.admin_id,
         user_guid=registered.admin_guid,
         user_type="admin",
@@ -165,6 +175,6 @@ def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db))
 
 
 @router.post("/auth/logout")
-def logout(session=Depends(get_current_session)):
-    invalidate_session(session.token)
+def logout(session=Depends(get_current_session), db: Session = Depends(get_db)):
+    invalidate_session(db, session.token)
     return {"status": "ok"}

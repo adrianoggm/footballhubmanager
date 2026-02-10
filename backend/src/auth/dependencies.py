@@ -20,6 +20,7 @@ def _extract_token(authorization: str | None, x_session_token: str | None) -> st
 def get_current_session(
     authorization: str | None = Header(default=None),
     x_session_token: str | None = Header(default=None, alias="X-Session-Token"),
+    db: Session = Depends(get_db),
 ) -> SessionData:
     token = _extract_token(authorization, x_session_token)
     if not token:
@@ -27,7 +28,7 @@ def get_current_session(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing session token",
         )
-    session = get_session(token)
+    session = get_session(db, token)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

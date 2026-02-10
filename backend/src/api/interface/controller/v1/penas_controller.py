@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 
 from auth.dependencies import authorize_pena_access, get_current_session
 from persistence.application.use_cases import GetPenasUseCase, PenasPage
+from persistence.infrastructure.repository.db.pena_query_repository import (
+    SqlAlchemyPenaQueryRepository,
+)
 from persistence.module import get_db
 
 router = APIRouter()
@@ -44,7 +47,8 @@ def list_penas(
     session=Depends(get_current_session),
     db: Session = Depends(get_db),
 ):
-    use_case = GetPenasUseCase(db)
+    repository = SqlAlchemyPenaQueryRepository(db)
+    use_case = GetPenasUseCase(repository)
     if session.user_type == "admin":
         result = use_case.execute_for_admin(
             session.user_id, page=page, page_size=page_size, search=search
@@ -64,7 +68,8 @@ def get_pena(
     _session=Depends(authorize_pena_access),
     db: Session = Depends(get_db),
 ):
-    use_case = GetPenasUseCase(db)
+    repository = SqlAlchemyPenaQueryRepository(db)
+    use_case = GetPenasUseCase(repository)
     pena = use_case.execute_by_guid(pena_guid)
     if not pena:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")

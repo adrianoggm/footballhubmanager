@@ -21,6 +21,15 @@ create table if not exists player_account (
   unique key uq_player_account_username (username)
 ) engine=innodb;
 
+create table if not exists user_session (
+  token      varchar(64) primary key,
+  user_id    int not null,
+  user_guid  char(36) not null,
+  user_type  varchar(20) not null,
+  expires_at bigint not null,
+  key idx_user_session_expires_at (expires_at)
+) engine=innodb;
+
 create table if not exists pena (
   id        int auto_increment primary key,
   guid      char(36) not null default (uuid()),

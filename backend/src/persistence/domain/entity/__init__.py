@@ -9,6 +9,7 @@ from .pena_player import PenaPlayer
 from .season import Season
 from .season_player import SeasonPlayer
 from .team_player import TeamPlayer
+from .user_session import UserSession
 
 __all__ = [
     "Base",
@@ -22,4 +23,5 @@ __all__ = [
     "Season",
     "SeasonPlayer",
     "TeamPlayer",
+    "UserSession",
 ]
