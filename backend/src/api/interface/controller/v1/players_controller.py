@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from auth.dependencies import authorize_player_access, get_current_session
 from persistence.application.use_cases import (
     GetPlayerProfileUseCase,
+    PlayerInvalidNationalityError,
+    InvalidPlayerUpdateDataError,
     PlayerProfile,
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
@@ -75,7 +77,12 @@ def update_me(
         surname2=payload.surname2,
         nationality=payload.nationality,
     )
-    profile = _profile_or_404(use_case.execute_by_account_id(session.user_id, update))
+    try:
+        profile = _profile_or_404(use_case.execute_by_account_id(session.user_id, update))
+    except PlayerInvalidNationalityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
+    except InvalidPlayerUpdateDataError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid player update data")
     return PlayerProfileResponse(**asdict(profile))
 
 

@@ -1,7 +1,9 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from persistence.application.ports.player_profile_repository import (
+    InvalidNationalityError,
     PenaInfoResult,
     PlayerProfileRepository,
     PlayerProfileResult,
@@ -44,7 +46,13 @@ class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
         self._apply_update(
             player, name=name, surname1=surname1, surname2=surname2, nationality=nationality
         )
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            if "fk_player_nationality" in str(exc.orig).lower():
+                raise InvalidNationalityError() from exc
+            raise
         return self._build_profile(player)
 
     def update_by_account_id(
@@ -66,7 +74,13 @@ class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
         self._apply_update(
             player, name=name, surname1=surname1, surname2=surname2, nationality=nationality
         )
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            if "fk_player_nationality" in str(exc.orig).lower():
+                raise InvalidNationalityError() from exc
+            raise
         return self._build_profile(player)
 
     def _build_profile(self, player: Player) -> PlayerProfileResult:

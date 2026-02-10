@@ -3,11 +3,20 @@ from dataclasses import dataclass
 from auth.security import hash_password
 from persistence.application.ports.registration_repository import (
     DuplicateUsernameError,
+    InvalidNationalityError as RegistrationInvalidNationalityError,
     UserRegistrationRepository,
 )
 
 
 class UsernameAlreadyExistsError(Exception):
+    pass
+
+
+class InvalidNationalityError(Exception):
+    pass
+
+
+class InvalidRegistrationDataError(Exception):
     pass
 
 
@@ -33,17 +42,30 @@ class RegisterUserUseCase:
         self.repository = repository
 
     def execute(self, data: UserRegistration) -> RegisteredUser:
+        username = data.username.strip()
+        name = data.name.strip()
+        surname1 = data.surname1.strip()
+        surname2 = data.surname2.strip() if data.surname2 is not None else None
+        nationality = data.nationality.strip()
+
+        if not username or not name or not surname1 or not nationality:
+            raise InvalidRegistrationDataError()
+        if surname2 == "":
+            surname2 = None
+
         try:
             registered = self.repository.register_user(
-                username=data.username,
+                username=username,
                 password_hash=hash_password(data.password),
-                name=data.name,
-                surname1=data.surname1,
-                surname2=data.surname2,
-                nationality=data.nationality,
+                name=name,
+                surname1=surname1,
+                surname2=surname2,
+                nationality=nationality,
             )
         except DuplicateUsernameError as exc:
             raise UsernameAlreadyExistsError() from exc
+        except RegistrationInvalidNationalityError as exc:
+            raise InvalidNationalityError() from exc
         return RegisteredUser(
             account_id=registered.account_id,
             account_guid=registered.account_guid,

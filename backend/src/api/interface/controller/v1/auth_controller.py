@@ -17,10 +17,13 @@ from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import 
 from auth.session import create_session, invalidate_session
 from persistence.application.use_cases import (
     AdminRegistration,
+    InvalidAdminRegistrationDataError,
+    InvalidRegistrationDataError,
     AdminUsernameExistsError,
     RegisterAdminUseCase,
     RegisterUserUseCase,
     UserRegistration,
+    UserInvalidNationalityError,
     UserUsernameExistsError,
 )
 from persistence.infrastructure.repository.db.registration_repository import (
@@ -129,6 +132,10 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
     except UserUsernameExistsError:
         logger.warning("User register exists: %s", payload.username)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    except InvalidRegistrationDataError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user registration data")
+    except UserInvalidNationalityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
 
     session = create_session(
         db,
@@ -162,6 +169,8 @@ def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db))
     except AdminUsernameExistsError:
         logger.warning("Admin register exists: %s", payload.username)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    except InvalidAdminRegistrationDataError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid admin registration data")
 
     session = create_session(
         db,

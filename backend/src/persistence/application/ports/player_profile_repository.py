@@ -18,6 +18,10 @@ class PlayerProfileResult:
     penas: list[PenaInfoResult]
 
 
+class InvalidNationalityError(Exception):
+    pass
+
+
 class PlayerProfileRepository(Protocol):
     def find_by_guid(self, player_guid: str) -> PlayerProfileResult | None:
         ...
