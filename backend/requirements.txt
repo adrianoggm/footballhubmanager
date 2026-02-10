@@ -1,1 +1,6 @@
 pylint
+sqlalchemy
+fastapi
+uvicorn
+pydantic-settings
+pymysql
