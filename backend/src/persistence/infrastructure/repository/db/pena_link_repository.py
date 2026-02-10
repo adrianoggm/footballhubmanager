@@ -52,9 +52,11 @@ class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
         self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.expires_at <= now_ts))
 
         link = self.session.execute(
-            select(PenaLinkToken).where(PenaLinkToken.token == token)
+            select(PenaLinkToken)
+            .where(PenaLinkToken.token == token, PenaLinkToken.expires_at > now_ts)
+            .with_for_update()
         ).scalar_one_or_none()
-        if not link or link.expires_at <= now_ts:
+        if not link:
             self.session.rollback()
             raise InvalidOrExpiredLinkTokenError()
 
