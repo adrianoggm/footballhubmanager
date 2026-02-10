@@ -1,0 +1,104 @@
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from persistence.application.ports.player_profile_repository import (
+    PenaInfoResult,
+    PlayerProfileRepository,
+    PlayerProfileResult,
+)
+from persistence.domain.entity import Pena, PenaPlayer, Player
+
+
+class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
+    def __init__(self, session: Session):
+        self.session = session
+
+    def find_by_guid(self, player_guid: str) -> PlayerProfileResult | None:
+        player = self.session.execute(
+            select(Player).where(Player.guid == player_guid)
+        ).scalar_one_or_none()
+        if not player:
+            return None
+        return self._build_profile(player)
+
+    def find_by_account_id(self, account_id: int) -> PlayerProfileResult | None:
+        player = self.session.execute(
+            select(Player).where(Player.id_player_account == account_id)
+        ).scalar_one_or_none()
+        if not player:
+            return None
+        return self._build_profile(player)
+
+    def update_by_guid(
+        self,
+        player_guid: str,
+        *,
+        name: str | None,
+        surname1: str | None,
+        surname2: str | None,
+        nationality: str | None,
+    ) -> PlayerProfileResult | None:
+        player = self.session.query(Player).filter(Player.guid == player_guid).one_or_none()
+        if not player:
+            return None
+        self._apply_update(
+            player, name=name, surname1=surname1, surname2=surname2, nationality=nationality
+        )
+        self.session.commit()
+        return self._build_profile(player)
+
+    def update_by_account_id(
+        self,
+        account_id: int,
+        *,
+        name: str | None,
+        surname1: str | None,
+        surname2: str | None,
+        nationality: str | None,
+    ) -> PlayerProfileResult | None:
+        player = (
+            self.session.query(Player)
+            .filter(Player.id_player_account == account_id)
+            .one_or_none()
+        )
+        if not player:
+            return None
+        self._apply_update(
+            player, name=name, surname1=surname1, surname2=surname2, nationality=nationality
+        )
+        self.session.commit()
+        return self._build_profile(player)
+
+    def _build_profile(self, player: Player) -> PlayerProfileResult:
+        penas = self.session.execute(
+            select(Pena)
+            .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
+            .where(PenaPlayer.id_player == player.id)
+            .order_by(Pena.name)
+        ).scalars().all()
+        return PlayerProfileResult(
+            guid=player.guid,
+            name=player.name,
+            surname1=player.surname1,
+            surname2=player.surname2,
+            nationality=player.nationality,
+            penas=[PenaInfoResult(guid=pena.guid, name=pena.name) for pena in penas],
+        )
+
+    @staticmethod
+    def _apply_update(
+        player: Player,
+        *,
+        name: str | None,
+        surname1: str | None,
+        surname2: str | None,
+        nationality: str | None,
+    ) -> None:
+        if name is not None:
+            player.name = name
+        if surname1 is not None:
+            player.surname1 = surname1
+        if surname2 is not None:
+            player.surname2 = surname2
+        if nationality is not None:
+            player.nationality = nationality

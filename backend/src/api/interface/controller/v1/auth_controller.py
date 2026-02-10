@@ -23,6 +23,9 @@ from persistence.application.use_cases import (
     UserRegistration,
     UserUsernameExistsError,
 )
+from persistence.infrastructure.repository.db.registration_repository import (
+    SqlAlchemyRegistrationRepository,
+)
 from persistence.module import get_db
 
 router = APIRouter()
@@ -110,7 +113,8 @@ def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/auth/register", response_model=LoginResponse)
 def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
     logger.info("User register attempt: %s", payload.username)
-    use_case = RegisterUserUseCase(db)
+    repository = SqlAlchemyRegistrationRepository(db)
+    use_case = RegisterUserUseCase(repository)
     try:
         registered = use_case.execute(
             UserRegistration(
@@ -145,7 +149,8 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
 @router.post("/auth/admin/register", response_model=LoginResponse)
 def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db)):
     logger.info("Admin register attempt: %s", payload.username)
-    use_case = RegisterAdminUseCase(db)
+    repository = SqlAlchemyRegistrationRepository(db)
+    use_case = RegisterAdminUseCase(repository)
     try:
         registered = use_case.execute(
             AdminRegistration(
