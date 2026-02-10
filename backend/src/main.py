@@ -27,6 +27,19 @@ from api.module import api_router
 # Logger
 logger = logging.getLogger(__name__)
 
+
+def _resolve_allowed_hosts() -> list[str]:
+    raw_hosts = os.getenv("ALLOWED_HOSTS")
+    if raw_hosts:
+        hosts = [host.strip() for host in raw_hosts.split(",") if host.strip()]
+        if hosts:
+            return hosts
+
+    app_env = os.getenv("APP_ENV", "development").strip().lower()
+    if app_env in {"dev", "development", "local", "test"}:
+        return ["localhost", "127.0.0.1", "::1", "testserver"]
+    return ["localhost"]
+
 # Lifespan for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -66,7 +79,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])  # Configure for production
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
 
 # Global exception handler
 @app.exception_handler(Exception)
@@ -90,12 +103,15 @@ async def health_check():
 app.include_router(api_router)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    logger.info(f"Starting server on port {port}")
+    logger.info(
+        "Starting server on %s:%s",
+        app_config.APP_HOST,
+        app_config.APP_PORT,
+    )
     run(
         "main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=True,
+        host=app_config.APP_HOST,
+        port=app_config.APP_PORT,
+        reload=app_config.APP_RELOAD,
         log_level="info"
     )
