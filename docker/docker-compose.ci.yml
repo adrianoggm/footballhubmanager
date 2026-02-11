@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: footballhub
+      MYSQL_USER: footballuser
+      MYSQL_PASSWORD: footballpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - ../versioning/sql/actual.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ../versioning/sql/ci_seed.sql:/docker-entrypoint-initdb.d/02-ci-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -ufootballuser -pfootballpass --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: docker/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      APP_ENV: test
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      APP_RELOAD: "false"
+      SQL_ECHO: "false"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: footballhub
+      DB_USER: footballuser
+      DB_PASSWORD: footballpass
+      DB_PROVIDER: mysql+pymysql
+      LINK_TOKEN_TTL_SECONDS: 3600
+      SESSION_TTL_SECONDS: 3600
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/').read()"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
