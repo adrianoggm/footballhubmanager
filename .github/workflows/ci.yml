@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          python -m pytest backend/tests --ignore=backend/tests/integration -q
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
+
+      - name: Start containerized backend stack
+        run: |
+          docker compose -f docker/docker-compose.ci.yml up -d --build
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/api/ > /dev/null; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not become healthy in time"
+          docker compose -f docker/docker-compose.ci.yml logs
+          exit 1
+
+      - name: Run integration tests
+        env:
+          TEST_API_ROOT: http://127.0.0.1:8000/api
+          TEST_API_V1: http://127.0.0.1:8000/api/v1
+        run: |
+          python -m pytest backend/tests/integration -q
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker/docker-compose.ci.yml logs
+
+      - name: Stop containerized backend stack
+        if: always()
+        run: docker compose -f docker/docker-compose.ci.yml down -v
