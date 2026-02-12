@@ -1,6 +1,13 @@
 -- v1__init_schema.sql
 set foreign_key_checks = 0;
 
+create table if not exists schema_migrations (
+  version     varchar(50) primary key,
+  description varchar(255) not null,
+  success     tinyint(1) not null default 1,
+  applied_at  timestamp not null default current_timestamp
+) engine=innodb;
+
 create table if not exists admin_accounts (
   id        int auto_increment primary key,
   guid      char(36) not null default (uuid()),
