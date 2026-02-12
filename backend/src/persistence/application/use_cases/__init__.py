@@ -36,3 +36,14 @@ from .link_user_to_pena import (
     UserProfileNotFoundError,
 )
 from .get_nationalities import GetNationalitiesUseCase
+from .manage_pena_membership import (
+    InvalidPenaMembershipUpdateDataError,
+    ManagePenaMembershipUseCase,
+    PenaMembershipAccessDeniedError,
+    PenaMembershipInfo,
+    PenaMembershipNotFoundError,
+    PenaMembershipPenaNotFoundError,
+    PenaMembershipPlayerNotFoundError,
+    PenaMembershipUpdate,
+    PenaMembershipUserProfileNotFoundError,
+)
