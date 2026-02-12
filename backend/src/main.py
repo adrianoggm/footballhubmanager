@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import asyncio
 from contextlib import asynccontextmanager
 
 # Add src to path
@@ -40,19 +41,51 @@ def _resolve_allowed_hosts() -> list[str]:
         return ["localhost", "127.0.0.1", "::1", "testserver"]
     return ["localhost"]
 
+
+def _db_startup_retries() -> tuple[int, float]:
+    attempts_raw = os.getenv("DB_STARTUP_MAX_ATTEMPTS", "30")
+    delay_raw = os.getenv("DB_STARTUP_RETRY_SECONDS", "1")
+    try:
+        attempts = int(attempts_raw)
+    except ValueError:
+        attempts = 30
+    try:
+        delay = float(delay_raw)
+    except ValueError:
+        delay = 1.0
+    return max(1, attempts), max(0.1, delay)
+
 # Lifespan for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting FootballHubManager API")
-    try:
-        # Test DB connection
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        logger.info("Database connection successful")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        raise
+    max_attempts, retry_delay_seconds = _db_startup_retries()
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # Test DB connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("Database connection successful (attempt %s/%s)", attempt, max_attempts)
+            last_error = None
+            break
+        except Exception as exc:  # pragma: no cover - exercised in container startup
+            last_error = exc
+            if attempt == max_attempts:
+                break
+            logger.warning(
+                "Database connection attempt %s/%s failed: %s. Retrying in %.1fs",
+                attempt,
+                max_attempts,
+                exc,
+                retry_delay_seconds,
+            )
+            await asyncio.sleep(retry_delay_seconds)
+
+    if last_error is not None:
+        logger.error("Database connection failed after %s attempts: %s", max_attempts, last_error)
+        raise last_error
 
     yield
 
