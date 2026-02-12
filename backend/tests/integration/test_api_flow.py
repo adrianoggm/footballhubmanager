@@ -56,6 +56,12 @@ def _register_user():
     return data, payload
 
 
+def _player_guid_for_user(token: str) -> str:
+    status, data = _request("GET", f"{API_V1}/players/me", token=token)
+    assert status == 200, data
+    return data["guid"]
+
+
 def test_health_and_nationalities_catalog_available():
     status, data = _request("GET", f"{API_ROOT}/")
     assert status == 200
@@ -113,3 +119,99 @@ def test_link_token_invalid_token_returns_400():
     )
     assert status == 400
     assert data["detail"] == "Invalid or expired link token"
+
+
+def test_membership_user_can_update_get_status_and_leave():
+    admin_auth, _ = _register_admin()
+    status, penas = _request("GET", f"{API_V1}/penas", token=admin_auth["token"])
+    assert status == 200, penas
+    pena_guid = penas["items"][0]["guid"]
+
+    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    assert status == 200, link
+
+    user_auth, _ = _register_user()
+    status, consume = _request(
+        "POST",
+        f"{API_V1}/penas/link/consume",
+        token=user_auth["token"],
+        payload={"token": link["token"], "nickname": "Before", "position": "GK"},
+    )
+    assert status == 200, consume
+
+    status, updated = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/players/me",
+        token=user_auth["token"],
+        payload={"nickname": "After", "position": "CM"},
+    )
+    assert status == 200, updated
+    assert updated["nickname"] == "After"
+    assert updated["position"] == "CM"
+    assert updated["role"] == "member"
+
+    status, mine = _request("GET", f"{API_V1}/players/me/penas/{pena_guid}", token=user_auth["token"])
+    assert status == 200, mine
+    assert mine["nickname"] == "After"
+    assert mine["position"] == "CM"
+
+    status, _ = _request("DELETE", f"{API_V1}/penas/{pena_guid}/players/me", token=user_auth["token"])
+    assert status == 204
+
+    status, mine_after = _request("GET", f"{API_V1}/players/me/penas/{pena_guid}", token=user_auth["token"])
+    assert status == 403, mine_after
+    assert mine_after["detail"] == "User does not belong to this pena"
+
+
+def test_membership_admin_can_update_get_and_remove_player():
+    admin_auth, _ = _register_admin()
+    status, penas = _request("GET", f"{API_V1}/penas", token=admin_auth["token"])
+    assert status == 200, penas
+    pena_guid = penas["items"][0]["guid"]
+
+    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    assert status == 200, link
+
+    user_auth, _ = _register_user()
+    player_guid = _player_guid_for_user(user_auth["token"])
+    status, consume = _request(
+        "POST",
+        f"{API_V1}/penas/link/consume",
+        token=user_auth["token"],
+        payload={"token": link["token"], "nickname": "UserNick", "position": "ST"},
+    )
+    assert status == 200, consume
+
+    status, updated = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/players/{player_guid}",
+        token=admin_auth["token"],
+        payload={"nickname": "AdminNick", "position": "RW"},
+    )
+    assert status == 200, updated
+    assert updated["nickname"] == "AdminNick"
+    assert updated["position"] == "RW"
+
+    status, detail = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/players/{player_guid}",
+        token=admin_auth["token"],
+    )
+    assert status == 200, detail
+    assert detail["nickname"] == "AdminNick"
+    assert detail["position"] == "RW"
+
+    status, _ = _request(
+        "DELETE",
+        f"{API_V1}/penas/{pena_guid}/players/{player_guid}",
+        token=admin_auth["token"],
+    )
+    assert status == 204
+
+    status, data = _request(
+        "DELETE",
+        f"{API_V1}/penas/{pena_guid}/players/{player_guid}",
+        token=admin_auth["token"],
+    )
+    assert status == 409, data
+    assert data["detail"] == "Player is not linked to this pena"
