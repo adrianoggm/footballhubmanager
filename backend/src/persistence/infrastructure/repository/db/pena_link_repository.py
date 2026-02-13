@@ -49,45 +49,53 @@ class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
         position: str | None,
     ) -> None:
         now_ts = int(time.time())
-        self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.expires_at <= now_ts))
-
-        link = self.session.execute(
-            select(PenaLinkToken)
-            .where(PenaLinkToken.token == token, PenaLinkToken.expires_at > now_ts)
-            .with_for_update()
-        ).scalar_one_or_none()
-        if not link:
-            self.session.rollback()
-            raise InvalidOrExpiredLinkTokenError()
-
-        player = self.session.execute(
-            select(Player).where(Player.id_player_account == account_id)
-        ).scalar_one_or_none()
-        if not player:
-            self.session.rollback()
-            raise UserPlayerNotFoundError()
-
-        existing = self.session.execute(
-            select(PenaPlayer.id).where(
-                PenaPlayer.id_player == player.id,
-                PenaPlayer.id_pena == link.id_pena,
-            )
-        ).first()
-        if existing:
-            self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.token == token))
-            self.session.commit()
-            raise UserAlreadyLinkedToPenaError()
-
+        already_linked = False
         try:
-            membership = PenaPlayer(
-                id_player=player.id,
-                id_pena=link.id_pena,
-                nickname=nickname,
-                position=position,
-            )
-            self.session.add(membership)
-            self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.token == token))
-            self.session.commit()
+            with self.session.begin():
+                self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.expires_at <= now_ts))
+
+                link = self.session.execute(
+                    select(PenaLinkToken)
+                    .where(PenaLinkToken.token == token, PenaLinkToken.expires_at > now_ts)
+                    .with_for_update()
+                ).scalar_one_or_none()
+                if not link:
+                    raise InvalidOrExpiredLinkTokenError()
+
+                player = self.session.execute(
+                    select(Player).where(Player.id_player_account == account_id)
+                ).scalar_one_or_none()
+                if not player:
+                    raise UserPlayerNotFoundError()
+
+                existing = self.session.execute(
+                    select(PenaPlayer.id)
+                    .where(
+                        PenaPlayer.id_player == player.id,
+                        PenaPlayer.id_pena == link.id_pena,
+                    )
+                    .with_for_update()
+                ).first()
+                self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.token == token))
+                if existing:
+                    already_linked = True
+                else:
+                    membership = PenaPlayer(
+                        id_player=player.id,
+                        id_pena=link.id_pena,
+                        nickname=nickname,
+                        position=position,
+                    )
+                    self.session.add(membership)
+        except (InvalidOrExpiredLinkTokenError, UserPlayerNotFoundError):
+            self.session.rollback()
+            raise
         except IntegrityError as exc:
             self.session.rollback()
+            # Best effort: ensure token is consumed even when membership insert raced.
+            with self.session.begin():
+                self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.token == token))
             raise UserAlreadyLinkedToPenaError() from exc
+
+        if already_linked:
+            raise UserAlreadyLinkedToPenaError()

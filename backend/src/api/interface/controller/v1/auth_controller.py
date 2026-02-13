@@ -65,13 +65,13 @@ class RegisterAdminRequest(BaseModel):
 
 @router.post("/auth/login", response_model=LoginResponse)
 def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
-    logger.info("User login attempt: %s", payload.username)
+    logger.info("User login attempt")
     repo = SqlAlchemyAuthAccountRepository(db)
     use_case = LoginUserUseCase(repo)
     try:
         user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
     except InvalidCredentialsError:
-        logger.warning("User login failed: %s", payload.username)
+        logger.warning("User login failed: invalid credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -90,13 +90,13 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/auth/admin/login", response_model=LoginResponse)
 def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
-    logger.info("Admin login attempt: %s", payload.username)
+    logger.info("Admin login attempt")
     repo = SqlAlchemyAuthAccountRepository(db)
     use_case = LoginAdminUseCase(repo)
     try:
         admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
     except InvalidCredentialsError:
-        logger.warning("Admin login failed: %s", payload.username)
+        logger.warning("Admin login failed: invalid credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",

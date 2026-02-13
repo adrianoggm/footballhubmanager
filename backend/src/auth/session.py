@@ -54,20 +54,27 @@ def create_session(
 
 def get_session(db: Session, token: str) -> SessionData | None:
     now_ts = _now_ts()
-    row = db.execute(select(UserSession).where(UserSession.token == token)).scalar_one_or_none()
-    if not row:
-        return None
-    if row.expires_at <= now_ts:
-        db.execute(delete(UserSession).where(UserSession.token == token))
-        db.commit()
-        return None
-    return SessionData(
-        token=row.token,
-        user_id=row.user_id,
-        user_guid=row.user_guid,
-        user_type=row.user_type,
-        expires_at=row.expires_at,
-    )
+    with db.begin():
+        row = (
+            db.execute(
+                select(UserSession)
+                .where(UserSession.token == token)
+                .with_for_update()
+            )
+            .scalar_one_or_none()
+        )
+        if not row:
+            return None
+        if row.expires_at <= now_ts:
+            db.execute(delete(UserSession).where(UserSession.token == token))
+            return None
+        return SessionData(
+            token=row.token,
+            user_id=row.user_id,
+            user_guid=row.user_guid,
+            user_type=row.user_type,
+            expires_at=row.expires_at,
+        )
 
 
 def invalidate_session(db: Session, token: str) -> None:
