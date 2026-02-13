@@ -9,6 +9,7 @@ API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
 CI_ADMIN_USERNAME = "ci_admin"
 CI_ADMIN_PASSWORD = "ci_admin_pass"
 CI_PENA_ONE_GUID = "00000000-0000-0000-0000-000000009101"
+CI_PENA_ONE_SEASON_GUID = "00000000-0000-0000-0000-000000009151"
 CI_USER_NAME = "CI"
 
 
@@ -61,3 +62,24 @@ def test_seeded_pena_players_query_returns_seeded_membership():
         item["name"] == CI_USER_NAME and item["nickname"] == "SeedNick" and item["position"] == "GK"
         for item in data["items"]
     )
+
+
+def test_seeded_pena_seasons_query_returns_seeded_season():
+    token = _admin_token()
+    status, data = _request("GET", f"{API_V1}/penas/{CI_PENA_ONE_GUID}/seasons", token=token)
+
+    assert status == 200, data
+    guids = {item["guid"] for item in data["items"]}
+    assert CI_PENA_ONE_SEASON_GUID in guids
+
+
+def test_seeded_pena_active_season_query_returns_seeded_season():
+    token = _admin_token()
+    status, data = _request(
+        "GET",
+        f"{API_V1}/penas/{CI_PENA_ONE_GUID}/seasons/active?at_date=2025-02-01",
+        token=token,
+    )
+
+    assert status == 200, data
+    assert data["guid"] == CI_PENA_ONE_SEASON_GUID

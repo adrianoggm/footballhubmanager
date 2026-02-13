@@ -47,3 +47,15 @@ from .manage_pena_membership import (
     PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
 )
+from .manage_pena_seasons import (
+    InvalidPenaSeasonDataError,
+    ManagePenaSeasonsUseCase,
+    PenaSeasonAccessDeniedError,
+    PenaSeasonCreate,
+    PenaSeasonDateOverlapError,
+    PenaSeasonInfo,
+    PenaSeasonNotFoundError,
+    PenaSeasonPenaNotFoundError,
+    PenaSeasonUpdate,
+    PenaSeasonsPage,
+)
