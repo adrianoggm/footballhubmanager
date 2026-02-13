@@ -1,0 +1,225 @@
+from dataclasses import dataclass
+
+import pytest
+
+from persistence.application.ports.pena_membership_repository import (
+    PenaMembershipNotFoundError,
+    PenaMembershipResult,
+    PenaNotFoundError,
+    PenaNotManagedByAdminError,
+    PlayerNotFoundError,
+    UserPlayerNotFoundError,
+)
+from persistence.application.use_cases.manage_pena_membership import (
+    InvalidPenaMembershipUpdateDataError,
+    ManagePenaMembershipUseCase,
+    PenaMembershipAccessDeniedError,
+    PenaMembershipNotFoundError as UseCasePenaMembershipNotFoundError,
+    PenaMembershipPenaNotFoundError,
+    PenaMembershipPlayerNotFoundError,
+    PenaMembershipUpdate,
+    PenaMembershipUserProfileNotFoundError,
+)
+
+
+@dataclass
+class _FakeRepo:
+    should_raise_pena_not_found: bool = False
+    should_raise_pena_access_denied: bool = False
+    should_raise_membership_not_found: bool = False
+    should_raise_player_not_found: bool = False
+    should_raise_user_player_not_found: bool = False
+    last_payload: dict | None = None
+
+    @staticmethod
+    def _sample_result() -> PenaMembershipResult:
+        return PenaMembershipResult(
+            pena_guid="pena-guid",
+            player_guid="player-guid",
+            name="John",
+            surname1="Doe",
+            surname2=None,
+            nationality="Spain",
+            nickname="Nick",
+            position="ST",
+        )
+
+    def _raise_maybe(self):
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_pena_access_denied:
+            raise PenaNotManagedByAdminError()
+        if self.should_raise_membership_not_found:
+            raise PenaMembershipNotFoundError()
+        if self.should_raise_player_not_found:
+            raise PlayerNotFoundError()
+        if self.should_raise_user_player_not_found:
+            raise UserPlayerNotFoundError()
+
+    def get_by_pena_and_player(self, *, pena_guid: str, player_guid: str):
+        self._raise_maybe()
+        self.last_payload = {"pena_guid": pena_guid, "player_guid": player_guid}
+        return self._sample_result()
+
+    def get_by_pena_and_account(self, *, pena_guid: str, account_id: int):
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_membership_not_found:
+            raise PenaMembershipNotFoundError()
+        if self.should_raise_user_player_not_found:
+            raise UserPlayerNotFoundError()
+        self.last_payload = {"pena_guid": pena_guid, "account_id": account_id}
+        return self._sample_result()
+
+    def update_by_account(
+        self,
+        *,
+        pena_guid: str,
+        account_id: int,
+        nickname_provided: bool,
+        nickname,
+        position_provided: bool,
+        position,
+    ):
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_membership_not_found:
+            raise PenaMembershipNotFoundError()
+        if self.should_raise_user_player_not_found:
+            raise UserPlayerNotFoundError()
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "account_id": account_id,
+            "nickname_provided": nickname_provided,
+            "nickname": nickname,
+            "position_provided": position_provided,
+            "position": position,
+        }
+        return self._sample_result()
+
+    def delete_by_account(self, *, pena_guid: str, account_id: int):
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_membership_not_found:
+            raise PenaMembershipNotFoundError()
+        if self.should_raise_user_player_not_found:
+            raise UserPlayerNotFoundError()
+        self.last_payload = {"pena_guid": pena_guid, "account_id": account_id}
+
+    def update_by_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        admin_id: int,
+        player_guid: str,
+        nickname_provided: bool,
+        nickname,
+        position_provided: bool,
+        position,
+    ):
+        self._raise_maybe()
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "admin_id": admin_id,
+            "player_guid": player_guid,
+            "nickname_provided": nickname_provided,
+            "nickname": nickname,
+            "position_provided": position_provided,
+            "position": position,
+        }
+        return self._sample_result()
+
+    def delete_by_player_for_admin(self, *, pena_guid: str, admin_id: int, player_guid: str):
+        self._raise_maybe()
+        self.last_payload = {"pena_guid": pena_guid, "admin_id": admin_id, "player_guid": player_guid}
+
+
+def test_update_for_user_positive_normalizes_blank_to_none():
+    repo = _FakeRepo()
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    result = use_case.update_for_user(
+        pena_guid="pena-guid",
+        account_id=12,
+        update=PenaMembershipUpdate(
+            nickname="  ",
+            position="  GK ",
+            nickname_provided=True,
+            position_provided=True,
+        ),
+    )
+
+    assert repo.last_payload == {
+        "pena_guid": "pena-guid",
+        "account_id": 12,
+        "nickname_provided": True,
+        "nickname": None,
+        "position_provided": True,
+        "position": "GK",
+    }
+    assert result.role == "member"
+
+
+def test_update_for_user_negative_rejects_empty_patch_payload():
+    repo = _FakeRepo()
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(InvalidPenaMembershipUpdateDataError):
+        use_case.update_for_user(
+            pena_guid="pena-guid",
+            account_id=12,
+            update=PenaMembershipUpdate(),
+        )
+    assert repo.last_payload is None
+
+
+def test_get_for_user_maps_missing_membership_to_access_denied():
+    repo = _FakeRepo(should_raise_membership_not_found=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(PenaMembershipAccessDeniedError):
+        use_case.get_for_user(pena_guid="pena-guid", account_id=12)
+
+
+def test_update_for_admin_maps_not_managed_to_access_denied():
+    repo = _FakeRepo(should_raise_pena_access_denied=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(PenaMembershipAccessDeniedError):
+        use_case.update_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            player_guid="player-guid",
+            update=PenaMembershipUpdate(nickname="N", nickname_provided=True),
+        )
+
+
+def test_update_for_admin_maps_missing_membership_to_conflict_domain_error():
+    repo = _FakeRepo(should_raise_membership_not_found=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(UseCasePenaMembershipNotFoundError):
+        use_case.update_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            player_guid="player-guid",
+            update=PenaMembershipUpdate(position="CM", position_provided=True),
+        )
+
+
+def test_get_for_player_maps_pena_and_player_not_found():
+    use_case_pena = ManagePenaMembershipUseCase(_FakeRepo(should_raise_pena_not_found=True))
+    with pytest.raises(PenaMembershipPenaNotFoundError):
+        use_case_pena.get_for_player(pena_guid="pena-guid", player_guid="player-guid")
+
+    use_case_player = ManagePenaMembershipUseCase(_FakeRepo(should_raise_player_not_found=True))
+    with pytest.raises(PenaMembershipPlayerNotFoundError):
+        use_case_player.get_for_player(pena_guid="pena-guid", player_guid="player-guid")
+
+
+def test_remove_for_user_maps_user_profile_not_found():
+    repo = _FakeRepo(should_raise_user_player_not_found=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(PenaMembershipUserProfileNotFoundError):
+        use_case.remove_for_user(pena_guid="pena-guid", account_id=12)

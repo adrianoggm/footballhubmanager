@@ -20,6 +20,7 @@ class Configuration(BaseSettings):
     APP_HOST: str = Field(default='0.0.0.0')
     APP_PORT: int = Field(default=8000, ge=1, le=65535)
     APP_RELOAD: bool = Field(default=True)
+    LINK_TOKEN_TTL_SECONDS: int = Field(default=86400, ge=60)
 
 
 def initialize_config() -> Configuration:

@@ -1,6 +1,13 @@
 -- v1__init_schema.sql
 set foreign_key_checks = 0;
 
+create table if not exists schema_migrations (
+  version     varchar(50) primary key,
+  description varchar(255) not null,
+  success     tinyint(1) not null default 1,
+  applied_at  timestamp not null default current_timestamp
+) engine=innodb;
+
 create table if not exists admin_accounts (
   id        int auto_increment primary key,
   guid      char(36) not null default (uuid()),
@@ -21,6 +28,15 @@ create table if not exists player_account (
   unique key uq_player_account_username (username)
 ) engine=innodb;
 
+create table if not exists user_session (
+  token      varchar(64) primary key,
+  user_id    int not null,
+  user_guid  char(36) not null,
+  user_type  varchar(20) not null,
+  expires_at bigint not null,
+  key idx_user_session_expires_at (expires_at)
+) engine=innodb;
+
 create table if not exists pena (
   id        int auto_increment primary key,
   guid      char(36) not null default (uuid()),
@@ -31,6 +47,21 @@ create table if not exists pena (
   constraint fk_pena_admin
     foreign key (id_admin) references admin_accounts(id)
     on delete restrict on update cascade
+) engine=innodb;
+
+create table if not exists pena_link_token (
+  token      varchar(128) primary key,
+  id_pena    int not null,
+  expires_at bigint not null,
+  key idx_pena_link_token_expires_at (expires_at),
+  key idx_pena_link_token_pena (id_pena),
+  constraint fk_pena_link_token_pena
+    foreign key (id_pena) references pena(id)
+    on delete cascade on update cascade
+) engine=innodb;
+
+create table if not exists nationality (
+  name varchar(80) primary key
 ) engine=innodb;
 
 create table if not exists player (
@@ -45,7 +76,10 @@ create table if not exists player (
   unique key uq_player_account (id_player_account),
   constraint fk_player_account
     foreign key (id_player_account) references player_account(id)
-    on delete set null on update cascade
+    on delete set null on update cascade,
+  constraint fk_player_nationality
+    foreign key (nationality) references nationality(name)
+    on delete restrict on update cascade
 ) engine=innodb;
 
 create table if not exists season (
@@ -155,6 +189,51 @@ create table if not exists team_player (
     foreign key (id_player) references player(id)
     on delete cascade on update cascade
 ) engine=innodb;
+
+insert into nationality (name) values
+  ('Argentina'),
+  ('Australia'),
+  ('Austria'),
+  ('Belgium'),
+  ('Brazil'),
+  ('Cameroon'),
+  ('Canada'),
+  ('Chile'),
+  ('Colombia'),
+  ('Croatia'),
+  ('Denmark'),
+  ('Ecuador'),
+  ('Egypt'),
+  ('England'),
+  ('France'),
+  ('Germany'),
+  ('Ghana'),
+  ('Greece'),
+  ('Italy'),
+  ('Japan'),
+  ('Mexico'),
+  ('Morocco'),
+  ('Netherlands'),
+  ('Nigeria'),
+  ('Norway'),
+  ('Paraguay'),
+  ('Peru'),
+  ('Poland'),
+  ('Portugal'),
+  ('Republic of Ireland'),
+  ('Scotland'),
+  ('Senegal'),
+  ('Serbia'),
+  ('South Korea'),
+  ('Spain'),
+  ('Sweden'),
+  ('Switzerland'),
+  ('Turkey'),
+  ('United States'),
+  ('Uruguay'),
+  ('Venezuela'),
+  ('Wales')
+on duplicate key update name=values(name);
 
 set foreign_key_checks = 1;
 

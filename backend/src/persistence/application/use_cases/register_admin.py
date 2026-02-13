@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from auth.security import hash_password
-from persistence.domain.entity import AdminAccounts
+from persistence.application.ports.registration_repository import (
+    AdminRegistrationRepository,
+    DuplicateUsernameError,
+)
 
 
 class UsernameAlreadyExistsError(Exception):
+    pass
+
+
+class InvalidAdminRegistrationDataError(Exception):
     pass
 
 
@@ -26,26 +29,20 @@ class RegisteredAdmin:
 
 
 class RegisterAdminUseCase:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, repository: AdminRegistrationRepository):
+        self.repository = repository
 
     def execute(self, data: AdminRegistration) -> RegisteredAdmin:
-        exists = self.session.execute(
-            select(AdminAccounts.id).where(AdminAccounts.username == data.username)
-        ).first()
-        if exists:
-            raise UsernameAlreadyExistsError()
-
+        username = data.username.strip()
+        name = data.name.strip()
+        if not username or not name:
+            raise InvalidAdminRegistrationDataError()
         try:
-            admin = AdminAccounts(
-                username=data.username,
-                password=hash_password(data.password),
-                name=data.name,
+            registered = self.repository.register_admin(
+                username=username,
+                password_hash=hash_password(data.password),
+                name=name,
             )
-            self.session.add(admin)
-            self.session.commit()
-            self.session.refresh(admin)
-        except IntegrityError as exc:
-            self.session.rollback()
+        except DuplicateUsernameError as exc:
             raise UsernameAlreadyExistsError() from exc
-        return RegisteredAdmin(admin_id=admin.id, admin_guid=admin.guid)
+        return RegisteredAdmin(admin_id=registered.admin_id, admin_guid=registered.admin_guid)

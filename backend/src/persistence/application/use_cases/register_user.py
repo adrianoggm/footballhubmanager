@@ -1,14 +1,22 @@
 from dataclasses import dataclass
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from auth.security import hash_password
-from persistence.domain.entity import Player, PlayerAccount
+from persistence.application.ports.registration_repository import (
+    DuplicateUsernameError,
+    InvalidNationalityError as RegistrationInvalidNationalityError,
+    UserRegistrationRepository,
+)
 
 
 class UsernameAlreadyExistsError(Exception):
+    pass
+
+
+class InvalidNationalityError(Exception):
+    pass
+
+
+class InvalidRegistrationDataError(Exception):
     pass
 
 
@@ -30,41 +38,36 @@ class RegisteredUser:
 
 
 class RegisterUserUseCase:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, repository: UserRegistrationRepository):
+        self.repository = repository
 
     def execute(self, data: UserRegistration) -> RegisteredUser:
-        exists = self.session.execute(
-            select(PlayerAccount.id).where(PlayerAccount.username == data.username)
-        ).first()
-        if exists:
-            raise UsernameAlreadyExistsError()
+        username = data.username.strip()
+        name = data.name.strip()
+        surname1 = data.surname1.strip()
+        surname2 = data.surname2.strip() if data.surname2 is not None else None
+        nationality = data.nationality.strip()
+
+        if not username or not name or not surname1 or not nationality:
+            raise InvalidRegistrationDataError()
+        if surname2 == "":
+            surname2 = None
 
         try:
-            account = PlayerAccount(
-                username=data.username,
-                password=hash_password(data.password),
-                name=data.name,
+            registered = self.repository.register_user(
+                username=username,
+                password_hash=hash_password(data.password),
+                name=name,
+                surname1=surname1,
+                surname2=surname2,
+                nationality=nationality,
             )
-            self.session.add(account)
-            self.session.flush()
-
-            player = Player(
-                name=data.name,
-                surname1=data.surname1,
-                surname2=data.surname2,
-                nationality=data.nationality,
-                id_player_account=account.id,
-            )
-            self.session.add(player)
-            self.session.commit()
-            self.session.refresh(account)
-            self.session.refresh(player)
-        except IntegrityError as exc:
-            self.session.rollback()
+        except DuplicateUsernameError as exc:
             raise UsernameAlreadyExistsError() from exc
+        except RegistrationInvalidNationalityError as exc:
+            raise InvalidNationalityError() from exc
         return RegisteredUser(
-            account_id=account.id,
-            account_guid=account.guid,
-            player_guid=player.guid,
+            account_id=registered.account_id,
+            account_guid=registered.account_guid,
+            player_guid=registered.player_guid,
         )

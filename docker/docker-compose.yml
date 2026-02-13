@@ -4,11 +4,13 @@ services:
   mysql:
     image: mysql:8.0
     container_name: footballhub_mysql
+    env_file:
+      - ../backend/config/.env
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: footballhub
-      MYSQL_USER: footballuser
-      MYSQL_PASSWORD: footballpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -19,14 +21,14 @@ services:
   # backend:
   #   build:
   #     context: ../backend
-  #     dockerfile: Dockerfile
+  #     dockerfile: docker/Dockerfile
   #   container_name: footballhub_backend
   #   ports:
   #     - "8000:8000"
   #   depends_on:
   #     - mysql
   #   environment:
-  #     - DATABASE_URL=mysql://footballuser:footballpass@mysql:3306/footballhub
+  #     - DATABASE_URL=mysql://${DB_USER}:${DB_PASSWORD}@mysql:3306/${DB_NAME}
   #   networks:
   #     - footballhub_network
 

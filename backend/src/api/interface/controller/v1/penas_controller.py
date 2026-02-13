@@ -2,11 +2,27 @@ import math
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from auth.dependencies import authorize_pena_access, get_current_session
-from persistence.application.use_cases import GetPenasUseCase, PenasPage
+from app.config import config as app_config
+from auth.dependencies import authorize_pena_access, get_current_session, require_admin
+from persistence.application.use_cases import (
+    GeneratePenaLinkTokenUseCase,
+    GetPenasUseCase,
+    InvalidLinkTokenError,
+    LinkUserToPenaUseCase,
+    PenaAccessDeniedError,
+    PenasPage,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
+)
+from persistence.infrastructure.repository.db.pena_link_repository import (
+    SqlAlchemyPenaLinkRepository,
+)
+from persistence.infrastructure.repository.db.pena_query_repository import (
+    SqlAlchemyPenaQueryRepository,
+)
 from persistence.module import get_db
 
 router = APIRouter()
@@ -23,6 +39,18 @@ class PenasPageResponse(BaseModel):
     page_size: int
     total: int
     total_pages: int
+
+
+class LinkTokenResponse(BaseModel):
+    token: str
+    pena_guid: str
+    expires_at: int
+
+
+class ConsumeLinkTokenRequest(BaseModel):
+    token: str = Field(min_length=1)
+    nickname: str | None = None
+    position: str | None = None
 
 
 def _page_response(page: PenasPage) -> PenasPageResponse:
@@ -44,7 +72,8 @@ def list_penas(
     session=Depends(get_current_session),
     db: Session = Depends(get_db),
 ):
-    use_case = GetPenasUseCase(db)
+    repository = SqlAlchemyPenaQueryRepository(db)
+    use_case = GetPenasUseCase(repository)
     if session.user_type == "admin":
         result = use_case.execute_for_admin(
             session.user_id, page=page, page_size=page_size, search=search
@@ -64,8 +93,67 @@ def get_pena(
     _session=Depends(authorize_pena_access),
     db: Session = Depends(get_db),
 ):
-    use_case = GetPenasUseCase(db)
+    repository = SqlAlchemyPenaQueryRepository(db)
+    use_case = GetPenasUseCase(repository)
     pena = use_case.execute_by_guid(pena_guid)
     if not pena:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
     return PenaResponse(**asdict(pena))
+
+
+@router.post("/penas/{pena_guid}/link-tokens", response_model=LinkTokenResponse)
+def create_link_token(
+    pena_guid: str,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemyPenaLinkRepository(db)
+    use_case = GeneratePenaLinkTokenUseCase(repository)
+    try:
+        created = use_case.execute(
+            admin_id=admin_session.user_id,
+            pena_guid=pena_guid,
+            ttl_seconds=app_config.LINK_TOKEN_TTL_SECONDS,
+        )
+    except PenaAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin does not manage this pena",
+        )
+    return LinkTokenResponse(token=created.token, pena_guid=created.pena_guid, expires_at=created.expires_at)
+
+
+@router.post("/penas/link/consume")
+def consume_link_token(
+    payload: ConsumeLinkTokenRequest,
+    session=Depends(get_current_session),
+    db: Session = Depends(get_db),
+):
+    if session.user_type != "user":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
+
+    repository = SqlAlchemyPenaLinkRepository(db)
+    use_case = LinkUserToPenaUseCase(repository)
+    try:
+        use_case.execute(
+            token=payload.token,
+            account_id=session.user_id,
+            nickname=payload.nickname,
+            position=payload.position,
+        )
+    except InvalidLinkTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired link token",
+        )
+    except UserAlreadyLinkedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User is already linked to this pena",
+        )
+    except UserProfileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User player profile not found",
+        )
+    return {"status": "ok"}

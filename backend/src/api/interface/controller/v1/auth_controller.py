@@ -2,20 +2,32 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_session
-from auth.security import verify_password
+from auth.application.use_cases.login import (
+    InvalidCredentialsError,
+    LoginAdminUseCase,
+    LoginPayload,
+    LoginUserUseCase,
+)
+from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
+    SqlAlchemyAuthAccountRepository,
+)
 from auth.session import create_session, invalidate_session
-from persistence.domain.entity import AdminAccounts, PlayerAccount
 from persistence.application.use_cases import (
     AdminRegistration,
+    InvalidAdminRegistrationDataError,
+    InvalidRegistrationDataError,
     AdminUsernameExistsError,
     RegisterAdminUseCase,
     RegisterUserUseCase,
     UserRegistration,
+    UserInvalidNationalityError,
     UserUsernameExistsError,
+)
+from persistence.infrastructure.repository.db.registration_repository import (
+    SqlAlchemyRegistrationRepository,
 )
 from persistence.module import get_db
 
@@ -53,18 +65,19 @@ class RegisterAdminRequest(BaseModel):
 
 @router.post("/auth/login", response_model=LoginResponse)
 def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
-    logger.info("User login attempt: %s", payload.username)
-    user = db.execute(
-        select(PlayerAccount).where(PlayerAccount.username == payload.username)
-    ).scalar_one_or_none()
-    if not user or not verify_password(payload.password, user.password):
-        logger.warning("User login failed: %s", payload.username)
+    logger.info("User login attempt")
+    repo = SqlAlchemyAuthAccountRepository(db)
+    use_case = LoginUserUseCase(repo)
+    try:
+        user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    except InvalidCredentialsError:
+        logger.warning("User login failed: invalid credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
-    session = create_session(user_id=user.id, user_guid=user.guid, user_type="user")
+    session = create_session(db, user_id=user.id, user_guid=user.guid, user_type="user")
     logger.info("User login ok: %s", user.guid)
     return LoginResponse(
         token=session.token,
@@ -77,18 +90,19 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/auth/admin/login", response_model=LoginResponse)
 def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
-    logger.info("Admin login attempt: %s", payload.username)
-    admin = db.execute(
-        select(AdminAccounts).where(AdminAccounts.username == payload.username)
-    ).scalar_one_or_none()
-    if not admin or not verify_password(payload.password, admin.password):
-        logger.warning("Admin login failed: %s", payload.username)
+    logger.info("Admin login attempt")
+    repo = SqlAlchemyAuthAccountRepository(db)
+    use_case = LoginAdminUseCase(repo)
+    try:
+        admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    except InvalidCredentialsError:
+        logger.warning("Admin login failed: invalid credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
 
-    session = create_session(user_id=admin.id, user_guid=admin.guid, user_type="admin")
+    session = create_session(db, user_id=admin.id, user_guid=admin.guid, user_type="admin")
     logger.info("Admin login ok: %s", admin.guid)
     return LoginResponse(
         token=session.token,
@@ -102,7 +116,8 @@ def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/auth/register", response_model=LoginResponse)
 def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
     logger.info("User register attempt: %s", payload.username)
-    use_case = RegisterUserUseCase(db)
+    repository = SqlAlchemyRegistrationRepository(db)
+    use_case = RegisterUserUseCase(repository)
     try:
         registered = use_case.execute(
             UserRegistration(
@@ -117,8 +132,13 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
     except UserUsernameExistsError:
         logger.warning("User register exists: %s", payload.username)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    except InvalidRegistrationDataError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user registration data")
+    except UserInvalidNationalityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
 
     session = create_session(
+        db,
         user_id=registered.account_id,
         user_guid=registered.account_guid,
         user_type="user",
@@ -136,7 +156,8 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
 @router.post("/auth/admin/register", response_model=LoginResponse)
 def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db)):
     logger.info("Admin register attempt: %s", payload.username)
-    use_case = RegisterAdminUseCase(db)
+    repository = SqlAlchemyRegistrationRepository(db)
+    use_case = RegisterAdminUseCase(repository)
     try:
         registered = use_case.execute(
             AdminRegistration(
@@ -148,8 +169,11 @@ def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db))
     except AdminUsernameExistsError:
         logger.warning("Admin register exists: %s", payload.username)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+    except InvalidAdminRegistrationDataError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid admin registration data")
 
     session = create_session(
+        db,
         user_id=registered.admin_id,
         user_guid=registered.admin_guid,
         user_type="admin",
@@ -165,6 +189,6 @@ def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db))
 
 
 @router.post("/auth/logout")
-def logout(session=Depends(get_current_session)):
-    invalidate_session(session.token)
+def logout(session=Depends(get_current_session), db: Session = Depends(get_db)):
+    invalidate_session(db, session.token)
     return {"status": "ok"}

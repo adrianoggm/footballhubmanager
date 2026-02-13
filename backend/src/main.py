@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import asyncio
 from contextlib import asynccontextmanager
 
 # Add src to path
@@ -21,11 +22,15 @@ from sqlalchemy import text
 from uvicorn import run
 
 from app.config import config as app_config
-from app.module import db_config, engine
+from app.module import engine
 from api.module import api_router
 
 # Logger
 logger = logging.getLogger(__name__)
+
+
+def _app_env() -> str:
+    return os.getenv("APP_ENV", "development").strip().lower()
 
 
 def _resolve_allowed_hosts() -> list[str]:
@@ -35,24 +40,95 @@ def _resolve_allowed_hosts() -> list[str]:
         if hosts:
             return hosts
 
-    app_env = os.getenv("APP_ENV", "development").strip().lower()
+    app_env = _app_env()
     if app_env in {"dev", "development", "local", "test"}:
         return ["localhost", "127.0.0.1", "::1", "testserver"]
     return ["localhost"]
+
+
+def _resolve_cors_origins() -> list[str]:
+    raw_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+    if raw_origins:
+        origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+        if origins:
+            return origins
+
+    app_env = _app_env()
+    if app_env in {"dev", "development", "local", "test"}:
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    return []
+
+
+def _resolve_cors_allow_credentials(origins: list[str]) -> bool:
+    raw_value = os.getenv("CORS_ALLOW_CREDENTIALS")
+    if raw_value is not None:
+        allow_credentials = raw_value.strip().lower() in {"1", "true", "yes", "on"}
+    else:
+        allow_credentials = False
+
+    # Browsers reject '*' when credentials are enabled, and it is insecure.
+    if allow_credentials and "*" in origins:
+        logger.warning(
+            "CORS_ALLOW_CREDENTIALS ignored because CORS_ALLOWED_ORIGINS contains '*'."
+        )
+        return False
+    return allow_credentials
+
+
+def _include_debug_error_detail() -> bool:
+    app_env = _app_env()
+    return app_env in {"dev", "development", "local", "test"}
+
+
+def _db_startup_retries() -> tuple[int, float]:
+    attempts_raw = os.getenv("DB_STARTUP_MAX_ATTEMPTS", "30")
+    delay_raw = os.getenv("DB_STARTUP_RETRY_SECONDS", "1")
+    try:
+        attempts = int(attempts_raw)
+    except ValueError:
+        attempts = 30
+    try:
+        delay = float(delay_raw)
+    except ValueError:
+        delay = 1.0
+    return max(1, attempts), max(0.1, delay)
 
 # Lifespan for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting FootballHubManager API")
-    try:
-        # Test DB connection
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        logger.info("Database connection successful")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        raise
+    max_attempts, retry_delay_seconds = _db_startup_retries()
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # Test DB connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("Database connection successful (attempt %s/%s)", attempt, max_attempts)
+            last_error = None
+            break
+        except Exception as exc:  # pragma: no cover - exercised in container startup
+            last_error = exc
+            if attempt == max_attempts:
+                break
+            logger.warning(
+                "Database connection attempt %s/%s failed: %s. Retrying in %.1fs",
+                attempt,
+                max_attempts,
+                exc,
+                retry_delay_seconds,
+            )
+            await asyncio.sleep(retry_delay_seconds)
+
+    if last_error is not None:
+        logger.error("Database connection failed after %s attempts: %s", max_attempts, last_error)
+        raise last_error
 
     yield
 
@@ -72,10 +148,11 @@ app = FastAPI(
 
 # Middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+cors_origins = _resolve_cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=_resolve_cors_allow_credentials(cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -84,10 +161,17 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts()
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled exception: {exc}")
+    logger.exception(
+        "Unhandled exception for %s %s",
+        request.method,
+        request.url.path,
+    )
+    detail = "Internal server error"
+    if _include_debug_error_detail():
+        detail = f"{exc.__class__.__name__}: {exc}"
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        content={"detail": detail}
     )
 
 # Health check

@@ -4,3 +4,4 @@ fastapi
 uvicorn
 pydantic-settings
 pymysql
+pytest
