@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from persistence.application.ports.pena_query_repository import (
     PenaQueryRepository,
-    PenaSummary,
     PenasPageResult,
 )
 

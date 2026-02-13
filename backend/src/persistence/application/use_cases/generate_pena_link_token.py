@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from persistence.application.ports.pena_link_repository import (
     PenaLinkRepository,
-    PenaLinkTokenResult,
     PenaNotManagedByAdminError,
 )
 
