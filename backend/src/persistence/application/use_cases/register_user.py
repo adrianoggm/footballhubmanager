@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from auth.security import hash_password
 from persistence.application.ports.registration_repository import (
     DuplicateUsernameError,
-    InvalidNationalityError as RegistrationInvalidNationalityError,
     UserRegistrationRepository,
+)
+from persistence.application.ports.registration_repository import (
+    InvalidNationalityError as RegistrationInvalidNationalityError,
 )
 
 

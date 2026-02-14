@@ -23,11 +23,9 @@ class InvalidNationalityError(Exception):
 
 
 class PlayerProfileRepository(Protocol):
-    def find_by_guid(self, player_guid: str) -> PlayerProfileResult | None:
-        ...
+    def find_by_guid(self, player_guid: str) -> PlayerProfileResult | None: ...
 
-    def find_by_account_id(self, account_id: int) -> PlayerProfileResult | None:
-        ...
+    def find_by_account_id(self, account_id: int) -> PlayerProfileResult | None: ...
 
     def update_by_guid(
         self,
@@ -37,8 +35,7 @@ class PlayerProfileRepository(Protocol):
         surname1: str | None,
         surname2: str | None,
         nationality: str | None,
-    ) -> PlayerProfileResult | None:
-        ...
+    ) -> PlayerProfileResult | None: ...
 
     def update_by_account_id(
         self,
@@ -48,5 +45,4 @@ class PlayerProfileRepository(Protocol):
         surname1: str | None,
         surname2: str | None,
         nationality: str | None,
-    ) -> PlayerProfileResult | None:
-        ...
+    ) -> PlayerProfileResult | None: ...

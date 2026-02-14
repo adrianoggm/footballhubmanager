@@ -1,10 +1,9 @@
 import json
 import os
-import uuid
 import urllib.error
 import urllib.request
+import uuid
 from datetime import date, timedelta
-
 
 API_ROOT = os.getenv("TEST_API_ROOT", "http://127.0.0.1:8000/api")
 API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
@@ -89,7 +88,9 @@ def test_link_token_happy_path_end_to_end():
     assert status == 200
     pena_guid = penas["items"][0]["guid"]
 
-    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200
     token = link["token"]
 
@@ -102,7 +103,9 @@ def test_link_token_happy_path_end_to_end():
     )
     assert status == 200, consume
 
-    status, players = _request("GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"])
+    status, players = _request(
+        "GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"]
+    )
     assert status == 200
     assert any(
         p["name"] == user_payload["name"] and p["nickname"] == "Killer" and p["position"] == "GK"
@@ -140,7 +143,9 @@ def test_admin_can_create_and_query_pena_seasons():
     assert status == 201, created
     season_guid = created["guid"]
 
-    status, listing = _request("GET", f"{API_V1}/penas/{pena_guid}/seasons", token=admin_auth["token"])
+    status, listing = _request(
+        "GET", f"{API_V1}/penas/{pena_guid}/seasons", token=admin_auth["token"]
+    )
     assert status == 200, listing
     assert any(item["guid"] == season_guid for item in listing["items"])
 
@@ -191,7 +196,9 @@ def test_membership_user_can_update_get_status_and_leave():
     assert status == 200, penas
     pena_guid = penas["items"][0]["guid"]
 
-    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200, link
 
     user_auth, _ = _register_user()
@@ -214,15 +221,21 @@ def test_membership_user_can_update_get_status_and_leave():
     assert updated["position"] == "CM"
     assert updated["role"] == "member"
 
-    status, mine = _request("GET", f"{API_V1}/players/me/penas/{pena_guid}", token=user_auth["token"])
+    status, mine = _request(
+        "GET", f"{API_V1}/players/me/penas/{pena_guid}", token=user_auth["token"]
+    )
     assert status == 200, mine
     assert mine["nickname"] == "After"
     assert mine["position"] == "CM"
 
-    status, _ = _request("DELETE", f"{API_V1}/penas/{pena_guid}/players/me", token=user_auth["token"])
+    status, _ = _request(
+        "DELETE", f"{API_V1}/penas/{pena_guid}/players/me", token=user_auth["token"]
+    )
     assert status == 204
 
-    status, mine_after = _request("GET", f"{API_V1}/players/me/penas/{pena_guid}", token=user_auth["token"])
+    status, mine_after = _request(
+        "GET", f"{API_V1}/players/me/penas/{pena_guid}", token=user_auth["token"]
+    )
     assert status == 403, mine_after
     assert mine_after["detail"] == "User does not belong to this pena"
 
@@ -233,7 +246,9 @@ def test_membership_admin_can_update_get_and_remove_player():
     assert status == 200, penas
     pena_guid = penas["items"][0]["guid"]
 
-    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200, link
 
     user_auth, _ = _register_user()

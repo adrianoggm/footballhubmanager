@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import pytest
-
 from persistence.application.ports.pena_link_repository import (
     PenaLinkTokenResult,
     PenaNotManagedByAdminError,

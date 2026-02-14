@@ -1,6 +1,3 @@
-from fastapi import Depends, Header, HTTPException, status
-from sqlalchemy.orm import Session
-
 from auth.application.use_cases.authorize_access import (
     AccessDeniedError,
     AuthorizePenaAccessUseCase,
@@ -11,7 +8,9 @@ from auth.infrastructure.repositories.sqlalchemy_access_repository import (
     SqlAlchemyAccessRepository,
 )
 from auth.session import SessionData, get_session
+from fastapi import Depends, Header, HTTPException, status
 from persistence.module import get_db
+from sqlalchemy.orm import Session
 
 
 def _extract_token(authorization: str | None, x_session_token: str | None) -> str | None:

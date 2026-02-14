@@ -1,11 +1,10 @@
 import time
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-
 from auth.session import get_session
 from persistence.domain.entity.base import Base
 from persistence.domain.entity.user_session import UserSession
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def _db_session() -> Session:

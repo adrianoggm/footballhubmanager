@@ -1,10 +1,9 @@
 import json
 import os
-import uuid
 import urllib.error
 import urllib.request
+import uuid
 from datetime import date, timedelta
-
 
 API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
 
@@ -115,7 +114,9 @@ def test_season_competition_happy_path():
     _link_user_to_pena(admin_token, pena_guid, user_one["token"])
     _link_user_to_pena(admin_token, pena_guid, user_two["token"])
 
-    status, active = _request("GET", f"{API_V1}/penas/{pena_guid}/seasons/active", token=admin_token)
+    status, active = _request(
+        "GET", f"{API_V1}/penas/{pena_guid}/seasons/active", token=admin_token
+    )
     assert status == 200, active
     assert active["guid"] == season_guid
 

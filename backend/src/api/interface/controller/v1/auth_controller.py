@@ -1,35 +1,34 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-
-from auth.dependencies import get_current_session
 from auth.application.use_cases.login import (
     InvalidCredentialsError,
     LoginAdminUseCase,
     LoginPayload,
     LoginUserUseCase,
 )
+from auth.dependencies import get_current_session
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
 from auth.session import create_session, invalidate_session
+from fastapi import APIRouter, Depends, HTTPException, status
 from persistence.application.use_cases import (
     AdminRegistration,
+    AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
     InvalidRegistrationDataError,
-    AdminUsernameExistsError,
     RegisterAdminUseCase,
     RegisterUserUseCase,
-    UserRegistration,
     UserInvalidNationalityError,
+    UserRegistration,
     UserUsernameExistsError,
 )
 from persistence.infrastructure.repository.db.registration_repository import (
     SqlAlchemyRegistrationRepository,
 )
 from persistence.module import get_db
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -133,7 +132,9 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
         logger.warning("User register exists: %s", payload.username)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
     except InvalidRegistrationDataError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user registration data")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user registration data"
+        )
     except UserInvalidNationalityError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
 
@@ -170,7 +171,9 @@ def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db))
         logger.warning("Admin register exists: %s", payload.username)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
     except InvalidAdminRegistrationDataError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid admin registration data")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid admin registration data"
+        )
 
     session = create_session(
         db,

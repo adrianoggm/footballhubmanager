@@ -1,12 +1,9 @@
 import math
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-
 from app.config import config as app_config
 from auth.dependencies import authorize_pena_access, get_current_session, require_admin
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.use_cases import (
     GeneratePenaLinkTokenUseCase,
     GetPenasUseCase,
@@ -24,6 +21,8 @@ from persistence.infrastructure.repository.db.pena_query_repository import (
     SqlAlchemyPenaQueryRepository,
 )
 from persistence.module import get_db
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -120,7 +119,9 @@ def create_link_token(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin does not manage this pena",
         )
-    return LinkTokenResponse(token=created.token, pena_guid=created.pena_guid, expires_at=created.expires_at)
+    return LinkTokenResponse(
+        token=created.token, pena_guid=created.pena_guid, expires_at=created.expires_at
+    )
 
 
 @router.post("/penas/link/consume")

@@ -1,9 +1,8 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from auth.application.models import AuthAccount
 from auth.application.ports import AuthAccountRepository
 from persistence.domain.entity import AdminAccounts, PlayerAccount
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyAuthAccountRepository(AuthAccountRepository):

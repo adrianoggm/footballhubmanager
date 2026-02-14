@@ -3,7 +3,6 @@ import hashlib
 import os
 import secrets
 
-
 _ITERATIONS = 260000
 _ALGO = "sha256"
 

@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-
 from persistence.application.ports.season_competition_repository import (
     InvalidSeasonPlayerStatsError,
     MatchResult,
@@ -15,10 +14,12 @@ from persistence.application.ports.season_competition_repository import (
     SeasonNotFoundError,
     SeasonPlayerAlreadyRegisteredError,
     SeasonPlayerFilters,
-    SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
     SeasonResult,
+)
+from persistence.application.ports.season_competition_repository import (
+    SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
 from persistence.application.use_cases.manage_season_competition import (
     InvalidSeasonDataError,
@@ -32,10 +33,14 @@ from persistence.application.use_cases.manage_season_competition import (
     SeasonMatchCreate,
     SeasonMatchInvalidPlayersError,
     SeasonMatchResultUpdate,
-    SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
     SeasonPlayerNotFoundError,
-    SeasonPlayerNotInPenaError as UseCaseSeasonPlayerNotInPenaError,
     SeasonPlayerStatsUpdate,
+)
+from persistence.application.use_cases.manage_season_competition import (
+    SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
+)
+from persistence.application.use_cases.manage_season_competition import (
+    SeasonPlayerNotInPenaError as UseCaseSeasonPlayerNotInPenaError,
 )
 
 
@@ -55,7 +60,9 @@ class _FakeRepo:
 
     @staticmethod
     def _season() -> SeasonResult:
-        return SeasonResult(guid="season-guid", start_date=date(2024, 1, 1), end_date=date(2024, 12, 31))
+        return SeasonResult(
+            guid="season-guid", start_date=date(2024, 1, 1), end_date=date(2024, 12, 31)
+        )
 
     @staticmethod
     def _player() -> SeasonPlayerResult:
@@ -96,17 +103,26 @@ class _FakeRepo:
             return None
         return self._season()
 
-    def create_season_for_admin(self, *, pena_guid: str, admin_id: int, start_date: date, end_date: date):
+    def create_season_for_admin(
+        self, *, pena_guid: str, admin_id: int, start_date: date, end_date: date
+    ):
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
         if self.should_raise_access_denied:
             raise PenaNotManagedByAdminError()
         if self.should_raise_overlap:
             raise SeasonDateRangeOverlapError()
-        self.last_payload = {"pena_guid": pena_guid, "admin_id": admin_id, "start_date": start_date, "end_date": end_date}
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "admin_id": admin_id,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
         return self._season()
 
-    def register_player_for_admin(self, *, pena_guid: str, season_guid: str, admin_id: int, player_guid: str):
+    def register_player_for_admin(
+        self, *, pena_guid: str, season_guid: str, admin_id: int, player_guid: str
+    ):
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
         if self.should_raise_access_denied:
@@ -119,7 +135,12 @@ class _FakeRepo:
             raise PlayerNotInPenaError()
         if self.should_raise_already_registered:
             raise SeasonPlayerAlreadyRegisteredError()
-        self.last_payload = {"pena_guid": pena_guid, "season_guid": season_guid, "admin_id": admin_id, "player_guid": player_guid}
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guid": season_guid,
+            "admin_id": admin_id,
+            "player_guid": player_guid,
+        }
         return self._player()
 
     def update_player_stats_for_admin(self, **kwargs):
@@ -130,7 +151,17 @@ class _FakeRepo:
         self.last_payload = kwargs
         return self._player()
 
-    def list_season_players(self, *, pena_guid: str, season_guid: str, filters: SeasonPlayerFilters, page: int, page_size: int, order_by: str, order_dir: str):
+    def list_season_players(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        filters: SeasonPlayerFilters,
+        page: int,
+        page_size: int,
+        order_by: str,
+        order_dir: str,
+    ):
         self.last_payload = {
             "pena_guid": pena_guid,
             "season_guid": season_guid,
@@ -140,9 +171,20 @@ class _FakeRepo:
             "order_by": order_by,
             "order_dir": order_dir,
         }
-        return SeasonPlayersPageResult(items=[self._player()], page=page, page_size=page_size, total=1)
+        return SeasonPlayersPageResult(
+            items=[self._player()], page=page, page_size=page_size, total=1
+        )
 
-    def create_match_for_admin(self, *, pena_guid: str, season_guid: str, admin_id: int, home_player_guid: str, away_player_guid: str, match_date: date):
+    def create_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        home_player_guid: str,
+        away_player_guid: str,
+        match_date: date,
+    ):
         if self.should_raise_same_player_match:
             raise SamePlayerMatchError()
         self.last_payload = {
@@ -160,8 +202,15 @@ class _FakeRepo:
         return self._match()
 
     def get_standings(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
-        self.last_payload = {"pena_guid": pena_guid, "season_guid": season_guid, "page": page, "page_size": page_size}
-        return SeasonPlayersPageResult(items=[self._player()], page=page, page_size=page_size, total=1)
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guid": season_guid,
+            "page": page,
+            "page_size": page_size,
+        }
+        return SeasonPlayersPageResult(
+            items=[self._player()], page=page, page_size=page_size, total=1
+        )
 
 
 def test_get_active_maps_not_found_and_passes_reference_date():
@@ -186,7 +235,9 @@ def test_create_season_validates_range_and_maps_errors():
         )
 
     with pytest.raises(PenaSeasonDateOverlapError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_overlap=True)).create_season_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_overlap=True)
+        ).create_season_for_admin(
             pena_guid="pena-guid",
             admin_id=1,
             data=SeasonCreate(start_date=date(2025, 1, 1), end_date=date(2025, 12, 1)),
@@ -195,14 +246,18 @@ def test_create_season_validates_range_and_maps_errors():
 
 def test_register_player_maps_expected_errors():
     with pytest.raises(UseCaseSeasonPlayerNotInPenaError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_player_not_in_pena=True)).register_player_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_player_not_in_pena=True)
+        ).register_player_for_admin(
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
             player_guid="player-guid",
         )
     with pytest.raises(UseCaseSeasonPlayerAlreadyRegisteredError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_already_registered=True)).register_player_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_already_registered=True)
+        ).register_player_for_admin(
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
@@ -233,7 +288,9 @@ def test_update_player_stats_validates_payload_and_values():
 
 def test_update_player_stats_maps_invalid_stats_error():
     with pytest.raises(InvalidSeasonPlayerUpdateDataError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_invalid_stats=True)).update_player_stats_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_invalid_stats=True)
+        ).update_player_stats_for_admin(
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
@@ -258,7 +315,9 @@ def test_list_players_and_standings_passthrough():
     assert page.page_size == 5
     assert page.total == 1
 
-    standings = use_case.get_standings(pena_guid="pena-guid", season_guid="season-guid", page=1, page_size=10)
+    standings = use_case.get_standings(
+        pena_guid="pena-guid", season_guid="season-guid", page=1, page_size=10
+    )
     assert standings.total == 1
 
 
@@ -317,7 +376,9 @@ def test_update_match_rejects_negative_scores():
 
 def test_maps_generic_access_and_not_found_errors():
     with pytest.raises(PenaSeasonPenaNotFoundError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_pena_not_found=True)).register_player_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_pena_not_found=True)
+        ).register_player_for_admin(
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
@@ -325,7 +386,9 @@ def test_maps_generic_access_and_not_found_errors():
         )
 
     with pytest.raises(PenaSeasonAccessDeniedError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_access_denied=True)).register_player_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_access_denied=True)
+        ).register_player_for_admin(
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
@@ -333,7 +396,9 @@ def test_maps_generic_access_and_not_found_errors():
         )
 
     with pytest.raises(SeasonPlayerNotFoundError):
-        ManageSeasonCompetitionUseCase(_FakeRepo(should_raise_player_not_found=True)).register_player_for_admin(
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_player_not_found=True)
+        ).register_player_for_admin(
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,

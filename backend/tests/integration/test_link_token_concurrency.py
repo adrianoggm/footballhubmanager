@@ -1,10 +1,9 @@
 import json
 import os
 import threading
-import uuid
 import urllib.error
 import urllib.request
-
+import uuid
 
 API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
 
@@ -68,7 +67,9 @@ def test_link_token_is_single_use_under_concurrency():
     assert status == 200, penas
     pena_guid = penas["items"][0]["guid"]
 
-    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200, link
     token = link["token"]
 
@@ -111,7 +112,9 @@ def test_link_token_is_single_use_under_concurrency():
     # Exactly one successful consume, second must fail because token is single-use.
     assert statuses == [200, 400], results
 
-    status, players = _request("GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"])
+    status, players = _request(
+        "GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"]
+    )
     assert status == 200, players
     linked_guids = {item["guid"] for item in players["items"]}
     linked_count = int(user_a_player_guid in linked_guids) + int(user_b_player_guid in linked_guids)
@@ -124,7 +127,9 @@ def test_link_token_same_user_double_consume_concurrently():
     assert status == 200, penas
     pena_guid = penas["items"][0]["guid"]
 
-    status, link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200, link
     token = link["token"]
 
@@ -165,7 +170,9 @@ def test_link_token_same_user_double_consume_concurrently():
     # Same token cannot be consumed twice, even by same user.
     assert statuses == [200, 400], results
 
-    status, players = _request("GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"])
+    status, players = _request(
+        "GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"]
+    )
     assert status == 200, players
     assert sum(1 for item in players["items"] if item["guid"] == user_player_guid) == 1, players
 
@@ -180,7 +187,9 @@ def test_link_token_already_linked_user_concurrent_consume():
     user_player_guid = _player_guid_for_user(user["token"])
 
     # First token links the user to the pena.
-    status, first_link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, first_link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200, first_link
     status, first_consume = _request(
         "POST",
@@ -191,7 +200,9 @@ def test_link_token_already_linked_user_concurrent_consume():
     assert status == 200, first_consume
 
     # Second token should be consumed exactly once even if user is already linked.
-    status, second_link = _request("POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"])
+    status, second_link = _request(
+        "POST", f"{API_V1}/penas/{pena_guid}/link-tokens", token=admin_auth["token"]
+    )
     assert status == 200, second_link
     second_token = second_link["token"]
 
@@ -229,6 +240,8 @@ def test_link_token_already_linked_user_concurrent_consume():
     statuses = sorted(status for status, _ in results)
     assert statuses == [400, 409], results
 
-    status, players = _request("GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"])
+    status, players = _request(
+        "GET", f"{API_V1}/penas/{pena_guid}/players", token=admin_auth["token"]
+    )
     assert status == 200, players
     assert sum(1 for item in players["items"] if item["guid"] == user_player_guid) == 1, players

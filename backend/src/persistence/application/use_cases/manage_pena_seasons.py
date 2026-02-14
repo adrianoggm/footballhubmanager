@@ -3,13 +3,23 @@ from datetime import date
 
 from persistence.application.ports.pena_season_repository import (
     InvalidSeasonDateRangeError as RepositoryInvalidSeasonDateRangeError,
+)
+from persistence.application.ports.pena_season_repository import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
+)
+from persistence.application.ports.pena_season_repository import (
     PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
+)
+from persistence.application.ports.pena_season_repository import (
     PenaSeasonRepository,
     PenaSeasonResult,
     PenaSeasonsPageResult,
-    SeasonNotFoundError as RepositorySeasonNotFoundError,
+)
+from persistence.application.ports.pena_season_repository import (
     SeasonDateRangeOverlapError as RepositorySeasonDateRangeOverlapError,
+)
+from persistence.application.ports.pena_season_repository import (
+    SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
 
 
@@ -66,7 +76,9 @@ class ManagePenaSeasonsUseCase:
     def __init__(self, repository: PenaSeasonRepository):
         self.repository = repository
 
-    def list_for_pena(self, *, pena_guid: str, page: int = 1, page_size: int = 20) -> PenaSeasonsPage:
+    def list_for_pena(
+        self, *, pena_guid: str, page: int = 1, page_size: int = 20
+    ) -> PenaSeasonsPage:
         try:
             result = self.repository.find_for_pena(
                 pena_guid=pena_guid,

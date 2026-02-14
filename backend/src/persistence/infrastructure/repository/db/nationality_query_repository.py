@@ -1,10 +1,9 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.nationality_query_repository import (
     NationalityQueryRepository,
 )
 from persistence.domain.entity import Nationality
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyNationalityQueryRepository(NationalityQueryRepository):
