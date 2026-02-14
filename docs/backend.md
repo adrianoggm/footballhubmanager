@@ -135,6 +135,35 @@ pip install -r requirements.txt
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+## Ruff (Lint + Format)
+
+The backend style standard is:
+
+- Formatter: `ruff format`
+- Lint: `ruff check` with `E`, `F`, and import sorting (`I`)
+- `F401` is allowed only in `__init__.py` files for explicit re-exports
+
+From repository root:
+
+```bash
+backend/.venv/bin/python -m ruff check backend/src backend/tests
+backend/.venv/bin/python -m ruff format --check backend/src backend/tests
+```
+
+## Just Task Runner
+
+`just` recipes are defined at repository root in `justfile`.
+
+Common commands:
+
+```bash
+just bootstrap
+just run-backend
+just lint
+just format
+just test-unit
+```
+
 ## Useful Commands
 
 Run unit tests only:

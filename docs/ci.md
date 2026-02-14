@@ -4,8 +4,18 @@ Workflow file: `.github/workflows/ci.yml`
 
 ## Jobs
 
+- `lint`
 - `unit-tests`
 - `integration-tests`
+
+## Lint
+
+- Uses `ruff` on backend code (`ruff check` + `ruff format --check`):
+
+```bash
+python -m ruff check backend/src backend/tests
+python -m ruff format --check backend/src backend/tests
+```
 
 ## Unit Test Matrix
 
