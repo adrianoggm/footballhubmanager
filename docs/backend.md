@@ -19,6 +19,89 @@ The backend follows a hexagonal structure:
 
 Controllers should stay thin: validate input, invoke a use case, map errors to HTTP responses.
 
+## Architecture Schema
+
+```mermaid
+flowchart LR
+    Client["Client / Frontend / Tests"]
+    C["HTTP Controllers<br/>api/interface/controller/v1"]
+    UC["Application Use Cases<br/>persistence/application/use_cases"]
+    P["Ports (Protocols)<br/>persistence/application/ports"]
+    A["Infrastructure Adapters<br/>persistence/infrastructure/repository/db"]
+    D[(MySQL)]
+    E["Domain Entities<br/>persistence/domain/entity"]
+
+    Client --> C
+    C --> UC
+    UC --> E
+    UC --> P
+    P --> A
+    A --> D
+```
+
+## Layer Responsibilities (SOLID-Oriented)
+
+### 1) Controllers (Interface Layer)
+
+- Main responsibility:
+  - Parse/validate HTTP input, enforce auth dependencies, map use-case errors to HTTP status codes, return response DTOs.
+- SOLID alignment:
+  - `S` (Single Responsibility): only transport concerns.
+  - `O` (Open/Closed): add new endpoints without changing use-case internals.
+  - `D` (Dependency Inversion): depend on use-case abstractions/workflows, not SQL code.
+- Must not do:
+  - Business rules, SQL queries, transaction logic.
+
+### 2) Use Cases (Application Layer)
+
+- Main responsibility:
+  - Orchestrate business flows, enforce application rules, coordinate domain objects through ports.
+- SOLID alignment:
+  - `S`: one use case class per business capability.
+  - `O`: extend behavior with new use cases rather than mutating unrelated ones.
+  - `D`: depend on port interfaces instead of concrete repositories.
+- Must not do:
+  - Framework-specific HTTP handling, direct ORM session operations in controllers.
+
+### 3) Ports (Abstractions)
+
+- Main responsibility:
+  - Define contracts required by use cases (queries, commands, error semantics).
+- SOLID alignment:
+  - `I` (Interface Segregation): small, purpose-driven repository interfaces.
+  - `D`: stable boundary so application stays independent from infrastructure.
+- Must not do:
+  - SQL or persistence implementation details.
+
+### 4) Adapters / Repositories (Infrastructure Layer)
+
+- Main responsibility:
+  - Implement ports using SQLAlchemy and map persistence details to application DTOs/errors.
+- SOLID alignment:
+  - `S`: persistence only.
+  - `L` (Liskov): any adapter implementing a port should be safely replaceable (e.g., DB mock, alternate storage).
+- Must not do:
+  - HTTP concerns or endpoint-level validation.
+
+### 5) Domain Entities (Domain Layer)
+
+- Main responsibility:
+  - Represent core business concepts and invariant data model.
+- SOLID alignment:
+  - `S`: entity behavior/data integrity in one place.
+  - `O`: evolve domain with new entities/value objects without breaking unrelated flows.
+- Must not do:
+  - Framework dependencies (FastAPI, request/response objects).
+
+## Dependency Rule
+
+Dependencies should point inward:
+
+- Controllers -> Use Cases -> Ports <- Adapters
+- Domain stays independent and reusable from the outside layers.
+
+This keeps high-level policy stable while allowing infrastructure details to change.
+
 ## Identifiers
 
 API contracts expose GUIDs, not internal numeric IDs.
