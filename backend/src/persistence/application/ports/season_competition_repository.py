@@ -58,6 +58,70 @@ class MatchResult:
     away_score: int
 
 
+@dataclass(frozen=True)
+class MatchPlayerStatsUpdateData:
+    player_guid: str
+    goals: int
+    assists: int
+    saves: int
+    rating: float
+
+
+@dataclass(frozen=True)
+class MatchPlayerStatsResult:
+    player_guid: str
+    name: str
+    surname1: str
+    surname2: str | None
+    nickname: str | None
+    position: str | None
+    goals: int
+    assists: int
+    saves: int
+    rating: float
+
+
+@dataclass(frozen=True)
+class MatchTeamResult:
+    team_guid: str
+    team_name: str
+    score: int
+    total_assists: int
+    total_saves: int
+    average_rating: float
+    players: list[MatchPlayerStatsResult]
+
+
+@dataclass(frozen=True)
+class MatchDetailResult:
+    guid: str
+    season_guid: str
+    match_date: date
+    home_team: MatchTeamResult
+    away_team: MatchTeamResult
+
+
+@dataclass(frozen=True)
+class MatchSummaryResult:
+    guid: str
+    season_guid: str
+    match_date: date
+    home_team_name: str
+    away_team_name: str
+    home_score: int
+    away_score: int
+    home_players: int
+    away_players: int
+
+
+@dataclass(frozen=True)
+class MatchesPageResult:
+    items: list[MatchSummaryResult]
+    page: int
+    page_size: int
+    total: int
+
+
 class PenaNotFoundError(Exception):
     pass
 
@@ -107,6 +171,14 @@ class MatchPlayersNotInSeasonError(Exception):
 
 
 class SamePlayerMatchError(Exception):
+    pass
+
+
+class InvalidMatchDataError(Exception):
+    pass
+
+
+class MatchStatsMismatchError(Exception):
     pass
 
 
@@ -184,6 +256,47 @@ class SeasonCompetitionRepository(Protocol):
         away_score: int,
         update_standings: bool,
     ) -> MatchResult: ...
+
+    def create_match_with_lineups_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        match_date: date,
+        home_team_name: str | None,
+        away_team_name: str | None,
+        home_player_guids: list[str],
+        away_player_guids: list[str],
+    ) -> MatchDetailResult: ...
+
+    def update_match_stats_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        home_players_stats: list[MatchPlayerStatsUpdateData],
+        away_players_stats: list[MatchPlayerStatsUpdateData],
+    ) -> MatchDetailResult: ...
+
+    def list_season_matches(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        page: int,
+        page_size: int,
+    ) -> MatchesPageResult: ...
+
+    def get_match_detail(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+    ) -> MatchDetailResult: ...
 
     def get_standings(
         self,

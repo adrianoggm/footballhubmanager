@@ -2,10 +2,27 @@ from dataclasses import dataclass
 from datetime import date
 
 from persistence.application.ports.season_competition_repository import (
+    InvalidMatchDataError as RepositoryInvalidMatchDataError,
+)
+from persistence.application.ports.season_competition_repository import (
     InvalidSeasonDateRangeError as RepositoryInvalidSeasonDateRangeError,
 )
 from persistence.application.ports.season_competition_repository import (
     InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
+)
+from persistence.application.ports.season_competition_repository import (
+    MatchDetailResult,
+    MatchesPageResult,
+    MatchPlayerStatsResult,
+    MatchPlayerStatsUpdateData,
+    MatchResult,
+    MatchSummaryResult,
+    MatchTeamResult,
+    SeasonCompetitionRepository,
+    SeasonPlayerFilters,
+    SeasonPlayerResult,
+    SeasonPlayersPageResult,
+    SeasonResult,
 )
 from persistence.application.ports.season_competition_repository import (
     MatchNotFoundError as RepositoryMatchNotFoundError,
@@ -14,12 +31,7 @@ from persistence.application.ports.season_competition_repository import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
 )
 from persistence.application.ports.season_competition_repository import (
-    MatchResult,
-    SeasonCompetitionRepository,
-    SeasonPlayerFilters,
-    SeasonPlayerResult,
-    SeasonPlayersPageResult,
-    SeasonResult,
+    MatchStatsMismatchError as RepositoryMatchStatsMismatchError,
 )
 from persistence.application.ports.season_competition_repository import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
@@ -107,10 +119,38 @@ class SeasonMatchCreate:
 
 
 @dataclass(frozen=True)
+class SeasonMatchTeamCreate:
+    player_guids: list[str]
+    team_name: str | None = None
+
+
+@dataclass(frozen=True)
+class SeasonMatchCreateDetailed:
+    match_date: date
+    home_team: SeasonMatchTeamCreate
+    away_team: SeasonMatchTeamCreate
+
+
+@dataclass(frozen=True)
 class SeasonMatchResultUpdate:
     home_score: int
     away_score: int
     update_standings: bool = True
+
+
+@dataclass(frozen=True)
+class SeasonMatchPlayerStatsUpdate:
+    player_guid: str
+    goals: int = 0
+    assists: int = 0
+    saves: int = 0
+    rating: float = 0.0
+
+
+@dataclass(frozen=True)
+class SeasonMatchStatsUpdate:
+    home_players: list[SeasonMatchPlayerStatsUpdate]
+    away_players: list[SeasonMatchPlayerStatsUpdate]
 
 
 @dataclass(frozen=True)
@@ -124,6 +164,61 @@ class SeasonMatchInfo:
     away_player_name: str
     home_score: int
     away_score: int
+
+
+@dataclass(frozen=True)
+class SeasonMatchPlayerStatsInfo:
+    player_guid: str
+    name: str
+    surname1: str
+    surname2: str | None
+    nickname: str | None
+    position: str | None
+    goals: int
+    assists: int
+    saves: int
+    rating: float
+
+
+@dataclass(frozen=True)
+class SeasonMatchTeamInfo:
+    team_guid: str
+    team_name: str
+    score: int
+    total_assists: int
+    total_saves: int
+    average_rating: float
+    players: list[SeasonMatchPlayerStatsInfo]
+
+
+@dataclass(frozen=True)
+class SeasonMatchDetailInfo:
+    guid: str
+    season_guid: str
+    match_date: date
+    home_team: SeasonMatchTeamInfo
+    away_team: SeasonMatchTeamInfo
+
+
+@dataclass(frozen=True)
+class SeasonMatchSummaryInfo:
+    guid: str
+    season_guid: str
+    match_date: date
+    home_team_name: str
+    away_team_name: str
+    home_score: int
+    away_score: int
+    home_players: int
+    away_players: int
+
+
+@dataclass(frozen=True)
+class SeasonMatchesPage:
+    items: list[SeasonMatchSummaryInfo]
+    page: int
+    page_size: int
+    total: int
 
 
 class InvalidSeasonDataError(Exception):
@@ -171,6 +266,14 @@ class SeasonMatchPlayersNotInSeasonError(Exception):
 
 
 class SeasonMatchInvalidPlayersError(Exception):
+    pass
+
+
+class InvalidSeasonMatchDataError(Exception):
+    pass
+
+
+class SeasonMatchStatsMismatchError(Exception):
     pass
 
 
@@ -387,6 +490,117 @@ class ManageSeasonCompetitionUseCase:
             raise InvalidSeasonPlayerUpdateDataError() from exc
         return self._to_match_info(updated)
 
+    def create_match_with_lineups_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        data: SeasonMatchCreateDetailed,
+    ) -> SeasonMatchDetailInfo:
+        self._validate_team_lineup(data.home_team.player_guids)
+        self._validate_team_lineup(data.away_team.player_guids)
+        if set(data.home_team.player_guids).intersection(set(data.away_team.player_guids)):
+            raise SeasonMatchInvalidPlayersError()
+
+        try:
+            created = self.repository.create_match_with_lineups_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                admin_id=admin_id,
+                match_date=data.match_date,
+                home_team_name=self._clean_name(data.home_team.team_name),
+                away_team_name=self._clean_name(data.away_team.team_name),
+                home_player_guids=data.home_team.player_guids,
+                away_player_guids=data.away_team.player_guids,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositorySamePlayerMatchError as exc:
+            raise SeasonMatchInvalidPlayersError() from exc
+        except RepositoryMatchPlayersNotInSeasonError as exc:
+            raise SeasonMatchPlayersNotInSeasonError() from exc
+        except RepositoryPlayerNotFoundError as exc:
+            raise SeasonPlayerNotFoundError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return self._to_match_detail(created)
+
+    def update_match_stats_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        update: SeasonMatchStatsUpdate,
+    ) -> SeasonMatchDetailInfo:
+        home_stats = self._normalize_player_stats(update.home_players)
+        away_stats = self._normalize_player_stats(update.away_players)
+
+        try:
+            updated = self.repository.update_match_stats_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+                home_players_stats=home_stats,
+                away_players_stats=away_stats,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchStatsMismatchError as exc:
+            raise SeasonMatchStatsMismatchError() from exc
+        except (
+            RepositoryInvalidMatchDataError,
+            RepositoryInvalidSeasonPlayerStatsError,
+        ) as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return self._to_match_detail(updated)
+
+    def list_season_matches(
+        self, *, pena_guid: str, season_guid: str, page: int = 1, page_size: int = 20
+    ) -> SeasonMatchesPage:
+        try:
+            result = self.repository.list_season_matches(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                page=page,
+                page_size=page_size,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        return self._to_matches_page(result)
+
+    def get_match_detail(
+        self, *, pena_guid: str, season_guid: str, match_guid: str
+    ) -> SeasonMatchDetailInfo:
+        try:
+            result = self.repository.get_match_detail(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        return self._to_match_detail(result)
+
     def get_standings(
         self, *, pena_guid: str, season_guid: str, page: int = 1, page_size: int = 20
     ) -> SeasonPlayersPage:
@@ -416,6 +630,51 @@ class ManageSeasonCompetitionUseCase:
             return
         if value is None or value < 0:
             raise InvalidSeasonPlayerUpdateDataError()
+
+    @staticmethod
+    def _validate_team_lineup(player_guids: list[str]) -> None:
+        if not player_guids:
+            raise InvalidSeasonMatchDataError()
+        cleaned = [item.strip() for item in player_guids if item.strip()]
+        if len(cleaned) != len(player_guids):
+            raise InvalidSeasonMatchDataError()
+        if len(set(cleaned)) != len(cleaned):
+            raise SeasonMatchInvalidPlayersError()
+
+    @staticmethod
+    def _clean_name(value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+    @staticmethod
+    def _normalize_player_stats(
+        values: list[SeasonMatchPlayerStatsUpdate],
+    ) -> list[MatchPlayerStatsUpdateData]:
+        if not values:
+            raise InvalidSeasonMatchDataError()
+        result: list[MatchPlayerStatsUpdateData] = []
+        seen_guids: set[str] = set()
+        for item in values:
+            player_guid = item.player_guid.strip()
+            if not player_guid:
+                raise InvalidSeasonMatchDataError()
+            if player_guid in seen_guids:
+                raise InvalidSeasonMatchDataError()
+            if item.goals < 0 or item.assists < 0 or item.saves < 0 or item.rating < 0:
+                raise InvalidSeasonMatchDataError()
+            seen_guids.add(player_guid)
+            result.append(
+                MatchPlayerStatsUpdateData(
+                    player_guid=player_guid,
+                    goals=item.goals,
+                    assists=item.assists,
+                    saves=item.saves,
+                    rating=item.rating,
+                )
+            )
+        return result
 
     @staticmethod
     def _to_season_info(item: SeasonResult) -> SeasonInfo:
@@ -459,4 +718,64 @@ class ManageSeasonCompetitionUseCase:
             away_player_name=item.away_player_name,
             home_score=item.home_score,
             away_score=item.away_score,
+        )
+
+    @classmethod
+    def _to_match_team(cls, item: MatchTeamResult) -> SeasonMatchTeamInfo:
+        return SeasonMatchTeamInfo(
+            team_guid=item.team_guid,
+            team_name=item.team_name,
+            score=item.score,
+            total_assists=item.total_assists,
+            total_saves=item.total_saves,
+            average_rating=item.average_rating,
+            players=[cls._to_match_player(stats) for stats in item.players],
+        )
+
+    @staticmethod
+    def _to_match_player(item: MatchPlayerStatsResult) -> SeasonMatchPlayerStatsInfo:
+        return SeasonMatchPlayerStatsInfo(
+            player_guid=item.player_guid,
+            name=item.name,
+            surname1=item.surname1,
+            surname2=item.surname2,
+            nickname=item.nickname,
+            position=item.position,
+            goals=item.goals,
+            assists=item.assists,
+            saves=item.saves,
+            rating=item.rating,
+        )
+
+    @classmethod
+    def _to_match_detail(cls, item: MatchDetailResult) -> SeasonMatchDetailInfo:
+        return SeasonMatchDetailInfo(
+            guid=item.guid,
+            season_guid=item.season_guid,
+            match_date=item.match_date,
+            home_team=cls._to_match_team(item.home_team),
+            away_team=cls._to_match_team(item.away_team),
+        )
+
+    @staticmethod
+    def _to_match_summary(item: MatchSummaryResult) -> SeasonMatchSummaryInfo:
+        return SeasonMatchSummaryInfo(
+            guid=item.guid,
+            season_guid=item.season_guid,
+            match_date=item.match_date,
+            home_team_name=item.home_team_name,
+            away_team_name=item.away_team_name,
+            home_score=item.home_score,
+            away_score=item.away_score,
+            home_players=item.home_players,
+            away_players=item.away_players,
+        )
+
+    @classmethod
+    def _to_matches_page(cls, page: MatchesPageResult) -> SeasonMatchesPage:
+        return SeasonMatchesPage(
+            items=[cls._to_match_summary(item) for item in page.items],
+            page=page.page,
+            page_size=page.page_size,
+            total=page.total,
         )
