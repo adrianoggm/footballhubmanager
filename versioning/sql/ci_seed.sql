@@ -15,6 +15,15 @@ on duplicate key update
   name = values(name),
   id_admin = values(id_admin);
 
+insert into season (id, guid, id_pena, start_date, end_date)
+values
+  (9151, '00000000-0000-0000-0000-000000009151', 9101, '2024-09-01', '2025-06-30'),
+  (9152, '00000000-0000-0000-0000-000000009152', 9102, '2024-09-01', '2025-06-30')
+on duplicate key update
+  id_pena = values(id_pena),
+  start_date = values(start_date),
+  end_date = values(end_date);
+
 insert into player_account (id, guid, username, password, name)
 values
   (9201, '00000000-0000-0000-0000-000000009201', 'ci_user', 'ci_user_pass', 'CI User')

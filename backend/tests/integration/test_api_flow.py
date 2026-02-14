@@ -3,6 +3,7 @@ import os
 import uuid
 import urllib.error
 import urllib.request
+from datetime import date, timedelta
 
 
 API_ROOT = os.getenv("TEST_API_ROOT", "http://127.0.0.1:8000/api")
@@ -119,6 +120,69 @@ def test_link_token_invalid_token_returns_400():
     )
     assert status == 400
     assert data["detail"] == "Invalid or expired link token"
+
+
+def test_admin_can_create_and_query_pena_seasons():
+    admin_auth, _ = _register_admin()
+    status, penas = _request("GET", f"{API_V1}/penas", token=admin_auth["token"])
+    assert status == 200, penas
+    pena_guid = penas["items"][0]["guid"]
+    today = date.today()
+    start = (today - timedelta(days=10)).isoformat()
+    end = (today + timedelta(days=10)).isoformat()
+
+    status, created = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons",
+        token=admin_auth["token"],
+        payload={"start_date": start, "end_date": end},
+    )
+    assert status == 201, created
+    season_guid = created["guid"]
+
+    status, listing = _request("GET", f"{API_V1}/penas/{pena_guid}/seasons", token=admin_auth["token"])
+    assert status == 200, listing
+    assert any(item["guid"] == season_guid for item in listing["items"])
+
+    status, detail = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}",
+        token=admin_auth["token"],
+    )
+    assert status == 200, detail
+    assert detail["guid"] == season_guid
+
+    status, active = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/active",
+        token=admin_auth["token"],
+    )
+    assert status == 200, active
+    assert active["guid"] == season_guid
+
+    new_end = (today + timedelta(days=20)).isoformat()
+    status, updated = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}",
+        token=admin_auth["token"],
+        payload={"end_date": new_end},
+    )
+    assert status == 200, updated
+    assert updated["end_date"] == new_end
+
+    status, _ = _request(
+        "DELETE",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}",
+        token=admin_auth["token"],
+    )
+    assert status == 204
+
+    status, deleted_detail = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}",
+        token=admin_auth["token"],
+    )
+    assert status == 404, deleted_detail
 
 
 def test_membership_user_can_update_get_status_and_leave():
