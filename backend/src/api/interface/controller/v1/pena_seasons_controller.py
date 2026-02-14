@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from auth.dependencies import authorize_pena_access, require_admin
-from persistence.application.use_cases import (
+from persistence.application.use_cases.manage_pena_seasons import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
     PenaSeasonAccessDeniedError,
