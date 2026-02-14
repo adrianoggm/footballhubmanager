@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import pytest
-
 from persistence.application.ports.pena_membership_repository import (
     PenaMembershipNotFoundError,
     PenaMembershipResult,
@@ -14,11 +13,13 @@ from persistence.application.use_cases.manage_pena_membership import (
     InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
     PenaMembershipAccessDeniedError,
-    PenaMembershipNotFoundError as UseCasePenaMembershipNotFoundError,
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
+)
+from persistence.application.use_cases.manage_pena_membership import (
+    PenaMembershipNotFoundError as UseCasePenaMembershipNotFoundError,
 )
 
 
@@ -131,7 +132,11 @@ class _FakeRepo:
 
     def delete_by_player_for_admin(self, *, pena_guid: str, admin_id: int, player_guid: str):
         self._raise_maybe()
-        self.last_payload = {"pena_guid": pena_guid, "admin_id": admin_id, "player_guid": player_guid}
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "admin_id": admin_id,
+            "player_guid": player_guid,
+        }
 
 
 def test_update_for_user_positive_normalizes_blank_to_none():

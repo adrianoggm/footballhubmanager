@@ -1,8 +1,5 @@
 from datetime import date
 
-from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.season_competition_repository import (
     InvalidSeasonDateRangeError,
     InvalidSeasonPlayerStatsError,
@@ -34,15 +31,15 @@ from persistence.domain.entity import (
     Team,
     TeamPlayer,
 )
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
     def __init__(self, session: Session):
         self.session = session
 
-    def find_active_for_pena(
-        self, *, pena_guid: str, reference_date: date
-    ) -> SeasonResult | None:
+    def find_active_for_pena(self, *, pena_guid: str, reference_date: date) -> SeasonResult | None:
         pena = self._get_pena(pena_guid)
         season = self.session.execute(
             select(Season)
@@ -56,7 +53,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         ).scalar_one_or_none()
         if not season:
             return None
-        return SeasonResult(guid=season.guid, start_date=season.start_date, end_date=season.end_date)
+        return SeasonResult(
+            guid=season.guid, start_date=season.start_date, end_date=season.end_date
+        )
 
     def create_season_for_admin(
         self,
@@ -87,7 +86,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         self.session.add(season)
         self.session.commit()
         self.session.refresh(season)
-        return SeasonResult(guid=season.guid, start_date=season.start_date, end_date=season.end_date)
+        return SeasonResult(
+            guid=season.guid, start_date=season.start_date, end_date=season.end_date
+        )
 
     def register_player_for_admin(
         self,
@@ -229,11 +230,13 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         )
 
         stmt = self._apply_season_player_filters(stmt, filters)
-        stmt = self._apply_player_order(stmt, order_by=order_by, order_dir=order_dir, points_expr=points_expr)
-        total = int(self.session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0)
-        rows = self.session.execute(
-            stmt.limit(page_size).offset((page - 1) * page_size)
-        ).all()
+        stmt = self._apply_player_order(
+            stmt, order_by=order_by, order_dir=order_dir, points_expr=points_expr
+        )
+        total = int(
+            self.session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0
+        )
+        rows = self.session.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
         return SeasonPlayersPageResult(
             items=[self._row_to_player_result(row) for row in rows],
             page=page,
@@ -451,14 +454,18 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         return season
 
     def _get_player(self, player_guid: str) -> Player:
-        player = self.session.execute(select(Player).where(Player.guid == player_guid)).scalar_one_or_none()
+        player = self.session.execute(
+            select(Player).where(Player.guid == player_guid)
+        ).scalar_one_or_none()
         if not player:
             self.session.rollback()
             raise PlayerNotFoundError()
         return player
 
     def _get_player_by_id(self, player_id: int) -> Player:
-        player = self.session.execute(select(Player).where(Player.id == player_id)).scalar_one_or_none()
+        player = self.session.execute(
+            select(Player).where(Player.id == player_id)
+        ).scalar_one_or_none()
         if not player:
             self.session.rollback()
             raise PlayerNotFoundError()
@@ -466,7 +473,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
 
     def _get_pena_player_link(self, *, pena_id: int, player_id: int) -> PenaPlayer:
         link = self.session.execute(
-            select(PenaPlayer).where(PenaPlayer.id_pena == pena_id, PenaPlayer.id_player == player_id)
+            select(PenaPlayer).where(
+                PenaPlayer.id_pena == pena_id, PenaPlayer.id_player == player_id
+            )
         ).scalar_one_or_none()
         if not link:
             self.session.rollback()

@@ -35,5 +35,4 @@ class PenaPlayerQueryRepository(Protocol):
         search: str | None,
         page: int,
         page_size: int,
-    ) -> PenaPlayersPageResult:
-        ...
+    ) -> PenaPlayersPageResult: ...

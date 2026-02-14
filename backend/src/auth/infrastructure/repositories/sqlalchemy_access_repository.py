@@ -1,8 +1,7 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from auth.application.ports import AccessRepository
 from persistence.domain.entity import Pena, PenaPlayer, Player
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyAccessRepository(AccessRepository):

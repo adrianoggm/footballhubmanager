@@ -1,12 +1,13 @@
-from fastapi import APIRouter
-
 from api.interface.controller.v1.auth_controller import router as auth_router
 from api.interface.controller.v1.catalogs_controller import router as catalogs_router
-from api.interface.controller.v1.penas_controller import router as penas_router
-from api.interface.controller.v1.players_controller import router as players_router
 from api.interface.controller.v1.pena_players_controller import router as pena_players_router
 from api.interface.controller.v1.pena_seasons_controller import router as pena_seasons_router
-from api.interface.controller.v1.season_competition_controller import router as season_competition_router
+from api.interface.controller.v1.penas_controller import router as penas_router
+from api.interface.controller.v1.players_controller import router as players_router
+from api.interface.controller.v1.season_competition_controller import (
+    router as season_competition_router,
+)
+from fastapi import APIRouter
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/v1", tags=["auth"])

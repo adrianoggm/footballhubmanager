@@ -2,25 +2,24 @@ import math
 from dataclasses import asdict
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
 from auth.dependencies import authorize_pena_access, require_admin
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from persistence.application.use_cases.manage_pena_seasons import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
     PenaSeasonAccessDeniedError,
     PenaSeasonCreate,
     PenaSeasonDateOverlapError,
-    PenaSeasonPenaNotFoundError,
     PenaSeasonNotFoundError,
+    PenaSeasonPenaNotFoundError,
     PenaSeasonUpdate,
 )
 from persistence.infrastructure.repository.db.pena_season_repository import (
     SqlAlchemyPenaSeasonRepository,
 )
 from persistence.module import get_db
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

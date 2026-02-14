@@ -1,12 +1,11 @@
-from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.pena_player_query_repository import (
     PenaPlayerInfoResult,
     PenaPlayerQueryRepository,
     PenaPlayersPageResult,
 )
 from persistence.domain.entity import Pena, PenaPlayer, Player
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):

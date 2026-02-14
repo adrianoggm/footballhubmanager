@@ -1,6 +1,3 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.pena_membership_repository import (
     PenaMembershipNotFoundError,
     PenaMembershipRepository,
@@ -11,6 +8,8 @@ from persistence.application.ports.pena_membership_repository import (
     UserPlayerNotFoundError,
 )
 from persistence.domain.entity import Pena, PenaPlayer, Player
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyPenaMembershipRepository(PenaMembershipRepository):
@@ -135,7 +134,9 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipRepository):
         return player
 
     def _get_link(self, *, pena_id: int, player_id: int, for_update: bool) -> PenaPlayer:
-        stmt = select(PenaPlayer).where(PenaPlayer.id_pena == pena_id, PenaPlayer.id_player == player_id)
+        stmt = select(PenaPlayer).where(
+            PenaPlayer.id_pena == pena_id, PenaPlayer.id_player == player_id
+        )
         if for_update:
             stmt = stmt.with_for_update()
         link = self.session.execute(stmt).scalar_one_or_none()

@@ -33,12 +33,10 @@ class UserRegistrationRepository(Protocol):
         surname1: str,
         surname2: str | None,
         nationality: str,
-    ) -> RegisteredUserResult:
-        ...
+    ) -> RegisteredUserResult: ...
 
 
 class AdminRegistrationRepository(Protocol):
     def register_admin(
         self, *, username: str, password_hash: str, name: str
-    ) -> RegisteredAdminResult:
-        ...
+    ) -> RegisteredAdminResult: ...

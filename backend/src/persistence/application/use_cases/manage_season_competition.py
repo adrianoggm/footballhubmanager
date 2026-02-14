@@ -3,24 +3,50 @@ from datetime import date
 
 from persistence.application.ports.season_competition_repository import (
     InvalidSeasonDateRangeError as RepositoryInvalidSeasonDateRangeError,
+)
+from persistence.application.ports.season_competition_repository import (
     InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
+)
+from persistence.application.ports.season_competition_repository import (
     MatchNotFoundError as RepositoryMatchNotFoundError,
+)
+from persistence.application.ports.season_competition_repository import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
+)
+from persistence.application.ports.season_competition_repository import (
     MatchResult,
-    PenaNotFoundError as RepositoryPenaNotFoundError,
-    PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
-    PlayerNotFoundError as RepositoryPlayerNotFoundError,
-    PlayerNotInPenaError as RepositoryPlayerNotInPenaError,
-    SamePlayerMatchError as RepositorySamePlayerMatchError,
     SeasonCompetitionRepository,
-    SeasonDateRangeOverlapError as RepositorySeasonDateRangeOverlapError,
-    SeasonNotFoundError as RepositorySeasonNotFoundError,
-    SeasonPlayerAlreadyRegisteredError as RepositorySeasonPlayerAlreadyRegisteredError,
     SeasonPlayerFilters,
-    SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
     SeasonResult,
+)
+from persistence.application.ports.season_competition_repository import (
+    PenaNotFoundError as RepositoryPenaNotFoundError,
+)
+from persistence.application.ports.season_competition_repository import (
+    PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
+)
+from persistence.application.ports.season_competition_repository import (
+    PlayerNotFoundError as RepositoryPlayerNotFoundError,
+)
+from persistence.application.ports.season_competition_repository import (
+    PlayerNotInPenaError as RepositoryPlayerNotInPenaError,
+)
+from persistence.application.ports.season_competition_repository import (
+    SamePlayerMatchError as RepositorySamePlayerMatchError,
+)
+from persistence.application.ports.season_competition_repository import (
+    SeasonDateRangeOverlapError as RepositorySeasonDateRangeOverlapError,
+)
+from persistence.application.ports.season_competition_repository import (
+    SeasonNotFoundError as RepositorySeasonNotFoundError,
+)
+from persistence.application.ports.season_competition_repository import (
+    SeasonPlayerAlreadyRegisteredError as RepositorySeasonPlayerAlreadyRegisteredError,
+)
+from persistence.application.ports.season_competition_repository import (
+    SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
 
 
@@ -152,7 +178,9 @@ class ManageSeasonCompetitionUseCase:
     def __init__(self, repository: SeasonCompetitionRepository):
         self.repository = repository
 
-    def get_active_for_pena(self, *, pena_guid: str, reference_date: date | None = None) -> SeasonInfo:
+    def get_active_for_pena(
+        self, *, pena_guid: str, reference_date: date | None = None
+    ) -> SeasonInfo:
         effective_date = reference_date or date.today()
         try:
             season = self.repository.find_active_for_pena(
@@ -181,7 +209,10 @@ class ManageSeasonCompetitionUseCase:
             raise PenaSeasonPenaNotFoundError() from exc
         except RepositoryPenaNotManagedByAdminError as exc:
             raise PenaSeasonAccessDeniedError() from exc
-        except (RepositoryInvalidSeasonDateRangeError, RepositorySeasonDateRangeOverlapError) as exc:
+        except (
+            RepositoryInvalidSeasonDateRangeError,
+            RepositorySeasonDateRangeOverlapError,
+        ) as exc:
             raise PenaSeasonDateOverlapError() from exc
         return self._to_season_info(created)
 

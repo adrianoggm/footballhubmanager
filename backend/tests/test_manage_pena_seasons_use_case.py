@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-
 from persistence.application.ports.pena_season_repository import (
     InvalidSeasonDateRangeError,
     PenaNotFoundError,
@@ -61,7 +60,9 @@ class _FakeRepo:
             return None
         return self._sample_result()
 
-    def find_active_for_pena(self, *, pena_guid: str, reference_date: date) -> PenaSeasonResult | None:
+    def find_active_for_pena(
+        self, *, pena_guid: str, reference_date: date
+    ) -> PenaSeasonResult | None:
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
         self.last_payload = {"pena_guid": pena_guid, "reference_date": reference_date}
@@ -147,7 +148,11 @@ class _FakeRepo:
             raise PenaNotManagedByAdminError()
         if self.should_raise_season_not_found:
             raise SeasonNotFoundError()
-        self.last_payload = {"pena_guid": pena_guid, "season_guid": season_guid, "admin_id": admin_id}
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guid": season_guid,
+            "admin_id": admin_id,
+        }
 
 
 def test_list_for_pena_returns_page_data():

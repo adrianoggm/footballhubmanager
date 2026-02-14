@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from persistence.application.ports.player_profile_repository import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
+)
+from persistence.application.ports.player_profile_repository import (
     PlayerProfileRepository,
 )
 from persistence.application.use_cases.get_player_profile import (
@@ -34,7 +36,9 @@ class UpdatePlayerProfileUseCase:
         normalized_name = update.name.strip() if update.name is not None else None
         normalized_surname1 = update.surname1.strip() if update.surname1 is not None else None
         normalized_surname2 = update.surname2.strip() if update.surname2 is not None else None
-        normalized_nationality = update.nationality.strip() if update.nationality is not None else None
+        normalized_nationality = (
+            update.nationality.strip() if update.nationality is not None else None
+        )
 
         if normalized_name == "" or normalized_surname1 == "" or normalized_nationality == "":
             raise InvalidPlayerUpdateDataError()
@@ -60,7 +64,9 @@ class UpdatePlayerProfileUseCase:
         normalized_name = update.name.strip() if update.name is not None else None
         normalized_surname1 = update.surname1.strip() if update.surname1 is not None else None
         normalized_surname2 = update.surname2.strip() if update.surname2 is not None else None
-        normalized_nationality = update.nationality.strip() if update.nationality is not None else None
+        normalized_nationality = (
+            update.nationality.strip() if update.nationality is not None else None
+        )
 
         if normalized_name == "" or normalized_surname1 == "" or normalized_nationality == "":
             raise InvalidPlayerUpdateDataError()

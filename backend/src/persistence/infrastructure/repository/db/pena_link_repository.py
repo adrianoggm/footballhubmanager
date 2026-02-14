@@ -1,10 +1,6 @@
 import secrets
 import time
 
-from sqlalchemy import delete, select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.pena_link_repository import (
     InvalidOrExpiredLinkTokenError,
     PenaLinkRepository,
@@ -14,6 +10,9 @@ from persistence.application.ports.pena_link_repository import (
     UserPlayerNotFoundError,
 )
 from persistence.domain.entity import Pena, PenaLinkToken, PenaPlayer, Player
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
@@ -52,7 +51,9 @@ class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
         already_linked = False
         try:
             with self.session.begin():
-                self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.expires_at <= now_ts))
+                self.session.execute(
+                    delete(PenaLinkToken).where(PenaLinkToken.expires_at <= now_ts)
+                )
 
                 link = self.session.execute(
                     select(PenaLinkToken)

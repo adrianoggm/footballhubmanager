@@ -113,8 +113,7 @@ class SamePlayerMatchError(Exception):
 class SeasonCompetitionRepository(Protocol):
     def find_active_for_pena(
         self, *, pena_guid: str, reference_date: date
-    ) -> SeasonResult | None:
-        ...
+    ) -> SeasonResult | None: ...
 
     def create_season_for_admin(
         self,
@@ -123,8 +122,7 @@ class SeasonCompetitionRepository(Protocol):
         admin_id: int,
         start_date: date,
         end_date: date,
-    ) -> SeasonResult:
-        ...
+    ) -> SeasonResult: ...
 
     def register_player_for_admin(
         self,
@@ -133,8 +131,7 @@ class SeasonCompetitionRepository(Protocol):
         season_guid: str,
         admin_id: int,
         player_guid: str,
-    ) -> SeasonPlayerResult:
-        ...
+    ) -> SeasonPlayerResult: ...
 
     def update_player_stats_for_admin(
         self,
@@ -151,8 +148,7 @@ class SeasonCompetitionRepository(Protocol):
         draws: int | None,
         quality_level_provided: bool,
         quality_level: float | None,
-    ) -> SeasonPlayerResult:
-        ...
+    ) -> SeasonPlayerResult: ...
 
     def list_season_players(
         self,
@@ -164,8 +160,7 @@ class SeasonCompetitionRepository(Protocol):
         page_size: int,
         order_by: str,
         order_dir: str,
-    ) -> SeasonPlayersPageResult:
-        ...
+    ) -> SeasonPlayersPageResult: ...
 
     def create_match_for_admin(
         self,
@@ -176,8 +171,7 @@ class SeasonCompetitionRepository(Protocol):
         home_player_guid: str,
         away_player_guid: str,
         match_date: date,
-    ) -> MatchResult:
-        ...
+    ) -> MatchResult: ...
 
     def update_match_result_for_admin(
         self,
@@ -189,8 +183,7 @@ class SeasonCompetitionRepository(Protocol):
         home_score: int,
         away_score: int,
         update_standings: bool,
-    ) -> MatchResult:
-        ...
+    ) -> MatchResult: ...
 
     def get_standings(
         self,
@@ -199,5 +192,4 @@ class SeasonCompetitionRepository(Protocol):
         season_guid: str,
         page: int,
         page_size: int,
-    ) -> SeasonPlayersPageResult:
-        ...
+    ) -> SeasonPlayersPageResult: ...

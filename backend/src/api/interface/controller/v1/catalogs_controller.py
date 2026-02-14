@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-
 from persistence.application.use_cases.get_nationalities import GetNationalitiesUseCase
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
 )
 from persistence.module import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

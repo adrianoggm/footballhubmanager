@@ -1,6 +1,3 @@
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.registration_repository import (
     AdminRegistrationRepository,
     DuplicateUsernameError,
@@ -10,6 +7,8 @@ from persistence.application.ports.registration_repository import (
     UserRegistrationRepository,
 )
 from persistence.domain.entity import AdminAccounts, Pena, Player, PlayerAccount
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistrationRepository):

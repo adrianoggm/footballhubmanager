@@ -28,8 +28,7 @@ class UserPlayerNotFoundError(Exception):
 class PenaLinkRepository(Protocol):
     def create_token_for_admin_pena(
         self, *, admin_id: int, pena_guid: str, ttl_seconds: int
-    ) -> PenaLinkTokenResult:
-        ...
+    ) -> PenaLinkTokenResult: ...
 
     def consume_token_for_user(
         self,
@@ -38,5 +37,4 @@ class PenaLinkRepository(Protocol):
         account_id: int,
         nickname: str | None,
         position: str | None,
-    ) -> None:
-        ...
+    ) -> None: ...

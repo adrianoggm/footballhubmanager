@@ -9,6 +9,18 @@ cd backend
 .venv/bin/python -m pytest tests --ignore=tests/integration -q
 ```
 
+From repository root (with `just`):
+
+```bash
+just test-unit
+```
+
+Full local quality gate:
+
+```bash
+just check
+```
+
 ## Integration Tests
 
 Requires backend listening on `127.0.0.1:8000` and a reachable MySQL database.
@@ -16,6 +28,12 @@ Requires backend listening on `127.0.0.1:8000` and a reachable MySQL database.
 ```bash
 cd backend
 .venv/bin/python -m pytest tests/integration -q
+```
+
+From repository root (with `just`):
+
+```bash
+just test-integration
 ```
 
 ## CI-like Local Run

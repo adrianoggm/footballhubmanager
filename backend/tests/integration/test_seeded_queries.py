@@ -3,7 +3,6 @@ import os
 import urllib.error
 import urllib.request
 
-
 API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
 
 CI_ADMIN_USERNAME = "ci_admin"

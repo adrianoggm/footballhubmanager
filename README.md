@@ -19,5 +19,9 @@ Project documentation is organized in the `docs/` directory.
 
 1. Follow [Project Overview](docs/overview.md).
 2. Start MySQL with [Docker Guide](docs/docker.md).
-3. Run backend using [Backend Guide](docs/backend.md).
-4. Run tests using [Testing Guide](docs/testing.md).
+3. (Recommended) use `just` as the task runner:
+   - `just bootstrap`
+   - `just run-backend`
+   - `just check` (format + lint + unit tests)
+4. Run backend using [Backend Guide](docs/backend.md).
+5. Run tests using [Testing Guide](docs/testing.md).

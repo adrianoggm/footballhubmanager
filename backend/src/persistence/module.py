@@ -1,9 +1,8 @@
+from persistence.config import initialize_config
+from persistence.domain.entity import Base
+from persistence.infrastructure.repository.db.repository import BaseRepository
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from persistence.domain.entity import Base
-from persistence.config import initialize_config
-from persistence.infrastructure.repository.db.repository import BaseRepository
 
 # Initialize config
 config = initialize_config()
@@ -36,12 +35,14 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Tables are created via Docker init script, not here
 
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
 
 # Exports
 __all__ = ["config", "engine", "SessionLocal", "get_db", "Base", "BaseRepository"]

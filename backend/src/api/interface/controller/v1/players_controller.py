@@ -1,14 +1,11 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-
 from auth.dependencies import authorize_player_access, get_current_session
+from fastapi import APIRouter, Depends, HTTPException, status
 from persistence.application.use_cases import (
     GetPlayerProfileUseCase,
-    PlayerInvalidNationalityError,
     InvalidPlayerUpdateDataError,
+    PlayerInvalidNationalityError,
     PlayerProfile,
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
@@ -17,6 +14,8 @@ from persistence.infrastructure.repository.db.player_profile_repository import (
     SqlAlchemyPlayerProfileRepository,
 )
 from persistence.module import get_db
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -82,7 +81,9 @@ def update_me(
     except PlayerInvalidNationalityError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
     except InvalidPlayerUpdateDataError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid player update data")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid player update data"
+        )
     return PlayerProfileResponse(**asdict(profile))
 
 

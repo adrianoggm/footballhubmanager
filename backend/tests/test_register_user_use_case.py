@@ -2,18 +2,19 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
-
 from persistence.application.ports.registration_repository import (
     DuplicateUsernameError,
-    InvalidNationalityError as RepositoryInvalidNationalityError,
     RegisteredUserResult,
+)
+from persistence.application.ports.registration_repository import (
+    InvalidNationalityError as RepositoryInvalidNationalityError,
 )
 from persistence.application.use_cases.register_user import (
     InvalidNationalityError,
     InvalidRegistrationDataError,
     RegisterUserUseCase,
-    UserRegistration,
     UsernameAlreadyExistsError,
+    UserRegistration,
 )
 
 
@@ -46,7 +47,9 @@ class _FakeRepo:
             "surname2": surname2,
             "nationality": nationality,
         }
-        return RegisteredUserResult(account_id=1, account_guid="acc-guid", player_guid="player-guid")
+        return RegisteredUserResult(
+            account_id=1, account_guid="acc-guid", player_guid="player-guid"
+        )
 
 
 def test_register_user_positive_normalizes_and_persists():

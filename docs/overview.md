@@ -22,6 +22,7 @@ PenaHub is a monorepo for managing football fan clubs (penas), members, seasons,
 - Docker and Docker Compose plugin (`docker compose`).
 - Python 3.10+.
 - Node.js 18+.
+- `just` (recommended task runner).
 
 ## Local Setup Summary
 
@@ -54,6 +55,17 @@ python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 cd ../frontend
 npm install
 npm run dev
+```
+
+## Optional: Just-Based Workflow
+
+From repository root:
+
+```bash
+just bootstrap
+just run-backend
+just test-unit
+just check
 ```
 
 ## Service URLs

@@ -35,11 +35,13 @@ class UserPlayerNotFoundError(Exception):
 
 
 class PenaMembershipRepository(Protocol):
-    def get_by_pena_and_player(self, *, pena_guid: str, player_guid: str) -> PenaMembershipResult:
-        ...
+    def get_by_pena_and_player(
+        self, *, pena_guid: str, player_guid: str
+    ) -> PenaMembershipResult: ...
 
-    def get_by_pena_and_account(self, *, pena_guid: str, account_id: int) -> PenaMembershipResult:
-        ...
+    def get_by_pena_and_account(
+        self, *, pena_guid: str, account_id: int
+    ) -> PenaMembershipResult: ...
 
     def update_by_account(
         self,
@@ -50,16 +52,14 @@ class PenaMembershipRepository(Protocol):
         nickname: str | None,
         position_provided: bool,
         position: str | None,
-    ) -> PenaMembershipResult:
-        ...
+    ) -> PenaMembershipResult: ...
 
     def delete_by_account(
         self,
         *,
         pena_guid: str,
         account_id: int,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def update_by_player_for_admin(
         self,
@@ -71,8 +71,7 @@ class PenaMembershipRepository(Protocol):
         nickname: str | None,
         position_provided: bool,
         position: str | None,
-    ) -> PenaMembershipResult:
-        ...
+    ) -> PenaMembershipResult: ...
 
     def delete_by_player_for_admin(
         self,
@@ -80,5 +79,4 @@ class PenaMembershipRepository(Protocol):
         pena_guid: str,
         admin_id: int,
         player_guid: str,
-    ) -> None:
-        ...
+    ) -> None: ...

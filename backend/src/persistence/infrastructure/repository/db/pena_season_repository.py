@@ -1,8 +1,5 @@
 from datetime import date
 
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
 from persistence.application.ports.pena_season_repository import (
     InvalidSeasonDateRangeError,
     PenaNotFoundError,
@@ -10,19 +7,19 @@ from persistence.application.ports.pena_season_repository import (
     PenaSeasonRepository,
     PenaSeasonResult,
     PenaSeasonsPageResult,
-    SeasonNotFoundError,
     SeasonDateRangeOverlapError,
+    SeasonNotFoundError,
 )
 from persistence.domain.entity import Pena, Season
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 
 class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
     def __init__(self, session: Session):
         self.session = session
 
-    def find_for_pena(
-        self, *, pena_guid: str, page: int, page_size: int
-    ) -> PenaSeasonsPageResult:
+    def find_for_pena(self, *, pena_guid: str, page: int, page_size: int) -> PenaSeasonsPageResult:
         pena = self._get_pena(pena_guid)
 
         stmt = (
