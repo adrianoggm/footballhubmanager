@@ -182,6 +182,14 @@ class MatchStatsMismatchError(Exception):
     pass
 
 
+class MatchLineupLockedError(Exception):
+    pass
+
+
+class SeasonPlayerHasMatchesError(Exception):
+    pass
+
+
 class SeasonCompetitionRepository(Protocol):
     def find_active_for_pena(
         self, *, pena_guid: str, reference_date: date
@@ -205,6 +213,15 @@ class SeasonCompetitionRepository(Protocol):
         player_guid: str,
     ) -> SeasonPlayerResult: ...
 
+    def register_players_for_admin_bulk(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        player_guids: list[str],
+    ) -> list[SeasonPlayerResult]: ...
+
     def update_player_stats_for_admin(
         self,
         *,
@@ -221,6 +238,15 @@ class SeasonCompetitionRepository(Protocol):
         quality_level_provided: bool,
         quality_level: float | None,
     ) -> SeasonPlayerResult: ...
+
+    def unregister_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        player_guid: str,
+    ) -> None: ...
 
     def list_season_players(
         self,
@@ -281,6 +307,32 @@ class SeasonCompetitionRepository(Protocol):
         away_players_stats: list[MatchPlayerStatsUpdateData],
     ) -> MatchDetailResult: ...
 
+    def update_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        match_date_provided: bool,
+        match_date: date | None,
+        home_team_name_provided: bool,
+        home_team_name: str | None,
+        away_team_name_provided: bool,
+        away_team_name: str | None,
+    ) -> MatchDetailResult: ...
+
+    def update_match_lineups_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        home_player_guids: list[str],
+        away_player_guids: list[str],
+    ) -> MatchDetailResult: ...
+
     def list_season_matches(
         self,
         *,
@@ -297,6 +349,15 @@ class SeasonCompetitionRepository(Protocol):
         season_guid: str,
         match_guid: str,
     ) -> MatchDetailResult: ...
+
+    def delete_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> None: ...
 
     def get_standings(
         self,

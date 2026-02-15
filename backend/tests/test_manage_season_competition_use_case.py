@@ -7,6 +7,7 @@ from persistence.application.ports.season_competition_repository import (
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
     MatchesPageResult,
+    MatchLineupLockedError,
     MatchPlayerStatsResult,
     MatchResult,
     MatchStatsMismatchError,
@@ -21,6 +22,7 @@ from persistence.application.ports.season_competition_repository import (
     SeasonNotFoundError,
     SeasonPlayerAlreadyRegisteredError,
     SeasonPlayerFilters,
+    SeasonPlayerHasMatchesError,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
     SeasonResult,
@@ -31,6 +33,7 @@ from persistence.application.ports.season_competition_repository import (
 from persistence.application.use_cases.manage_season_competition import (
     InvalidSeasonDataError,
     InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonCompetitionUseCase,
     PenaSeasonAccessDeniedError,
@@ -41,11 +44,16 @@ from persistence.application.use_cases.manage_season_competition import (
     SeasonMatchCreate,
     SeasonMatchCreateDetailed,
     SeasonMatchInvalidPlayersError,
+    SeasonMatchLineupLockedError,
+    SeasonMatchLineupsUpdate,
+    SeasonMatchNotFoundError,
     SeasonMatchPlayerStatsUpdate,
     SeasonMatchResultUpdate,
     SeasonMatchStatsMismatchError,
     SeasonMatchStatsUpdate,
     SeasonMatchTeamCreate,
+    SeasonMatchUpdate,
+    SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerStatsUpdate,
 )
@@ -71,6 +79,8 @@ class _FakeRepo:
     should_raise_invalid_match_data: bool = False
     should_raise_match_stats_mismatch: bool = False
     should_raise_match_not_found: bool = False
+    should_raise_player_has_matches: bool = False
+    should_raise_match_lineup_locked: bool = False
     active_exists: bool = True
     last_payload: dict | None = None
 
@@ -271,6 +281,24 @@ class _FakeRepo:
         }
         return self._player()
 
+    def register_players_for_admin_bulk(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_access_denied:
+            raise PenaNotManagedByAdminError()
+        if self.should_raise_season_not_found:
+            raise SeasonNotFoundError()
+        if self.should_raise_player_not_found:
+            raise PlayerNotFoundError()
+        if self.should_raise_player_not_in_pena:
+            raise PlayerNotInPenaError()
+        if self.should_raise_already_registered:
+            raise SeasonPlayerAlreadyRegisteredError()
+        self.last_payload = kwargs
+        return [self._player() for _ in kwargs["player_guids"]]
+
     def update_player_stats_for_admin(self, **kwargs):
         if self.should_raise_invalid_stats:
             raise InvalidSeasonPlayerStatsError()
@@ -278,6 +306,19 @@ class _FakeRepo:
             raise RepositorySeasonPlayerNotFoundError()
         self.last_payload = kwargs
         return self._player()
+
+    def unregister_player_for_admin(self, **kwargs):
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_access_denied:
+            raise PenaNotManagedByAdminError()
+        if self.should_raise_season_not_found:
+            raise SeasonNotFoundError()
+        if self.should_raise_player_not_found:
+            raise RepositorySeasonPlayerNotFoundError()
+        if self.should_raise_player_has_matches:
+            raise SeasonPlayerHasMatchesError()
+        self.last_payload = kwargs
 
     def list_season_players(
         self,
@@ -329,6 +370,18 @@ class _FakeRepo:
         self.last_payload = kwargs
         return self._match()
 
+    def update_match_for_admin(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        if self.should_raise_match_not_found:
+            from persistence.application.ports.season_competition_repository import (
+                MatchNotFoundError,
+            )
+
+            raise MatchNotFoundError()
+        self.last_payload = kwargs
+        return self._match_detail()
+
     def create_match_with_lineups_for_admin(self, **kwargs):
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
@@ -351,6 +404,20 @@ class _FakeRepo:
             home_players_stats=kwargs["home_players_stats"],
             away_players_stats=kwargs["away_players_stats"],
         )
+
+    def update_match_lineups_for_admin(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        if self.should_raise_match_not_found:
+            from persistence.application.ports.season_competition_repository import (
+                MatchNotFoundError,
+            )
+
+            raise MatchNotFoundError()
+        if self.should_raise_match_lineup_locked:
+            raise MatchLineupLockedError()
+        self.last_payload = kwargs
+        return self._match_detail()
 
     def list_season_matches(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
         self.last_payload = {
@@ -376,6 +443,17 @@ class _FakeRepo:
             "match_guid": match_guid,
         }
         return self._match_detail()
+
+    def delete_match_for_admin(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        if self.should_raise_match_not_found:
+            from persistence.application.ports.season_competition_repository import (
+                MatchNotFoundError,
+            )
+
+            raise MatchNotFoundError()
+        self.last_payload = kwargs
 
     def get_standings(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
         self.last_payload = {
@@ -439,6 +517,69 @@ def test_register_player_maps_expected_errors():
             admin_id=1,
             player_guid="player-guid",
         )
+
+
+def test_register_players_bulk_validates_and_forwards_cleaned_guids():
+    use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
+
+    with pytest.raises(InvalidSeasonPlayerBatchDataError):
+        use_case.register_players_bulk_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=1,
+            player_guids=[],
+        )
+    with pytest.raises(InvalidSeasonPlayerBatchDataError):
+        use_case.register_players_bulk_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=1,
+            player_guids=["player-a", "player-a"],
+        )
+    with pytest.raises(InvalidSeasonPlayerBatchDataError):
+        use_case.register_players_bulk_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=1,
+            player_guids=["player-a", "   "],
+        )
+
+    repo = _FakeRepo()
+    use_case = ManageSeasonCompetitionUseCase(repo)
+    registered = use_case.register_players_bulk_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        admin_id=1,
+        player_guids=[" player-a ", "player-b"],
+    )
+    assert len(registered) == 2
+    assert repo.last_payload["player_guids"] == ["player-a", "player-b"]
+
+
+def test_unregister_player_maps_in_match_error():
+    with pytest.raises(SeasonPlayerInMatchError):
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_player_has_matches=True)
+        ).unregister_player_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=1,
+            player_guid="player-guid",
+        )
+
+    repo = _FakeRepo()
+    ManageSeasonCompetitionUseCase(repo).unregister_player_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        admin_id=1,
+        player_guid="player-guid",
+    )
+    assert repo.last_payload == {
+        "pena_guid": "pena-guid",
+        "season_guid": "season-guid",
+        "admin_id": 1,
+        "player_guid": "player-guid",
+    }
 
 
 def test_update_player_stats_validates_payload_and_values():
@@ -550,6 +691,61 @@ def test_update_match_rejects_negative_scores():
         )
 
 
+def test_update_match_validates_payload_and_maps_not_found():
+    use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
+    with pytest.raises(InvalidSeasonMatchDataError):
+        use_case.update_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchUpdate(),
+        )
+
+    with pytest.raises(InvalidSeasonMatchDataError):
+        use_case.update_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchUpdate(
+                home_team_name="   ",
+                home_team_name_provided=True,
+            ),
+        )
+
+    with pytest.raises(SeasonMatchNotFoundError):
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_match_not_found=True)
+        ).update_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchUpdate(
+                home_team_name="Home",
+                home_team_name_provided=True,
+            ),
+        )
+
+    repo = _FakeRepo()
+    updated = ManageSeasonCompetitionUseCase(repo).update_match_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=1,
+        update=SeasonMatchUpdate(
+            home_team_name=" New Home ",
+            away_team_name=" New Away ",
+            home_team_name_provided=True,
+            away_team_name_provided=True,
+        ),
+    )
+    assert updated.guid == "match-guid"
+    assert repo.last_payload["home_team_name"] == "New Home"
+    assert repo.last_payload["away_team_name"] == "New Away"
+
+
 def test_create_match_with_lineups_rejects_invalid_roster():
     use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
     with pytest.raises(SeasonMatchInvalidPlayersError):
@@ -563,6 +759,50 @@ def test_create_match_with_lineups_rejects_invalid_roster():
                 away_team=SeasonMatchTeamCreate(player_guids=["player-b"]),
             ),
         )
+
+
+def test_update_match_lineups_validates_and_maps_locked_error():
+    use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
+    with pytest.raises(SeasonMatchInvalidPlayersError):
+        use_case.update_match_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchLineupsUpdate(
+                home_player_guids=["player-a", "player-a"],
+                away_player_guids=["player-b"],
+            ),
+        )
+
+    with pytest.raises(SeasonMatchLineupLockedError):
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_match_lineup_locked=True)
+        ).update_match_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchLineupsUpdate(
+                home_player_guids=["player-a"],
+                away_player_guids=["player-b"],
+            ),
+        )
+
+    repo = _FakeRepo()
+    updated = ManageSeasonCompetitionUseCase(repo).update_match_lineups_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=1,
+        update=SeasonMatchLineupsUpdate(
+            home_player_guids=["player-a"],
+            away_player_guids=["player-b"],
+        ),
+    )
+    assert updated.guid == "match-guid"
+    assert repo.last_payload["home_player_guids"] == ["player-a"]
+    assert repo.last_payload["away_player_guids"] == ["player-b"]
 
 
 def test_create_match_with_lineups_and_update_stats_positive():
@@ -623,6 +863,32 @@ def test_create_match_with_lineups_and_update_stats_positive():
     assert updated.away_team.players[0].player_guid == "away-player-guid"
     assert repo.last_payload["home_players_stats"][0].player_guid == "home-player-guid"
     assert repo.last_payload["away_players_stats"][0].player_guid == "away-player-guid"
+
+
+def test_delete_match_maps_not_found_and_passthrough():
+    with pytest.raises(SeasonMatchNotFoundError):
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_match_not_found=True)
+        ).delete_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+        )
+
+    repo = _FakeRepo()
+    ManageSeasonCompetitionUseCase(repo).delete_match_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=1,
+    )
+    assert repo.last_payload == {
+        "pena_guid": "pena-guid",
+        "season_guid": "season-guid",
+        "match_guid": "match-guid",
+        "admin_id": 1,
+    }
 
 
 def test_update_match_stats_maps_validation_and_mismatch_errors():

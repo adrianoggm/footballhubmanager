@@ -43,13 +43,18 @@ Base path: `/api/v1`
 ## Seasons (Competition)
 
 - `POST /penas/{pena_guid}/seasons/{season_guid}/players`
+- `POST /penas/{pena_guid}/seasons/{season_guid}/players/bulk`
 - `PATCH /penas/{pena_guid}/seasons/{season_guid}/players/{player_guid}`
+- `DELETE /penas/{pena_guid}/seasons/{season_guid}/players/{player_guid}`
 - `GET /penas/{pena_guid}/seasons/{season_guid}/players`
 - `POST /penas/{pena_guid}/seasons/{season_guid}/matches`
+- `PATCH /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}`
 - `POST /penas/{pena_guid}/seasons/{season_guid}/matches/detailed`
+- `PATCH /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/lineups`
 - `PATCH /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stats`
 - `GET /penas/{pena_guid}/seasons/{season_guid}/matches`
 - `GET /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}`
+- `DELETE /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}`
 - `PATCH /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/result`
 - `GET /penas/{pena_guid}/seasons/{season_guid}/standings`
 

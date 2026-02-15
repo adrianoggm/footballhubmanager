@@ -6,6 +6,7 @@ from persistence.application.ports.season_competition_repository import (
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
     MatchesPageResult,
+    MatchLineupLockedError,
     MatchNotFoundError,
     MatchPlayersNotInSeasonError,
     MatchPlayerStatsResult,
@@ -24,6 +25,7 @@ from persistence.application.ports.season_competition_repository import (
     SeasonNotFoundError,
     SeasonPlayerAlreadyRegisteredError,
     SeasonPlayerFilters,
+    SeasonPlayerHasMatchesError,
     SeasonPlayerNotFoundError,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
@@ -138,6 +140,89 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         self.session.commit()
         return self._to_season_player_result(player=player, link=link, season_player=season_player)
 
+    def register_players_for_admin_bulk(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        player_guids: list[str],
+    ) -> list[SeasonPlayerResult]:
+        if not player_guids:
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        cleaned_guids = [player_guid.strip() for player_guid in player_guids if player_guid.strip()]
+        if len(cleaned_guids) != len(player_guids) or len(set(cleaned_guids)) != len(cleaned_guids):
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        pena = self._get_pena(pena_guid)
+        if pena.id_admin != admin_id:
+            self.session.rollback()
+            raise PenaNotManagedByAdminError()
+        season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+
+        players = list(
+            self.session.execute(
+                select(Player).where(Player.guid.in_(set(cleaned_guids)))
+            ).scalars()
+        )
+        players_by_guid = {player.guid: player for player in players}
+        if len(players_by_guid) != len(cleaned_guids):
+            self.session.rollback()
+            raise PlayerNotFoundError()
+
+        player_ids = {player.id for player in players}
+        links = list(
+            self.session.execute(
+                select(PenaPlayer).where(
+                    PenaPlayer.id_pena == pena.id,
+                    PenaPlayer.id_player.in_(player_ids),
+                )
+            ).scalars()
+        )
+        links_by_player_id = {link.id_player: link for link in links}
+        if len(links_by_player_id) != len(player_ids):
+            self.session.rollback()
+            raise PlayerNotInPenaError()
+
+        existing_rows = self.session.execute(
+            select(SeasonPlayer.id_player).where(
+                SeasonPlayer.id_pena == pena.id,
+                SeasonPlayer.id_season == season.id,
+                SeasonPlayer.id_player.in_(player_ids),
+            )
+        ).all()
+        if existing_rows:
+            self.session.rollback()
+            raise SeasonPlayerAlreadyRegisteredError()
+
+        season_players: dict[int, SeasonPlayer] = {}
+        for player_guid in cleaned_guids:
+            player = players_by_guid[player_guid]
+            season_player = SeasonPlayer(
+                id_player=player.id,
+                id_pena=pena.id,
+                id_season=season.id,
+                wins=0,
+                losses=0,
+                draws=0,
+                quality_level=0.0,
+            )
+            self.session.add(season_player)
+            season_players[player.id] = season_player
+        self.session.commit()
+
+        return [
+            self._to_season_player_result(
+                player=players_by_guid[player_guid],
+                link=links_by_player_id[players_by_guid[player_guid].id],
+                season_player=season_players[players_by_guid[player_guid].id],
+            )
+            for player_guid in cleaned_guids
+        ]
+
     def update_player_stats_for_admin(
         self,
         *,
@@ -191,6 +276,36 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
 
         self.session.commit()
         return self._to_season_player_result(player=player, link=link, season_player=season_player)
+
+    def unregister_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        player_guid: str,
+    ) -> None:
+        pena = self._get_pena(pena_guid)
+        if pena.id_admin != admin_id:
+            self.session.rollback()
+            raise PenaNotManagedByAdminError()
+        season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+        player = self._get_player(player_guid)
+        season_player = self._get_season_player(
+            pena_id=pena.id,
+            season_id=season.id,
+            player_id=player.id,
+            for_update=True,
+            allow_missing=True,
+        )
+        if not season_player:
+            self.session.rollback()
+            raise SeasonPlayerNotFoundError()
+        if self._player_has_season_matches(season_id=season.id, player_id=player.id):
+            self.session.rollback()
+            raise SeasonPlayerHasMatchesError()
+        self.session.delete(season_player)
+        self.session.commit()
 
     def list_season_players(
         self,
@@ -433,6 +548,64 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             away_score=away_team_player.goals,
         )
 
+    def update_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        match_date_provided: bool,
+        match_date: date | None,
+        home_team_name_provided: bool,
+        home_team_name: str | None,
+        away_team_name_provided: bool,
+        away_team_name: str | None,
+    ) -> MatchDetailResult:
+        if not (match_date_provided or home_team_name_provided or away_team_name_provided):
+            self.session.rollback()
+            raise InvalidMatchDataError()
+        if match_date_provided and match_date is None:
+            self.session.rollback()
+            raise InvalidMatchDataError()
+        if home_team_name_provided and not home_team_name:
+            self.session.rollback()
+            raise InvalidMatchDataError()
+        if away_team_name_provided and not away_team_name:
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        pena = self._get_pena(pena_guid)
+        if pena.id_admin != admin_id:
+            self.session.rollback()
+            raise PenaNotManagedByAdminError()
+        season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+        bundle = self._get_match_teams(
+            season_id=season.id,
+            match_guid=match_guid,
+            for_update=True,
+        )
+        if not bundle:
+            self.session.rollback()
+            raise MatchNotFoundError()
+        football_match, home_team, away_team = bundle
+
+        if match_date_provided:
+            football_match.match_date = match_date
+        if home_team_name_provided:
+            home_team.name = home_team_name
+        if away_team_name_provided:
+            away_team.name = away_team_name
+
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
     def create_match_with_lineups_for_admin(
         self,
         *,
@@ -505,28 +678,88 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         home_team.id_match = football_match.id
         away_team.id_match = football_match.id
 
-        for home_player in home_players:
-            self.session.add(
-                TeamPlayer(
-                    id_team=home_team.id,
-                    id_player=home_player.id,
-                    goals=0,
-                    assists=0,
-                    rating=-1.0,  # sentinel: standings were not applied yet
-                    saves=0,
-                )
-            )
-        for away_player in away_players:
-            self.session.add(
-                TeamPlayer(
-                    id_team=away_team.id,
-                    id_player=away_player.id,
-                    goals=0,
-                    assists=0,
-                    rating=-1.0,  # sentinel: standings were not applied yet
-                    saves=0,
-                )
-            )
+        self._add_team_players(team_id=home_team.id, players=home_players)
+        self._add_team_players(team_id=away_team.id, players=away_players)
+
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def update_match_lineups_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        home_player_guids: list[str],
+        away_player_guids: list[str],
+    ) -> MatchDetailResult:
+        cleaned_home = [guid.strip() for guid in home_player_guids if guid.strip()]
+        cleaned_away = [guid.strip() for guid in away_player_guids if guid.strip()]
+        if (
+            not cleaned_home
+            or not cleaned_away
+            or len(cleaned_home) != len(home_player_guids)
+            or len(cleaned_away) != len(away_player_guids)
+        ):
+            self.session.rollback()
+            raise InvalidMatchDataError()
+        if len(set(cleaned_home)) != len(cleaned_home) or len(set(cleaned_away)) != len(
+            cleaned_away
+        ):
+            self.session.rollback()
+            raise SamePlayerMatchError()
+        if set(cleaned_home).intersection(set(cleaned_away)):
+            self.session.rollback()
+            raise SamePlayerMatchError()
+
+        pena = self._get_pena(pena_guid)
+        if pena.id_admin != admin_id:
+            self.session.rollback()
+            raise PenaNotManagedByAdminError()
+        season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+        bundle = self._get_match_teams(
+            season_id=season.id,
+            match_guid=match_guid,
+            for_update=True,
+        )
+        if not bundle:
+            self.session.rollback()
+            raise MatchNotFoundError()
+        football_match, home_team, away_team = bundle
+
+        home_team_players = self._list_team_players(home_team.id, for_update=True)
+        away_team_players = self._list_team_players(away_team.id, for_update=True)
+        if not home_team_players or not away_team_players:
+            self.session.rollback()
+            raise MatchNotFoundError()
+        if self._lineup_update_locked(home_team_players, away_team_players):
+            self.session.rollback()
+            raise MatchLineupLockedError()
+
+        home_players = self._resolve_match_players(
+            pena_id=pena.id,
+            season_id=season.id,
+            player_guids=cleaned_home,
+        )
+        away_players = self._resolve_match_players(
+            pena_id=pena.id,
+            season_id=season.id,
+            player_guids=cleaned_away,
+        )
+
+        for team_player in home_team_players + away_team_players:
+            self.session.delete(team_player)
+        self.session.flush()
+
+        self._add_team_players(team_id=home_team.id, players=home_players)
+        self._add_team_players(team_id=away_team.id, players=away_players)
 
         self.session.commit()
         return self._build_match_detail_result(
@@ -723,6 +956,60 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             away_team=away_team,
         )
 
+    def delete_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> None:
+        pena = self._get_pena(pena_guid)
+        if pena.id_admin != admin_id:
+            self.session.rollback()
+            raise PenaNotManagedByAdminError()
+        season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+        bundle = self._get_match_teams(
+            season_id=season.id,
+            match_guid=match_guid,
+            for_update=True,
+        )
+        if not bundle:
+            self.session.rollback()
+            raise MatchNotFoundError()
+        football_match, home_team, away_team = bundle
+
+        home_team_players = self._list_team_players(home_team.id, for_update=True)
+        away_team_players = self._list_team_players(away_team.id, for_update=True)
+        if not home_team_players or not away_team_players:
+            self.session.rollback()
+            raise MatchNotFoundError()
+
+        if self._match_standings_applied(home_team_players, away_team_players):
+            home_season_players = self._team_season_players(
+                pena_id=pena.id,
+                season_id=season.id,
+                team_players=home_team_players,
+            )
+            away_season_players = self._team_season_players(
+                pena_id=pena.id,
+                season_id=season.id,
+                team_players=away_team_players,
+            )
+            self._apply_team_outcome_delta(
+                home_team_stats=home_season_players,
+                away_team_stats=away_season_players,
+                home_score=sum(player.goals for player in home_team_players),
+                away_score=sum(player.goals for player in away_team_players),
+                delta=-1,
+            )
+
+        self.session.delete(football_match)
+        self.session.flush()
+        self.session.delete(home_team)
+        self.session.delete(away_team)
+        self.session.commit()
+
     def get_standings(
         self,
         *,
@@ -823,6 +1110,25 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 Season.id_pena == pena_id,
                 Season.start_date <= end_date,
                 Season.end_date >= start_date,
+            )
+            .limit(1)
+        ).first()
+        return bool(row)
+
+    def _player_has_season_matches(self, *, season_id: int, player_id: int) -> bool:
+        row = self.session.execute(
+            select(TeamPlayer.id_player)
+            .join(Team, Team.id == TeamPlayer.id_team)
+            .join(
+                FootballMatch,
+                or_(
+                    FootballMatch.id_home_team == Team.id,
+                    FootballMatch.id_away_team == Team.id,
+                ),
+            )
+            .where(
+                TeamPlayer.id_player == player_id,
+                FootballMatch.id_season == season_id,
             )
             .limit(1)
         ).first()
@@ -1073,6 +1379,19 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             players.append(player)
         return players
 
+    def _add_team_players(self, *, team_id: int, players: list[Player]) -> None:
+        for player in players:
+            self.session.add(
+                TeamPlayer(
+                    id_team=team_id,
+                    id_player=player.id,
+                    goals=0,
+                    assists=0,
+                    rating=-1.0,  # sentinel: standings were not applied yet
+                    saves=0,
+                )
+            )
+
     @staticmethod
     def _team_name_or_default(name: str | None, *, default_name: str) -> str:
         if name is None:
@@ -1150,6 +1469,17 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         if not home_team_players or not away_team_players:
             return False
         return all(player.rating >= 0 for player in home_team_players + away_team_players)
+
+    @staticmethod
+    def _lineup_update_locked(
+        home_team_players: list[TeamPlayer],
+        away_team_players: list[TeamPlayer],
+    ) -> bool:
+        players = home_team_players + away_team_players
+        return any(
+            player.goals > 0 or player.assists > 0 or player.saves > 0 or player.rating >= 0
+            for player in players
+        )
 
     @staticmethod
     def _apply_team_outcome_delta(

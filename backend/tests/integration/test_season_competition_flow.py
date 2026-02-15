@@ -675,3 +675,230 @@ def test_season_competition_detailed_match_stats_mismatch():
     )
     assert status == 409, mismatch
     assert mismatch["detail"] == "Stats payload must match the exact match lineup"
+
+
+def test_season_competition_bulk_register_and_unregister_player():
+    admin_auth = _register_admin()
+    admin_token = admin_auth["token"]
+    pena_guid = _first_pena_guid(admin_token)
+
+    today = date.today()
+    season_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date=(today - timedelta(days=30)).isoformat(),
+        end_date=(today + timedelta(days=30)).isoformat(),
+    )
+
+    users = [_register_user() for _ in range(3)]
+    player_guids: list[str] = []
+    for user in users:
+        player_guid = _player_guid_for_user(user["token"])
+        _link_user_to_pena(admin_token, pena_guid, user["token"])
+        player_guids.append(player_guid)
+
+    status, bulk_registered = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players/bulk",
+        token=admin_token,
+        payload={"player_guids": player_guids},
+    )
+    assert status == 201, bulk_registered
+    assert bulk_registered["total_registered"] == 3
+    assert len(bulk_registered["items"]) == 3
+
+    status, removed = _request(
+        "DELETE",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players/{player_guids[2]}",
+        token=admin_token,
+    )
+    assert status == 204, removed
+
+    status, listed = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players?page_size=20",
+        token=admin_token,
+    )
+    assert status == 200, listed
+    assert listed["total"] == 2
+
+    status, created_match = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/detailed",
+        token=admin_token,
+        payload={
+            "match_date": today.isoformat(),
+            "home_team": {"team_name": "Home", "player_guids": [player_guids[0]]},
+            "away_team": {"team_name": "Away", "player_guids": [player_guids[1]]},
+        },
+    )
+    assert status == 201, created_match
+
+    status, in_match = _request(
+        "DELETE",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players/{player_guids[0]}",
+        token=admin_token,
+    )
+    assert status == 409, in_match
+    assert in_match["detail"] == "Player already has matches in this season"
+
+
+def test_season_competition_update_lineups_and_delete_match():
+    admin_auth = _register_admin()
+    admin_token = admin_auth["token"]
+    pena_guid = _first_pena_guid(admin_token)
+
+    today = date.today()
+    season_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date=(today - timedelta(days=30)).isoformat(),
+        end_date=(today + timedelta(days=30)).isoformat(),
+    )
+
+    users = [_register_user() for _ in range(4)]
+    player_guids: list[str] = []
+    for user in users:
+        player_guid = _player_guid_for_user(user["token"])
+        _link_user_to_pena(admin_token, pena_guid, user["token"])
+        player_guids.append(player_guid)
+
+    status, bulk_registered = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players/bulk",
+        token=admin_token,
+        payload={"player_guids": player_guids},
+    )
+    assert status == 201, bulk_registered
+
+    status, created = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/detailed",
+        token=admin_token,
+        payload={
+            "match_date": today.isoformat(),
+            "home_team": {"team_name": "Initial Home", "player_guids": player_guids[:2]},
+            "away_team": {"team_name": "Initial Away", "player_guids": player_guids[2:]},
+        },
+    )
+    assert status == 201, created
+    match_guid = created["guid"]
+
+    status, updated_match = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+        token=admin_token,
+        payload={
+            "match_date": (today - timedelta(days=1)).isoformat(),
+            "home_team_name": "Edited Home",
+            "away_team_name": "Edited Away",
+        },
+    )
+    assert status == 200, updated_match
+    assert updated_match["home_team"]["team_name"] == "Edited Home"
+    assert updated_match["away_team"]["team_name"] == "Edited Away"
+
+    new_home = [player_guids[0], player_guids[2]]
+    new_away = [player_guids[1], player_guids[3]]
+    status, updated_lineups = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/lineups",
+        token=admin_token,
+        payload={
+            "home_team": {"player_guids": new_home},
+            "away_team": {"player_guids": new_away},
+        },
+    )
+    assert status == 200, updated_lineups
+    assert {item["player_guid"] for item in updated_lineups["home_team"]["players"]} == set(
+        new_home
+    )
+    assert {item["player_guid"] for item in updated_lineups["away_team"]["players"]} == set(
+        new_away
+    )
+
+    status, stats_updated = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stats",
+        token=admin_token,
+        payload={
+            "home_team": {
+                "players": [
+                    {
+                        "player_guid": new_home[0],
+                        "goals": 2,
+                        "assists": 1,
+                        "saves": 0,
+                        "rating": 8.0,
+                    },
+                    {
+                        "player_guid": new_home[1],
+                        "goals": 0,
+                        "assists": 0,
+                        "saves": 1,
+                        "rating": 7.0,
+                    },
+                ]
+            },
+            "away_team": {
+                "players": [
+                    {
+                        "player_guid": new_away[0],
+                        "goals": 1,
+                        "assists": 0,
+                        "saves": 0,
+                        "rating": 7.0,
+                    },
+                    {
+                        "player_guid": new_away[1],
+                        "goals": 0,
+                        "assists": 0,
+                        "saves": 1,
+                        "rating": 6.0,
+                    },
+                ]
+            },
+        },
+    )
+    assert status == 200, stats_updated
+    assert stats_updated["home_team"]["score"] == 2
+    assert stats_updated["away_team"]["score"] == 1
+
+    status, locked = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/lineups",
+        token=admin_token,
+        payload={
+            "home_team": {"player_guids": player_guids[:2]},
+            "away_team": {"player_guids": player_guids[2:]},
+        },
+    )
+    assert status == 409, locked
+    assert locked["detail"] == "Cannot update lineups after match stats have been recorded"
+
+    status, deleted = _request(
+        "DELETE",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+        token=admin_token,
+    )
+    assert status == 204, deleted
+
+    status, deleted_detail = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+        token=admin_token,
+    )
+    assert status == 404, deleted_detail
+    assert deleted_detail["detail"] == "Match not found"
+
+    status, standings = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/standings?page_size=20",
+        token=admin_token,
+    )
+    assert status == 200, standings
+    points_by_player = {item["player_guid"]: item["points"] for item in standings["items"]}
+    assert points_by_player[new_home[0]] == 0
+    assert points_by_player[new_home[1]] == 0
+    assert points_by_player[new_away[0]] == 0
+    assert points_by_player[new_away[1]] == 0

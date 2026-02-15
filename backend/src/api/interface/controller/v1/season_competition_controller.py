@@ -9,6 +9,7 @@ from persistence.application.ports.season_competition_repository import SeasonPl
 from persistence.application.use_cases import (
     InvalidSeasonDataError,
     InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonCompetitionUseCase,
     PenaSeasonAccessDeniedError,
@@ -22,6 +23,8 @@ from persistence.application.use_cases import (
     SeasonMatchesPage,
     SeasonMatchInfo,
     SeasonMatchInvalidPlayersError,
+    SeasonMatchLineupLockedError,
+    SeasonMatchLineupsUpdate,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsInfo,
@@ -31,7 +34,9 @@ from persistence.application.use_cases import (
     SeasonMatchStatsUpdate,
     SeasonMatchTeamCreate,
     SeasonMatchTeamInfo,
+    SeasonMatchUpdate,
     SeasonPlayerAlreadyRegisteredError,
+    SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
     SeasonPlayersPage,
@@ -88,8 +93,17 @@ class SeasonPlayersPageResponse(BaseModel):
     total_pages: int
 
 
+class SeasonPlayersBulkResponse(BaseModel):
+    items: list[SeasonPlayerResponse]
+    total_registered: int
+
+
 class RegisterSeasonPlayerRequest(BaseModel):
     player_guid: str = Field(min_length=1)
+
+
+class RegisterSeasonPlayersBulkRequest(BaseModel):
+    player_guids: list[str] = Field(min_length=1)
 
 
 class UpdateSeasonPlayerStatsRequest(BaseModel):
@@ -109,6 +123,12 @@ class UpdateSeasonMatchResultRequest(BaseModel):
     home_score: int = Field(ge=0)
     away_score: int = Field(ge=0)
     update_standings: bool = True
+
+
+class UpdateSeasonMatchRequest(BaseModel):
+    match_date: date | None = None
+    home_team_name: str | None = None
+    away_team_name: str | None = None
 
 
 class SeasonMatchResponse(BaseModel):
@@ -149,6 +169,15 @@ class MatchTeamStatsRequest(BaseModel):
 class UpdateSeasonMatchStatsRequest(BaseModel):
     home_team: MatchTeamStatsRequest
     away_team: MatchTeamStatsRequest
+
+
+class MatchTeamLineupsRequest(BaseModel):
+    player_guids: list[str] = Field(min_length=1)
+
+
+class UpdateSeasonMatchLineupsRequest(BaseModel):
+    home_team: MatchTeamLineupsRequest
+    away_team: MatchTeamLineupsRequest
 
 
 class SeasonMatchPlayerStatsResponse(BaseModel):
@@ -344,6 +373,57 @@ def register_player_in_season(
     return SeasonPlayerResponse(**asdict(registered))
 
 
+@router.post(
+    "/penas/{pena_guid}/seasons/{season_guid}/players/bulk",
+    response_model=SeasonPlayersBulkResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def register_players_in_season_bulk(
+    pena_guid: str,
+    season_guid: str,
+    payload: RegisterSeasonPlayersBulkRequest,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    use_case = ManageSeasonCompetitionUseCase(repository)
+    try:
+        registered = use_case.register_players_bulk_for_admin(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            player_guids=payload.player_guids,
+        )
+    except InvalidSeasonPlayerBatchDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid bulk player registration data",
+        )
+    except PenaSeasonPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaSeasonNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    except PenaSeasonAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin does not manage this pena"
+        )
+    except SeasonPlayerNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found")
+    except SeasonPlayerNotInPenaError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Player is not linked to this pena"
+        )
+    except SeasonPlayerAlreadyRegisteredError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Player is already registered in this season",
+        )
+    return SeasonPlayersBulkResponse(
+        items=[SeasonPlayerResponse(**asdict(item)) for item in registered],
+        total_registered=len(registered),
+    )
+
+
 @router.patch(
     "/penas/{pena_guid}/seasons/{season_guid}/players/{player_guid}",
     response_model=SeasonPlayerResponse,
@@ -393,6 +473,45 @@ def update_season_player_stats(
             status_code=status.HTTP_404_NOT_FOUND, detail="Player is not registered in this season"
         )
     return SeasonPlayerResponse(**asdict(updated))
+
+
+@router.delete(
+    "/penas/{pena_guid}/seasons/{season_guid}/players/{player_guid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def unregister_player_from_season(
+    pena_guid: str,
+    season_guid: str,
+    player_guid: str,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    use_case = ManageSeasonCompetitionUseCase(repository)
+    try:
+        use_case.unregister_player_for_admin(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            player_guid=player_guid,
+        )
+    except PenaSeasonPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaSeasonNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    except PenaSeasonAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin does not manage this pena"
+        )
+    except SeasonPlayerNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Player is not registered in this season"
+        )
+    except SeasonPlayerInMatchError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Player already has matches in this season",
+        )
 
 
 @router.get(
@@ -535,6 +654,53 @@ def update_season_match_result(
     return _match_response(updated)
 
 
+@router.patch(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+    response_model=SeasonMatchDetailResponse,
+)
+def update_season_match(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    payload: UpdateSeasonMatchRequest,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    use_case = ManageSeasonCompetitionUseCase(repository)
+    update = SeasonMatchUpdate(
+        match_date=payload.match_date,
+        home_team_name=payload.home_team_name,
+        away_team_name=payload.away_team_name,
+        match_date_provided="match_date" in payload.model_fields_set,
+        home_team_name_provided="home_team_name" in payload.model_fields_set,
+        away_team_name_provided="away_team_name" in payload.model_fields_set,
+    )
+    try:
+        updated = use_case.update_match_for_admin(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_session.user_id,
+            update=update,
+        )
+    except InvalidSeasonMatchDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid match update data"
+        )
+    except PenaSeasonPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaSeasonNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    except PenaSeasonAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin does not manage this pena"
+        )
+    except SeasonMatchNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    return _match_detail_response(updated)
+
+
 @router.post(
     "/penas/{pena_guid}/seasons/{season_guid}/matches/detailed",
     response_model=SeasonMatchDetailResponse,
@@ -656,6 +822,65 @@ def update_season_match_stats(
     return _match_detail_response(updated)
 
 
+@router.patch(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/lineups",
+    response_model=SeasonMatchDetailResponse,
+)
+def update_season_match_lineups(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    payload: UpdateSeasonMatchLineupsRequest,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    use_case = ManageSeasonCompetitionUseCase(repository)
+    try:
+        updated = use_case.update_match_lineups_for_admin(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_session.user_id,
+            update=SeasonMatchLineupsUpdate(
+                home_player_guids=payload.home_team.player_guids,
+                away_player_guids=payload.away_team.player_guids,
+            ),
+        )
+    except InvalidSeasonMatchDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid lineup update data"
+        )
+    except PenaSeasonPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaSeasonNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    except PenaSeasonAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin does not manage this pena"
+        )
+    except SeasonMatchNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+    except SeasonMatchLineupLockedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot update lineups after match stats have been recorded",
+        )
+    except SeasonMatchInvalidPlayersError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A match cannot repeat players across lineups",
+        )
+    except SeasonMatchPlayersNotInSeasonError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="All called-up players must be registered in this season",
+        )
+    except SeasonPlayerNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found")
+    return _match_detail_response(updated)
+
+
 @router.get(
     "/penas/{pena_guid}/seasons/{season_guid}/matches",
     response_model=SeasonMatchesPageResponse,
@@ -710,6 +935,42 @@ def get_season_match_detail(
     except SeasonMatchNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
     return _match_detail_response(result)
+
+
+@router.delete(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_season_match(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    use_case = ManageSeasonCompetitionUseCase(repository)
+    try:
+        use_case.delete_match_for_admin(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_session.user_id,
+        )
+    except InvalidSeasonMatchDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid match operation"
+        )
+    except PenaSeasonPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaSeasonNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    except PenaSeasonAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin does not manage this pena"
+        )
+    except SeasonMatchNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
 
 
 @router.get(
