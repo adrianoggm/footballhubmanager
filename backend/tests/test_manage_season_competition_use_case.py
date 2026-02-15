@@ -147,6 +147,69 @@ class _FakeRepo:
         )
 
     @staticmethod
+    def _match_team_from_stats(
+        *,
+        team_guid: str,
+        team_name: str,
+        values: list,
+    ) -> MatchTeamResult:
+        players: list[MatchPlayerStatsResult] = []
+        total_goals = 0
+        total_assists = 0
+        total_saves = 0
+        total_rating = 0.0
+
+        for index, item in enumerate(values, start=1):
+            rating = float(item.rating)
+            total_goals += int(item.goals)
+            total_assists += int(item.assists)
+            total_saves += int(item.saves)
+            total_rating += rating
+            players.append(
+                MatchPlayerStatsResult(
+                    player_guid=item.player_guid,
+                    name=f"{team_name}Player{index}",
+                    surname1="Player",
+                    surname2=None,
+                    nickname=f"{team_name}Nick{index}",
+                    position="CM",
+                    goals=int(item.goals),
+                    assists=int(item.assists),
+                    saves=int(item.saves),
+                    rating=rating,
+                )
+            )
+
+        average_rating = round(total_rating / len(values), 2) if values else 0.0
+        return MatchTeamResult(
+            team_guid=team_guid,
+            team_name=team_name,
+            score=total_goals,
+            total_assists=total_assists,
+            total_saves=total_saves,
+            average_rating=average_rating,
+            players=players,
+        )
+
+    @classmethod
+    def _match_detail_from_stats(cls, *, home_players_stats: list, away_players_stats: list):
+        return MatchDetailResult(
+            guid="match-guid",
+            season_guid="season-guid",
+            match_date=date(2024, 3, 1),
+            home_team=cls._match_team_from_stats(
+                team_guid="home-team-guid",
+                team_name="Home",
+                values=home_players_stats,
+            ),
+            away_team=cls._match_team_from_stats(
+                team_guid="away-team-guid",
+                team_name="Away",
+                values=away_players_stats,
+            ),
+        )
+
+    @staticmethod
     def _match_summary() -> MatchSummaryResult:
         return MatchSummaryResult(
             guid="match-guid",
@@ -284,7 +347,10 @@ class _FakeRepo:
 
             raise MatchNotFoundError()
         self.last_payload = kwargs
-        return self._match_detail()
+        return self._match_detail_from_stats(
+            home_players_stats=kwargs["home_players_stats"],
+            away_players_stats=kwargs["away_players_stats"],
+        )
 
     def list_season_matches(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
         self.last_payload = {
@@ -529,7 +595,7 @@ def test_create_match_with_lineups_and_update_stats_positive():
         update=SeasonMatchStatsUpdate(
             home_players=[
                 SeasonMatchPlayerStatsUpdate(
-                    player_guid="home-player-guid",
+                    player_guid=" home-player-guid ",
                     goals=2,
                     assists=1,
                     saves=0,
@@ -538,7 +604,7 @@ def test_create_match_with_lineups_and_update_stats_positive():
             ],
             away_players=[
                 SeasonMatchPlayerStatsUpdate(
-                    player_guid="away-player-guid",
+                    player_guid=" away-player-guid ",
                     goals=1,
                     assists=0,
                     saves=0,
@@ -547,7 +613,16 @@ def test_create_match_with_lineups_and_update_stats_positive():
             ],
         ),
     )
-    assert updated.away_team.score == 2
+    assert updated.home_team.score == 2
+    assert updated.away_team.score == 1
+    assert updated.home_team.total_assists == 1
+    assert updated.away_team.total_assists == 0
+    assert updated.home_team.average_rating == 8.5
+    assert updated.away_team.average_rating == 7.0
+    assert updated.home_team.players[0].player_guid == "home-player-guid"
+    assert updated.away_team.players[0].player_guid == "away-player-guid"
+    assert repo.last_payload["home_players_stats"][0].player_guid == "home-player-guid"
+    assert repo.last_payload["away_players_stats"][0].player_guid == "away-player-guid"
 
 
 def test_update_match_stats_maps_validation_and_mismatch_errors():

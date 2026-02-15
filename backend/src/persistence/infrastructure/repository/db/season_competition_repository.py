@@ -649,16 +649,33 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.execute(select(func.count()).select_from(base_stmt.subquery())).scalar()
             or 0
         )
-        rows = self.session.execute(
-            base_stmt.limit(page_size).offset((page - 1) * page_size)
-        ).scalars()
+        matches = list(
+            self.session.execute(
+                base_stmt.limit(page_size).offset((page - 1) * page_size)
+            ).scalars()
+        )
+        if not matches:
+            return MatchesPageResult(
+                items=[],
+                page=page,
+                page_size=page_size,
+                total=total,
+            )
+
+        team_ids = {
+            team_id
+            for football_match in matches
+            for team_id in (football_match.id_home_team, football_match.id_away_team)
+        }
+        teams_by_id = self._get_teams_by_ids(team_ids, for_update=False)
+        team_stats = self._get_team_match_summary_stats(team_ids)
 
         items: list[MatchSummaryResult] = []
-        for football_match in rows:
-            home_team = self._get_team(football_match.id_home_team)
-            away_team = self._get_team(football_match.id_away_team)
-            home_players = self._list_team_players(home_team.id, for_update=False)
-            away_players = self._list_team_players(away_team.id, for_update=False)
+        for football_match in matches:
+            home_team = teams_by_id[football_match.id_home_team]
+            away_team = teams_by_id[football_match.id_away_team]
+            home_score, home_players = team_stats.get(home_team.id, (0, 0))
+            away_score, away_players = team_stats.get(away_team.id, (0, 0))
             items.append(
                 MatchSummaryResult(
                     guid=football_match.guid,
@@ -666,10 +683,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                     match_date=football_match.match_date,
                     home_team_name=home_team.name,
                     away_team_name=away_team.name,
-                    home_score=sum(player.goals for player in home_players),
-                    away_score=sum(player.goals for player in away_players),
-                    home_players=len(home_players),
-                    away_players=len(away_players),
+                    home_score=home_score,
+                    away_score=away_score,
+                    home_players=home_players,
+                    away_players=away_players,
                 )
             )
 
@@ -964,16 +981,12 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         if not football_match:
             return None
 
-        home_team = self.session.execute(
-            select(Team).where(Team.id == football_match.id_home_team)
-        ).scalar_one_or_none()
-        away_team = self.session.execute(
-            select(Team).where(Team.id == football_match.id_away_team)
-        ).scalar_one_or_none()
-        if not home_team or not away_team:
-            self.session.rollback()
-            raise MatchNotFoundError()
-
+        teams_by_id = self._get_teams_by_ids(
+            {football_match.id_home_team, football_match.id_away_team},
+            for_update=for_update,
+        )
+        home_team = teams_by_id[football_match.id_home_team]
+        away_team = teams_by_id[football_match.id_away_team]
         return football_match, home_team, away_team
 
     def _list_team_players(self, team_id: int, *, for_update: bool) -> list[TeamPlayer]:
@@ -986,12 +999,56 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             stmt = stmt.with_for_update()
         return list(self.session.execute(stmt).scalars())
 
-    def _get_team(self, team_id: int) -> Team:
-        team = self.session.execute(select(Team).where(Team.id == team_id)).scalar_one_or_none()
-        if not team:
+    def _list_team_players_by_team_ids(
+        self,
+        team_ids: set[int],
+        *,
+        for_update: bool,
+    ) -> dict[int, list[TeamPlayer]]:
+        if not team_ids:
+            return {}
+
+        stmt = (
+            select(TeamPlayer)
+            .where(TeamPlayer.id_team.in_(team_ids))
+            .order_by(TeamPlayer.id_team.asc(), TeamPlayer.id_player.asc())
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+
+        grouped = {team_id: [] for team_id in team_ids}
+        for row in self.session.execute(stmt).scalars():
+            grouped[row.id_team].append(row)
+        return grouped
+
+    def _get_teams_by_ids(self, team_ids: set[int], *, for_update: bool) -> dict[int, Team]:
+        if not team_ids:
+            return {}
+
+        stmt = select(Team).where(Team.id.in_(team_ids))
+        if for_update:
+            stmt = stmt.with_for_update()
+        teams = list(self.session.execute(stmt).scalars())
+        teams_by_id = {team.id: team for team in teams}
+        if len(teams_by_id) != len(team_ids):
             self.session.rollback()
             raise MatchNotFoundError()
-        return team
+        return teams_by_id
+
+    def _get_team_match_summary_stats(self, team_ids: set[int]) -> dict[int, tuple[int, int]]:
+        if not team_ids:
+            return {}
+
+        rows = self.session.execute(
+            select(
+                TeamPlayer.id_team.label("team_id"),
+                func.coalesce(func.sum(TeamPlayer.goals), 0).label("score"),
+                func.count(TeamPlayer.id_player).label("players"),
+            )
+            .where(TeamPlayer.id_team.in_(team_ids))
+            .group_by(TeamPlayer.id_team)
+        ).all()
+        return {int(row.team_id): (int(row.score), int(row.players)) for row in rows}
 
     def _resolve_match_players(
         self,
@@ -1052,9 +1109,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         return result
 
     def _team_player_guid_map(self, team_players: list[TeamPlayer]) -> dict[str, TeamPlayer]:
+        player_ids = {team_player.id_player for team_player in team_players}
+        players_by_id = self._get_players_by_ids(player_ids)
         result: dict[str, TeamPlayer] = {}
         for team_player in team_players:
-            player = self._get_player_by_id(team_player.id_player)
+            player = players_by_id.get(team_player.id_player)
+            if not player:
+                self.session.rollback()
+                raise PlayerNotFoundError()
             result[player.guid] = team_player
         return result
 
@@ -1138,30 +1200,44 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         home_team: Team,
         away_team: Team,
     ) -> MatchDetailResult:
-        home_players = self._list_team_players(home_team.id, for_update=False)
-        away_players = self._list_team_players(away_team.id, for_update=False)
+        team_players_by_id = self._list_team_players_by_team_ids(
+            {home_team.id, away_team.id},
+            for_update=False,
+        )
+        home_players = team_players_by_id.get(home_team.id, [])
+        away_players = team_players_by_id.get(away_team.id, [])
+        player_ids = {team_player.id_player for team_player in home_players + away_players}
+        players_by_id = self._get_players_by_ids(player_ids)
+        links_by_player_id = self._get_pena_player_links_by_player_ids(
+            pena_id=pena_id,
+            player_ids=player_ids,
+        )
+
         return MatchDetailResult(
             guid=football_match.guid,
             season_guid=season_guid,
             match_date=football_match.match_date,
             home_team=self._build_match_team_result(
-                pena_id=pena_id,
                 team=home_team,
                 team_players=home_players,
+                players_by_id=players_by_id,
+                links_by_player_id=links_by_player_id,
             ),
             away_team=self._build_match_team_result(
-                pena_id=pena_id,
                 team=away_team,
                 team_players=away_players,
+                players_by_id=players_by_id,
+                links_by_player_id=links_by_player_id,
             ),
         )
 
     def _build_match_team_result(
         self,
         *,
-        pena_id: int,
         team: Team,
         team_players: list[TeamPlayer],
+        players_by_id: dict[int, Player],
+        links_by_player_id: dict[int, PenaPlayer],
     ) -> MatchTeamResult:
         players: list[MatchPlayerStatsResult] = []
         total_goals = 0
@@ -1170,8 +1246,11 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         total_rating = 0.0
 
         for team_player in team_players:
-            player = self._get_player_by_id(team_player.id_player)
-            link = self._get_pena_player_link_optional(pena_id=pena_id, player_id=player.id)
+            player = players_by_id.get(team_player.id_player)
+            if not player:
+                self.session.rollback()
+                raise PlayerNotFoundError()
+            link = links_by_player_id.get(player.id)
             rating = max(float(team_player.rating), 0.0)
             total_goals += int(team_player.goals)
             total_assists += int(team_player.assists)
@@ -1203,15 +1282,32 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             players=players,
         )
 
-    def _get_pena_player_link_optional(
+    def _get_players_by_ids(self, player_ids: set[int]) -> dict[int, Player]:
+        if not player_ids:
+            return {}
+
+        players = list(
+            self.session.execute(select(Player).where(Player.id.in_(player_ids))).scalars()
+        )
+        players_by_id = {player.id: player for player in players}
+        if len(players_by_id) != len(player_ids):
+            self.session.rollback()
+            raise PlayerNotFoundError()
+        return players_by_id
+
+    def _get_pena_player_links_by_player_ids(
         self,
         *,
         pena_id: int,
-        player_id: int,
-    ) -> PenaPlayer | None:
-        return self.session.execute(
+        player_ids: set[int],
+    ) -> dict[int, PenaPlayer]:
+        if not player_ids:
+            return {}
+
+        rows = self.session.execute(
             select(PenaPlayer).where(
                 PenaPlayer.id_pena == pena_id,
-                PenaPlayer.id_player == player_id,
+                PenaPlayer.id_player.in_(player_ids),
             )
-        ).scalar_one_or_none()
+        ).scalars()
+        return {row.id_player: row for row in rows}

@@ -301,6 +301,169 @@ def test_season_competition_access_control():
     assert foreign_denied["detail"] == "Admin does not manage this pena"
 
 
+def test_season_competition_detailed_match_access_control():
+    owner_admin = _register_admin()
+    owner_token = owner_admin["token"]
+    pena_guid = _first_pena_guid(owner_token)
+    today = date.today()
+    season_guid = _create_season(
+        owner_token,
+        pena_guid,
+        start_date=(today - timedelta(days=20)).isoformat(),
+        end_date=(today + timedelta(days=20)).isoformat(),
+    )
+
+    member_user = _register_user()
+    second_user = _register_user()
+    outsider_user = _register_user()
+    foreign_admin = _register_admin()
+
+    member_player_guid = _player_guid_for_user(member_user["token"])
+    second_player_guid = _player_guid_for_user(second_user["token"])
+
+    _link_user_to_pena(owner_token, pena_guid, member_user["token"])
+    _link_user_to_pena(owner_token, pena_guid, second_user["token"])
+
+    for player_guid in (member_player_guid, second_player_guid):
+        status, registered = _request(
+            "POST",
+            f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players",
+            token=owner_token,
+            payload={"player_guid": player_guid},
+        )
+        assert status == 201, registered
+
+    status, created = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/detailed",
+        token=owner_token,
+        payload={
+            "match_date": today.isoformat(),
+            "home_team": {"team_name": "Home XI", "player_guids": [member_player_guid]},
+            "away_team": {"team_name": "Away XI", "player_guids": [second_player_guid]},
+        },
+    )
+    assert status == 201, created
+    match_guid = created["guid"]
+
+    stats_payload = {
+        "home_team": {
+            "players": [
+                {
+                    "player_guid": member_player_guid,
+                    "goals": 1,
+                    "assists": 0,
+                    "saves": 0,
+                    "rating": 7.5,
+                }
+            ]
+        },
+        "away_team": {
+            "players": [
+                {
+                    "player_guid": second_player_guid,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 1,
+                    "rating": 6.8,
+                }
+            ]
+        },
+    }
+
+    status, member_create_denied = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/detailed",
+        token=member_user["token"],
+        payload={
+            "match_date": today.isoformat(),
+            "home_team": {"team_name": "User Home", "player_guids": [member_player_guid]},
+            "away_team": {"team_name": "User Away", "player_guids": [second_player_guid]},
+        },
+    )
+    assert status == 403, member_create_denied
+    assert member_create_denied["detail"] == "Admin access required"
+
+    status, foreign_create_denied = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/detailed",
+        token=foreign_admin["token"],
+        payload={
+            "match_date": today.isoformat(),
+            "home_team": {"team_name": "Foreign Home", "player_guids": [member_player_guid]},
+            "away_team": {"team_name": "Foreign Away", "player_guids": [second_player_guid]},
+        },
+    )
+    assert status == 403, foreign_create_denied
+    assert foreign_create_denied["detail"] == "Admin does not manage this pena"
+
+    status, member_patch_denied = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stats",
+        token=member_user["token"],
+        payload=stats_payload,
+    )
+    assert status == 403, member_patch_denied
+    assert member_patch_denied["detail"] == "Admin access required"
+
+    status, foreign_patch_denied = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stats",
+        token=foreign_admin["token"],
+        payload=stats_payload,
+    )
+    assert status == 403, foreign_patch_denied
+    assert foreign_patch_denied["detail"] == "Admin does not manage this pena"
+
+    status, member_list = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches",
+        token=member_user["token"],
+    )
+    assert status == 200, member_list
+    assert any(item["guid"] == match_guid for item in member_list["items"])
+
+    status, member_detail = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+        token=member_user["token"],
+    )
+    assert status == 200, member_detail
+    assert member_detail["guid"] == match_guid
+
+    status, foreign_list_denied = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches",
+        token=foreign_admin["token"],
+    )
+    assert status == 403, foreign_list_denied
+    assert foreign_list_denied["detail"] == "Admin does not manage this pena"
+
+    status, foreign_detail_denied = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+        token=foreign_admin["token"],
+    )
+    assert status == 403, foreign_detail_denied
+    assert foreign_detail_denied["detail"] == "Admin does not manage this pena"
+
+    status, outsider_list_denied = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches",
+        token=outsider_user["token"],
+    )
+    assert status == 403, outsider_list_denied
+    assert outsider_list_denied["detail"] == "User does not belong to this pena"
+
+    status, outsider_detail_denied = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}",
+        token=outsider_user["token"],
+    )
+    assert status == 403, outsider_detail_denied
+    assert outsider_detail_denied["detail"] == "User does not belong to this pena"
+
+
 def test_season_competition_detailed_match_happy_path():
     admin_auth = _register_admin()
     admin_token = admin_auth["token"]
