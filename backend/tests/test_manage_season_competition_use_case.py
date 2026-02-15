@@ -3,8 +3,15 @@ from datetime import date
 
 import pytest
 from persistence.application.ports.season_competition_repository import (
+    InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
+    MatchDetailResult,
+    MatchesPageResult,
+    MatchPlayerStatsResult,
     MatchResult,
+    MatchStatsMismatchError,
+    MatchSummaryResult,
+    MatchTeamResult,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
     PlayerNotFoundError,
@@ -23,6 +30,7 @@ from persistence.application.ports.season_competition_repository import (
 )
 from persistence.application.use_cases.manage_season_competition import (
     InvalidSeasonDataError,
+    InvalidSeasonMatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonCompetitionUseCase,
     PenaSeasonAccessDeniedError,
@@ -31,8 +39,13 @@ from persistence.application.use_cases.manage_season_competition import (
     PenaSeasonPenaNotFoundError,
     SeasonCreate,
     SeasonMatchCreate,
+    SeasonMatchCreateDetailed,
     SeasonMatchInvalidPlayersError,
+    SeasonMatchPlayerStatsUpdate,
     SeasonMatchResultUpdate,
+    SeasonMatchStatsMismatchError,
+    SeasonMatchStatsUpdate,
+    SeasonMatchTeamCreate,
     SeasonPlayerNotFoundError,
     SeasonPlayerStatsUpdate,
 )
@@ -55,6 +68,9 @@ class _FakeRepo:
     should_raise_invalid_stats: bool = False
     should_raise_overlap: bool = False
     should_raise_same_player_match: bool = False
+    should_raise_invalid_match_data: bool = False
+    should_raise_match_stats_mismatch: bool = False
+    should_raise_match_not_found: bool = False
     active_exists: bool = True
     last_payload: dict | None = None
 
@@ -93,6 +109,118 @@ class _FakeRepo:
             away_player_name="Away P",
             home_score=2,
             away_score=1,
+        )
+
+    @staticmethod
+    def _match_team(name: str) -> MatchTeamResult:
+        return MatchTeamResult(
+            team_guid=f"{name.lower()}-team-guid",
+            team_name=name,
+            score=2,
+            total_assists=1,
+            total_saves=0,
+            average_rating=7.5,
+            players=[
+                MatchPlayerStatsResult(
+                    player_guid=f"{name.lower()}-player-guid",
+                    name=name,
+                    surname1="Player",
+                    surname2=None,
+                    nickname=f"{name}Nick",
+                    position="CM",
+                    goals=2,
+                    assists=1,
+                    saves=0,
+                    rating=7.5,
+                )
+            ],
+        )
+
+    @classmethod
+    def _match_detail(cls) -> MatchDetailResult:
+        return MatchDetailResult(
+            guid="match-guid",
+            season_guid="season-guid",
+            match_date=date(2024, 3, 1),
+            home_team=cls._match_team("Home"),
+            away_team=cls._match_team("Away"),
+        )
+
+    @staticmethod
+    def _match_team_from_stats(
+        *,
+        team_guid: str,
+        team_name: str,
+        values: list,
+    ) -> MatchTeamResult:
+        players: list[MatchPlayerStatsResult] = []
+        total_goals = 0
+        total_assists = 0
+        total_saves = 0
+        total_rating = 0.0
+
+        for index, item in enumerate(values, start=1):
+            rating = float(item.rating)
+            total_goals += int(item.goals)
+            total_assists += int(item.assists)
+            total_saves += int(item.saves)
+            total_rating += rating
+            players.append(
+                MatchPlayerStatsResult(
+                    player_guid=item.player_guid,
+                    name=f"{team_name}Player{index}",
+                    surname1="Player",
+                    surname2=None,
+                    nickname=f"{team_name}Nick{index}",
+                    position="CM",
+                    goals=int(item.goals),
+                    assists=int(item.assists),
+                    saves=int(item.saves),
+                    rating=rating,
+                )
+            )
+
+        average_rating = round(total_rating / len(values), 2) if values else 0.0
+        return MatchTeamResult(
+            team_guid=team_guid,
+            team_name=team_name,
+            score=total_goals,
+            total_assists=total_assists,
+            total_saves=total_saves,
+            average_rating=average_rating,
+            players=players,
+        )
+
+    @classmethod
+    def _match_detail_from_stats(cls, *, home_players_stats: list, away_players_stats: list):
+        return MatchDetailResult(
+            guid="match-guid",
+            season_guid="season-guid",
+            match_date=date(2024, 3, 1),
+            home_team=cls._match_team_from_stats(
+                team_guid="home-team-guid",
+                team_name="Home",
+                values=home_players_stats,
+            ),
+            away_team=cls._match_team_from_stats(
+                team_guid="away-team-guid",
+                team_name="Away",
+                values=away_players_stats,
+            ),
+        )
+
+    @staticmethod
+    def _match_summary() -> MatchSummaryResult:
+        return MatchSummaryResult(
+            guid="match-guid",
+            season_guid="season-guid",
+            match_date=date(2024, 3, 1),
+            home_team_name="Home",
+            away_team_name="Away",
+            home_score=2,
+            away_score=1,
+            home_players=1,
+            away_players=1,
         )
 
     def find_active_for_pena(self, *, pena_guid: str, reference_date: date):
@@ -200,6 +328,54 @@ class _FakeRepo:
     def update_match_result_for_admin(self, **kwargs):
         self.last_payload = kwargs
         return self._match()
+
+    def create_match_with_lineups_for_admin(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        self.last_payload = kwargs
+        return self._match_detail()
+
+    def update_match_stats_for_admin(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        if self.should_raise_match_stats_mismatch:
+            raise MatchStatsMismatchError()
+        if self.should_raise_match_not_found:
+            from persistence.application.ports.season_competition_repository import (
+                MatchNotFoundError,
+            )
+
+            raise MatchNotFoundError()
+        self.last_payload = kwargs
+        return self._match_detail_from_stats(
+            home_players_stats=kwargs["home_players_stats"],
+            away_players_stats=kwargs["away_players_stats"],
+        )
+
+    def list_season_matches(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guid": season_guid,
+            "page": page,
+            "page_size": page_size,
+        }
+        return MatchesPageResult(
+            items=[self._match_summary()], page=page, page_size=page_size, total=1
+        )
+
+    def get_match_detail(self, *, pena_guid: str, season_guid: str, match_guid: str):
+        if self.should_raise_match_not_found:
+            from persistence.application.ports.season_competition_repository import (
+                MatchNotFoundError,
+            )
+
+            raise MatchNotFoundError()
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guid": season_guid,
+            "match_guid": match_guid,
+        }
+        return self._match_detail()
 
     def get_standings(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
         self.last_payload = {
@@ -372,6 +548,130 @@ def test_update_match_rejects_negative_scores():
             admin_id=1,
             update=SeasonMatchResultUpdate(home_score=-1, away_score=0),
         )
+
+
+def test_create_match_with_lineups_rejects_invalid_roster():
+    use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
+    with pytest.raises(SeasonMatchInvalidPlayersError):
+        use_case.create_match_with_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=1,
+            data=SeasonMatchCreateDetailed(
+                match_date=date(2024, 4, 1),
+                home_team=SeasonMatchTeamCreate(player_guids=["player-a", "player-a"]),
+                away_team=SeasonMatchTeamCreate(player_guids=["player-b"]),
+            ),
+        )
+
+
+def test_create_match_with_lineups_and_update_stats_positive():
+    repo = _FakeRepo()
+    use_case = ManageSeasonCompetitionUseCase(repo)
+    created = use_case.create_match_with_lineups_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        admin_id=1,
+        data=SeasonMatchCreateDetailed(
+            match_date=date(2024, 4, 1),
+            home_team=SeasonMatchTeamCreate(
+                team_name="Team Home",
+                player_guids=["home-player-guid"],
+            ),
+            away_team=SeasonMatchTeamCreate(
+                team_name="Team Away",
+                player_guids=["away-player-guid"],
+            ),
+        ),
+    )
+    assert created.guid == "match-guid"
+    assert created.home_team.team_name == "Home"
+
+    updated = use_case.update_match_stats_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=1,
+        update=SeasonMatchStatsUpdate(
+            home_players=[
+                SeasonMatchPlayerStatsUpdate(
+                    player_guid=" home-player-guid ",
+                    goals=2,
+                    assists=1,
+                    saves=0,
+                    rating=8.5,
+                )
+            ],
+            away_players=[
+                SeasonMatchPlayerStatsUpdate(
+                    player_guid=" away-player-guid ",
+                    goals=1,
+                    assists=0,
+                    saves=0,
+                    rating=7.0,
+                )
+            ],
+        ),
+    )
+    assert updated.home_team.score == 2
+    assert updated.away_team.score == 1
+    assert updated.home_team.total_assists == 1
+    assert updated.away_team.total_assists == 0
+    assert updated.home_team.average_rating == 8.5
+    assert updated.away_team.average_rating == 7.0
+    assert updated.home_team.players[0].player_guid == "home-player-guid"
+    assert updated.away_team.players[0].player_guid == "away-player-guid"
+    assert repo.last_payload["home_players_stats"][0].player_guid == "home-player-guid"
+    assert repo.last_payload["away_players_stats"][0].player_guid == "away-player-guid"
+
+
+def test_update_match_stats_maps_validation_and_mismatch_errors():
+    use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
+    with pytest.raises(InvalidSeasonMatchDataError):
+        use_case.update_match_stats_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchStatsUpdate(
+                home_players=[
+                    SeasonMatchPlayerStatsUpdate(
+                        player_guid="home-player-guid",
+                        goals=-1,
+                    )
+                ],
+                away_players=[SeasonMatchPlayerStatsUpdate(player_guid="away-player-guid")],
+            ),
+        )
+
+    with pytest.raises(SeasonMatchStatsMismatchError):
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_match_stats_mismatch=True)
+        ).update_match_stats_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchStatsUpdate(
+                home_players=[SeasonMatchPlayerStatsUpdate(player_guid="home-player-guid")],
+                away_players=[SeasonMatchPlayerStatsUpdate(player_guid="away-player-guid")],
+            ),
+        )
+
+
+def test_list_and_get_match_detail_passthrough():
+    repo = _FakeRepo()
+    use_case = ManageSeasonCompetitionUseCase(repo)
+    matches = use_case.list_season_matches(
+        pena_guid="pena-guid", season_guid="season-guid", page=1, page_size=20
+    )
+    assert matches.total == 1
+    assert matches.items[0].home_score == 2
+
+    detail = use_case.get_match_detail(
+        pena_guid="pena-guid", season_guid="season-guid", match_guid="match-guid"
+    )
+    assert detail.guid == "match-guid"
 
 
 def test_maps_generic_access_and_not_found_errors():
