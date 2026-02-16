@@ -55,11 +55,29 @@ export class HttpClient {
   }
 
   post(path, body, options = {}) {
-    return this.request(path, {
+    return this.request(path, this.withJsonBody({ ...options, method: 'POST' }, body))
+  }
+
+  put(path, body, options = {}) {
+    return this.request(path, this.withJsonBody({ ...options, method: 'PUT' }, body))
+  }
+
+  patch(path, body, options = {}) {
+    return this.request(path, this.withJsonBody({ ...options, method: 'PATCH' }, body))
+  }
+
+  delete(path, options = {}) {
+    return this.request(path, { ...options, method: 'DELETE' })
+  }
+
+  withJsonBody(options, body) {
+    if (typeof body === 'undefined') {
+      return options
+    }
+    return {
       ...options,
-      method: 'POST',
       body: JSON.stringify(body)
-    })
+    }
   }
 }
 
