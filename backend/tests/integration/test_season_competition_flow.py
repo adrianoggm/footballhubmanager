@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import urllib.error
 import urllib.request
 import uuid
@@ -257,6 +258,134 @@ def test_season_competition_negative_and_edge_cases():
     )
     assert status == 404, no_active
     assert no_active["detail"] == "Active season not found"
+
+
+def test_season_competition_concurrent_single_player_registration_returns_conflict_not_500():
+    admin_auth = _register_admin()
+    admin_token = admin_auth["token"]
+    pena_guid = _first_pena_guid(admin_token)
+
+    today = date.today()
+    season_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date=(today - timedelta(days=15)).isoformat(),
+        end_date=(today + timedelta(days=15)).isoformat(),
+    )
+
+    user = _register_user()
+    player_guid = _player_guid_for_user(user["token"])
+    _link_user_to_pena(admin_token, pena_guid, user["token"])
+
+    barrier = threading.Barrier(2)
+    results: list[tuple[int, dict | None]] = []
+    errors: list[Exception] = []
+    lock = threading.Lock()
+
+    def _register_once():
+        try:
+            barrier.wait(timeout=10)
+            result = _request(
+                "POST",
+                f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players",
+                token=admin_token,
+                payload={"player_guid": player_guid},
+            )
+            with lock:
+                results.append(result)
+        except Exception as exc:  # pragma: no cover - defensive in integration race
+            with lock:
+                errors.append(exc)
+
+    t1 = threading.Thread(target=_register_once)
+    t2 = threading.Thread(target=_register_once)
+    t1.start()
+    t2.start()
+    t1.join(timeout=20)
+    t2.join(timeout=20)
+
+    assert not errors, errors
+    assert len(results) == 2, results
+
+    statuses = sorted(status for status, _ in results)
+    assert statuses == [201, 409], results
+    assert all(status < 500 for status, _ in results), results
+
+    status, listed = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players?page_size=20",
+        token=admin_token,
+    )
+    assert status == 200, listed
+    assert listed["total"] == 1, listed
+    assert listed["items"][0]["player_guid"] == player_guid, listed
+
+
+def test_season_competition_concurrent_bulk_registration_returns_conflict_not_500():
+    admin_auth = _register_admin()
+    admin_token = admin_auth["token"]
+    pena_guid = _first_pena_guid(admin_token)
+
+    today = date.today()
+    season_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date=(today - timedelta(days=15)).isoformat(),
+        end_date=(today + timedelta(days=15)).isoformat(),
+    )
+
+    user_one = _register_user()
+    user_two = _register_user()
+    player_one_guid = _player_guid_for_user(user_one["token"])
+    player_two_guid = _player_guid_for_user(user_two["token"])
+    _link_user_to_pena(admin_token, pena_guid, user_one["token"])
+    _link_user_to_pena(admin_token, pena_guid, user_two["token"])
+
+    payload = {"player_guids": [player_one_guid, player_two_guid]}
+
+    barrier = threading.Barrier(2)
+    results: list[tuple[int, dict | None]] = []
+    errors: list[Exception] = []
+    lock = threading.Lock()
+
+    def _register_bulk_once():
+        try:
+            barrier.wait(timeout=10)
+            result = _request(
+                "POST",
+                f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players/bulk",
+                token=admin_token,
+                payload=payload,
+            )
+            with lock:
+                results.append(result)
+        except Exception as exc:  # pragma: no cover - defensive in integration race
+            with lock:
+                errors.append(exc)
+
+    t1 = threading.Thread(target=_register_bulk_once)
+    t2 = threading.Thread(target=_register_bulk_once)
+    t1.start()
+    t2.start()
+    t1.join(timeout=20)
+    t2.join(timeout=20)
+
+    assert not errors, errors
+    assert len(results) == 2, results
+
+    statuses = sorted(status for status, _ in results)
+    assert statuses == [201, 409], results
+    assert all(status < 500 for status, _ in results), results
+
+    status, listed = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players?page_size=20",
+        token=admin_token,
+    )
+    assert status == 200, listed
+    assert listed["total"] == 2, listed
+    listed_guids = {item["player_guid"] for item in listed["items"]}
+    assert listed_guids == {player_one_guid, player_two_guid}, listed
 
 
 def test_season_competition_access_control():

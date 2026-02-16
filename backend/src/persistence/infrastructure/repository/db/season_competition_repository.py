@@ -42,6 +42,7 @@ from persistence.domain.entity import (
     TeamPlayer,
 )
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 
@@ -156,8 +157,12 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             draws=0,
             quality_level=0.0,
         )
-        self.session.add(season_player)
-        self.session.commit()
+        try:
+            self.session.add(season_player)
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise SeasonPlayerAlreadyRegisteredError() from exc
         return self._to_season_player_result(
             player=player,
             link=link,
@@ -226,20 +231,24 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             raise SeasonPlayerAlreadyRegisteredError()
 
         season_players: dict[int, SeasonPlayer] = {}
-        for player_guid in cleaned_guids:
-            player = players_by_guid[player_guid]
-            season_player = SeasonPlayer(
-                id_player=player.id,
-                id_pena=pena.id,
-                id_season=season.id,
-                wins=0,
-                losses=0,
-                draws=0,
-                quality_level=0.0,
-            )
-            self.session.add(season_player)
-            season_players[player.id] = season_player
-        self.session.commit()
+        try:
+            for player_guid in cleaned_guids:
+                player = players_by_guid[player_guid]
+                season_player = SeasonPlayer(
+                    id_player=player.id,
+                    id_pena=pena.id,
+                    id_season=season.id,
+                    wins=0,
+                    losses=0,
+                    draws=0,
+                    quality_level=0.0,
+                )
+                self.session.add(season_player)
+                season_players[player.id] = season_player
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise SeasonPlayerAlreadyRegisteredError() from exc
 
         return [
             self._to_season_player_result(
