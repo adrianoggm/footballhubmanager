@@ -242,16 +242,16 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         self.session.commit()
 
         return [
-                self._to_season_player_result(
-                    player=players_by_guid[player_guid],
-                    link=links_by_player_id[players_by_guid[player_guid].id],
-                    season_player=season_players[players_by_guid[player_guid].id],
-                    points_win=season.points_win,
-                    points_draw=season.points_draw,
-                    points_loss=season.points_loss,
-                )
-                for player_guid in cleaned_guids
-            ]
+            self._to_season_player_result(
+                player=players_by_guid[player_guid],
+                link=links_by_player_id[players_by_guid[player_guid].id],
+                season_player=season_players[players_by_guid[player_guid].id],
+                points_win=season.points_win,
+                points_draw=season.points_draw,
+                points_loss=season.points_loss,
+            )
+            for player_guid in cleaned_guids
+        ]
 
     def update_player_stats_for_admin(
         self,
