@@ -88,6 +88,9 @@ create table if not exists season (
   id_pena    int not null,
   start_date date not null,
   end_date   date not null,
+  points_win int not null default 3,
+  points_draw int not null default 1,
+  points_loss int not null default 0,
   unique key uq_season_guid (guid),
   key idx_season_pena (id_pena),
   constraint fk_season_pena

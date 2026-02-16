@@ -39,6 +39,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
                     guid=season.guid,
                     start_date=season.start_date,
                     end_date=season.end_date,
+                    points_win=season.points_win,
+                    points_draw=season.points_draw,
+                    points_loss=season.points_loss,
                 )
                 for season in seasons
             ],
@@ -58,6 +61,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
             guid=season.guid,
             start_date=season.start_date,
             end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     def find_active_for_pena(
@@ -80,6 +86,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
             guid=season.guid,
             start_date=season.start_date,
             end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     def create_for_admin(
@@ -89,6 +98,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
         admin_id: int,
         start_date: date,
         end_date: date,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ) -> PenaSeasonResult:
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
@@ -107,6 +119,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
             id_pena=pena.id,
             start_date=start_date,
             end_date=end_date,
+            points_win=points_win,
+            points_draw=points_draw,
+            points_loss=points_loss,
         )
         self.session.add(season)
         self.session.commit()
@@ -115,6 +130,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
             guid=season.guid,
             start_date=season.start_date,
             end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     def update_for_admin(
@@ -127,6 +145,12 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
         start_date: date | None,
         end_date_provided: bool,
         end_date: date | None,
+        points_win_provided: bool,
+        points_win: int | None,
+        points_draw_provided: bool,
+        points_draw: int | None,
+        points_loss_provided: bool,
+        points_loss: int | None,
     ) -> PenaSeasonResult:
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
@@ -141,9 +165,15 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
 
         resolved_start_date = start_date if start_date_provided else season.start_date
         resolved_end_date = end_date if end_date_provided else season.end_date
+        resolved_points_win = points_win if points_win_provided else season.points_win
+        resolved_points_draw = points_draw if points_draw_provided else season.points_draw
+        resolved_points_loss = points_loss if points_loss_provided else season.points_loss
         if (
             resolved_start_date is None
             or resolved_end_date is None
+            or resolved_points_win is None
+            or resolved_points_draw is None
+            or resolved_points_loss is None
             or resolved_start_date > resolved_end_date
         ):
             self.session.rollback()
@@ -160,12 +190,18 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
 
         season.start_date = resolved_start_date
         season.end_date = resolved_end_date
+        season.points_win = resolved_points_win
+        season.points_draw = resolved_points_draw
+        season.points_loss = resolved_points_loss
         self.session.commit()
         self.session.refresh(season)
         return PenaSeasonResult(
             guid=season.guid,
             start_date=season.start_date,
             end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     def delete_for_admin(

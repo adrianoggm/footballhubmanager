@@ -13,8 +13,11 @@ bootstrap:
 install:
     {{venv_python}} -m pip install -r backend/requirements.txt
 
-run-backend:
-    {{venv_python}} -m uvicorn src.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
+backend port="8000" host="0.0.0.0":
+    {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
+
+run-backend port="8000" host="0.0.0.0":
+    {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q

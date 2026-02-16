@@ -25,6 +25,9 @@ from persistence.application.ports.season_competition_repository import (
     SeasonResult,
 )
 from persistence.application.ports.season_competition_repository import (
+    MatchLineupLockedError as RepositoryMatchLineupLockedError,
+)
+from persistence.application.ports.season_competition_repository import (
     MatchNotFoundError as RepositoryMatchNotFoundError,
 )
 from persistence.application.ports.season_competition_repository import (
@@ -58,6 +61,9 @@ from persistence.application.ports.season_competition_repository import (
     SeasonPlayerAlreadyRegisteredError as RepositorySeasonPlayerAlreadyRegisteredError,
 )
 from persistence.application.ports.season_competition_repository import (
+    SeasonPlayerHasMatchesError as RepositorySeasonPlayerHasMatchesError,
+)
+from persistence.application.ports.season_competition_repository import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
 
@@ -67,6 +73,9 @@ class SeasonInfo:
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 @dataclass(frozen=True)
@@ -97,6 +106,9 @@ class SeasonPlayersPage:
 class SeasonCreate:
     start_date: date
     end_date: date
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
 
 
 @dataclass(frozen=True)
@@ -132,6 +144,16 @@ class SeasonMatchCreateDetailed:
 
 
 @dataclass(frozen=True)
+class SeasonMatchUpdate:
+    match_date: date | None = None
+    home_team_name: str | None = None
+    away_team_name: str | None = None
+    match_date_provided: bool = False
+    home_team_name_provided: bool = False
+    away_team_name_provided: bool = False
+
+
+@dataclass(frozen=True)
 class SeasonMatchResultUpdate:
     home_score: int
     away_score: int
@@ -151,6 +173,12 @@ class SeasonMatchPlayerStatsUpdate:
 class SeasonMatchStatsUpdate:
     home_players: list[SeasonMatchPlayerStatsUpdate]
     away_players: list[SeasonMatchPlayerStatsUpdate]
+
+
+@dataclass(frozen=True)
+class SeasonMatchLineupsUpdate:
+    home_player_guids: list[str]
+    away_player_guids: list[str]
 
 
 @dataclass(frozen=True)
@@ -257,6 +285,10 @@ class InvalidSeasonPlayerUpdateDataError(Exception):
     pass
 
 
+class InvalidSeasonPlayerBatchDataError(Exception):
+    pass
+
+
 class SeasonMatchNotFoundError(Exception):
     pass
 
@@ -274,6 +306,14 @@ class InvalidSeasonMatchDataError(Exception):
 
 
 class SeasonMatchStatsMismatchError(Exception):
+    pass
+
+
+class SeasonMatchLineupLockedError(Exception):
+    pass
+
+
+class SeasonPlayerInMatchError(Exception):
     pass
 
 
@@ -307,6 +347,9 @@ class ManageSeasonCompetitionUseCase:
                 admin_id=admin_id,
                 start_date=data.start_date,
                 end_date=data.end_date,
+                points_win=data.points_win,
+                points_draw=data.points_draw,
+                points_loss=data.points_loss,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -347,6 +390,38 @@ class ManageSeasonCompetitionUseCase:
         except RepositorySeasonPlayerAlreadyRegisteredError as exc:
             raise SeasonPlayerAlreadyRegisteredError() from exc
         return self._to_player_info(registered)
+
+    def register_players_bulk_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        player_guids: list[str],
+    ) -> list[SeasonPlayerInfo]:
+        cleaned_guids = self._normalize_player_guids(player_guids)
+        try:
+            registered = self.repository.register_players_for_admin_bulk(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                admin_id=admin_id,
+                player_guids=cleaned_guids,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryPlayerNotFoundError as exc:
+            raise SeasonPlayerNotFoundError() from exc
+        except RepositoryPlayerNotInPenaError as exc:
+            raise SeasonPlayerNotInPenaError() from exc
+        except RepositorySeasonPlayerAlreadyRegisteredError as exc:
+            raise SeasonPlayerAlreadyRegisteredError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonPlayerBatchDataError() from exc
+        return [self._to_player_info(item) for item in registered]
 
     def update_player_stats_for_admin(
         self,
@@ -396,6 +471,32 @@ class ManageSeasonCompetitionUseCase:
         except RepositoryInvalidSeasonPlayerStatsError as exc:
             raise InvalidSeasonPlayerUpdateDataError() from exc
         return self._to_player_info(updated)
+
+    def unregister_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        admin_id: int,
+        player_guid: str,
+    ) -> None:
+        try:
+            self.repository.unregister_player_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                admin_id=admin_id,
+                player_guid=player_guid,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except (RepositoryPlayerNotFoundError, RepositorySeasonPlayerNotFoundError) as exc:
+            raise SeasonPlayerNotFoundError() from exc
+        except RepositorySeasonPlayerHasMatchesError as exc:
+            raise SeasonPlayerInMatchError() from exc
 
     def list_season_players(
         self,
@@ -568,6 +669,125 @@ class ManageSeasonCompetitionUseCase:
             raise InvalidSeasonMatchDataError() from exc
         return self._to_match_detail(updated)
 
+    def update_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        update: SeasonMatchUpdate,
+    ) -> SeasonMatchDetailInfo:
+        if not (
+            update.match_date_provided
+            or update.home_team_name_provided
+            or update.away_team_name_provided
+        ):
+            raise InvalidSeasonMatchDataError()
+
+        home_team_name = self._clean_name(update.home_team_name)
+        away_team_name = self._clean_name(update.away_team_name)
+        if update.home_team_name_provided and home_team_name is None:
+            raise InvalidSeasonMatchDataError()
+        if update.away_team_name_provided and away_team_name is None:
+            raise InvalidSeasonMatchDataError()
+        if update.match_date_provided and update.match_date is None:
+            raise InvalidSeasonMatchDataError()
+
+        try:
+            updated = self.repository.update_match_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+                match_date_provided=update.match_date_provided,
+                match_date=update.match_date,
+                home_team_name_provided=update.home_team_name_provided,
+                home_team_name=home_team_name,
+                away_team_name_provided=update.away_team_name_provided,
+                away_team_name=away_team_name,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return self._to_match_detail(updated)
+
+    def update_match_lineups_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        update: SeasonMatchLineupsUpdate,
+    ) -> SeasonMatchDetailInfo:
+        self._validate_team_lineup(update.home_player_guids)
+        self._validate_team_lineup(update.away_player_guids)
+        if set(update.home_player_guids).intersection(set(update.away_player_guids)):
+            raise SeasonMatchInvalidPlayersError()
+
+        try:
+            updated = self.repository.update_match_lineups_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+                home_player_guids=update.home_player_guids,
+                away_player_guids=update.away_player_guids,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchLineupLockedError as exc:
+            raise SeasonMatchLineupLockedError() from exc
+        except RepositorySamePlayerMatchError as exc:
+            raise SeasonMatchInvalidPlayersError() from exc
+        except RepositoryMatchPlayersNotInSeasonError as exc:
+            raise SeasonMatchPlayersNotInSeasonError() from exc
+        except RepositoryPlayerNotFoundError as exc:
+            raise SeasonPlayerNotFoundError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return self._to_match_detail(updated)
+
+    def delete_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> None:
+        try:
+            self.repository.delete_match_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+
     def list_season_matches(
         self, *, pena_guid: str, season_guid: str, page: int = 1, page_size: int = 20
     ) -> SeasonMatchesPage:
@@ -649,6 +869,17 @@ class ManageSeasonCompetitionUseCase:
         return cleaned or None
 
     @staticmethod
+    def _normalize_player_guids(player_guids: list[str]) -> list[str]:
+        if not player_guids:
+            raise InvalidSeasonPlayerBatchDataError()
+        cleaned_guids = [player_guid.strip() for player_guid in player_guids if player_guid.strip()]
+        if len(cleaned_guids) != len(player_guids):
+            raise InvalidSeasonPlayerBatchDataError()
+        if len(set(cleaned_guids)) != len(cleaned_guids):
+            raise InvalidSeasonPlayerBatchDataError()
+        return cleaned_guids
+
+    @staticmethod
     def _normalize_player_stats(
         values: list[SeasonMatchPlayerStatsUpdate],
     ) -> list[MatchPlayerStatsUpdateData]:
@@ -678,7 +909,14 @@ class ManageSeasonCompetitionUseCase:
 
     @staticmethod
     def _to_season_info(item: SeasonResult) -> SeasonInfo:
-        return SeasonInfo(guid=item.guid, start_date=item.start_date, end_date=item.end_date)
+        return SeasonInfo(
+            guid=item.guid,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            points_win=item.points_win,
+            points_draw=item.points_draw,
+            points_loss=item.points_loss,
+        )
 
     @staticmethod
     def _to_player_info(item: SeasonPlayerResult) -> SeasonPlayerInfo:

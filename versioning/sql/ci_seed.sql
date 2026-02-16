@@ -2,7 +2,13 @@
 
 insert into admin_accounts (id, guid, username, password, name)
 values
-  (9001, '00000000-0000-0000-0000-000000009001', 'ci_admin', 'ci_admin_pass', 'CI Admin')
+  (
+    9001,
+    '00000000-0000-0000-0000-000000009001',
+    'ci_admin',
+    'pbkdf2$sha256$260000$IjB3C4pwbbh-cJivB2Iiwg$WcNXPRmZMWIVehya8K7b6695vTTpPz3eZjXpksn77T8',
+    'CI Admin'
+  )
 on duplicate key update
   password = values(password),
   name = values(name);
@@ -26,7 +32,13 @@ on duplicate key update
 
 insert into player_account (id, guid, username, password, name)
 values
-  (9201, '00000000-0000-0000-0000-000000009201', 'ci_user', 'ci_user_pass', 'CI User')
+  (
+    9201,
+    '00000000-0000-0000-0000-000000009201',
+    'ci_user',
+    'pbkdf2$sha256$260000$AjdgpmpF0zhQELJT72ohSg$mSGumQ1LofD3UouNj3BiBdJNDvhOv9LK22GC_9N9w70',
+    'CI User'
+  )
 on duplicate key update
   password = values(password),
   name = values(name);

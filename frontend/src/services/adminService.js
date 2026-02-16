@@ -1,0 +1,58 @@
+import { httpClient } from './httpClient.js'
+
+const API_V1 = '/api/v1'
+
+const toQueryString = (params) => {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return
+    }
+    query.set(key, String(value))
+  })
+  const queryString = query.toString()
+  return queryString ? `?${queryString}` : ''
+}
+
+export class AdminService {
+  getPenas({ page = 1, pageSize = 50, search = '' } = {}) {
+    const query = toQueryString({ page, page_size: pageSize, search })
+    return httpClient.get(`${API_V1}/penas${query}`)
+  }
+
+  listSeasons(penaGuid, { page = 1, pageSize = 100 } = {}) {
+    const query = toQueryString({ page, page_size: pageSize })
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons${query}`)
+  }
+
+  getActiveSeason(penaGuid, atDate) {
+    const query = toQueryString({ at_date: atDate })
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/active${query}`)
+  }
+
+  createSeason(penaGuid, payload) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/seasons`, payload)
+  }
+
+  updateSeason(penaGuid, seasonGuid, payload) {
+    return httpClient.patch(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}`, payload)
+  }
+
+  listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20 } = {}) {
+    const query = toQueryString({ page, page_size: pageSize })
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings${query}`)
+  }
+
+  createDetailedMatch(penaGuid, seasonGuid, payload) {
+    return httpClient.post(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/detailed`,
+      payload
+    )
+  }
+
+  createLinkToken(penaGuid) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/link-tokens`, {})
+  }
+}
+
+export const adminService = new AdminService()

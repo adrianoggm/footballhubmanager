@@ -1,6 +1,18 @@
-import { Alert, Box, Button, Card, CardContent, MenuItem, Stack, TextField, Typography } from '@mui/material'
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  MenuItem,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography
+} from '@mui/material'
 import { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth.js'
 import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
@@ -18,11 +30,11 @@ const initialAdmin = {
   name: ''
 }
 
-export default function AuthPanel() {
-  const auth = useAuth()
+export default function AuthPanel({ auth }) {
+  const [mode, setMode] = useState('login')
+  const [accountType, setAccountType] = useState('admin')
   const [nationalities, setNationalities] = useState([])
-  const [userLogin, setUserLogin] = useState({ username: '', password: '' })
-  const [adminLogin, setAdminLogin] = useState({ username: '', password: '' })
+  const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [userRegister, setUserRegister] = useState(initialUser)
   const [adminRegister, setAdminRegister] = useState(initialAdmin)
 
@@ -39,6 +51,33 @@ export default function AuthPanel() {
     }
   }
 
+  const handleSubmit = async () => {
+    if (mode === 'login') {
+      if (accountType === 'admin') {
+        await auth.loginAdmin(credentials)
+      } else {
+        await auth.loginUser(credentials)
+      }
+      return
+    }
+
+    if (accountType === 'admin') {
+      await auth.registerAdmin(adminRegister)
+      return
+    }
+
+    await auth.registerUser(userRegister)
+  }
+
+  const submitLabel =
+    mode === 'login'
+      ? accountType === 'admin'
+        ? 'Sign in as admin'
+        : 'Sign in as player'
+      : accountType === 'admin'
+        ? 'Create admin account'
+        : 'Create player account'
+
   useEffect(() => {
     const loadNationalities = async () => {
       try {
@@ -52,53 +91,127 @@ export default function AuthPanel() {
   }, [])
 
   return (
-    <Stack spacing={3}>
-      {auth.error && <Alert severity="error">{auth.error.message}</Alert>}
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">User login</Typography>
-              <TextField label="Username" name="username" value={userLogin.username} onChange={onField(setUserLogin)} />
-              <TextField label="Password" type="password" name="password" value={userLogin.password} onChange={onField(setUserLogin)} />
-              <Button
-                variant="contained"
-                onClick={handle(() => auth.loginUser(userLogin))}
-                disabled={auth.status === 'loading'}
-              >
-                Login
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">Admin login</Typography>
-              <TextField label="Username" name="username" value={adminLogin.username} onChange={onField(setAdminLogin)} />
-              <TextField label="Password" type="password" name="password" value={adminLogin.password} onChange={onField(setAdminLogin)} />
-              <Button
-                variant="contained"
-                onClick={handle(() => auth.loginAdmin(adminLogin))}
-                disabled={auth.status === 'loading'}
-              >
-                Login
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
-      </Stack>
+    <Card
+      sx={{
+        maxWidth: 460,
+        width: '100%',
+        borderRadius: 4,
+        boxShadow: '0 18px 48px rgba(15, 23, 42, 0.16)'
+      }}
+    >
+      <CardContent sx={{ p: 4 }}>
+        <Stack spacing={3}>
+          <Stack spacing={1}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              {mode === 'login' ? 'Sign in to PenaHub' : 'Create your PenaHub account'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Manage your pena seasons, call-ups, matches and standings from one panel.
+            </Typography>
+          </Stack>
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
+          <Tabs
+            value={mode}
+            onChange={(_, value) => setMode(value)}
+            variant="fullWidth"
+            sx={{ minHeight: 40 }}
+          >
+            <Tab value="login" label="Login" sx={{ minHeight: 40 }} />
+            <Tab value="register" label="Register" sx={{ minHeight: 40 }} />
+          </Tabs>
+
+          <ToggleButtonGroup
+            value={accountType}
+            exclusive
+            fullWidth
+            onChange={(_, value) => {
+              if (value) {
+                setAccountType(value)
+              }
+            }}
+            size="small"
+          >
+            <ToggleButton value="admin">Admin</ToggleButton>
+            <ToggleButton value="user">Player</ToggleButton>
+          </ToggleButtonGroup>
+
+          {auth.error && <Alert severity="error">{auth.error.message}</Alert>}
+
+          {mode === 'login' && (
             <Stack spacing={2}>
-              <Typography variant="h6">User register</Typography>
-              <TextField label="Username" name="username" value={userRegister.username} onChange={onField(setUserRegister)} />
-              <TextField label="Password" type="password" name="password" value={userRegister.password} onChange={onField(setUserRegister)} />
-              <TextField label="Name" name="name" value={userRegister.name} onChange={onField(setUserRegister)} />
-              <TextField label="Surname 1" name="surname1" value={userRegister.surname1} onChange={onField(setUserRegister)} />
-              <TextField label="Surname 2" name="surname2" value={userRegister.surname2} onChange={onField(setUserRegister)} />
+              <TextField
+                label="Username"
+                name="username"
+                value={credentials.username}
+                onChange={onField(setCredentials)}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                name="password"
+                value={credentials.password}
+                onChange={onField(setCredentials)}
+              />
+            </Stack>
+          )}
+
+          {mode === 'register' && accountType === 'admin' && (
+            <Stack spacing={2}>
+              <TextField
+                label="Username"
+                name="username"
+                value={adminRegister.username}
+                onChange={onField(setAdminRegister)}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                name="password"
+                value={adminRegister.password}
+                onChange={onField(setAdminRegister)}
+              />
+              <TextField
+                label="Display name"
+                name="name"
+                value={adminRegister.name}
+                onChange={onField(setAdminRegister)}
+              />
+            </Stack>
+          )}
+
+          {mode === 'register' && accountType === 'user' && (
+            <Stack spacing={2}>
+              <TextField
+                label="Username"
+                name="username"
+                value={userRegister.username}
+                onChange={onField(setUserRegister)}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                name="password"
+                value={userRegister.password}
+                onChange={onField(setUserRegister)}
+              />
+              <TextField
+                label="Name"
+                name="name"
+                value={userRegister.name}
+                onChange={onField(setUserRegister)}
+              />
+              <TextField
+                label="Surname 1"
+                name="surname1"
+                value={userRegister.surname1}
+                onChange={onField(setUserRegister)}
+              />
+              <TextField
+                label="Surname 2"
+                name="surname2"
+                value={userRegister.surname2}
+                onChange={onField(setUserRegister)}
+              />
               <TextField
                 select
                 label="Nationality"
@@ -112,43 +225,25 @@ export default function AuthPanel() {
                   </MenuItem>
                 ))}
               </TextField>
-              <Button
-                variant="outlined"
-                onClick={handle(() => auth.registerUser(userRegister))}
-                disabled={auth.status === 'loading'}
-              >
-                Register
-              </Button>
             </Stack>
-          </CardContent>
-        </Card>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">Admin register</Typography>
-              <TextField label="Username" name="username" value={adminRegister.username} onChange={onField(setAdminRegister)} />
-              <TextField label="Password" type="password" name="password" value={adminRegister.password} onChange={onField(setAdminRegister)} />
-              <TextField label="Name" name="name" value={adminRegister.name} onChange={onField(setAdminRegister)} />
-              <Button
-                variant="outlined"
-                onClick={handle(() => auth.registerAdmin(adminRegister))}
-                disabled={auth.status === 'loading'}
-              >
-                Register
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
-      </Stack>
+          )}
 
-      {auth.token && (
-        <Box>
-          <Typography variant="body2">Token: {auth.token}</Typography>
-          <Button onClick={handle(() => auth.logout())} disabled={auth.status === 'loading'}>
-            Logout
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handle(handleSubmit)}
+            disabled={auth.status === 'loading'}
+          >
+            {submitLabel}
           </Button>
-        </Box>
-      )}
-    </Stack>
+
+          <Typography variant="caption" color="text.secondary">
+            {accountType === 'admin'
+              ? 'Admins manage seasons, lineups, scoring rules and invite links.'
+              : 'Players join penas with invite codes and participate in season matches.'}
+          </Typography>
+        </Stack>
+      </CardContent>
+    </Card>
   )
 }
