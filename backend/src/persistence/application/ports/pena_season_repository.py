@@ -8,6 +8,9 @@ class PenaSeasonResult:
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 @dataclass(frozen=True)
@@ -56,6 +59,9 @@ class PenaSeasonRepository(Protocol):
         admin_id: int,
         start_date: date,
         end_date: date,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ) -> PenaSeasonResult: ...
 
     def update_for_admin(
@@ -68,6 +74,12 @@ class PenaSeasonRepository(Protocol):
         start_date: date | None,
         end_date_provided: bool,
         end_date: date | None,
+        points_win_provided: bool,
+        points_win: int | None,
+        points_draw_provided: bool,
+        points_draw: int | None,
+        points_loss_provided: bool,
+        points_loss: int | None,
     ) -> PenaSeasonResult: ...
 
     def delete_for_admin(

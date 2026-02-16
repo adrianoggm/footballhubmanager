@@ -64,7 +64,12 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         if not season:
             return None
         return SeasonResult(
-            guid=season.guid, start_date=season.start_date, end_date=season.end_date
+            guid=season.guid,
+            start_date=season.start_date,
+            end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     def create_season_for_admin(
@@ -74,6 +79,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         admin_id: int,
         start_date: date,
         end_date: date,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ) -> SeasonResult:
         if start_date > end_date:
             self.session.rollback()
@@ -92,12 +100,24 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.rollback()
             raise SeasonDateRangeOverlapError()
 
-        season = Season(id_pena=pena.id, start_date=start_date, end_date=end_date)
+        season = Season(
+            id_pena=pena.id,
+            start_date=start_date,
+            end_date=end_date,
+            points_win=points_win,
+            points_draw=points_draw,
+            points_loss=points_loss,
+        )
         self.session.add(season)
         self.session.commit()
         self.session.refresh(season)
         return SeasonResult(
-            guid=season.guid, start_date=season.start_date, end_date=season.end_date
+            guid=season.guid,
+            start_date=season.start_date,
+            end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     def register_player_for_admin(
@@ -138,7 +158,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         )
         self.session.add(season_player)
         self.session.commit()
-        return self._to_season_player_result(player=player, link=link, season_player=season_player)
+        return self._to_season_player_result(
+            player=player,
+            link=link,
+            season_player=season_player,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
+        )
 
     def register_players_for_admin_bulk(
         self,
@@ -215,13 +242,16 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         self.session.commit()
 
         return [
-            self._to_season_player_result(
-                player=players_by_guid[player_guid],
-                link=links_by_player_id[players_by_guid[player_guid].id],
-                season_player=season_players[players_by_guid[player_guid].id],
-            )
-            for player_guid in cleaned_guids
-        ]
+                self._to_season_player_result(
+                    player=players_by_guid[player_guid],
+                    link=links_by_player_id[players_by_guid[player_guid].id],
+                    season_player=season_players[players_by_guid[player_guid].id],
+                    points_win=season.points_win,
+                    points_draw=season.points_draw,
+                    points_loss=season.points_loss,
+                )
+                for player_guid in cleaned_guids
+            ]
 
     def update_player_stats_for_admin(
         self,
@@ -275,7 +305,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             season_player.quality_level = quality_level
 
         self.session.commit()
-        return self._to_season_player_result(player=player, link=link, season_player=season_player)
+        return self._to_season_player_result(
+            player=player,
+            link=link,
+            season_player=season_player,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
+        )
 
     def unregister_player_for_admin(
         self,
@@ -320,7 +357,11 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
     ) -> SeasonPlayersPageResult:
         pena = self._get_pena(pena_guid)
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
-        points_expr = (SeasonPlayer.wins * 3 + SeasonPlayer.draws).label("points")
+        points_expr = (
+            SeasonPlayer.wins * season.points_win
+            + SeasonPlayer.draws * season.points_draw
+            + SeasonPlayer.losses * season.points_loss
+        ).label("points")
 
         stmt = (
             select(
@@ -1140,6 +1181,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         player: Player,
         link: PenaPlayer,
         season_player: SeasonPlayer,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ) -> SeasonPlayerResult:
         return SeasonPlayerResult(
             player_guid=player.guid,
@@ -1153,7 +1197,11 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             losses=season_player.losses,
             draws=season_player.draws,
             quality_level=float(season_player.quality_level),
-            points=(season_player.wins * 3 + season_player.draws),
+            points=(
+                season_player.wins * points_win
+                + season_player.draws * points_draw
+                + season_player.losses * points_loss
+            ),
         )
 
     @staticmethod

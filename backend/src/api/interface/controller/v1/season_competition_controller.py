@@ -63,11 +63,17 @@ class SeasonResponse(BaseModel):
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 class CreateSeasonRequest(BaseModel):
     start_date: date
     end_date: date
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
 
 
 class SeasonPlayerResponse(BaseModel):
@@ -310,7 +316,13 @@ def create_pena_season(
         season = use_case.create_season_for_admin(
             pena_guid=pena_guid,
             admin_id=admin_session.user_id,
-            data=SeasonCreate(start_date=payload.start_date, end_date=payload.end_date),
+            data=SeasonCreate(
+                start_date=payload.start_date,
+                end_date=payload.end_date,
+                points_win=payload.points_win,
+                points_draw=payload.points_draw,
+                points_loss=payload.points_loss,
+            ),
         )
     except InvalidSeasonDataError:
         raise HTTPException(

@@ -73,6 +73,9 @@ class SeasonInfo:
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 @dataclass(frozen=True)
@@ -103,6 +106,9 @@ class SeasonPlayersPage:
 class SeasonCreate:
     start_date: date
     end_date: date
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
 
 
 @dataclass(frozen=True)
@@ -341,6 +347,9 @@ class ManageSeasonCompetitionUseCase:
                 admin_id=admin_id,
                 start_date=data.start_date,
                 end_date=data.end_date,
+                points_win=data.points_win,
+                points_draw=data.points_draw,
+                points_loss=data.points_loss,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -900,7 +909,14 @@ class ManageSeasonCompetitionUseCase:
 
     @staticmethod
     def _to_season_info(item: SeasonResult) -> SeasonInfo:
-        return SeasonInfo(guid=item.guid, start_date=item.start_date, end_date=item.end_date)
+        return SeasonInfo(
+            guid=item.guid,
+            start_date=item.start_date,
+            end_date=item.end_date,
+            points_win=item.points_win,
+            points_draw=item.points_draw,
+            points_loss=item.points_loss,
+        )
 
     @staticmethod
     def _to_player_info(item: SeasonPlayerResult) -> SeasonPlayerInfo:

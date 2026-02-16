@@ -39,6 +39,9 @@ class _FakeRepo:
             guid="season-guid",
             start_date=date(2024, 9, 1),
             end_date=date(2025, 6, 30),
+            points_win=3,
+            points_draw=1,
+            points_loss=0,
         )
 
     def find_for_pena(self, *, pena_guid: str, page: int, page_size: int) -> PenaSeasonsPageResult:
@@ -77,6 +80,9 @@ class _FakeRepo:
         admin_id: int,
         start_date: date,
         end_date: date,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ) -> PenaSeasonResult:
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
@@ -89,6 +95,9 @@ class _FakeRepo:
             "admin_id": admin_id,
             "start_date": start_date,
             "end_date": end_date,
+            "points_win": points_win,
+            "points_draw": points_draw,
+            "points_loss": points_loss,
         }
         return self._sample_result()
 
@@ -102,6 +111,12 @@ class _FakeRepo:
         start_date: date | None,
         end_date_provided: bool,
         end_date: date | None,
+        points_win_provided: bool,
+        points_win: int | None,
+        points_draw_provided: bool,
+        points_draw: int | None,
+        points_loss_provided: bool,
+        points_loss: int | None,
     ) -> PenaSeasonResult:
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
@@ -112,6 +127,9 @@ class _FakeRepo:
         if (
             (start_date_provided and start_date is None)
             or (end_date_provided and end_date is None)
+            or (points_win_provided and points_win is None)
+            or (points_draw_provided and points_draw is None)
+            or (points_loss_provided and points_loss is None)
             or (
                 start_date_provided
                 and end_date_provided
@@ -126,6 +144,9 @@ class _FakeRepo:
 
         resolved_start = start_date or date(2024, 9, 1)
         resolved_end = end_date or date(2025, 6, 30)
+        resolved_points_win = points_win if points_win is not None else 3
+        resolved_points_draw = points_draw if points_draw is not None else 1
+        resolved_points_loss = points_loss if points_loss is not None else 0
         self.last_payload = {
             "pena_guid": pena_guid,
             "season_guid": season_guid,
@@ -134,11 +155,20 @@ class _FakeRepo:
             "start_date": start_date,
             "end_date_provided": end_date_provided,
             "end_date": end_date,
+            "points_win_provided": points_win_provided,
+            "points_win": points_win,
+            "points_draw_provided": points_draw_provided,
+            "points_draw": points_draw,
+            "points_loss_provided": points_loss_provided,
+            "points_loss": points_loss,
         }
         return PenaSeasonResult(
             guid=season_guid,
             start_date=resolved_start,
             end_date=resolved_end,
+            points_win=resolved_points_win,
+            points_draw=resolved_points_draw,
+            points_loss=resolved_points_loss,
         )
 
     def delete_for_admin(self, *, pena_guid: str, season_guid: str, admin_id: int) -> None:
@@ -247,6 +277,12 @@ def test_update_for_admin_positive_partial_update():
         "start_date": None,
         "end_date_provided": True,
         "end_date": date(2025, 7, 15),
+        "points_win_provided": False,
+        "points_win": None,
+        "points_draw_provided": False,
+        "points_draw": None,
+        "points_loss_provided": False,
+        "points_loss": None,
     }
     assert updated.end_date == date(2025, 7, 15)
 

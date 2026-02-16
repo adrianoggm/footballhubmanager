@@ -28,6 +28,9 @@ class PenaSeasonResponse(BaseModel):
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 class PenaSeasonsPageResponse(BaseModel):
@@ -41,11 +44,17 @@ class PenaSeasonsPageResponse(BaseModel):
 class CreatePenaSeasonRequest(BaseModel):
     start_date: date
     end_date: date
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
 
 
 class UpdatePenaSeasonRequest(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
+    points_win: int | None = None
+    points_draw: int | None = None
+    points_loss: int | None = None
 
 
 @router.get("/penas/{pena_guid}/seasons", response_model=PenaSeasonsPageResponse)
@@ -129,6 +138,9 @@ def create_pena_season(
             data=PenaSeasonCreate(
                 start_date=payload.start_date,
                 end_date=payload.end_date,
+                points_win=payload.points_win,
+                points_draw=payload.points_draw,
+                points_loss=payload.points_loss,
             ),
         )
     except InvalidPenaSeasonDataError:
@@ -169,8 +181,14 @@ def update_pena_season(
             update=PenaSeasonUpdate(
                 start_date=payload.start_date,
                 end_date=payload.end_date,
+                points_win=payload.points_win,
+                points_draw=payload.points_draw,
+                points_loss=payload.points_loss,
                 start_date_provided="start_date" in payload.model_fields_set,
                 end_date_provided="end_date" in payload.model_fields_set,
+                points_win_provided="points_win" in payload.model_fields_set,
+                points_draw_provided="points_draw" in payload.model_fields_set,
+                points_loss_provided="points_loss" in payload.model_fields_set,
             ),
         )
     except InvalidPenaSeasonDataError:

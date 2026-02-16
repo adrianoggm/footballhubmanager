@@ -8,6 +8,9 @@ class SeasonResult:
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 @dataclass(frozen=True)
@@ -202,6 +205,9 @@ class SeasonCompetitionRepository(Protocol):
         admin_id: int,
         start_date: date,
         end_date: date,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ) -> SeasonResult: ...
 
     def register_player_for_admin(

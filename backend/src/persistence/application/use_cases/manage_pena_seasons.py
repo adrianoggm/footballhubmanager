@@ -28,6 +28,9 @@ class PenaSeasonInfo:
     guid: str
     start_date: date
     end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
 
 
 @dataclass(frozen=True)
@@ -42,14 +45,23 @@ class PenaSeasonsPage:
 class PenaSeasonCreate:
     start_date: date
     end_date: date
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
 
 
 @dataclass(frozen=True)
 class PenaSeasonUpdate:
     start_date: date | None = None
     end_date: date | None = None
+    points_win: int | None = None
+    points_draw: int | None = None
+    points_loss: int | None = None
     start_date_provided: bool = False
     end_date_provided: bool = False
+    points_win_provided: bool = False
+    points_draw_provided: bool = False
+    points_loss_provided: bool = False
 
 
 class InvalidPenaSeasonDataError(Exception):
@@ -132,6 +144,9 @@ class ManagePenaSeasonsUseCase:
                 admin_id=admin_id,
                 start_date=data.start_date,
                 end_date=data.end_date,
+                points_win=data.points_win,
+                points_draw=data.points_draw,
+                points_loss=data.points_loss,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -149,7 +164,19 @@ class ManagePenaSeasonsUseCase:
         admin_id: int,
         update: PenaSeasonUpdate,
     ) -> PenaSeasonInfo:
-        if not update.start_date_provided and not update.end_date_provided:
+        if not (
+            update.start_date_provided
+            or update.end_date_provided
+            or update.points_win_provided
+            or update.points_draw_provided
+            or update.points_loss_provided
+        ):
+            raise InvalidPenaSeasonDataError()
+        if update.points_win_provided and update.points_win is None:
+            raise InvalidPenaSeasonDataError()
+        if update.points_draw_provided and update.points_draw is None:
+            raise InvalidPenaSeasonDataError()
+        if update.points_loss_provided and update.points_loss is None:
             raise InvalidPenaSeasonDataError()
         if (
             update.start_date_provided
@@ -169,6 +196,12 @@ class ManagePenaSeasonsUseCase:
                 start_date=update.start_date,
                 end_date_provided=update.end_date_provided,
                 end_date=update.end_date,
+                points_win_provided=update.points_win_provided,
+                points_win=update.points_win,
+                points_draw_provided=update.points_draw_provided,
+                points_draw=update.points_draw,
+                points_loss_provided=update.points_loss_provided,
+                points_loss=update.points_loss,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -202,6 +235,9 @@ class ManagePenaSeasonsUseCase:
             guid=season.guid,
             start_date=season.start_date,
             end_date=season.end_date,
+            points_win=season.points_win,
+            points_draw=season.points_draw,
+            points_loss=season.points_loss,
         )
 
     @classmethod

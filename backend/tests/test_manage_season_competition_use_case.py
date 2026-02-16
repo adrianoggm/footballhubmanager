@@ -87,7 +87,12 @@ class _FakeRepo:
     @staticmethod
     def _season() -> SeasonResult:
         return SeasonResult(
-            guid="season-guid", start_date=date(2024, 1, 1), end_date=date(2024, 12, 31)
+            guid="season-guid",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            points_win=3,
+            points_draw=1,
+            points_loss=0,
         )
 
     @staticmethod
@@ -242,7 +247,15 @@ class _FakeRepo:
         return self._season()
 
     def create_season_for_admin(
-        self, *, pena_guid: str, admin_id: int, start_date: date, end_date: date
+        self,
+        *,
+        pena_guid: str,
+        admin_id: int,
+        start_date: date,
+        end_date: date,
+        points_win: int,
+        points_draw: int,
+        points_loss: int,
     ):
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
@@ -255,6 +268,9 @@ class _FakeRepo:
             "admin_id": admin_id,
             "start_date": start_date,
             "end_date": end_date,
+            "points_win": points_win,
+            "points_draw": points_draw,
+            "points_loss": points_loss,
         }
         return self._season()
 
