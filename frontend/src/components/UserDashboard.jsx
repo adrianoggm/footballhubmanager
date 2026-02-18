@@ -211,6 +211,12 @@ export default function UserDashboard({ session, onLogout }) {
     if (!selectedPenaGuid) {
       return
     }
+    const confirmed = window.confirm(
+      'Leaving will remove your current membership from this pena. Season stats already recorded will remain in history. Continue?'
+    )
+    if (!confirmed) {
+      return
+    }
     await runAction(async () => {
       await userService.leavePena(selectedPenaGuid)
       await loadDashboard()
@@ -397,6 +403,9 @@ export default function UserDashboard({ session, onLogout }) {
                         Leave pena
                       </Button>
                     </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      Leaving removes your membership link, but historical season stats remain.
+                    </Typography>
                   </Stack>
                 </CardContent>
               </Card>

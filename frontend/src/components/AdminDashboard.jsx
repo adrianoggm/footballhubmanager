@@ -39,6 +39,15 @@ const defaultMatchForm = () => ({
   away_player_guids: ''
 })
 
+const defaultGuestForm = () => ({
+  name: '',
+  surname1: '',
+  surname2: '',
+  nationality: 'Spain',
+  nickname: '',
+  position: ''
+})
+
 const splitGuids = (value) =>
   value
     .split(/[\n,]/g)
@@ -74,6 +83,7 @@ export default function AdminDashboard({ session, onLogout }) {
   const [standings, setStandings] = useState([])
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
+  const [nationalities, setNationalities] = useState([])
 
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [pointsForm, setPointsForm] = useState({
@@ -82,6 +92,7 @@ export default function AdminDashboard({ session, onLogout }) {
     points_loss: 0
   })
   const [matchForm, setMatchForm] = useState(defaultMatchForm)
+  const [guestForm, setGuestForm] = useState(defaultGuestForm)
 
   const historySeasons = useMemo(() => {
     if (!activeSeason) {
@@ -101,6 +112,10 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const onMatchField = (name) => (event) => {
     setMatchForm((prev) => ({ ...prev, [name]: event.target.value }))
+  }
+
+  const onGuestField = (name) => (event) => {
+    setGuestForm((prev) => ({ ...prev, [name]: event.target.value }))
   }
 
   const runAction = async (action, successMessage) => {
@@ -154,9 +169,16 @@ export default function AdminDashboard({ session, onLogout }) {
     setInitializing(true)
     setError(null)
     try {
-      const penaPage = await adminService.getPenas({ pageSize: 50 })
+      const [penaPage, catalogNationalities] = await Promise.all([
+        adminService.getPenas({ pageSize: 50 }),
+        adminService.getNationalities().catch(() => [])
+      ])
       const penaItems = penaPage.items || []
       setPenas(penaItems)
+      setNationalities(catalogNationalities)
+      if (catalogNationalities.length && !catalogNationalities.includes(guestForm.nationality)) {
+        setGuestForm((prev) => ({ ...prev, nationality: catalogNationalities[0] }))
+      }
 
       const defaultPena = selectedPenaGuid || penaItems[0]?.guid || ''
       setSelectedPenaGuid(defaultPena)
@@ -246,6 +268,34 @@ export default function AdminDashboard({ session, onLogout }) {
       const token = await adminService.createLinkToken(selectedPenaGuid)
       setTokenPayload(token)
     }, 'Join code generated')
+  }
+
+  const handleCreateGuestPlayer = async (registerInActiveSeason) => {
+    if (!selectedPenaGuid) {
+      return
+    }
+    if (registerInActiveSeason && !activeSeason) {
+      setError(new Error('An active season is required to register a guest into season standings'))
+      return
+    }
+    await runAction(async () => {
+      const created = await adminService.createGuestPlayer(selectedPenaGuid, {
+        name: guestForm.name,
+        surname1: guestForm.surname1,
+        surname2: guestForm.surname2 || null,
+        nationality: guestForm.nationality,
+        nickname: guestForm.nickname || null,
+        position: guestForm.position || null
+      })
+      if (registerInActiveSeason && activeSeason) {
+        await adminService.registerSeasonPlayer(selectedPenaGuid, activeSeason.guid, created.player_guid)
+      }
+      setGuestForm((prev) => ({
+        ...defaultGuestForm(),
+        nationality: prev.nationality || 'Spain'
+      }))
+      await loadPenaData(selectedPenaGuid)
+    }, registerInActiveSeason ? 'Guest created and added to active season' : 'Guest player created')
   }
 
   if (initializing) {
@@ -443,6 +493,89 @@ export default function AdminDashboard({ session, onLogout }) {
                       </Typography>
                     </Alert>
                   )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={5}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h6">Guest Players</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Create players without user account for invited or offline members.
+                  </Typography>
+                  <TextField
+                    label="Name"
+                    value={guestForm.name}
+                    onChange={onGuestField('name')}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Surname 1"
+                    value={guestForm.surname1}
+                    onChange={onGuestField('surname1')}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Surname 2"
+                    value={guestForm.surname2}
+                    onChange={onGuestField('surname2')}
+                    fullWidth
+                  />
+                  {nationalities.length > 0 ? (
+                    <TextField
+                      select
+                      label="Nationality"
+                      value={guestForm.nationality}
+                      onChange={onGuestField('nationality')}
+                      fullWidth
+                    >
+                      {nationalities.map((nationality) => (
+                        <MenuItem key={nationality} value={nationality}>
+                          {nationality}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  ) : (
+                    <TextField
+                      label="Nationality"
+                      value={guestForm.nationality}
+                      onChange={onGuestField('nationality')}
+                      fullWidth
+                    />
+                  )}
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <TextField
+                      label="Nickname"
+                      value={guestForm.nickname}
+                      onChange={onGuestField('nickname')}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Position"
+                      value={guestForm.position}
+                      onChange={onGuestField('position')}
+                      fullWidth
+                    />
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleCreateGuestPlayer(false)}
+                      disabled={loading}
+                    >
+                      Create Guest
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => handleCreateGuestPlayer(true)}
+                      disabled={loading || !activeSeason}
+                    >
+                      Create + Add To Season
+                    </Button>
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>

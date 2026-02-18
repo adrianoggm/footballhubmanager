@@ -53,6 +53,20 @@ export class AdminService {
   createLinkToken(penaGuid) {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/link-tokens`, {})
   }
+
+  createGuestPlayer(penaGuid, payload) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/players`, payload)
+  }
+
+  registerSeasonPlayer(penaGuid, seasonGuid, playerGuid) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players`, {
+      player_guid: playerGuid
+    })
+  }
+
+  getNationalities() {
+    return httpClient.get(`${API_V1}/catalogs/nationalities`)
+  }
 }
 
 export const adminService = new AdminService()

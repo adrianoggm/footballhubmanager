@@ -23,6 +23,7 @@ Base path: `/api/v1`
 
 ## Pena Membership
 
+- `POST /penas/{pena_guid}/players` (admin-only: create guest player + membership)
 - `GET /penas/{pena_guid}/players`
 - `GET /penas/{pena_guid}/players/{player_guid}`
 - `PATCH /penas/{pena_guid}/players/{player_guid}`

@@ -260,6 +260,44 @@ def test_season_competition_negative_and_edge_cases():
     assert no_active["detail"] == "Active season not found"
 
 
+def test_standings_keep_player_after_user_leaves_pena():
+    admin_auth = _register_admin()
+    admin_token = admin_auth["token"]
+    pena_guid = _first_pena_guid(admin_token)
+
+    today = date.today()
+    season_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date=(today - timedelta(days=15)).isoformat(),
+        end_date=(today + timedelta(days=15)).isoformat(),
+    )
+
+    user = _register_user()
+    user_token = user["token"]
+    player_guid = _player_guid_for_user(user_token)
+    _link_user_to_pena(admin_token, pena_guid, user_token)
+
+    status, registered = _request(
+        "POST",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/players",
+        token=admin_token,
+        payload={"player_guid": player_guid},
+    )
+    assert status == 201, registered
+
+    status, _ = _request("DELETE", f"{API_V1}/penas/{pena_guid}/players/me", token=user_token)
+    assert status == 204
+
+    status, standings = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/standings",
+        token=admin_token,
+    )
+    assert status == 200, standings
+    assert any(item["player_guid"] == player_guid for item in standings["items"])
+
+
 def test_season_competition_concurrent_single_player_registration_returns_conflict_not_500():
     admin_auth = _register_admin()
     admin_token = admin_auth["token"]
