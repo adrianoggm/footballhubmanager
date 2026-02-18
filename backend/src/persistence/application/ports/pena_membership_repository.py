@@ -34,6 +34,10 @@ class UserPlayerNotFoundError(Exception):
     pass
 
 
+class InvalidNationalityError(Exception):
+    pass
+
+
 class PenaMembershipRepository(Protocol):
     def get_by_pena_and_player(
         self, *, pena_guid: str, player_guid: str
@@ -80,3 +84,16 @@ class PenaMembershipRepository(Protocol):
         admin_id: int,
         player_guid: str,
     ) -> None: ...
+
+    def create_guest_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        admin_id: int,
+        name: str,
+        surname1: str,
+        surname2: str | None,
+        nationality: str,
+        nickname: str | None,
+        position: str | None,
+    ) -> PenaMembershipResult: ...
