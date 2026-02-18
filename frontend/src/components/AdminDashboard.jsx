@@ -128,6 +128,10 @@ export default function AdminDashboard({ session, onLogout }) {
         setNotice(successMessage)
       }
     } catch (actionError) {
+      if (actionError?.status === 401) {
+        await onLogout()
+        return
+      }
       setError(actionError)
     } finally {
       setLoading(false)
@@ -191,6 +195,10 @@ export default function AdminDashboard({ session, onLogout }) {
         setStandings([])
       }
     } catch (requestError) {
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
       setError(requestError)
     } finally {
       setInitializing(false)

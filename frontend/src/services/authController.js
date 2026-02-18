@@ -27,8 +27,13 @@ export class AuthController {
   }
 
   async logout() {
-    await authService.logout()
-    sessionStore.clear()
+    try {
+      await authService.logout()
+    } catch {
+      // Local logout must still succeed when server session is already expired.
+    } finally {
+      sessionStore.clear()
+    }
   }
 }
 

@@ -19,6 +19,12 @@ backend port="8000" host="0.0.0.0":
 run-backend port="8000" host="0.0.0.0":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 
+frontend port="5173" host="0.0.0.0":
+    npm --prefix frontend run dev -- --host {{host}} --port {{port}}
+
+run-frontend port="5173" host="0.0.0.0":
+    npm --prefix frontend run dev -- --host {{host}} --port {{port}}
+
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q
 
