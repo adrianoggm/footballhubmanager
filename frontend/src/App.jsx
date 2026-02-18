@@ -1,6 +1,7 @@
-import { Alert, Box, Button, Chip, Container, Grid, Stack, Typography } from '@mui/material'
+import { Alert, Box, Chip, Container, Grid, Stack, Typography } from '@mui/material'
 import AuthPanel from './components/AuthPanel.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
+import UserDashboard from './components/UserDashboard.jsx'
 import { useAuth } from './hooks/useAuth.js'
 
 export default function App() {
@@ -127,14 +128,7 @@ export default function App() {
         )}
 
         {isAuthenticated && isUser && (
-          <Stack spacing={2}>
-            <Alert severity="info">
-              You are logged in as player user. Admin panel is available only for admin sessions.
-            </Alert>
-            <Box>
-              <Button onClick={handleLogout}>Logout</Button>
-            </Box>
-          </Stack>
+          <UserDashboard session={auth.session} onLogout={handleLogout} />
         )}
 
         {isAuthenticated && !isAdmin && !isUser && (
