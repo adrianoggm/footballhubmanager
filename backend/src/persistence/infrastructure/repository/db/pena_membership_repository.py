@@ -1,4 +1,5 @@
 from persistence.application.ports.pena_membership_repository import (
+    InvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipRepository,
     PenaMembershipResult,
@@ -7,7 +8,7 @@ from persistence.application.ports.pena_membership_repository import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from persistence.domain.entity import Nationality, Pena, PenaPlayer, Player
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -107,6 +108,51 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipRepository):
 
         self.session.delete(link)
         self.session.commit()
+
+    def create_guest_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        admin_id: int,
+        name: str,
+        surname1: str,
+        surname2: str | None,
+        nationality: str,
+        nickname: str | None,
+        position: str | None,
+    ) -> PenaMembershipResult:
+        pena = self._get_pena(pena_guid)
+        if pena.id_admin != admin_id:
+            self.session.rollback()
+            raise PenaNotManagedByAdminError()
+        nationality_exists = self.session.execute(
+            select(Nationality.name).where(Nationality.name == nationality)
+        ).scalar_one_or_none()
+        if not nationality_exists:
+            self.session.rollback()
+            raise InvalidNationalityError()
+
+        player = Player(
+            name=name,
+            surname1=surname1,
+            surname2=surname2,
+            nationality=nationality,
+            id_player_account=None,
+        )
+        self.session.add(player)
+        self.session.flush()
+
+        link = PenaPlayer(
+            id_player=player.id,
+            id_pena=pena.id,
+            nickname=nickname,
+            position=position,
+        )
+        self.session.add(link)
+        self.session.commit()
+        self.session.refresh(player)
+        self.session.refresh(link)
+        return self._to_result(pena=pena, player=player, link=link)
 
     def _get_pena(self, pena_guid: str) -> Pena:
         pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()

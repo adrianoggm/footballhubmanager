@@ -389,7 +389,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             )
             .select_from(SeasonPlayer)
             .join(Player, Player.id == SeasonPlayer.id_player)
-            .join(
+            .outerjoin(
                 PenaPlayer,
                 and_(
                     PenaPlayer.id_player == SeasonPlayer.id_player,
