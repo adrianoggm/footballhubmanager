@@ -69,6 +69,62 @@ const formatEpochSeconds = (value) => {
   return new Date(value * 1000).toLocaleString()
 }
 
+const addDaysIso = (isoDate, days) => {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+const getLatestSeasonEndDate = (seasons) => {
+  if (!seasons.length) {
+    return null
+  }
+  return seasons.reduce(
+    (latest, season) => (!latest || season.end_date > latest ? season.end_date : latest),
+    null
+  )
+}
+
+const buildNextSeasonDateRange = (seasons) => {
+  const latestSeasonEndDate = getLatestSeasonEndDate(seasons)
+  if (!latestSeasonEndDate) {
+    const startDate = todayIso()
+    return {
+      start_date: startDate,
+      end_date: addDaysIso(startDate, 90)
+    }
+  }
+  return {
+    start_date: addDaysIso(latestSeasonEndDate, 1),
+    end_date: addDaysIso(latestSeasonEndDate, 90)
+  }
+}
+
+const formatPlayerDisplayName = (player) => {
+  const fullName = [player.name, player.surname1, player.surname2].filter(Boolean).join(' ')
+  return player.nickname ? `${player.nickname} (${fullName})` : fullName
+}
+
+const collectPagedItems = async (fetchPage) => {
+  const items = []
+  let page = 1
+  while (true) {
+    const response = await fetchPage(page)
+    const pageItems = response.items || []
+    items.push(...pageItems)
+    const totalPages = Number(response.total_pages || 0)
+    if (totalPages && page >= totalPages) {
+      break
+    }
+    if (!totalPages && !pageItems.length) {
+      break
+    }
+    page += 1
+  }
+  return items
+}
+
 export default function AdminDashboard({ session, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
@@ -80,6 +136,11 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const [activeSeason, setActiveSeason] = useState(null)
   const [seasonList, setSeasonList] = useState([])
+  const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
+  const [seasonRoster, setSeasonRoster] = useState([])
+  const [seasonRosterLoading, setSeasonRosterLoading] = useState(false)
+  const [historicalPlayers, setHistoricalPlayers] = useState([])
+  const [selectedHistoricalGuids, setSelectedHistoricalGuids] = useState([])
   const [standings, setStandings] = useState([])
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
@@ -100,6 +161,31 @@ export default function AdminDashboard({ session, onLogout }) {
     }
     return seasonList.filter((item) => item.guid !== activeSeason.guid)
   }, [activeSeason, seasonList])
+
+  const latestSeasonEndDate = useMemo(
+    () => getLatestSeasonEndDate(seasonList),
+    [seasonList]
+  )
+
+  const selectedSeason = useMemo(
+    () => seasonList.find((item) => item.guid === selectedSeasonGuid) || null,
+    [seasonList, selectedSeasonGuid]
+  )
+
+  const registeredSeasonPlayerGuids = useMemo(
+    () => new Set(seasonRoster.map((player) => player.player_guid)),
+    [seasonRoster]
+  )
+
+  const availableHistoricalPlayers = useMemo(
+    () =>
+      historicalPlayers
+        .filter((player) => !registeredSeasonPlayerGuids.has(player.guid))
+        .sort((left, right) =>
+          formatPlayerDisplayName(left).localeCompare(formatPlayerDisplayName(right))
+        ),
+    [historicalPlayers, registeredSeasonPlayerGuids]
+  )
 
   const onSeasonField = (name) => (event) => {
     const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
@@ -143,19 +229,59 @@ export default function AdminDashboard({ session, onLogout }) {
     setStandings(standingsPage.items || [])
   }
 
+  const loadHistoricalPlayers = async (penaGuid) =>
+    collectPagedItems((page) =>
+      adminService.listPenaPlayers(penaGuid, { page, pageSize: 100 })
+    )
+
+  const loadSeasonRoster = async (penaGuid, seasonGuid) => {
+    if (!seasonGuid) {
+      return []
+    }
+    return collectPagedItems((page) =>
+      adminService.listSeasonPlayers(penaGuid, seasonGuid, {
+        page,
+        pageSize: 100,
+        orderBy: 'points',
+        orderDir: 'desc'
+      })
+    )
+  }
+
   const loadPenaData = async (penaGuid) => {
-    const [active, seasonsPage] = await Promise.all([
+    const [active, seasonsPage, penaPlayers] = await Promise.all([
       adminService.getActiveSeason(penaGuid).catch((requestError) => {
         if (requestError.status === 404) {
           return null
         }
         throw requestError
       }),
-      adminService.listSeasons(penaGuid, { pageSize: 100 })
+      adminService.listSeasons(penaGuid, { pageSize: 100 }),
+      loadHistoricalPlayers(penaGuid)
     ])
 
+    const seasonItems = seasonsPage.items || []
     setActiveSeason(active)
-    setSeasonList(seasonsPage.items || [])
+    setSeasonList(seasonItems)
+    setHistoricalPlayers(penaPlayers)
+
+    const nextRange = buildNextSeasonDateRange(seasonItems)
+    const pointsReference = active || seasonItems[0]
+    setSeasonForm({
+      ...nextRange,
+      points_win: pointsReference?.points_win ?? 3,
+      points_draw: pointsReference?.points_draw ?? 1,
+      points_loss: pointsReference?.points_loss ?? 0
+    })
+
+    const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
+    setSelectedSeasonGuid((currentGuid) => {
+      if (currentGuid && seasonItems.some((item) => item.guid === currentGuid)) {
+        return currentGuid
+      }
+      return fallbackSeasonGuid
+    })
+    setSelectedHistoricalGuids([])
 
     if (active) {
       setPointsForm({
@@ -221,6 +347,54 @@ export default function AdminDashboard({ session, onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid])
 
+  useEffect(() => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+      setSeasonRoster([])
+      setSeasonRosterLoading(false)
+      return
+    }
+    if (!seasonList.some((season) => season.guid === selectedSeasonGuid)) {
+      setSeasonRoster([])
+      setSeasonRosterLoading(false)
+      return
+    }
+
+    let activeRequest = true
+    setSeasonRosterLoading(true)
+    ;(async () => {
+      try {
+        const rosterItems = await loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid)
+        if (!activeRequest) {
+          return
+        }
+        setSeasonRoster(rosterItems)
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
+        }
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      } finally {
+        if (activeRequest) {
+          setSeasonRosterLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      activeRequest = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+
+  useEffect(() => {
+    const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
+    setSelectedHistoricalGuids((current) => current.filter((guid) => availableGuids.has(guid)))
+  }, [availableHistoricalPlayers])
+
   const handleCreateSeason = async () => {
     if (!selectedPenaGuid) {
       return
@@ -229,6 +403,19 @@ export default function AdminDashboard({ session, onLogout }) {
       await adminService.createSeason(selectedPenaGuid, seasonForm)
       await loadPenaData(selectedPenaGuid)
     }, 'Season created')
+  }
+
+  const handlePrefillNextSeason = () => {
+    if (!latestSeasonEndDate) {
+      return
+    }
+    const startDate = addDaysIso(latestSeasonEndDate, 1)
+    const endDate = addDaysIso(latestSeasonEndDate, 90)
+    setSeasonForm((prev) => ({
+      ...prev,
+      start_date: startDate,
+      end_date: endDate
+    }))
   }
 
   const handleUpdateSeasonPoints = async () => {
@@ -306,6 +493,32 @@ export default function AdminDashboard({ session, onLogout }) {
     }, registerInActiveSeason ? 'Guest created and added to active season' : 'Guest player created')
   }
 
+  const handleSeasonSelection = (event) => {
+    setSelectedSeasonGuid(event.target.value)
+    setSelectedHistoricalGuids([])
+  }
+
+  const handleSelectHistoricalPlayers = (event) => {
+    const value = event.target.value
+    setSelectedHistoricalGuids(typeof value === 'string' ? value.split(',') : value)
+  }
+
+  const handleRegisterHistoricalPlayersInSeason = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedHistoricalGuids.length) {
+      return
+    }
+    const totalSelected = selectedHistoricalGuids.length
+    await runAction(async () => {
+      await adminService.registerSeasonPlayersBulk(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedHistoricalGuids
+      )
+      setSelectedHistoricalGuids([])
+      await loadPenaData(selectedPenaGuid)
+    }, `${totalSelected} player${totalSelected === 1 ? '' : 's'} added to season`)
+  }
+
   if (initializing) {
     return (
       <Stack spacing={2}>
@@ -358,7 +571,8 @@ export default function AdminDashboard({ session, onLogout }) {
 
       {!selectedPenaGuid && (
         <Alert severity="info">
-          This admin is not linked to any pena yet. Create or assign a pena first.
+          This admin account has no linked pena. In this system, each admin has exactly one pena
+          created at admin registration. Logout and create a new admin account if this is a legacy account.
         </Alert>
       )}
 
@@ -403,6 +617,11 @@ export default function AdminDashboard({ session, onLogout }) {
                       fullWidth
                     />
                   </Stack>
+                  {latestSeasonEndDate && (
+                    <Button variant="text" onClick={handlePrefillNextSeason} disabled={loading}>
+                      Use dates after latest season
+                    </Button>
+                  )}
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       type="number"
@@ -429,10 +648,13 @@ export default function AdminDashboard({ session, onLogout }) {
                   <Button
                     variant="contained"
                     onClick={handleCreateSeason}
-                    disabled={loading || Boolean(activeSeason)}
+                    disabled={loading}
                   >
-                    Create Active Season
+                    Create Season
                   </Button>
+                  <Typography variant="caption" color="text.secondary">
+                    New seasons must not overlap existing date ranges.
+                  </Typography>
 
                   <Divider />
 
@@ -584,6 +806,122 @@ export default function AdminDashboard({ session, onLogout }) {
                       Create + Add To Season
                     </Button>
                   </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ sm: 'center' }}
+                    justifyContent="space-between"
+                    spacing={1.5}
+                  >
+                    <Typography variant="h6">Season Squad Management</Typography>
+                    {selectedSeason && (
+                      <Chip
+                        size="small"
+                        color="primary"
+                        label={`${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`}
+                      />
+                    )}
+                  </Stack>
+
+                  <TextField
+                    select
+                    label="Season"
+                    value={selectedSeasonGuid}
+                    onChange={handleSeasonSelection}
+                    fullWidth
+                  >
+                    {seasonList.map((season) => (
+                      <MenuItem key={season.guid} value={season.guid}>
+                        {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                        {activeSeason?.guid === season.guid ? ' (Active)' : ''}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  {!seasonList.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      Create at least one season to manage season squads.
+                    </Typography>
+                  )}
+
+                  <TextField
+                    select
+                    label="Historical members to add"
+                    value={selectedHistoricalGuids}
+                    onChange={handleSelectHistoricalPlayers}
+                    SelectProps={{
+                      multiple: true,
+                      renderValue: (selected) => `${selected.length} selected`
+                    }}
+                    disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
+                    helperText={
+                      !selectedSeasonGuid
+                        ? 'Select a season first.'
+                        : availableHistoricalPlayers.length
+                          ? 'Only historical members not yet registered in this season are listed.'
+                          : 'All historical members are already in this season.'
+                    }
+                    fullWidth
+                  >
+                    {availableHistoricalPlayers.map((player) => (
+                      <MenuItem key={player.guid} value={player.guid}>
+                        {formatPlayerDisplayName(player)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={handleRegisterHistoricalPlayersInSeason}
+                      disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
+                    >
+                      Add Selected To Season
+                    </Button>
+                    <Typography variant="body2" color="text.secondary">
+                      Registered: {seasonRoster.length} | Available historical: {availableHistoricalPlayers.length}
+                    </Typography>
+                  </Stack>
+
+                  {seasonRosterLoading && <LinearProgress />}
+
+                  {selectedSeasonGuid && !seasonRosterLoading && (
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Player</TableCell>
+                          <TableCell align="right">W</TableCell>
+                          <TableCell align="right">D</TableCell>
+                          <TableCell align="right">L</TableCell>
+                          <TableCell align="right">Pts</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {seasonRoster.map((player) => (
+                          <TableRow key={player.player_guid}>
+                            <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                            <TableCell align="right">{player.wins}</TableCell>
+                            <TableCell align="right">{player.draws}</TableCell>
+                            <TableCell align="right">{player.losses}</TableCell>
+                            <TableCell align="right">{player.points}</TableCell>
+                          </TableRow>
+                        ))}
+                        {!seasonRoster.length && (
+                          <TableRow>
+                            <TableCell colSpan={5}>No players registered in this season yet.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
                 </Stack>
               </CardContent>
             </Card>
