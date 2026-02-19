@@ -69,6 +69,29 @@ export class AdminService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings${query}`)
   }
 
+  listSeasonMatches(penaGuid, seasonGuid, { page = 1, pageSize = 50 } = {}) {
+    const query = toQueryString({ page, page_size: pageSize })
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches${query}`)
+  }
+
+  updateMatchResult(penaGuid, seasonGuid, matchGuid, payload) {
+    return httpClient.patch(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/result`,
+      payload
+    )
+  }
+
+  getMatchDetail(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`)
+  }
+
+  updateMatchStats(penaGuid, seasonGuid, matchGuid, payload) {
+    return httpClient.patch(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/stats`,
+      payload
+    )
+  }
+
   createDetailedMatch(penaGuid, seasonGuid, payload) {
     return httpClient.post(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/detailed`,

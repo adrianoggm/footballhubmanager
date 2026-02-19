@@ -124,6 +124,23 @@ const formatPlayerDisplayName = (player) => {
   return player.nickname ? `${player.nickname} (${fullName})` : fullName
 }
 
+const isOneVsOneMatch = (match) => Number(match.home_players) === 1 && Number(match.away_players) === 1
+
+const buildTeamStatsDraft = (team) => ({
+  players: (team?.players || []).map((player) => ({
+    player_guid: player.player_guid,
+    goals: String(player.goals ?? 0),
+    assists: String(player.assists ?? 0),
+    saves: String(player.saves ?? 0),
+    rating: String(player.rating ?? 0)
+  }))
+})
+
+const buildMatchStatsDraft = (detail) => ({
+  home_team: buildTeamStatsDraft(detail?.home_team),
+  away_team: buildTeamStatsDraft(detail?.away_team)
+})
+
 const collectPagedItems = async (fetchPage) => {
   const items = []
   let page = 1
@@ -162,6 +179,13 @@ export default function AdminDashboard({ session, onLogout }) {
   const [historicalPlayers, setHistoricalPlayers] = useState([])
   const [selectedHistoricalGuids, setSelectedHistoricalGuids] = useState([])
   const [standings, setStandings] = useState([])
+  const [seasonMatches, setSeasonMatches] = useState([])
+  const [seasonMatchesLoading, setSeasonMatchesLoading] = useState(false)
+  const [matchResultDrafts, setMatchResultDrafts] = useState({})
+  const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
+  const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
+  const [matchStatsDraft, setMatchStatsDraft] = useState(null)
+  const [matchStatsLoading, setMatchStatsLoading] = useState(false)
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
@@ -278,6 +302,44 @@ export default function AdminDashboard({ session, onLogout }) {
     )
   }
 
+  const loadSeasonMatches = async (penaGuid, seasonGuid) => {
+    if (!seasonGuid) {
+      setSeasonMatches([])
+      setMatchResultDrafts({})
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
+      setMatchStatsDraft(null)
+      return
+    }
+    const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, { pageSize: 100 })
+    const nextMatches = matchesPage.items || []
+    setSeasonMatches(nextMatches)
+    setMatchResultDrafts((prev) => {
+      const nextDrafts = {}
+      nextMatches.forEach((item) => {
+        nextDrafts[item.guid] = {
+          home_score: prev[item.guid]?.home_score ?? String(item.home_score ?? 0),
+          away_score: prev[item.guid]?.away_score ?? String(item.away_score ?? 0)
+        }
+      })
+      return nextDrafts
+    })
+    const stillExists = nextMatches.some((item) => item.guid === selectedMatchGuid)
+    if (!stillExists) {
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
+      setMatchStatsDraft(null)
+    }
+  }
+
+  const loadMatchDetail = async (penaGuid, seasonGuid, matchGuid) => {
+    const detail = await adminService.getMatchDetail(penaGuid, seasonGuid, matchGuid)
+    setSelectedMatchGuid(matchGuid)
+    setSelectedMatchDetail(detail)
+    setMatchStatsDraft(buildMatchStatsDraft(detail))
+    return detail
+  }
+
   const loadPenaData = async (penaGuid) => {
     const [active, seasonsPage, penaPlayers] = await Promise.all([
       adminService.getActiveSeason(penaGuid).catch((requestError) => {
@@ -349,6 +411,8 @@ export default function AdminDashboard({ session, onLogout }) {
         setActiveSeason(null)
         setSeasonList([])
         setStandings([])
+        setSeasonMatches([])
+        setMatchResultDrafts({})
       }
     } catch (requestError) {
       if (requestError?.status === 401) {
@@ -421,6 +485,53 @@ export default function AdminDashboard({ session, onLogout }) {
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
 
   useEffect(() => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+      setSeasonMatches([])
+      setMatchResultDrafts({})
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
+      setMatchStatsDraft(null)
+      setSeasonMatchesLoading(false)
+      return
+    }
+    if (!seasonList.some((season) => season.guid === selectedSeasonGuid)) {
+      setSeasonMatches([])
+      setMatchResultDrafts({})
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
+      setMatchStatsDraft(null)
+      setSeasonMatchesLoading(false)
+      return
+    }
+
+    let activeRequest = true
+    setSeasonMatchesLoading(true)
+    ;(async () => {
+      try {
+        await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
+        }
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      } finally {
+        if (activeRequest) {
+          setSeasonMatchesLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      activeRequest = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+
+  useEffect(() => {
     const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
     setSelectedHistoricalGuids((current) => current.filter((guid) => availableGuids.has(guid)))
   }, [availableHistoricalPlayers])
@@ -482,6 +593,9 @@ export default function AdminDashboard({ session, onLogout }) {
       })
       setLastCreatedMatch(created)
       await loadPenaData(selectedPenaGuid)
+      if (selectedSeasonGuid) {
+        await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+      }
     }, t('dashboard.admin.notices.detailedMatchCreated'))
   }
 
@@ -529,8 +643,13 @@ export default function AdminDashboard({ session, onLogout }) {
     const nextSeasonGuid = event.target.value
     setSelectedSeasonGuid(nextSeasonGuid)
     setSelectedHistoricalGuids([])
+    setSelectedMatchGuid('')
+    setSelectedMatchDetail(null)
+    setMatchStatsDraft(null)
     if (!selectedPenaGuid || !nextSeasonGuid) {
       setStandings([])
+      setSeasonMatches([])
+      setMatchResultDrafts({})
       return
     }
     runAction(
@@ -571,6 +690,131 @@ export default function AdminDashboard({ session, onLogout }) {
       () => loadStandings(selectedPenaGuid, selectedSeasonGuid),
       t('dashboard.admin.notices.standingsUpdated')
     )
+  }
+
+  const onMatchResultDraftField = (matchGuid, field) => (event) => {
+    setMatchResultDrafts((prev) => ({
+      ...prev,
+      [matchGuid]: {
+        home_score: prev[matchGuid]?.home_score ?? '0',
+        away_score: prev[matchGuid]?.away_score ?? '0',
+        [field]: event.target.value
+      }
+    }))
+  }
+
+  const handleUpdateMatchResult = async (matchGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid) {
+      return
+    }
+    const draft = matchResultDrafts[matchGuid]
+    if (!draft) {
+      return
+    }
+    const homeScore = Number(draft.home_score)
+    const awayScore = Number(draft.away_score)
+    if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore) || homeScore < 0 || awayScore < 0) {
+      setError(new Error(t('dashboard.admin.errors.invalidMatchResult')))
+      return
+    }
+    await runAction(async () => {
+      await adminService.updateMatchResult(selectedPenaGuid, selectedSeasonGuid, matchGuid, {
+        home_score: homeScore,
+        away_score: awayScore,
+        update_standings: true
+      })
+      await Promise.all([
+        loadStandings(selectedPenaGuid, selectedSeasonGuid),
+        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+      ])
+    }, t('dashboard.admin.notices.matchResultUpdated'))
+  }
+
+  const handleOpenMatchStats = async (matchGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
+      return
+    }
+    setMatchStatsLoading(true)
+    setError(null)
+    try {
+      await loadMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid)
+    } catch (requestError) {
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      setMatchStatsLoading(false)
+    }
+  }
+
+  const onMatchStatsDraftField = (teamKey, playerGuid, field) => (event) => {
+    const value = event.target.value
+    setMatchStatsDraft((prev) => {
+      if (!prev) {
+        return prev
+      }
+      return {
+        ...prev,
+        [teamKey]: {
+          ...prev[teamKey],
+          players: (prev[teamKey]?.players || []).map((player) =>
+            player.player_guid === playerGuid ? { ...player, [field]: value } : player
+          )
+        }
+      }
+    })
+  }
+
+  const parseStatsPayload = (values) => {
+    const goals = Number(values.goals)
+    const assists = Number(values.assists)
+    const saves = Number(values.saves)
+    const rating = Number(values.rating)
+    const integers = [goals, assists, saves]
+    const invalidIntegers = integers.some((item) => !Number.isInteger(item) || item < 0)
+    if (invalidIntegers || Number.isNaN(rating) || rating < 0) {
+      return null
+    }
+    return {
+      player_guid: values.player_guid,
+      goals,
+      assists,
+      saves,
+      rating
+    }
+  }
+
+  const handleSaveMatchStats = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !matchStatsDraft) {
+      return
+    }
+
+    const homePlayers = (matchStatsDraft.home_team?.players || []).map(parseStatsPayload)
+    const awayPlayers = (matchStatsDraft.away_team?.players || []).map(parseStatsPayload)
+    if (!homePlayers.length || !awayPlayers.length || homePlayers.some((item) => !item) || awayPlayers.some((item) => !item)) {
+      setError(new Error(t('dashboard.admin.errors.invalidMatchStats')))
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.updateMatchStats(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid,
+        {
+          home_team: { players: homePlayers },
+          away_team: { players: awayPlayers }
+        }
+      )
+      setSelectedMatchDetail(updated)
+      setMatchStatsDraft(buildMatchStatsDraft(updated))
+      await Promise.all([
+        loadStandings(selectedPenaGuid, selectedSeasonGuid),
+        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+      ])
+    }, t('dashboard.admin.notices.matchStatsUpdated'))
   }
 
   const activeSeasonLabel = activeSeason
@@ -850,6 +1094,9 @@ export default function AdminDashboard({ session, onLogout }) {
                         <TableHead>
                           <TableRow>
                             <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
@@ -860,6 +1107,11 @@ export default function AdminDashboard({ session, onLogout }) {
                           {standings.slice(0, 5).map((player) => (
                             <TableRow key={player.player_guid}>
                               <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                              <TableCell align="right">
+                                {player.played ?? player.wins + player.draws + player.losses}
+                              </TableCell>
+                              <TableCell align="right">{player.goals ?? 0}</TableCell>
+                              <TableCell align="right">{player.assists ?? 0}</TableCell>
                               <TableCell align="right">{player.wins}</TableCell>
                               <TableCell align="right">{player.draws}</TableCell>
                               <TableCell align="right">{player.losses}</TableCell>
@@ -868,7 +1120,7 @@ export default function AdminDashboard({ session, onLogout }) {
                           ))}
                           {!standings.length && (
                             <TableRow>
-                              <TableCell colSpan={5}>
+                              <TableCell colSpan={8}>
                                 {t('dashboard.admin.overview.noStandingsForSeason')}
                               </TableCell>
                             </TableRow>
@@ -1034,6 +1286,7 @@ export default function AdminDashboard({ session, onLogout }) {
               </CardContent>
             </Card>
           </Grid>
+
         </Grid>
       )}
 
@@ -1112,6 +1365,9 @@ export default function AdminDashboard({ session, onLogout }) {
                         <TableHead>
                           <TableRow>
                             <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
@@ -1122,6 +1378,11 @@ export default function AdminDashboard({ session, onLogout }) {
                           {seasonRoster.map((player) => (
                             <TableRow key={player.player_guid}>
                               <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                              <TableCell align="right">
+                                {player.played ?? player.wins + player.draws + player.losses}
+                              </TableCell>
+                              <TableCell align="right">{player.goals ?? 0}</TableCell>
+                              <TableCell align="right">{player.assists ?? 0}</TableCell>
                               <TableCell align="right">{player.wins}</TableCell>
                               <TableCell align="right">{player.draws}</TableCell>
                               <TableCell align="right">{player.losses}</TableCell>
@@ -1130,7 +1391,7 @@ export default function AdminDashboard({ session, onLogout }) {
                           ))}
                           {!seasonRoster.length && (
                             <TableRow>
-                              <TableCell colSpan={5}>
+                              <TableCell colSpan={8}>
                                 {t('dashboard.admin.players.noPlayersInSeason')}
                               </TableCell>
                             </TableRow>
@@ -1348,6 +1609,244 @@ export default function AdminDashboard({ session, onLogout }) {
               </CardContent>
             </Card>
           </Grid>
+
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h6">{t('dashboard.admin.matches.seasonMatchesTitle')}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.admin.matches.seasonMatchesDescription')}
+                  </Typography>
+                  {seasonMatchesLoading && <LinearProgress />}
+                  {!selectedSeasonGuid && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.overview.selectSeasonToLoad')}
+                    </Typography>
+                  )}
+                  {selectedSeasonGuid && !seasonMatchesLoading && !seasonMatches.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.matches.noMatchesYet')}
+                    </Typography>
+                  )}
+                  {selectedSeasonGuid && !seasonMatchesLoading && seasonMatches.length > 0 && (
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
+                            <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
+                            <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
+                            <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
+                            <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
+                            <TableCell>{t('dashboard.admin.matches.finalScore')}</TableCell>
+                            <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {seasonMatches.map((match) => {
+                            const oneVsOne = isOneVsOneMatch(match)
+                            const status = String(match.status || 'open').toLowerCase()
+                            const isClosed = status === 'closed'
+
+                            return (
+                              <TableRow key={match.guid}>
+                                <TableCell>{formatDate(match.match_date)}</TableCell>
+                                <TableCell>{match.home_team_name}</TableCell>
+                                <TableCell>{match.away_team_name}</TableCell>
+                                <TableCell>
+                                  <Chip
+                                    size="small"
+                                    color={isClosed ? 'success' : 'warning'}
+                                    label={
+                                      isClosed
+                                        ? t('dashboard.admin.matches.statusClosed')
+                                        : t('dashboard.admin.matches.statusOpen')
+                                    }
+                                  />
+                                </TableCell>
+                                <TableCell>{match.home_score} - {match.away_score}</TableCell>
+                                <TableCell>
+                                  {oneVsOne ? (
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center">
+                                      <TextField
+                                        type="number"
+                                        size="small"
+                                        value={matchResultDrafts[match.guid]?.home_score ?? String(match.home_score ?? 0)}
+                                        onChange={onMatchResultDraftField(match.guid, 'home_score')}
+                                        inputProps={{ min: 0 }}
+                                        sx={{ maxWidth: 96 }}
+                                      />
+                                      <Typography variant="body2">-</Typography>
+                                      <TextField
+                                        type="number"
+                                        size="small"
+                                        value={matchResultDrafts[match.guid]?.away_score ?? String(match.away_score ?? 0)}
+                                        onChange={onMatchResultDraftField(match.guid, 'away_score')}
+                                        inputProps={{ min: 0 }}
+                                        sx={{ maxWidth: 96 }}
+                                      />
+                                      <Button
+                                        variant="outlined"
+                                        size="small"
+                                        onClick={() => handleUpdateMatchResult(match.guid)}
+                                        disabled={loading}
+                                      >
+                                        {t('dashboard.admin.matches.saveResult')}
+                                      </Button>
+                                    </Stack>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      {t('dashboard.admin.matches.scoreFromStats')}
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant={selectedMatchGuid === match.guid ? 'contained' : 'text'}
+                                    size="small"
+                                    onClick={() => handleOpenMatchStats(match.guid)}
+                                    disabled={loading || matchStatsLoading}
+                                  >
+                                    {t('dashboard.admin.matches.manageStats')}
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+
+                  {selectedSeasonGuid && matchStatsLoading && <LinearProgress />}
+                  {selectedSeasonGuid && !matchStatsLoading && selectedMatchDetail && matchStatsDraft && (
+                    <Card variant="outlined" sx={{ mt: 1 }}>
+                      <CardContent>
+                        <Stack spacing={2}>
+                          <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              {t('dashboard.admin.matches.statsEditorTitle', {
+                                home: selectedMatchDetail.home_team.team_name,
+                                away: selectedMatchDetail.away_team.team_name
+                              })}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {t('dashboard.admin.matches.statsEditorDescription')}
+                            </Typography>
+                          </Box>
+
+                          <Grid container spacing={2}>
+                            {[
+                              { key: 'home_team', team: selectedMatchDetail.home_team },
+                              { key: 'away_team', team: selectedMatchDetail.away_team }
+                            ].map(({ key, team }) => (
+                              <Grid key={key} item xs={12} md={6}>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                  {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
+                                </Typography>
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                                      <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
+                                      <TableCell>{t('dashboard.admin.matches.assists')}</TableCell>
+                                      <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
+                                      <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {team.players.map((player) => (
+                                      <TableRow key={player.player_guid}>
+                                        <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                                        <TableCell>
+                                          <TextField
+                                            type="number"
+                                            size="small"
+                                            value={
+                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.goals ??
+                                              '0'
+                                            }
+                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'goals')}
+                                            inputProps={{ min: 0 }}
+                                            sx={{ maxWidth: 90 }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <TextField
+                                            type="number"
+                                            size="small"
+                                            value={
+                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.assists ??
+                                              '0'
+                                            }
+                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'assists')}
+                                            inputProps={{ min: 0 }}
+                                            sx={{ maxWidth: 90 }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <TextField
+                                            type="number"
+                                            size="small"
+                                            value={
+                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.saves ??
+                                              '0'
+                                            }
+                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'saves')}
+                                            inputProps={{ min: 0 }}
+                                            sx={{ maxWidth: 90 }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <TextField
+                                            type="number"
+                                            size="small"
+                                            value={
+                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.rating ??
+                                              '0'
+                                            }
+                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'rating')}
+                                            inputProps={{ min: 0, step: 0.1 }}
+                                            sx={{ maxWidth: 90 }}
+                                          />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </Grid>
+                            ))}
+                          </Grid>
+
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                            <Button
+                              variant="contained"
+                              onClick={handleSaveMatchStats}
+                              disabled={loading || matchStatsLoading}
+                            >
+                              {t('dashboard.admin.matches.saveStats')}
+                            </Button>
+                            <Button
+                              variant="text"
+                              onClick={() => {
+                                setSelectedMatchGuid('')
+                                setSelectedMatchDetail(null)
+                                setMatchStatsDraft(null)
+                              }}
+                              disabled={loading}
+                            >
+                              {t('dashboard.admin.matches.closeEditor')}
+                            </Button>
+                          </Stack>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
       )}
 
@@ -1388,6 +1887,9 @@ export default function AdminDashboard({ session, onLogout }) {
                     <TableHead>
                       <TableRow>
                         <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
@@ -1398,6 +1900,11 @@ export default function AdminDashboard({ session, onLogout }) {
                       {standings.map((player) => (
                         <TableRow key={player.player_guid}>
                           <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                          <TableCell align="right">
+                            {player.played ?? player.wins + player.draws + player.losses}
+                          </TableCell>
+                          <TableCell align="right">{player.goals ?? 0}</TableCell>
+                          <TableCell align="right">{player.assists ?? 0}</TableCell>
                           <TableCell align="right">{player.wins}</TableCell>
                           <TableCell align="right">{player.draws}</TableCell>
                           <TableCell align="right">{player.losses}</TableCell>
@@ -1406,7 +1913,7 @@ export default function AdminDashboard({ session, onLogout }) {
                       ))}
                       {!standings.length && (
                         <TableRow>
-                          <TableCell colSpan={5}>{t('dashboard.admin.standings.noSeasonPlayers')}</TableCell>
+                          <TableCell colSpan={8}>{t('dashboard.admin.standings.noSeasonPlayers')}</TableCell>
                         </TableRow>
                       )}
                     </TableBody>

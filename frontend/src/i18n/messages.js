@@ -116,6 +116,9 @@ export const messages = {
         table: {
           player: 'Player',
           guid: 'GUID',
+          played: 'P',
+          goals: 'G',
+          assists: 'A',
           w: 'W',
           d: 'D',
           l: 'L',
@@ -188,6 +191,32 @@ export const messages = {
         matches: {
           title: 'Create Match + Lineups',
           description: 'Create a detailed season match and start the lineup process in one action.',
+          seasonMatchesTitle: 'Season Matches',
+          seasonMatchesDescription:
+            'Matches stay open after lineup creation. Register team/player stats to close them and compute final data.',
+          noMatchesYet: 'No matches created for this season yet.',
+          saveResult: 'Save Result',
+          date: 'Date',
+          home: 'Home',
+          away: 'Away',
+          status: 'Status',
+          statusOpen: 'Open',
+          statusClosed: 'Closed',
+          actions: 'Actions',
+          result: 'Result',
+          finalScore: 'Final score',
+          scoreFromStats: 'Set score from team/player stats.',
+          manageStats: 'Manage stats',
+          statsEditorTitle: 'Match stats: {home} vs {away}',
+          statsEditorDescription:
+            'Update player stats to close the match and recalculate standings.',
+          teamStats: 'Team stats: {team}',
+          goals: 'Goals',
+          assists: 'Assists',
+          saves: 'Saves',
+          rating: 'Rating',
+          saveStats: 'Save stats',
+          closeEditor: 'Close editor',
           matchDate: 'Match date',
           homeTeam: 'Home team name',
           awayTeam: 'Away team name',
@@ -214,6 +243,8 @@ export const messages = {
           seasonCreated: 'Season created',
           seasonPointsUpdated: 'Season points updated',
           detailedMatchCreated: 'Detailed match created',
+          matchResultUpdated: 'Match result updated',
+          matchStatsUpdated: 'Match stats updated',
           joinCodeGenerated: 'Join code generated',
           guestCreatedAdded: 'Guest created and added to active season',
           guestCreated: 'Guest player created',
@@ -222,6 +253,9 @@ export const messages = {
         },
         errors: {
           lineupsRequired: 'Home and away lineups must include at least one player guid',
+          invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
+          invalidMatchStats:
+            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
           activeSeasonRequired:
             'An active season is required to register a guest into season standings'
         }
@@ -388,6 +422,9 @@ export const messages = {
         table: {
           player: 'Jugador',
           guid: 'GUID',
+          played: 'PJ',
+          goals: 'G',
+          assists: 'A',
           w: 'V',
           d: 'E',
           l: 'D',
@@ -462,6 +499,32 @@ export const messages = {
         matches: {
           title: 'Crear partido + alineaciones',
           description: 'Crea un partido detallado y lanza el flujo de alineaciones en una acción.',
+          seasonMatchesTitle: 'Partidos de temporada',
+          seasonMatchesDescription:
+            'Los partidos quedan abiertos al crear la convocatoria. Registra estadísticas de equipo/jugadores para cerrarlos y calcular los datos finales.',
+          noMatchesYet: 'Todavía no hay partidos creados para esta temporada.',
+          saveResult: 'Guardar resultado',
+          date: 'Fecha',
+          home: 'Local',
+          away: 'Visitante',
+          status: 'Estado',
+          statusOpen: 'Abierto',
+          statusClosed: 'Cerrado',
+          actions: 'Acciones',
+          result: 'Resultado',
+          finalScore: 'Marcador final',
+          scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
+          manageStats: 'Editar estadísticas',
+          statsEditorTitle: 'Estadísticas: {home} vs {away}',
+          statsEditorDescription:
+            'Actualiza estadísticas por jugador para cerrar el partido y recalcular la clasificación.',
+          teamStats: 'Datos del equipo: {team}',
+          goals: 'Goles',
+          assists: 'Asistencias',
+          saves: 'Paradas',
+          rating: 'Valoración',
+          saveStats: 'Guardar estadísticas',
+          closeEditor: 'Cerrar editor',
           matchDate: 'Fecha del partido',
           homeTeam: 'Nombre del local',
           awayTeam: 'Nombre del visitante',
@@ -488,6 +551,8 @@ export const messages = {
           seasonCreated: 'Temporada creada',
           seasonPointsUpdated: 'Puntuación de temporada actualizada',
           detailedMatchCreated: 'Partido detallado creado',
+          matchResultUpdated: 'Resultado del partido actualizado',
+          matchStatsUpdated: 'Estadísticas del partido actualizadas',
           joinCodeGenerated: 'Código de acceso generado',
           guestCreatedAdded: 'Invitado creado y añadido a la temporada activa',
           guestCreated: 'Jugador invitado creado',
@@ -497,6 +562,10 @@ export const messages = {
         errors: {
           lineupsRequired:
             'La alineación local y visitante debe incluir al menos un GUID de jugador',
+          invalidMatchResult:
+            'El marcador local y visitante debe ser un número mayor o igual a cero',
+          invalidMatchStats:
+            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
           activeSeasonRequired:
             'Se requiere una temporada activa para registrar un invitado en la clasificación'
         }
