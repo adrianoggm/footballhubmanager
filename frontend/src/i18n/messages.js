@@ -64,7 +64,196 @@ export const messages = {
       adminUsernameHint: 'This username is used to sign in as admin.',
       adminPenaNameHint: 'This is the name of the pena created for your admin account.',
       adminFooter: 'Admins manage seasons, lineups, scoring rules and invite links.',
-      playerFooter: 'Players join penas with invite codes and participate in season matches.'
+      playerFooter: 'Players join penas with invite codes and participate in season matches.',
+      errors: {
+        invalidCredentials: 'Invalid credentials.',
+        usernameExists: 'Username already exists.',
+        invalidUserRegistrationData: 'Invalid user registration data.',
+        invalidAdminRegistrationData: 'Invalid admin registration data.',
+        invalidNationality: 'Invalid nationality.',
+        network: 'Could not reach the server. Check your connection and try again.',
+        generic: 'Authentication request failed. Please try again.'
+      }
+    },
+    dashboard: {
+      common: {
+        loggedAs: 'Logged as',
+        refresh: 'Refresh',
+        refreshData: 'Refresh data',
+        logout: 'Logout'
+      },
+      admin: {
+        panelTitle: 'Admin Workspace',
+        currentPena: 'Current pena',
+        referenceSeason: 'Reference season',
+        noLinkedPenaInfo:
+          'This admin account has no linked pena. In this system, each admin has exactly one pena created at admin registration. Logout and create a new admin account if this is a legacy account.',
+        seasonActiveSuffix: ' (Active)',
+        tabs: {
+          overview: 'Overview',
+          seasons: 'Seasons',
+          players: 'Players',
+          matches: 'Matches',
+          standings: 'Standings'
+        },
+        chips: {
+          pena: 'Pena: {name}',
+          activeSeason: 'Active season: {season}',
+          selectedSeason: 'Selected season: {season}'
+        },
+        status: {
+          noActiveSeason: 'No active season',
+          noSeasonSelected: 'No season selected',
+          configured: 'Configured',
+          missing: 'Missing'
+        },
+        table: {
+          player: 'Player',
+          guid: 'GUID',
+          w: 'W',
+          d: 'D',
+          l: 'L',
+          pts: 'Pts'
+        },
+        overview: {
+          currentPena: 'Current Pena',
+          activeSeason: 'Active Season',
+          totalSeasons: 'Total Seasons',
+          seasonPlayers: 'Season Players',
+          inviteTitle: 'Invite Players',
+          inviteDescription: 'Generate a one-time join token and share it with players.',
+          generateJoinCode: 'Generate Join Code',
+          codeLabel: 'Code',
+          expiresLabel: 'Expires',
+          quickActionsTitle: 'Quick Actions',
+          quickActionsDescription: 'Jump directly to a workflow and keep the dashboard focused.',
+          manageSeasons: 'Manage Seasons',
+          managePlayers: 'Manage Players',
+          createMatch: 'Create Match',
+          viewStandings: 'View Standings',
+          noDetailedMatch: 'No detailed match created in this session yet.',
+          lastMatchCreated: 'Last match created: {guid} for {date}.',
+          standingsSnapshotTitle: 'Standings Snapshot',
+          refreshStandings: 'Refresh standings',
+          selectSeasonToLoad: 'Select a season to load standings.',
+          noStandingsForSeason: 'No standings available for this season yet.'
+        },
+        seasons: {
+          configTitle: 'Season Configuration',
+          noActiveWarning: 'No active season found for today. Create one to start orchestration.',
+          startDate: 'Start date',
+          endDate: 'End date',
+          useAfterLatest: 'Use dates after latest season',
+          winPoints: 'Win points',
+          drawPoints: 'Draw points',
+          lossPoints: 'Loss points',
+          createSeason: 'Create Season',
+          overlapHint: 'New seasons must not overlap existing date ranges.',
+          scoringRulesTitle: 'Active Season Scoring Rules',
+          saveScoringRules: 'Save Scoring Rules',
+          historyTitle: 'Season History',
+          noHistory: 'No previous seasons found.',
+          historyPoints: 'W:{win} / D:{draw} / L:{loss}'
+        },
+        players: {
+          squadTitle: 'Season Squad Management',
+          createSeasonFirst: 'Create at least one season to manage season squads.',
+          historicalMembersLabel: 'Historical members to add',
+          helperSelectSeason: 'Select a season first.',
+          helperSome: 'Only historical members not yet registered in this season are listed.',
+          helperNone: 'All historical members are already in this season.',
+          addSelectedToSeason: 'Add Selected To Season',
+          registeredAvailable: 'Registered: {registered} | Available: {available}',
+          noPlayersInSeason: 'No players registered in this season yet.'
+        },
+        guest: {
+          title: 'Guest Players',
+          description: 'Create players without user account for invited or offline members.',
+          name: 'Name',
+          surname1: 'Surname 1',
+          surname2: 'Surname 2',
+          nationality: 'Nationality',
+          nickname: 'Nickname',
+          position: 'Position',
+          createGuest: 'Create Guest',
+          createAndAdd: 'Create + Add To Season'
+        },
+        matches: {
+          title: 'Create Match + Lineups',
+          description: 'Create a detailed season match and start the lineup process in one action.',
+          matchDate: 'Match date',
+          homeTeam: 'Home team name',
+          awayTeam: 'Away team name',
+          homeLineup: 'Home lineup guids',
+          awayLineup: 'Away lineup guids',
+          lineupGuidsHelper: 'Comma or line-break separated player GUIDs',
+          createDetailedMatch: 'Create Detailed Match',
+          matchCreated: 'Match {guid} created for {date}.',
+          lineupHelperTitle: 'Lineup Helper',
+          lineupHelperDescription:
+            'Use these player GUIDs from the selected season roster to compose lineups.',
+          lineupHelperSelectSeason: 'Select a season to display roster GUIDs.',
+          noPlayersAvailable: 'No players available in the selected season.'
+        },
+        standings: {
+          title: 'Season Standings',
+          showingDataFor: 'Showing data for: {season}',
+          selectSeasonHeader: 'Select a season in the header to load standings.',
+          noSeasonPlayers: 'No season players registered yet.'
+        },
+        notices: {
+          seasonCreated: 'Season created',
+          seasonPointsUpdated: 'Season points updated',
+          detailedMatchCreated: 'Detailed match created',
+          joinCodeGenerated: 'Join code generated',
+          guestCreatedAdded: 'Guest created and added to active season',
+          guestCreated: 'Guest player created',
+          playersAdded: '{count} player{suffix} added to season',
+          standingsUpdated: 'Standings updated'
+        },
+        errors: {
+          lineupsRequired: 'Home and away lineups must include at least one player guid',
+          activeSeasonRequired:
+            'An active season is required to register a guest into season standings'
+        }
+      },
+      user: {
+        panelTitle: 'Player Panel',
+        loadingTitle: 'Player Panel',
+        profileTitle: 'My Profile',
+        saveProfile: 'Save profile',
+        joinTitle: 'Join a Pena',
+        inviteCode: 'Invite code',
+        invitePlaceholder: 'Paste invite token',
+        nicknameOptional: 'Nickname (optional)',
+        positionOptional: 'Position (optional)',
+        join: 'Join',
+        myPenasTitle: 'My Penas',
+        linkedCount: 'You are linked to {count} pena{suffix}.',
+        selectedPena: 'Selected pena',
+        noPenasLinked: 'No penas linked yet',
+        membershipIn: 'Membership in {name}',
+        nickname: 'Nickname',
+        position: 'Position',
+        role: 'Role: {role}',
+        saveMembership: 'Save membership',
+        leavePena: 'Leave pena',
+        leaveHint: 'Leaving removes your membership link, but historical season stats remain.',
+        playerGuid: 'Player GUID: {guid}',
+        confirmLeave:
+          'Leaving will remove your current membership from this pena. Season stats already recorded will remain in history. Continue?',
+        errorInviteRequired: 'Invite code is required',
+        noticeProfileUpdated: 'Profile updated',
+        noticeJoinedPena: 'Joined pena successfully',
+        noticeMembershipUpdated: 'Membership updated',
+        noticeLeftPena: 'You left the selected pena',
+        fields: {
+          name: 'Name',
+          surname1: 'Surname 1',
+          surname2: 'Surname 2',
+          nationality: 'Nationality'
+        }
+      }
     },
     language: {
       label: 'Language',
@@ -138,7 +327,199 @@ export const messages = {
       adminUsernameHint: 'Este usuario se usa para iniciar sesión como admin.',
       adminPenaNameHint: 'Este será el nombre de la peña creada para tu cuenta de admin.',
       adminFooter: 'Los admins gestionan temporadas, alineaciones, reglas de puntuación y enlaces de invitación.',
-      playerFooter: 'Los jugadores se unen con códigos de invitación y participan en las temporadas.'
+      playerFooter: 'Los jugadores se unen con códigos de invitación y participan en las temporadas.',
+      errors: {
+        invalidCredentials: 'Credenciales inválidas.',
+        usernameExists: 'Ese usuario ya existe.',
+        invalidUserRegistrationData: 'Datos de registro de jugador inválidos.',
+        invalidAdminRegistrationData: 'Datos de registro de admin inválidos.',
+        invalidNationality: 'Nacionalidad inválida.',
+        network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+        generic: 'La solicitud de autenticación falló. Inténtalo de nuevo.'
+      }
+    },
+    dashboard: {
+      common: {
+        loggedAs: 'Sesión iniciada como',
+        refresh: 'Refrescar',
+        refreshData: 'Refrescar datos',
+        logout: 'Cerrar sesión'
+      },
+      admin: {
+        panelTitle: 'Espacio de administración',
+        currentPena: 'Peña actual',
+        referenceSeason: 'Temporada de referencia',
+        noLinkedPenaInfo:
+          'Esta cuenta de admin no tiene una peña vinculada. En este sistema, cada admin tiene exactamente una peña creada durante el registro. Cierra sesión y crea un nuevo admin si esta es una cuenta antigua.',
+        seasonActiveSuffix: ' (Activa)',
+        tabs: {
+          overview: 'Resumen',
+          seasons: 'Temporadas',
+          players: 'Jugadores',
+          matches: 'Partidos',
+          standings: 'Clasificación'
+        },
+        chips: {
+          pena: 'Peña: {name}',
+          activeSeason: 'Temporada activa: {season}',
+          selectedSeason: 'Temporada seleccionada: {season}'
+        },
+        status: {
+          noActiveSeason: 'Sin temporada activa',
+          noSeasonSelected: 'Sin temporada seleccionada',
+          configured: 'Configurada',
+          missing: 'Sin configurar'
+        },
+        table: {
+          player: 'Jugador',
+          guid: 'GUID',
+          w: 'V',
+          d: 'E',
+          l: 'D',
+          pts: 'Pts'
+        },
+        overview: {
+          currentPena: 'Peña actual',
+          activeSeason: 'Temporada activa',
+          totalSeasons: 'Temporadas totales',
+          seasonPlayers: 'Jugadores de temporada',
+          inviteTitle: 'Invitar jugadores',
+          inviteDescription: 'Genera un token de acceso de un solo uso y compártelo con jugadores.',
+          generateJoinCode: 'Generar código de acceso',
+          codeLabel: 'Código',
+          expiresLabel: 'Caduca',
+          quickActionsTitle: 'Acciones rápidas',
+          quickActionsDescription:
+            'Salta directamente a un flujo y mantén el panel enfocado.',
+          manageSeasons: 'Gestionar temporadas',
+          managePlayers: 'Gestionar jugadores',
+          createMatch: 'Crear partido',
+          viewStandings: 'Ver clasificación',
+          noDetailedMatch: 'Aún no se ha creado un partido detallado en esta sesión.',
+          lastMatchCreated: 'Último partido creado: {guid} para {date}.',
+          standingsSnapshotTitle: 'Resumen de clasificación',
+          refreshStandings: 'Actualizar clasificación',
+          selectSeasonToLoad: 'Selecciona una temporada para cargar la clasificación.',
+          noStandingsForSeason: 'Aún no hay clasificación disponible para esta temporada.'
+        },
+        seasons: {
+          configTitle: 'Configuración de temporada',
+          noActiveWarning: 'No hay temporada activa para hoy. Crea una para empezar.',
+          startDate: 'Fecha de inicio',
+          endDate: 'Fecha de fin',
+          useAfterLatest: 'Usar fechas posteriores a la última temporada',
+          winPoints: 'Puntos por victoria',
+          drawPoints: 'Puntos por empate',
+          lossPoints: 'Puntos por derrota',
+          createSeason: 'Crear temporada',
+          overlapHint: 'Las nuevas temporadas no pueden solaparse con rangos existentes.',
+          scoringRulesTitle: 'Reglas de puntuación de la temporada activa',
+          saveScoringRules: 'Guardar reglas de puntuación',
+          historyTitle: 'Histórico de temporadas',
+          noHistory: 'No se encontraron temporadas anteriores.',
+          historyPoints: 'V:{win} / E:{draw} / D:{loss}'
+        },
+        players: {
+          squadTitle: 'Gestión de plantilla por temporada',
+          createSeasonFirst: 'Crea al menos una temporada para gestionar plantillas.',
+          historicalMembersLabel: 'Miembros históricos para añadir',
+          helperSelectSeason: 'Primero selecciona una temporada.',
+          helperSome:
+            'Solo se listan miembros históricos que todavía no están registrados en esta temporada.',
+          helperNone: 'Todos los miembros históricos ya están en esta temporada.',
+          addSelectedToSeason: 'Añadir seleccionados a la temporada',
+          registeredAvailable: 'Registrados: {registered} | Disponibles: {available}',
+          noPlayersInSeason: 'Aún no hay jugadores registrados en esta temporada.'
+        },
+        guest: {
+          title: 'Jugadores invitados',
+          description: 'Crea jugadores sin cuenta para miembros invitados o presenciales.',
+          name: 'Nombre',
+          surname1: 'Primer apellido',
+          surname2: 'Segundo apellido',
+          nationality: 'Nacionalidad',
+          nickname: 'Apodo',
+          position: 'Posición',
+          createGuest: 'Crear invitado',
+          createAndAdd: 'Crear + añadir a temporada'
+        },
+        matches: {
+          title: 'Crear partido + alineaciones',
+          description: 'Crea un partido detallado y lanza el flujo de alineaciones en una acción.',
+          matchDate: 'Fecha del partido',
+          homeTeam: 'Nombre del local',
+          awayTeam: 'Nombre del visitante',
+          homeLineup: 'GUIDs alineación local',
+          awayLineup: 'GUIDs alineación visitante',
+          lineupGuidsHelper: 'Separa GUIDs por comas o saltos de línea',
+          createDetailedMatch: 'Crear partido detallado',
+          matchCreated: 'Partido {guid} creado para {date}.',
+          lineupHelperTitle: 'Asistente de alineación',
+          lineupHelperDescription:
+            'Usa estos GUIDs de jugadores de la plantilla seleccionada para componer alineaciones.',
+          lineupHelperSelectSeason: 'Selecciona una temporada para mostrar GUIDs de plantilla.',
+          noPlayersAvailable: 'No hay jugadores disponibles en la temporada seleccionada.'
+        },
+        standings: {
+          title: 'Clasificación de temporada',
+          showingDataFor: 'Mostrando datos para: {season}',
+          selectSeasonHeader: 'Selecciona una temporada en la cabecera para cargar la clasificación.',
+          noSeasonPlayers: 'Aún no hay jugadores de temporada registrados.'
+        },
+        notices: {
+          seasonCreated: 'Temporada creada',
+          seasonPointsUpdated: 'Puntuación de temporada actualizada',
+          detailedMatchCreated: 'Partido detallado creado',
+          joinCodeGenerated: 'Código de acceso generado',
+          guestCreatedAdded: 'Invitado creado y añadido a la temporada activa',
+          guestCreated: 'Jugador invitado creado',
+          playersAdded: '{count} jugador{suffix} añadido a la temporada',
+          standingsUpdated: 'Clasificación actualizada'
+        },
+        errors: {
+          lineupsRequired:
+            'La alineación local y visitante debe incluir al menos un GUID de jugador',
+          activeSeasonRequired:
+            'Se requiere una temporada activa para registrar un invitado en la clasificación'
+        }
+      },
+      user: {
+        panelTitle: 'Panel de jugador',
+        loadingTitle: 'Panel de jugador',
+        profileTitle: 'Mi perfil',
+        saveProfile: 'Guardar perfil',
+        joinTitle: 'Unirme a una peña',
+        inviteCode: 'Código de invitación',
+        invitePlaceholder: 'Pega el token de invitación',
+        nicknameOptional: 'Apodo (opcional)',
+        positionOptional: 'Posición (opcional)',
+        join: 'Unirme',
+        myPenasTitle: 'Mis peñas',
+        linkedCount: 'Estás vinculado a {count} peña{suffix}.',
+        selectedPena: 'Peña seleccionada',
+        noPenasLinked: 'Todavía no tienes peñas vinculadas',
+        membershipIn: 'Membresía en {name}',
+        nickname: 'Apodo',
+        position: 'Posición',
+        role: 'Rol: {role}',
+        saveMembership: 'Guardar membresía',
+        leavePena: 'Salir de la peña',
+        leaveHint: 'Salir elimina tu vínculo de membresía, pero las estadísticas históricas se conservan.',
+        playerGuid: 'GUID del jugador: {guid}',
+        confirmLeave:
+          'Salir eliminará tu membresía actual en esta peña. Las estadísticas históricas ya registradas se conservarán. ¿Continuar?',
+        errorInviteRequired: 'El código de invitación es obligatorio',
+        noticeProfileUpdated: 'Perfil actualizado',
+        noticeJoinedPena: 'Te uniste a la peña correctamente',
+        noticeMembershipUpdated: 'Membresía actualizada',
+        noticeLeftPena: 'Has salido de la peña seleccionada',
+        fields: {
+          name: 'Nombre',
+          surname1: 'Primer apellido',
+          surname2: 'Segundo apellido',
+          nationality: 'Nacionalidad'
+        }
+      }
     },
     language: {
       label: 'Idioma',

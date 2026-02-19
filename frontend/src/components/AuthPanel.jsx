@@ -12,7 +12,7 @@ import {
   ToggleButtonGroup,
   Typography
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
 import { httpClient } from '../services/httpClient.js'
 
@@ -29,6 +29,32 @@ const initialAdmin = {
   username: '',
   password: '',
   name: ''
+}
+
+const mapAuthErrorMessage = (error, t) => {
+  const raw = String(error?.message || '').toLowerCase()
+  if (!raw) {
+    return t('auth.errors.generic')
+  }
+  if (raw.includes('invalid credentials')) {
+    return t('auth.errors.invalidCredentials')
+  }
+  if (raw.includes('username already exists')) {
+    return t('auth.errors.usernameExists')
+  }
+  if (raw.includes('invalid user registration data')) {
+    return t('auth.errors.invalidUserRegistrationData')
+  }
+  if (raw.includes('invalid admin registration data')) {
+    return t('auth.errors.invalidAdminRegistrationData')
+  }
+  if (raw.includes('invalid nationality')) {
+    return t('auth.errors.invalidNationality')
+  }
+  if (raw.includes('failed to fetch') || raw.includes('network')) {
+    return t('auth.errors.network')
+  }
+  return t('auth.errors.generic')
 }
 
 export default function AuthPanel({ auth }) {
@@ -84,6 +110,11 @@ export default function AuthPanel({ auth }) {
     mode === 'register' && accountType === 'admin'
       ? t('auth.panelDescriptionAdminRegister')
       : t('auth.panelDescriptionDefault')
+
+  const authErrorMessage = useMemo(
+    () => (auth.error ? mapAuthErrorMessage(auth.error, t) : ''),
+    [auth.error, t]
+  )
 
   useEffect(() => {
     const loadNationalities = async () => {
@@ -144,7 +175,7 @@ export default function AuthPanel({ auth }) {
             <ToggleButton value="user">{t('auth.rolePlayer')}</ToggleButton>
           </ToggleButtonGroup>
 
-          {auth.error && <Alert severity="error">{auth.error.message}</Alert>}
+          {auth.error && <Alert severity="error">{authErrorMessage}</Alert>}
 
           {mode === 'login' && (
             <Stack spacing={2}>

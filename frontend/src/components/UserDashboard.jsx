@@ -13,6 +13,7 @@ import {
   Typography
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { useI18n } from '../i18n/useI18n.js'
 import { userService } from '../services/userService.js'
 
 const defaultProfileForm = () => ({
@@ -36,6 +37,7 @@ const defaultMembershipForm = () => ({
 const asText = (value) => value ?? ''
 
 export default function UserDashboard({ session, onLogout }) {
+  const { t } = useI18n()
   const [initializing, setInitializing] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -178,13 +180,13 @@ export default function UserDashboard({ session, onLogout }) {
         surname2: asText(updatedProfile.surname2),
         nationality: asText(updatedProfile.nationality)
       })
-    }, 'Profile updated')
+    }, t('dashboard.user.noticeProfileUpdated'))
   }
 
   const handleJoinPena = async () => {
     const token = joinForm.token.trim()
     if (!token) {
-      setError(new Error('Invite code is required'))
+      setError(new Error(t('dashboard.user.errorInviteRequired')))
       return
     }
     await runAction(async () => {
@@ -195,7 +197,7 @@ export default function UserDashboard({ session, onLogout }) {
       })
       setJoinForm(defaultJoinForm())
       await loadDashboard()
-    }, 'Joined pena successfully')
+    }, t('dashboard.user.noticeJoinedPena'))
   }
 
   const handleUpdateMembership = async () => {
@@ -212,29 +214,27 @@ export default function UserDashboard({ session, onLogout }) {
         nickname: asText(updatedMembership.nickname),
         position: asText(updatedMembership.position)
       })
-    }, 'Membership updated')
+    }, t('dashboard.user.noticeMembershipUpdated'))
   }
 
   const handleLeavePena = async () => {
     if (!selectedPenaGuid) {
       return
     }
-    const confirmed = window.confirm(
-      'Leaving will remove your current membership from this pena. Season stats already recorded will remain in history. Continue?'
-    )
+    const confirmed = window.confirm(t('dashboard.user.confirmLeave'))
     if (!confirmed) {
       return
     }
     await runAction(async () => {
       await userService.leavePena(selectedPenaGuid)
       await loadDashboard()
-    }, 'You left the selected pena')
+    }, t('dashboard.user.noticeLeftPena'))
   }
 
   if (initializing) {
     return (
       <Stack spacing={2}>
-        <Typography variant="h5">Player Panel</Typography>
+        <Typography variant="h5">{t('dashboard.user.loadingTitle')}</Typography>
         <LinearProgress />
       </Stack>
     )
@@ -246,17 +246,17 @@ export default function UserDashboard({ session, onLogout }) {
         <CardContent>
           <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }}>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h4">Player Panel</Typography>
+              <Typography variant="h4">{t('dashboard.user.panelTitle')}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Logged as <strong>{session?.user_guid || '-'}</strong>
+                {t('dashboard.common.loggedAs')} <strong>{session?.user_guid || '-'}</strong>
               </Typography>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
-                Refresh
+                {t('dashboard.common.refresh')}
               </Button>
               <Button variant="text" onClick={onLogout} disabled={loading}>
-                Logout
+                {t('dashboard.common.logout')}
               </Button>
             </Stack>
           </Stack>
@@ -272,21 +272,25 @@ export default function UserDashboard({ session, onLogout }) {
           <Card>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">My Profile</Typography>
-                <TextField label="Name" value={profileForm.name} onChange={onProfileField('name')} />
+                <Typography variant="h6">{t('dashboard.user.profileTitle')}</Typography>
                 <TextField
-                  label="Surname 1"
+                  label={t('dashboard.user.fields.name')}
+                  value={profileForm.name}
+                  onChange={onProfileField('name')}
+                />
+                <TextField
+                  label={t('dashboard.user.fields.surname1')}
                   value={profileForm.surname1}
                   onChange={onProfileField('surname1')}
                 />
                 <TextField
-                  label="Surname 2"
+                  label={t('dashboard.user.fields.surname2')}
                   value={profileForm.surname2}
                   onChange={onProfileField('surname2')}
                 />
                 <TextField
                   select
-                  label="Nationality"
+                  label={t('dashboard.user.fields.nationality')}
                   value={profileForm.nationality}
                   onChange={onProfileField('nationality')}
                 >
@@ -297,7 +301,7 @@ export default function UserDashboard({ session, onLogout }) {
                   ))}
                 </TextField>
                 <Button variant="contained" onClick={handleUpdateProfile} disabled={loading}>
-                  Save profile
+                  {t('dashboard.user.saveProfile')}
                 </Button>
               </Stack>
             </CardContent>
@@ -308,25 +312,25 @@ export default function UserDashboard({ session, onLogout }) {
           <Card>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">Join a Pena</Typography>
+                <Typography variant="h6">{t('dashboard.user.joinTitle')}</Typography>
                 <TextField
-                  label="Invite code"
+                  label={t('dashboard.user.inviteCode')}
                   value={joinForm.token}
                   onChange={onJoinField('token')}
-                  placeholder="Paste invite token"
+                  placeholder={t('dashboard.user.invitePlaceholder')}
                 />
                 <TextField
-                  label="Nickname (optional)"
+                  label={t('dashboard.user.nicknameOptional')}
                   value={joinForm.nickname}
                   onChange={onJoinField('nickname')}
                 />
                 <TextField
-                  label="Position (optional)"
+                  label={t('dashboard.user.positionOptional')}
                   value={joinForm.position}
                   onChange={onJoinField('position')}
                 />
                 <Button variant="contained" onClick={handleJoinPena} disabled={loading}>
-                  Join
+                  {t('dashboard.user.join')}
                 </Button>
               </Stack>
             </CardContent>
@@ -339,15 +343,18 @@ export default function UserDashboard({ session, onLogout }) {
           <Stack spacing={2.5}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h6">My Penas</Typography>
+                <Typography variant="h6">{t('dashboard.user.myPenasTitle')}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  You are linked to {penas.length} pena{penas.length === 1 ? '' : 's'}.
+                  {t('dashboard.user.linkedCount', {
+                    count: penas.length,
+                    suffix: penas.length === 1 ? '' : 's'
+                  })}
                 </Typography>
               </Box>
               <TextField
                 select
                 size="small"
-                label="Selected pena"
+                label={t('dashboard.user.selectedPena')}
                 value={selectedPenaGuid}
                 onChange={(event) => setSelectedPenaGuid(event.target.value)}
                 sx={{ minWidth: 280 }}
@@ -369,7 +376,7 @@ export default function UserDashboard({ session, onLogout }) {
                   variant={pena.guid === selectedPenaGuid ? 'filled' : 'outlined'}
                 />
               ))}
-              {!penas.length && <Chip label="No penas linked yet" />}
+              {!penas.length && <Chip label={t('dashboard.user.noPenasLinked')} />}
             </Stack>
 
             {selectedPena && (
@@ -377,21 +384,21 @@ export default function UserDashboard({ session, onLogout }) {
                 <CardContent>
                   <Stack spacing={2}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                      Membership in {selectedPena.name}
+                      {t('dashboard.user.membershipIn', { name: selectedPena.name })}
                     </Typography>
                     <TextField
-                      label="Nickname"
+                      label={t('dashboard.user.nickname')}
                       value={membershipForm.nickname}
                       onChange={onMembershipField('nickname')}
                     />
                     <TextField
-                      label="Position"
+                      label={t('dashboard.user.position')}
                       value={membershipForm.position}
                       onChange={onMembershipField('position')}
                     />
                     {membership?.role && (
                       <Typography variant="body2" color="text.secondary">
-                        Role: {membership.role}
+                        {t('dashboard.user.role', { role: membership.role })}
                       </Typography>
                     )}
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
@@ -400,7 +407,7 @@ export default function UserDashboard({ session, onLogout }) {
                         onClick={handleUpdateMembership}
                         disabled={loading}
                       >
-                        Save membership
+                        {t('dashboard.user.saveMembership')}
                       </Button>
                       <Button
                         variant="outlined"
@@ -408,11 +415,11 @@ export default function UserDashboard({ session, onLogout }) {
                         onClick={handleLeavePena}
                         disabled={loading}
                       >
-                        Leave pena
+                        {t('dashboard.user.leavePena')}
                       </Button>
                     </Stack>
                     <Typography variant="caption" color="text.secondary">
-                      Leaving removes your membership link, but historical season stats remain.
+                      {t('dashboard.user.leaveHint')}
                     </Typography>
                   </Stack>
                 </CardContent>
@@ -424,7 +431,7 @@ export default function UserDashboard({ session, onLogout }) {
 
       {profile && (
         <Alert severity="info">
-          Player GUID: <strong>{profile.guid}</strong>
+          {t('dashboard.user.playerGuid', { guid: profile.guid })}
         </Alert>
       )}
     </Stack>

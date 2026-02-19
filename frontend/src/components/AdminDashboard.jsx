@@ -22,6 +22,7 @@ import {
   Typography
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { useI18n } from '../i18n/useI18n.js'
 import { adminService } from '../services/adminService.js'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
@@ -129,6 +130,7 @@ const collectPagedItems = async (fetchPage) => {
 }
 
 export default function AdminDashboard({ session, onLogout }) {
+  const { language, t } = useI18n()
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
@@ -411,7 +413,7 @@ export default function AdminDashboard({ session, onLogout }) {
     await runAction(async () => {
       await adminService.createSeason(selectedPenaGuid, seasonForm)
       await loadPenaData(selectedPenaGuid)
-    }, 'Season created')
+    }, t('dashboard.admin.notices.seasonCreated'))
   }
 
   const handlePrefillNextSeason = () => {
@@ -434,7 +436,7 @@ export default function AdminDashboard({ session, onLogout }) {
     await runAction(async () => {
       await adminService.updateSeason(selectedPenaGuid, activeSeason.guid, pointsForm)
       await loadPenaData(selectedPenaGuid)
-    }, 'Season points updated')
+    }, t('dashboard.admin.notices.seasonPointsUpdated'))
   }
 
   const handleCreateDetailedMatch = async () => {
@@ -444,7 +446,7 @@ export default function AdminDashboard({ session, onLogout }) {
     const homeLineup = splitGuids(matchForm.home_player_guids)
     const awayLineup = splitGuids(matchForm.away_player_guids)
     if (!homeLineup.length || !awayLineup.length) {
-      setError(new Error('Home and away lineups must include at least one player guid'))
+      setError(new Error(t('dashboard.admin.errors.lineupsRequired')))
       return
     }
     await runAction(async () => {
@@ -461,7 +463,7 @@ export default function AdminDashboard({ session, onLogout }) {
       })
       setLastCreatedMatch(created)
       await loadPenaData(selectedPenaGuid)
-    }, 'Detailed match created')
+    }, t('dashboard.admin.notices.detailedMatchCreated'))
   }
 
   const handleGenerateJoinCode = async () => {
@@ -471,7 +473,7 @@ export default function AdminDashboard({ session, onLogout }) {
     await runAction(async () => {
       const token = await adminService.createLinkToken(selectedPenaGuid)
       setTokenPayload(token)
-    }, 'Join code generated')
+    }, t('dashboard.admin.notices.joinCodeGenerated'))
   }
 
   const handleCreateGuestPlayer = async (registerInActiveSeason) => {
@@ -479,7 +481,7 @@ export default function AdminDashboard({ session, onLogout }) {
       return
     }
     if (registerInActiveSeason && !activeSeason) {
-      setError(new Error('An active season is required to register a guest into season standings'))
+      setError(new Error(t('dashboard.admin.errors.activeSeasonRequired')))
       return
     }
     await runAction(async () => {
@@ -499,7 +501,9 @@ export default function AdminDashboard({ session, onLogout }) {
         nationality: prev.nationality || 'Spain'
       }))
       await loadPenaData(selectedPenaGuid)
-    }, registerInActiveSeason ? 'Guest created and added to active season' : 'Guest player created')
+    }, registerInActiveSeason
+      ? t('dashboard.admin.notices.guestCreatedAdded')
+      : t('dashboard.admin.notices.guestCreated'))
   }
 
   const handleSeasonSelection = (event) => {
@@ -534,7 +538,10 @@ export default function AdminDashboard({ session, onLogout }) {
       )
       setSelectedHistoricalGuids([])
       await loadPenaData(selectedPenaGuid)
-    }, `${totalSelected} player${totalSelected === 1 ? '' : 's'} added to season`)
+    }, t('dashboard.admin.notices.playersAdded', {
+      count: totalSelected,
+      suffix: totalSelected === 1 ? '' : language === 'es' ? 'es' : 's'
+    }))
   }
 
   const handleRefreshStandings = async () => {
@@ -543,22 +550,22 @@ export default function AdminDashboard({ session, onLogout }) {
     }
     await runAction(
       () => loadStandings(selectedPenaGuid, selectedSeasonGuid),
-      'Standings updated'
+      t('dashboard.admin.notices.standingsUpdated')
     )
   }
 
   const activeSeasonLabel = activeSeason
     ? `${formatDate(activeSeason.start_date)} - ${formatDate(activeSeason.end_date)}`
-    : 'No active season'
+    : t('dashboard.admin.status.noActiveSeason')
 
   const selectedSeasonLabel = selectedSeason
     ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
-    : 'No season selected'
+    : t('dashboard.admin.status.noSeasonSelected')
 
   if (initializing) {
     return (
       <Stack spacing={2}>
-        <Typography variant="h5">Admin Panel</Typography>
+        <Typography variant="h5">{t('dashboard.admin.panelTitle')}</Typography>
         <LinearProgress />
       </Stack>
     )
@@ -583,18 +590,18 @@ export default function AdminDashboard({ session, onLogout }) {
             >
               <Box>
                 <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  Admin Workspace
+                  {t('dashboard.admin.panelTitle')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Logged as <strong>{session?.user_guid || '-'}</strong>
+                  {t('dashboard.common.loggedAs')} <strong>{session?.user_guid || '-'}</strong>
                 </Typography>
               </Box>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
                 <Button variant="outlined" onClick={() => runAction(loadDashboard, '')} disabled={loading}>
-                  Refresh data
+                  {t('dashboard.common.refreshData')}
                 </Button>
                 <Button variant="text" onClick={onLogout} disabled={loading}>
-                  Logout
+                  {t('dashboard.common.logout')}
                 </Button>
               </Stack>
             </Stack>
@@ -604,7 +611,7 @@ export default function AdminDashboard({ session, onLogout }) {
                 <TextField
                   select
                   size="small"
-                  label="Current pena"
+                  label={t('dashboard.admin.currentPena')}
                   value={selectedPenaGuid}
                   onChange={(event) => setSelectedPenaGuid(event.target.value)}
                   fullWidth
@@ -620,7 +627,7 @@ export default function AdminDashboard({ session, onLogout }) {
                 <TextField
                   select
                   size="small"
-                  label="Reference season"
+                  label={t('dashboard.admin.referenceSeason')}
                   value={selectedSeasonGuid}
                   onChange={handleSeasonSelection}
                   disabled={!seasonList.length}
@@ -629,7 +636,7 @@ export default function AdminDashboard({ session, onLogout }) {
                   {seasonList.map((season) => (
                     <MenuItem key={season.guid} value={season.guid}>
                       {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                      {activeSeason?.guid === season.guid ? ' (Active)' : ''}
+                      {activeSeason?.guid === season.guid ? t('dashboard.admin.seasonActiveSuffix') : ''}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -637,9 +644,21 @@ export default function AdminDashboard({ session, onLogout }) {
             </Grid>
 
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-              <Chip size="small" color="secondary" label={`Pena: ${selectedPena?.name || '-'}`} />
-              <Chip size="small" color={activeSeason ? 'success' : 'warning'} label={`Active season: ${activeSeasonLabel}`} />
-              <Chip size="small" color="primary" label={`Selected season: ${selectedSeasonLabel}`} />
+              <Chip
+                size="small"
+                color="secondary"
+                label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
+              />
+              <Chip
+                size="small"
+                color={activeSeason ? 'success' : 'warning'}
+                label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
+              />
+              <Chip
+                size="small"
+                color="primary"
+                label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
+              />
             </Stack>
 
             <Tabs
@@ -648,11 +667,11 @@ export default function AdminDashboard({ session, onLogout }) {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab value="overview" label="Overview" />
-              <Tab value="seasons" label="Seasons" />
-              <Tab value="players" label="Players" />
-              <Tab value="matches" label="Matches" />
-              <Tab value="standings" label="Standings" />
+              <Tab value="overview" label={t('dashboard.admin.tabs.overview')} />
+              <Tab value="seasons" label={t('dashboard.admin.tabs.seasons')} />
+              <Tab value="players" label={t('dashboard.admin.tabs.players')} />
+              <Tab value="matches" label={t('dashboard.admin.tabs.matches')} />
+              <Tab value="standings" label={t('dashboard.admin.tabs.standings')} />
             </Tabs>
           </Stack>
         </CardContent>
@@ -663,10 +682,7 @@ export default function AdminDashboard({ session, onLogout }) {
       {notice && <Alert severity="success">{notice}</Alert>}
 
       {!selectedPenaGuid && (
-        <Alert severity="info">
-          This admin account has no linked pena. In this system, each admin has exactly one pena
-          created at admin registration. Logout and create a new admin account if this is a legacy account.
-        </Alert>
+        <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>
       )}
 
       {selectedPenaGuid && activeSection === 'overview' && (
@@ -675,7 +691,7 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
-                  Current Pena
+                  {t('dashboard.admin.overview.currentPena')}
                 </Typography>
                 <Typography variant="h6">{selectedPena?.name || '-'}</Typography>
               </CardContent>
@@ -685,9 +701,11 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
-                  Active Season
+                  {t('dashboard.admin.overview.activeSeason')}
                 </Typography>
-                <Typography variant="h6">{activeSeason ? 'Configured' : 'Missing'}</Typography>
+                <Typography variant="h6">
+                  {activeSeason ? t('dashboard.admin.status.configured') : t('dashboard.admin.status.missing')}
+                </Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -695,7 +713,7 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
-                  Total Seasons
+                  {t('dashboard.admin.overview.totalSeasons')}
                 </Typography>
                 <Typography variant="h6">{seasonList.length}</Typography>
               </CardContent>
@@ -705,7 +723,7 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
-                  Season Players
+                  {t('dashboard.admin.overview.seasonPlayers')}
                 </Typography>
                 <Typography variant="h6">{seasonRoster.length}</Typography>
               </CardContent>
@@ -716,9 +734,9 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="h6">Invite Players</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.overview.inviteTitle')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Generate a one-time join token and share it with players.
+                    {t('dashboard.admin.overview.inviteDescription')}
                   </Typography>
                   <Button
                     variant="contained"
@@ -726,15 +744,16 @@ export default function AdminDashboard({ session, onLogout }) {
                     onClick={handleGenerateJoinCode}
                     disabled={loading}
                   >
-                    Generate Join Code
+                    {t('dashboard.admin.overview.generateJoinCode')}
                   </Button>
                   {tokenPayload && (
                     <Alert severity="info">
                       <Typography variant="body2">
-                        <strong>Code:</strong> {tokenPayload.token}
+                        <strong>{t('dashboard.admin.overview.codeLabel')}:</strong> {tokenPayload.token}
                       </Typography>
                       <Typography variant="body2">
-                        <strong>Expires:</strong> {formatEpochSeconds(tokenPayload.expires_at)}
+                        <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
+                        {formatEpochSeconds(tokenPayload.expires_at)}
                       </Typography>
                     </Alert>
                   )}
@@ -747,32 +766,34 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="h6">Quick Actions</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.overview.quickActionsTitle')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Jump directly to a workflow and keep the dashboard focused.
+                    {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                     <Button variant="outlined" onClick={() => setActiveSection('seasons')}>
-                      Manage Seasons
+                      {t('dashboard.admin.overview.manageSeasons')}
                     </Button>
                     <Button variant="outlined" onClick={() => setActiveSection('players')}>
-                      Manage Players
+                      {t('dashboard.admin.overview.managePlayers')}
                     </Button>
                     <Button variant="outlined" onClick={() => setActiveSection('matches')}>
-                      Create Match
+                      {t('dashboard.admin.overview.createMatch')}
                     </Button>
                     <Button variant="outlined" onClick={() => setActiveSection('standings')}>
-                      View Standings
+                      {t('dashboard.admin.overview.viewStandings')}
                     </Button>
                   </Stack>
                   {lastCreatedMatch ? (
                     <Alert severity="success">
-                      Last match created: <strong>{lastCreatedMatch.guid}</strong> for{' '}
-                      <strong>{formatDate(lastCreatedMatch.match_date)}</strong>.
+                      {t('dashboard.admin.overview.lastMatchCreated', {
+                        guid: lastCreatedMatch.guid,
+                        date: formatDate(lastCreatedMatch.match_date)
+                      })}
                     </Alert>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      No detailed match created in this session yet.
+                      {t('dashboard.admin.overview.noDetailedMatch')}
                     </Typography>
                   )}
                 </Stack>
@@ -790,18 +811,18 @@ export default function AdminDashboard({ session, onLogout }) {
                     justifyContent="space-between"
                     spacing={1}
                   >
-                    <Typography variant="h6">Standings Snapshot</Typography>
+                    <Typography variant="h6">{t('dashboard.admin.overview.standingsSnapshotTitle')}</Typography>
                     <Button
                       variant="text"
                       onClick={handleRefreshStandings}
                       disabled={loading || !selectedSeasonGuid}
                     >
-                      Refresh standings
+                      {t('dashboard.admin.overview.refreshStandings')}
                     </Button>
                   </Stack>
                   {!selectedSeasonGuid && (
                     <Typography variant="body2" color="text.secondary">
-                      Select a season to load standings.
+                      {t('dashboard.admin.overview.selectSeasonToLoad')}
                     </Typography>
                   )}
                   {selectedSeasonGuid && (
@@ -809,11 +830,11 @@ export default function AdminDashboard({ session, onLogout }) {
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Player</TableCell>
-                            <TableCell align="right">W</TableCell>
-                            <TableCell align="right">D</TableCell>
-                            <TableCell align="right">L</TableCell>
-                            <TableCell align="right">Pts</TableCell>
+                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -828,7 +849,9 @@ export default function AdminDashboard({ session, onLogout }) {
                           ))}
                           {!standings.length && (
                             <TableRow>
-                              <TableCell colSpan={5}>No standings available for this season yet.</TableCell>
+                              <TableCell colSpan={5}>
+                                {t('dashboard.admin.overview.noStandingsForSeason')}
+                              </TableCell>
                             </TableRow>
                           )}
                         </TableBody>
@@ -849,20 +872,20 @@ export default function AdminDashboard({ session, onLogout }) {
               <CardContent>
                 <Stack spacing={2.5}>
                   <Stack direction="row" alignItems="center" spacing={1.25}>
-                    <Typography variant="h6">Season Configuration</Typography>
+                    <Typography variant="h6">{t('dashboard.admin.seasons.configTitle')}</Typography>
                     {activeSeason && <Chip size="small" color="secondary" label={activeSeasonLabel} />}
                   </Stack>
 
                   {!activeSeason && (
                     <Alert severity="warning">
-                      No active season found for today. Create one to start orchestration.
+                      {t('dashboard.admin.seasons.noActiveWarning')}
                     </Alert>
                   )}
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       type="date"
-                      label="Start date"
+                      label={t('dashboard.admin.seasons.startDate')}
                       InputLabelProps={{ shrink: true }}
                       value={seasonForm.start_date}
                       onChange={onSeasonField('start_date')}
@@ -870,7 +893,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     />
                     <TextField
                       type="date"
-                      label="End date"
+                      label={t('dashboard.admin.seasons.endDate')}
                       InputLabelProps={{ shrink: true }}
                       value={seasonForm.end_date}
                       onChange={onSeasonField('end_date')}
@@ -880,28 +903,28 @@ export default function AdminDashboard({ session, onLogout }) {
 
                   {latestSeasonEndDate && (
                     <Button variant="text" onClick={handlePrefillNextSeason} disabled={loading}>
-                      Use dates after latest season
+                      {t('dashboard.admin.seasons.useAfterLatest')}
                     </Button>
                   )}
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       type="number"
-                      label="Win points"
+                      label={t('dashboard.admin.seasons.winPoints')}
                       value={seasonForm.points_win}
                       onChange={onSeasonField('points_win')}
                       fullWidth
                     />
                     <TextField
                       type="number"
-                      label="Draw points"
+                      label={t('dashboard.admin.seasons.drawPoints')}
                       value={seasonForm.points_draw}
                       onChange={onSeasonField('points_draw')}
                       fullWidth
                     />
                     <TextField
                       type="number"
-                      label="Loss points"
+                      label={t('dashboard.admin.seasons.lossPoints')}
                       value={seasonForm.points_loss}
                       onChange={onSeasonField('points_loss')}
                       fullWidth
@@ -909,19 +932,19 @@ export default function AdminDashboard({ session, onLogout }) {
                   </Stack>
 
                   <Button variant="contained" onClick={handleCreateSeason} disabled={loading}>
-                    Create Season
+                    {t('dashboard.admin.seasons.createSeason')}
                   </Button>
                   <Typography variant="caption" color="text.secondary">
-                    New seasons must not overlap existing date ranges.
+                    {t('dashboard.admin.seasons.overlapHint')}
                   </Typography>
 
                   <Divider />
 
-                  <Typography variant="subtitle1">Active Season Scoring Rules</Typography>
+                  <Typography variant="subtitle1">{t('dashboard.admin.seasons.scoringRulesTitle')}</Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       type="number"
-                      label="Win points"
+                      label={t('dashboard.admin.seasons.winPoints')}
                       value={pointsForm.points_win}
                       onChange={onPointsField('points_win')}
                       fullWidth
@@ -929,7 +952,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     />
                     <TextField
                       type="number"
-                      label="Draw points"
+                      label={t('dashboard.admin.seasons.drawPoints')}
                       value={pointsForm.points_draw}
                       onChange={onPointsField('points_draw')}
                       fullWidth
@@ -937,7 +960,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     />
                     <TextField
                       type="number"
-                      label="Loss points"
+                      label={t('dashboard.admin.seasons.lossPoints')}
                       value={pointsForm.points_loss}
                       onChange={onPointsField('points_loss')}
                       fullWidth
@@ -949,7 +972,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     onClick={handleUpdateSeasonPoints}
                     disabled={loading || !activeSeason}
                   >
-                    Save Scoring Rules
+                    {t('dashboard.admin.seasons.saveScoringRules')}
                   </Button>
                 </Stack>
               </CardContent>
@@ -960,10 +983,10 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={1.5}>
-                  <Typography variant="h6">Season History</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.seasons.historyTitle')}</Typography>
                   {!historySeasons.length && (
                     <Typography variant="body2" color="text.secondary">
-                      No previous seasons found.
+                      {t('dashboard.admin.seasons.noHistory')}
                     </Typography>
                   )}
                   {historySeasons.map((season) => (
@@ -980,7 +1003,11 @@ export default function AdminDashboard({ session, onLogout }) {
                         {formatDate(season.start_date)} - {formatDate(season.end_date)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        W:{season.points_win} / D:{season.points_draw} / L:{season.points_loss}
+                        {t('dashboard.admin.seasons.historyPoints', {
+                          win: season.points_win,
+                          draw: season.points_draw,
+                          loss: season.points_loss
+                        })}
                       </Typography>
                     </Box>
                   ))}
@@ -1003,19 +1030,19 @@ export default function AdminDashboard({ session, onLogout }) {
                     justifyContent="space-between"
                     spacing={1.5}
                   >
-                    <Typography variant="h6">Season Squad Management</Typography>
+                    <Typography variant="h6">{t('dashboard.admin.players.squadTitle')}</Typography>
                     {selectedSeason && <Chip size="small" color="primary" label={selectedSeasonLabel} />}
                   </Stack>
 
                   {!seasonList.length && (
                     <Typography variant="body2" color="text.secondary">
-                      Create at least one season to manage season squads.
+                      {t('dashboard.admin.players.createSeasonFirst')}
                     </Typography>
                   )}
 
                   <TextField
                     select
-                    label="Historical members to add"
+                    label={t('dashboard.admin.players.historicalMembersLabel')}
                     value={selectedHistoricalGuids}
                     onChange={handleSelectHistoricalPlayers}
                     SelectProps={{
@@ -1025,10 +1052,10 @@ export default function AdminDashboard({ session, onLogout }) {
                     disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
                     helperText={
                       !selectedSeasonGuid
-                        ? 'Select a season first.'
+                        ? t('dashboard.admin.players.helperSelectSeason')
                         : availableHistoricalPlayers.length
-                          ? 'Only historical members not yet registered in this season are listed.'
-                          : 'All historical members are already in this season.'
+                          ? t('dashboard.admin.players.helperSome')
+                          : t('dashboard.admin.players.helperNone')
                     }
                     fullWidth
                   >
@@ -1045,10 +1072,13 @@ export default function AdminDashboard({ session, onLogout }) {
                       onClick={handleRegisterHistoricalPlayersInSeason}
                       disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
                     >
-                      Add Selected To Season
+                      {t('dashboard.admin.players.addSelectedToSeason')}
                     </Button>
                     <Typography variant="body2" color="text.secondary">
-                      Registered: {seasonRoster.length} | Available: {availableHistoricalPlayers.length}
+                      {t('dashboard.admin.players.registeredAvailable', {
+                        registered: seasonRoster.length,
+                        available: availableHistoricalPlayers.length
+                      })}
                     </Typography>
                   </Stack>
 
@@ -1059,11 +1089,11 @@ export default function AdminDashboard({ session, onLogout }) {
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Player</TableCell>
-                            <TableCell align="right">W</TableCell>
-                            <TableCell align="right">D</TableCell>
-                            <TableCell align="right">L</TableCell>
-                            <TableCell align="right">Pts</TableCell>
+                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
+                            <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1078,7 +1108,9 @@ export default function AdminDashboard({ session, onLogout }) {
                           ))}
                           {!seasonRoster.length && (
                             <TableRow>
-                              <TableCell colSpan={5}>No players registered in this season yet.</TableCell>
+                              <TableCell colSpan={5}>
+                                {t('dashboard.admin.players.noPlayersInSeason')}
+                              </TableCell>
                             </TableRow>
                           )}
                         </TableBody>
@@ -1094,24 +1126,24 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="h6">Guest Players</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Create players without user account for invited or offline members.
+                    {t('dashboard.admin.guest.description')}
                   </Typography>
                   <TextField
-                    label="Name"
+                    label={t('dashboard.admin.guest.name')}
                     value={guestForm.name}
                     onChange={onGuestField('name')}
                     fullWidth
                   />
                   <TextField
-                    label="Surname 1"
+                    label={t('dashboard.admin.guest.surname1')}
                     value={guestForm.surname1}
                     onChange={onGuestField('surname1')}
                     fullWidth
                   />
                   <TextField
-                    label="Surname 2"
+                    label={t('dashboard.admin.guest.surname2')}
                     value={guestForm.surname2}
                     onChange={onGuestField('surname2')}
                     fullWidth
@@ -1119,7 +1151,7 @@ export default function AdminDashboard({ session, onLogout }) {
                   {nationalities.length > 0 ? (
                     <TextField
                       select
-                      label="Nationality"
+                      label={t('dashboard.admin.guest.nationality')}
                       value={guestForm.nationality}
                       onChange={onGuestField('nationality')}
                       fullWidth
@@ -1132,7 +1164,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     </TextField>
                   ) : (
                     <TextField
-                      label="Nationality"
+                      label={t('dashboard.admin.guest.nationality')}
                       value={guestForm.nationality}
                       onChange={onGuestField('nationality')}
                       fullWidth
@@ -1140,13 +1172,13 @@ export default function AdminDashboard({ session, onLogout }) {
                   )}
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
-                      label="Nickname"
+                      label={t('dashboard.admin.guest.nickname')}
                       value={guestForm.nickname}
                       onChange={onGuestField('nickname')}
                       fullWidth
                     />
                     <TextField
-                      label="Position"
+                      label={t('dashboard.admin.guest.position')}
                       value={guestForm.position}
                       onChange={onGuestField('position')}
                       fullWidth
@@ -1158,14 +1190,14 @@ export default function AdminDashboard({ session, onLogout }) {
                       onClick={() => handleCreateGuestPlayer(false)}
                       disabled={loading}
                     >
-                      Create Guest
+                      {t('dashboard.admin.guest.createGuest')}
                     </Button>
                     <Button
                       variant="contained"
                       onClick={() => handleCreateGuestPlayer(true)}
                       disabled={loading || !activeSeason}
                     >
-                      Create + Add To Season
+                      {t('dashboard.admin.guest.createAndAdd')}
                     </Button>
                   </Stack>
                 </Stack>
@@ -1181,13 +1213,13 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="h6">Create Match + Lineups</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.matches.title')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Create a detailed season match and start the lineup process in one action.
+                    {t('dashboard.admin.matches.description')}
                   </Typography>
                   <TextField
                     type="date"
-                    label="Match date"
+                    label={t('dashboard.admin.matches.matchDate')}
                     InputLabelProps={{ shrink: true }}
                     value={matchForm.match_date}
                     onChange={onMatchField('match_date')}
@@ -1195,14 +1227,14 @@ export default function AdminDashboard({ session, onLogout }) {
                   />
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
-                      label="Home team name"
+                      label={t('dashboard.admin.matches.homeTeam')}
                       value={matchForm.home_team_name}
                       onChange={onMatchField('home_team_name')}
                       disabled={!activeSeason}
                       fullWidth
                     />
                     <TextField
-                      label="Away team name"
+                      label={t('dashboard.admin.matches.awayTeam')}
                       value={matchForm.away_team_name}
                       onChange={onMatchField('away_team_name')}
                       disabled={!activeSeason}
@@ -1210,34 +1242,36 @@ export default function AdminDashboard({ session, onLogout }) {
                     />
                   </Stack>
                   <TextField
-                    label="Home lineup guids"
+                    label={t('dashboard.admin.matches.homeLineup')}
                     value={matchForm.home_player_guids}
                     onChange={onMatchField('home_player_guids')}
                     disabled={!activeSeason}
                     multiline
                     minRows={3}
-                    helperText="Comma or line-break separated player GUIDs"
+                    helperText={t('dashboard.admin.matches.lineupGuidsHelper')}
                   />
                   <TextField
-                    label="Away lineup guids"
+                    label={t('dashboard.admin.matches.awayLineup')}
                     value={matchForm.away_player_guids}
                     onChange={onMatchField('away_player_guids')}
                     disabled={!activeSeason}
                     multiline
                     minRows={3}
-                    helperText="Comma or line-break separated player GUIDs"
+                    helperText={t('dashboard.admin.matches.lineupGuidsHelper')}
                   />
                   <Button
                     variant="contained"
                     onClick={handleCreateDetailedMatch}
                     disabled={loading || !activeSeason}
                   >
-                    Create Detailed Match
+                    {t('dashboard.admin.matches.createDetailedMatch')}
                   </Button>
                   {lastCreatedMatch && (
                     <Alert severity="success">
-                      Match <strong>{lastCreatedMatch.guid}</strong> created for{' '}
-                      <strong>{formatDate(lastCreatedMatch.match_date)}</strong>.
+                      {t('dashboard.admin.matches.matchCreated', {
+                        guid: lastCreatedMatch.guid,
+                        date: formatDate(lastCreatedMatch.match_date)
+                      })}
                     </Alert>
                   )}
                 </Stack>
@@ -1249,13 +1283,13 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={1.5}>
-                  <Typography variant="h6">Lineup Helper</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.matches.lineupHelperTitle')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Use these player GUIDs from the selected season roster to compose lineups.
+                    {t('dashboard.admin.matches.lineupHelperDescription')}
                   </Typography>
                   {!selectedSeasonGuid && (
                     <Typography variant="body2" color="text.secondary">
-                      Select a season to display roster GUIDs.
+                      {t('dashboard.admin.matches.lineupHelperSelectSeason')}
                     </Typography>
                   )}
                   {selectedSeasonGuid && seasonRosterLoading && <LinearProgress />}
@@ -1264,8 +1298,8 @@ export default function AdminDashboard({ session, onLogout }) {
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Player</TableCell>
-                            <TableCell>GUID</TableCell>
+                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                            <TableCell>{t('dashboard.admin.table.guid')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1277,7 +1311,9 @@ export default function AdminDashboard({ session, onLogout }) {
                           ))}
                           {!seasonRoster.length && (
                             <TableRow>
-                              <TableCell colSpan={2}>No players available in the selected season.</TableCell>
+                              <TableCell colSpan={2}>
+                                {t('dashboard.admin.matches.noPlayersAvailable')}
+                              </TableCell>
                             </TableRow>
                           )}
                         </TableBody>
@@ -1302,9 +1338,9 @@ export default function AdminDashboard({ session, onLogout }) {
                 spacing={1.5}
               >
                 <Box>
-                  <Typography variant="h6">Season Standings</Typography>
+                  <Typography variant="h6">{t('dashboard.admin.standings.title')}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Showing data for: {selectedSeasonLabel}
+                    {t('dashboard.admin.standings.showingDataFor', { season: selectedSeasonLabel })}
                   </Typography>
                 </Box>
                 <Button
@@ -1312,13 +1348,13 @@ export default function AdminDashboard({ session, onLogout }) {
                   onClick={handleRefreshStandings}
                   disabled={loading || !selectedSeasonGuid}
                 >
-                  Refresh standings
+                  {t('dashboard.admin.overview.refreshStandings')}
                 </Button>
               </Stack>
 
               {!selectedSeasonGuid && (
                 <Typography variant="body2" color="text.secondary">
-                  Select a season in the header to load standings.
+                  {t('dashboard.admin.standings.selectSeasonHeader')}
                 </Typography>
               )}
 
@@ -1327,11 +1363,11 @@ export default function AdminDashboard({ session, onLogout }) {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Player</TableCell>
-                        <TableCell align="right">W</TableCell>
-                        <TableCell align="right">D</TableCell>
-                        <TableCell align="right">L</TableCell>
-                        <TableCell align="right">Pts</TableCell>
+                        <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1346,7 +1382,7 @@ export default function AdminDashboard({ session, onLogout }) {
                       ))}
                       {!standings.length && (
                         <TableRow>
-                          <TableCell colSpan={5}>No season players registered yet.</TableCell>
+                          <TableCell colSpan={5}>{t('dashboard.admin.standings.noSeasonPlayers')}</TableCell>
                         </TableRow>
                       )}
                     </TableBody>

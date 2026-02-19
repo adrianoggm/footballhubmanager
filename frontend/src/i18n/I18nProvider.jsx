@@ -27,11 +27,34 @@ const interpolate = (value, params) => {
   })
 }
 
-const getInitialLanguage = () => {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored && SUPPORTED_LANGUAGES.includes(stored)) {
-    return stored
+const normalizeLanguage = (value) => {
+  if (!value) {
+    return null
   }
+  const normalized = String(value).toLowerCase().split('-')[0]
+  if (SUPPORTED_LANGUAGES.includes(normalized)) {
+    return normalized
+  }
+  return null
+}
+
+const getInitialLanguage = () => {
+  try {
+    const stored = normalizeLanguage(localStorage.getItem(STORAGE_KEY))
+    if (stored) {
+      return stored
+    }
+  } catch {
+    // Ignore localStorage availability errors and continue with browser/fallback language.
+  }
+
+  if (typeof navigator !== 'undefined') {
+    const browserLanguage = normalizeLanguage(navigator.language)
+    if (browserLanguage) {
+      return browserLanguage
+    }
+  }
+
   return FALLBACK_LANGUAGE
 }
 
@@ -48,7 +71,11 @@ export function I18nProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, language)
+    try {
+      localStorage.setItem(STORAGE_KEY, language)
+    } catch {
+      // Ignore localStorage availability errors.
+    }
     document.documentElement.lang = language
   }, [language])
 
