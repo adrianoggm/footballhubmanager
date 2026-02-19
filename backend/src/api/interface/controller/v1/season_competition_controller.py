@@ -7,16 +7,13 @@ from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
 from persistence.application.use_cases import (
-    InvalidSeasonDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonCompetitionUseCase,
     PenaSeasonAccessDeniedError,
-    PenaSeasonDateOverlapError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
-    SeasonCreate,
     SeasonMatchCreate,
     SeasonMatchCreateDetailed,
     SeasonMatchDetailInfo,
@@ -59,23 +56,6 @@ def _clean(value: str | None) -> str | None:
     return value or None
 
 
-class SeasonResponse(BaseModel):
-    guid: str
-    start_date: date
-    end_date: date
-    points_win: int
-    points_draw: int
-    points_loss: int
-
-
-class CreateSeasonRequest(BaseModel):
-    start_date: date
-    end_date: date
-    points_win: int = 3
-    points_draw: int = 1
-    points_loss: int = 0
-
-
 class SeasonPlayerResponse(BaseModel):
     player_guid: str
     name: str
@@ -84,6 +64,9 @@ class SeasonPlayerResponse(BaseModel):
     nationality: str
     nickname: str | None
     position: str | None
+    played: int
+    goals: int
+    assists: int
     wins: int
     losses: int
     draws: int
@@ -145,6 +128,7 @@ class SeasonMatchResponse(BaseModel):
     away_player_guid: str
     home_player_name: str
     away_player_name: str
+    status: str
     home_score: int
     away_score: int
 
@@ -213,6 +197,7 @@ class SeasonMatchDetailResponse(BaseModel):
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team: SeasonMatchTeamResponse
     away_team: SeasonMatchTeamResponse
 
@@ -221,6 +206,7 @@ class SeasonMatchSummaryResponse(BaseModel):
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team_name: str
     away_team_name: str
     home_score: int
@@ -267,6 +253,7 @@ def _match_detail_response(item: SeasonMatchDetailInfo) -> SeasonMatchDetailResp
         guid=item.guid,
         season_guid=item.season_guid,
         match_date=item.match_date,
+        status=item.status,
         home_team=_match_team_response(item.home_team),
         away_team=_match_team_response(item.away_team),
     )
@@ -281,65 +268,6 @@ def _matches_page_response(page: SeasonMatchesPage) -> SeasonMatchesPageResponse
         total=page.total,
         total_pages=total_pages,
     )
-
-
-@router.get("/penas/{pena_guid}/seasons/active", response_model=SeasonResponse)
-def get_active_pena_season(
-    pena_guid: str,
-    at_date: date | None = Query(default=None),
-    db: Session = Depends(get_db),
-    _session=Depends(authorize_pena_access),
-):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
-    try:
-        season = use_case.get_active_for_pena(pena_guid=pena_guid, reference_date=at_date)
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Active season not found")
-    return SeasonResponse(**asdict(season))
-
-
-@router.post(
-    "/penas/{pena_guid}/seasons", response_model=SeasonResponse, status_code=status.HTTP_201_CREATED
-)
-def create_pena_season(
-    pena_guid: str,
-    payload: CreateSeasonRequest,
-    admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
-    try:
-        season = use_case.create_season_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            data=SeasonCreate(
-                start_date=payload.start_date,
-                end_date=payload.end_date,
-                points_win=payload.points_win,
-                points_draw=payload.points_draw,
-                points_loss=payload.points_loss,
-            ),
-        )
-    except InvalidSeasonDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid season date range"
-        )
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin does not manage this pena"
-        )
-    except PenaSeasonDateOverlapError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Season range overlaps an existing season",
-        )
-    return SeasonResponse(**asdict(season))
 
 
 @router.post(
@@ -541,9 +469,16 @@ def list_season_players(
     nickname: str | None = Query(default=None),
     position: str | None = Query(default=None),
     search: str | None = Query(default=None),
-    order_by: Literal["quality_level", "wins", "losses", "draws", "points"] = Query(
-        default="quality_level"
-    ),
+    order_by: Literal[
+        "quality_level",
+        "played",
+        "goals",
+        "assists",
+        "wins",
+        "losses",
+        "draws",
+        "points",
+    ] = Query(default="quality_level"),
     order_dir: Literal["asc", "desc"] = Query(default="desc"),
     db: Session = Depends(get_db),
     _session=Depends(authorize_pena_access),
@@ -652,6 +587,11 @@ def update_season_match_result(
     except InvalidSeasonPlayerUpdateDataError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid match result data"
+        )
+    except InvalidSeasonMatchDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Manual match result updates are disabled. Use match stats endpoint",
         )
     except PenaSeasonPenaNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")

@@ -20,10 +20,13 @@ from .link_user_to_pena import (
     UserProfileNotFoundError,
 )
 from .manage_pena_membership import (
+    InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
+    PenaGuestPlayerCreate,
     PenaMembershipAccessDeniedError,
     PenaMembershipInfo,
+    PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,

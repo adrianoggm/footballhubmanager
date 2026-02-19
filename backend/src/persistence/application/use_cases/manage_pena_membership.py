@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
 from persistence.application.ports.pena_membership_repository import (
+    InvalidNationalityError as RepositoryInvalidNationalityError,
+)
+from persistence.application.ports.pena_membership_repository import (
     PenaMembershipNotFoundError as RepositoryPenaMembershipNotFoundError,
 )
 from persistence.application.ports.pena_membership_repository import (
@@ -42,6 +45,16 @@ class PenaMembershipUpdate:
     position_provided: bool = False
 
 
+@dataclass(frozen=True)
+class PenaGuestPlayerCreate:
+    name: str
+    surname1: str
+    surname2: str | None = None
+    nationality: str = ""
+    nickname: str | None = None
+    position: str | None = None
+
+
 class PenaMembershipPenaNotFoundError(Exception):
     pass
 
@@ -63,6 +76,14 @@ class PenaMembershipUserProfileNotFoundError(Exception):
 
 
 class InvalidPenaMembershipUpdateDataError(Exception):
+    pass
+
+
+class InvalidPenaGuestPlayerDataError(Exception):
+    pass
+
+
+class PenaMembershipInvalidNationalityError(Exception):
     pass
 
 
@@ -176,6 +197,44 @@ class ManagePenaMembershipUseCase:
             raise PenaMembershipPlayerNotFoundError() from exc
         except RepositoryPenaMembershipNotFoundError as exc:
             raise PenaMembershipNotFoundError() from exc
+
+    def create_guest_for_admin(
+        self, *, pena_guid: str, admin_id: int, data: PenaGuestPlayerCreate
+    ) -> PenaMembershipInfo:
+        name = data.name.strip()
+        surname1 = data.surname1.strip()
+        nationality = data.nationality.strip()
+        surname2 = data.surname2.strip() if data.surname2 is not None else None
+        nickname = data.nickname.strip() if data.nickname is not None else None
+        position = data.position.strip() if data.position is not None else None
+        if surname2 == "":
+            surname2 = None
+        if nickname == "":
+            nickname = None
+        if position == "":
+            position = None
+
+        if not name or not surname1 or not nationality:
+            raise InvalidPenaGuestPlayerDataError()
+
+        try:
+            created = self.repository.create_guest_player_for_admin(
+                pena_guid=pena_guid,
+                admin_id=admin_id,
+                name=name,
+                surname1=surname1,
+                surname2=surname2,
+                nationality=nationality,
+                nickname=nickname,
+                position=position,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaMembershipPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaMembershipAccessDeniedError() from exc
+        except RepositoryInvalidNationalityError as exc:
+            raise PenaMembershipInvalidNationalityError() from exc
+        return self._to_info(created)
 
     @staticmethod
     def _normalize_update(update: PenaMembershipUpdate) -> tuple[str | None, str | None]:

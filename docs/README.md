@@ -7,6 +7,7 @@ This folder contains all project documentation, split by module.
 - [Project Overview](overview.md)
 - [Backend Guide](backend.md)
 - [Frontend Guide](frontend.md)
+- [Frontend Implementation Planning](frontend-implementation-planning.md)
 - [Docker Guide](docker.md)
 - [Database and SQL](database.md)
 - [API Reference (v1)](api.md)

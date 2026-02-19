@@ -1,10 +1,14 @@
-import { Alert, Box, Button, Chip, Container, Grid, Stack, Typography } from '@mui/material'
+import { Alert, Box, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material'
 import AuthPanel from './components/AuthPanel.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
+import LanguageSwitcher from './components/LanguageSwitcher.jsx'
+import UserDashboard from './components/UserDashboard.jsx'
 import { useAuth } from './hooks/useAuth.js'
+import { useI18n } from './i18n/useI18n.js'
 
 export default function App() {
   const auth = useAuth()
+  const { t } = useI18n()
   const isAuthenticated = Boolean(auth.token)
   const isAdmin = auth.session?.user_type === 'admin'
   const isUser = auth.session?.user_type === 'user'
@@ -19,95 +23,201 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', py: { xs: 3, md: 5 } }}>
         <Box
           sx={{
             position: 'absolute',
-            width: 420,
-            height: 420,
+            width: 520,
+            height: 520,
             borderRadius: '50%',
-            right: -120,
-            top: -120,
-            background: 'radial-gradient(circle, rgba(37,99,235,0.22) 0%, rgba(37,99,235,0) 70%)'
+            right: -180,
+            top: -200,
+            background: 'radial-gradient(circle, rgba(15,118,110,0.3) 0%, rgba(15,118,110,0) 72%)',
+            animation: 'floatOrb 16s ease-in-out infinite'
           }}
         />
         <Box
           sx={{
             position: 'absolute',
-            width: 360,
-            height: 360,
+            width: 480,
+            height: 480,
             borderRadius: '50%',
-            left: -160,
-            bottom: -120,
-            background: 'radial-gradient(circle, rgba(17,24,39,0.16) 0%, rgba(17,24,39,0) 70%)'
+            left: -210,
+            bottom: -180,
+            background: 'radial-gradient(circle, rgba(180,83,9,0.24) 0%, rgba(180,83,9,0) 72%)',
+            animation: 'floatOrb 20s ease-in-out infinite reverse'
           }}
         />
 
-        <Container maxWidth="xl" sx={{ py: { xs: 4, md: 8 }, position: 'relative' }}>
-          <Grid container spacing={5} alignItems="center">
-            <Grid item xs={12} md={7}>
+        <Container maxWidth="xl" sx={{ position: 'relative' }}>
+          <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+            <LanguageSwitcher />
+          </Stack>
+          <Grid container spacing={{ xs: 3, md: 5 }} alignItems="start">
+            <Grid item xs={12} md={4}>
+              <Box sx={{ position: { md: 'sticky' }, top: { md: 28 } }}>
+                <Stack spacing={2.5}>
+                  <Stack spacing={0.5}>
+                    <Typography
+                      variant="overline"
+                      sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
+                    >
+                      {t('app.auth.sectionTitle')}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {t('app.auth.sectionHint')}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: -0.8 }}>
+                    {t('app.auth.welcome')}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    {t('app.auth.accessHint')}
+                  </Typography>
+                  <AuthPanel auth={auth} />
+                </Stack>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
               <Stack spacing={3}>
-                <Chip
-                  label="Community football manager"
-                  color="secondary"
-                  sx={{ width: 'fit-content', fontWeight: 600 }}
-                />
+                <Stack spacing={0.5}>
+                  <Typography
+                    variant="overline"
+                    sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
+                  >
+                    {t('app.overview.sectionTitle')}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t('app.overview.sectionHint')}
+                  </Typography>
+                </Stack>
                 <Typography
                   variant="h2"
-                  sx={{ fontWeight: 800, lineHeight: 1.05, maxWidth: 720, letterSpacing: -1.6 }}
+                  sx={{ fontWeight: 800, lineHeight: 1.04, maxWidth: 860, letterSpacing: -1.8 }}
                 >
-                  Run your pena season from one place.
+                  {t('app.overview.hero')}
                 </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 640, fontWeight: 400 }}>
-                  Create seasons, configure scoring rules, generate join codes, call up lineups, and
-                  track standings match by match.
+                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 760, fontWeight: 400 }}>
+                  {t('app.overview.description')}
                 </Typography>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    borderRadius: 4,
+                    p: { xs: 2.5, md: 3.5 },
+                    border: '1px solid rgba(31,41,55,0.1)',
+                    background:
+                      'linear-gradient(145deg, rgba(255,255,252,0.95) 0%, rgba(227,245,240,0.8) 56%, rgba(255,241,225,0.74) 100%)'
+                  }}
+                >
+                  <Stack spacing={1.5}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {t('app.overview.todayTitle')}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      {t('app.overview.todayBody')}
+                    </Typography>
+                  </Stack>
+                </Paper>
+
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Season control
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('app.overview.adminTitle')}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Points by win/draw/loss are configurable per season.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        {t('app.overview.adminBody')}
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Match orchestration
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('app.overview.playerTitle')}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Create detailed matches with full home/away lineups.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        {t('app.overview.playerBody')}
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Invite flow
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('app.overview.contextTitle')}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Share secure join codes with players in seconds.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        {t('app.overview.contextBody')}
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Live standings
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('app.overview.roadmapTitle')}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Track wins, draws, losses and points for the current season.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        {t('app.overview.roadmapBody')}
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                 </Grid>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    borderRadius: 4,
+                    p: { xs: 2.5, md: 3 },
+                    border: '1px dashed rgba(180,83,9,0.3)',
+                    bgcolor: 'rgba(255,246,230,0.72)'
+                  }}
+                >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">
+                    <Chip label={t('app.overview.onboardingChip')} size="small" color="secondary" />
+                    <Typography variant="body2" color="text.secondary">
+                      {t('app.overview.onboardingBody')}
+                    </Typography>
+                  </Stack>
+                </Paper>
               </Stack>
-            </Grid>
-            <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: { md: 'flex-end' } }}>
-              <AuthPanel auth={auth} />
             </Grid>
           </Grid>
         </Container>
@@ -118,28 +228,24 @@ export default function App() {
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
       <Stack spacing={4}>
-        <Box>
-          <Typography variant="h3">PenaHub</Typography>
-        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h3">{t('app.brand')}</Typography>
+          </Box>
+          <LanguageSwitcher />
+        </Stack>
 
         {isAuthenticated && isAdmin && (
           <AdminDashboard session={auth.session} onLogout={handleLogout} />
         )}
 
         {isAuthenticated && isUser && (
-          <Stack spacing={2}>
-            <Alert severity="info">
-              You are logged in as player user. Admin panel is available only for admin sessions.
-            </Alert>
-            <Box>
-              <Button onClick={handleLogout}>Logout</Button>
-            </Box>
-          </Stack>
+          <UserDashboard session={auth.session} onLogout={handleLogout} />
         )}
 
         {isAuthenticated && !isAdmin && !isUser && (
           <Alert severity="warning">
-            Session metadata is incomplete. Please logout and login again.
+            {t('app.sessionIncomplete')}
           </Alert>
         )}
       </Stack>

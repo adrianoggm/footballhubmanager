@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 from persistence.application.ports.pena_membership_repository import (
+    InvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipResult,
     PenaNotFoundError,
@@ -10,9 +11,12 @@ from persistence.application.ports.pena_membership_repository import (
     UserPlayerNotFoundError,
 )
 from persistence.application.use_cases.manage_pena_membership import (
+    InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
+    PenaGuestPlayerCreate,
     PenaMembershipAccessDeniedError,
+    PenaMembershipInvalidNationalityError,
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUpdate,
@@ -30,6 +34,7 @@ class _FakeRepo:
     should_raise_membership_not_found: bool = False
     should_raise_player_not_found: bool = False
     should_raise_user_player_not_found: bool = False
+    should_raise_invalid_nationality: bool = False
     last_payload: dict | None = None
 
     @staticmethod
@@ -138,6 +143,36 @@ class _FakeRepo:
             "player_guid": player_guid,
         }
 
+    def create_guest_player_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        admin_id: int,
+        name: str,
+        surname1: str,
+        surname2: str | None,
+        nationality: str,
+        nickname: str | None,
+        position: str | None,
+    ):
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_pena_access_denied:
+            raise PenaNotManagedByAdminError()
+        if self.should_raise_invalid_nationality:
+            raise InvalidNationalityError()
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "admin_id": admin_id,
+            "name": name,
+            "surname1": surname1,
+            "surname2": surname2,
+            "nationality": nationality,
+            "nickname": nickname,
+            "position": position,
+        }
+        return self._sample_result()
+
 
 def test_update_for_user_positive_normalizes_blank_to_none():
     repo = _FakeRepo()
@@ -228,3 +263,66 @@ def test_remove_for_user_maps_user_profile_not_found():
 
     with pytest.raises(PenaMembershipUserProfileNotFoundError):
         use_case.remove_for_user(pena_guid="pena-guid", account_id=12)
+
+
+def test_create_guest_for_admin_positive_normalizes_blank_to_none():
+    repo = _FakeRepo()
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    result = use_case.create_guest_for_admin(
+        pena_guid="pena-guid",
+        admin_id=7,
+        data=PenaGuestPlayerCreate(
+            name="  Guest  ",
+            surname1="  Player  ",
+            surname2="   ",
+            nationality="  Spain ",
+            nickname="  Invitado  ",
+            position="  ",
+        ),
+    )
+
+    assert repo.last_payload == {
+        "pena_guid": "pena-guid",
+        "admin_id": 7,
+        "name": "Guest",
+        "surname1": "Player",
+        "surname2": None,
+        "nationality": "Spain",
+        "nickname": "Invitado",
+        "position": None,
+    }
+    assert result.role == "member"
+
+
+def test_create_guest_for_admin_rejects_invalid_payload():
+    repo = _FakeRepo()
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(InvalidPenaGuestPlayerDataError):
+        use_case.create_guest_for_admin(
+            pena_guid="pena-guid",
+            admin_id=7,
+            data=PenaGuestPlayerCreate(
+                name=" ",
+                surname1="Player",
+                nationality="Spain",
+            ),
+        )
+    assert repo.last_payload is None
+
+
+def test_create_guest_for_admin_maps_invalid_nationality():
+    repo = _FakeRepo(should_raise_invalid_nationality=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(PenaMembershipInvalidNationalityError):
+        use_case.create_guest_for_admin(
+            pena_guid="pena-guid",
+            admin_id=7,
+            data=PenaGuestPlayerCreate(
+                name="Guest",
+                surname1="Player",
+                nationality="WrongCountry",
+            ),
+        )

@@ -87,6 +87,9 @@ class SeasonPlayerInfo:
     nationality: str
     nickname: str | None
     position: str | None
+    played: int
+    goals: int
+    assists: int
     wins: int
     losses: int
     draws: int
@@ -190,6 +193,7 @@ class SeasonMatchInfo:
     away_player_guid: str
     home_player_name: str
     away_player_name: str
+    status: str
     home_score: int
     away_score: int
 
@@ -224,6 +228,7 @@ class SeasonMatchDetailInfo:
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team: SeasonMatchTeamInfo
     away_team: SeasonMatchTeamInfo
 
@@ -233,6 +238,7 @@ class SeasonMatchSummaryInfo:
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team_name: str
     away_team_name: str
     home_score: int
@@ -589,6 +595,8 @@ class ManageSeasonCompetitionUseCase:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryInvalidSeasonPlayerStatsError as exc:
             raise InvalidSeasonPlayerUpdateDataError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
         return self._to_match_info(updated)
 
     def create_match_with_lineups_for_admin(
@@ -928,6 +936,9 @@ class ManageSeasonCompetitionUseCase:
             nationality=item.nationality,
             nickname=item.nickname,
             position=item.position,
+            played=item.played,
+            goals=item.goals,
+            assists=item.assists,
             wins=item.wins,
             losses=item.losses,
             draws=item.draws,
@@ -954,6 +965,7 @@ class ManageSeasonCompetitionUseCase:
             away_player_guid=item.away_player_guid,
             home_player_name=item.home_player_name,
             away_player_name=item.away_player_name,
+            status=item.status,
             home_score=item.home_score,
             away_score=item.away_score,
         )
@@ -991,6 +1003,7 @@ class ManageSeasonCompetitionUseCase:
             guid=item.guid,
             season_guid=item.season_guid,
             match_date=item.match_date,
+            status=item.status,
             home_team=cls._to_match_team(item.home_team),
             away_team=cls._to_match_team(item.away_team),
         )
@@ -1001,6 +1014,7 @@ class ManageSeasonCompetitionUseCase:
             guid=item.guid,
             season_guid=item.season_guid,
             match_date=item.match_date,
+            status=item.status,
             home_team_name=item.home_team_name,
             away_team_name=item.away_team_name,
             home_score=item.home_score,

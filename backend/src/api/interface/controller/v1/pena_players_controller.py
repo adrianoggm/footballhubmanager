@@ -5,9 +5,12 @@ from auth.dependencies import authorize_pena_access, get_current_session, requir
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from persistence.application.use_cases import (
     GetPenaPlayersUseCase,
+    InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
+    PenaGuestPlayerCreate,
     PenaMembershipAccessDeniedError,
+    PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
@@ -58,6 +61,15 @@ class UpdatePenaMembershipRequest(BaseModel):
     position: str | None = None
 
 
+class CreateGuestPlayerRequest(BaseModel):
+    name: str
+    surname1: str
+    surname2: str | None = None
+    nationality: str
+    nickname: str | None = None
+    position: str | None = None
+
+
 class PenaMembershipResponse(BaseModel):
     pena_guid: str
     player_guid: str
@@ -72,6 +84,49 @@ class PenaMembershipResponse(BaseModel):
 
 def _to_membership_response(data) -> PenaMembershipResponse:
     return PenaMembershipResponse(**asdict(data))
+
+
+@router.post(
+    "/penas/{pena_guid}/players",
+    response_model=PenaMembershipResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_guest_player_for_admin(
+    pena_guid: str,
+    payload: CreateGuestPlayerRequest,
+    admin_session=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    repository = SqlAlchemyPenaMembershipRepository(db)
+    use_case = ManagePenaMembershipUseCase(repository)
+    try:
+        created = use_case.create_guest_for_admin(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            data=PenaGuestPlayerCreate(
+                name=payload.name,
+                surname1=payload.surname1,
+                surname2=payload.surname2,
+                nationality=payload.nationality,
+                nickname=payload.nickname,
+                position=payload.position,
+            ),
+        )
+    except InvalidPenaGuestPlayerDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid guest player data",
+        )
+    except PenaMembershipPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaMembershipAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin does not manage this pena",
+        )
+    except PenaMembershipInvalidNationalityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
+    return _to_membership_response(created)
 
 
 @router.get("/penas/{pena_guid}/players", response_model=PenaPlayersPageResponse)
