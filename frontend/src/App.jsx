@@ -1,11 +1,14 @@
 import { Alert, Box, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material'
 import AuthPanel from './components/AuthPanel.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
+import LanguageSwitcher from './components/LanguageSwitcher.jsx'
 import UserDashboard from './components/UserDashboard.jsx'
 import { useAuth } from './hooks/useAuth.js'
+import { useI18n } from './i18n/useI18n.js'
 
 export default function App() {
   const auth = useAuth()
+  const { t } = useI18n()
   const isAuthenticated = Boolean(auth.token)
   const isAdmin = auth.session?.user_type === 'admin'
   const isUser = auth.session?.user_type === 'user'
@@ -47,6 +50,9 @@ export default function App() {
         />
 
         <Container maxWidth="xl" sx={{ position: 'relative' }}>
+          <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+            <LanguageSwitcher />
+          </Stack>
           <Grid container spacing={{ xs: 3, md: 5 }} alignItems="start">
             <Grid item xs={12} md={4}>
               <Box sx={{ position: { md: 'sticky' }, top: { md: 28 } }}>
@@ -56,18 +62,17 @@ export default function App() {
                       variant="overline"
                       sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
                     >
-                      Authentication
+                      {t('app.auth.sectionTitle')}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Use this panel to sign in or create your account.
+                      {t('app.auth.sectionHint')}
                     </Typography>
                   </Stack>
                   <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: -0.8 }}>
-                    Welcome to footballhubmanager
+                    {t('app.auth.welcome')}
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
-                    Login or register on the left panel to access your role-specific experience
-                    as admin or player.
+                    {t('app.auth.accessHint')}
                   </Typography>
                   <AuthPanel auth={auth} />
                 </Stack>
@@ -81,21 +86,20 @@ export default function App() {
                     variant="overline"
                     sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
                   >
-                    Product overview
+                    {t('app.overview.sectionTitle')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Core value and capabilities for admins and players.
+                    {t('app.overview.sectionHint')}
                   </Typography>
                 </Stack>
                 <Typography
                   variant="h2"
                   sx={{ fontWeight: 800, lineHeight: 1.04, maxWidth: 860, letterSpacing: -1.8 }}
                 >
-                  Run your pena from invite to final standings in one place.
+                  {t('app.overview.hero')}
                 </Typography>
                 <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 760, fontWeight: 400 }}>
-                  footballhubmanager centralizes seasons, memberships, matches, and rankings with clear
-                  workflows for admins and players.
+                  {t('app.overview.description')}
                 </Typography>
 
                 <Paper
@@ -110,11 +114,10 @@ export default function App() {
                 >
                   <Stack spacing={1.5}>
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      What you can do today
+                      {t('app.overview.todayTitle')}
                     </Typography>
                     <Typography variant="body1" color="text.secondary">
-                      Create and activate seasons, generate invitation tokens, let players join
-                      safely, and monitor standings by selected season.
+                      {t('app.overview.todayBody')}
                     </Typography>
                   </Stack>
                 </Paper>
@@ -132,11 +135,10 @@ export default function App() {
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                        Admin workspace
+                        {t('app.overview.adminTitle')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                        Manage pena context, seasons, invite tokens and competitive tracking
-                        without leaving the same dashboard.
+                        {t('app.overview.adminBody')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -152,11 +154,10 @@ export default function App() {
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                        Player experience
+                        {t('app.overview.playerTitle')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                        Join penas with invite tokens, pick your current pena, keep profile and
-                        membership updated, and follow fixtures and standings.
+                        {t('app.overview.playerBody')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -172,11 +173,10 @@ export default function App() {
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                        Context-first navigation
+                        {t('app.overview.contextTitle')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                        Admin screens require selected managed pena. Player screens require current
-                        pena membership. The app always routes to the right setup step.
+                        {t('app.overview.contextBody')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -192,11 +192,10 @@ export default function App() {
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                        MVP now, V2 ready
+                        {t('app.overview.roadmapTitle')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                        Current scope delivers auth, seasons, invitations, standings, memberships,
-                        and read-only match flow, with expansion space for roster and match detail.
+                        {t('app.overview.roadmapBody')}
                       </Typography>
                     </Paper>
                   </Grid>
@@ -212,10 +211,9 @@ export default function App() {
                   }}
                 >
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">
-                    <Chip label="Fast onboarding" size="small" color="secondary" />
+                    <Chip label={t('app.overview.onboardingChip')} size="small" color="secondary" />
                     <Typography variant="body2" color="text.secondary">
-                      Register as admin to create your competition, or as player to join a pena in
-                      seconds with an invite token.
+                      {t('app.overview.onboardingBody')}
                     </Typography>
                   </Stack>
                 </Paper>
@@ -230,9 +228,12 @@ export default function App() {
   return (
     <Container maxWidth="lg" sx={{ py: 6 }}>
       <Stack spacing={4}>
-        <Box>
-          <Typography variant="h3">footballhubmanager</Typography>
-        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h3">{t('app.brand')}</Typography>
+          </Box>
+          <LanguageSwitcher />
+        </Stack>
 
         {isAuthenticated && isAdmin && (
           <AdminDashboard session={auth.session} onLogout={handleLogout} />
@@ -244,7 +245,7 @@ export default function App() {
 
         {isAuthenticated && !isAdmin && !isUser && (
           <Alert severity="warning">
-            Session metadata is incomplete. Please logout and login again.
+            {t('app.sessionIncomplete')}
           </Alert>
         )}
       </Stack>

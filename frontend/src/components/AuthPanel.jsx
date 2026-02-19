@@ -13,6 +13,7 @@ import {
   Typography
 } from '@mui/material'
 import { useEffect, useState } from 'react'
+import { useI18n } from '../i18n/useI18n.js'
 import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
@@ -31,6 +32,7 @@ const initialAdmin = {
 }
 
 export default function AuthPanel({ auth }) {
+  const { t } = useI18n()
   const [mode, setMode] = useState('login')
   const [accountType, setAccountType] = useState('admin')
   const [nationalities, setNationalities] = useState([])
@@ -72,16 +74,16 @@ export default function AuthPanel({ auth }) {
   const submitLabel =
     mode === 'login'
       ? accountType === 'admin'
-        ? 'Sign in as admin'
-        : 'Sign in as player'
+        ? t('auth.submitSignInAdmin')
+        : t('auth.submitSignInPlayer')
       : accountType === 'admin'
-        ? 'Create admin account'
-        : 'Create player account'
+        ? t('auth.submitCreateAdmin')
+        : t('auth.submitCreatePlayer')
 
   const panelDescription =
     mode === 'register' && accountType === 'admin'
-      ? 'Create your admin login and your first pena in one step.'
-      : 'Manage your pena seasons, call-ups, matches and standings from one panel.'
+      ? t('auth.panelDescriptionAdminRegister')
+      : t('auth.panelDescriptionDefault')
 
   useEffect(() => {
     const loadNationalities = async () => {
@@ -110,9 +112,7 @@ export default function AuthPanel({ auth }) {
         <Stack spacing={3}>
           <Stack spacing={1}>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {mode === 'login'
-                ? 'Sign in to footballhubmanager'
-                : 'Create your footballhubmanager account'}
+              {mode === 'login' ? t('auth.titleLogin') : t('auth.titleRegister')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {panelDescription}
@@ -125,8 +125,8 @@ export default function AuthPanel({ auth }) {
             variant="fullWidth"
             sx={{ minHeight: 40 }}
           >
-            <Tab value="login" label="Login" sx={{ minHeight: 40 }} />
-            <Tab value="register" label="Register" sx={{ minHeight: 40 }} />
+            <Tab value="login" label={t('auth.tabLogin')} sx={{ minHeight: 40 }} />
+            <Tab value="register" label={t('auth.tabRegister')} sx={{ minHeight: 40 }} />
           </Tabs>
 
           <ToggleButtonGroup
@@ -140,8 +140,8 @@ export default function AuthPanel({ auth }) {
             }}
             size="small"
           >
-            <ToggleButton value="admin">Admin</ToggleButton>
-            <ToggleButton value="user">Player</ToggleButton>
+            <ToggleButton value="admin">{t('auth.roleAdmin')}</ToggleButton>
+            <ToggleButton value="user">{t('auth.rolePlayer')}</ToggleButton>
           </ToggleButtonGroup>
 
           {auth.error && <Alert severity="error">{auth.error.message}</Alert>}
@@ -149,13 +149,13 @@ export default function AuthPanel({ auth }) {
           {mode === 'login' && (
             <Stack spacing={2}>
               <TextField
-                label="Username"
+                label={t('auth.username')}
                 name="username"
                 value={credentials.username}
                 onChange={onField(setCredentials)}
               />
               <TextField
-                label="Password"
+                label={t('auth.password')}
                 type="password"
                 name="password"
                 value={credentials.password}
@@ -166,30 +166,27 @@ export default function AuthPanel({ auth }) {
 
           {mode === 'register' && accountType === 'admin' && (
             <Stack spacing={2}>
-              <Alert severity="info">
-                <strong>Admin username</strong> is for login. <strong>Pena name</strong> is the club
-                created at registration.
-              </Alert>
+              <Alert severity="info">{t('auth.adminRegisterHint')}</Alert>
               <TextField
-                label="Admin username"
+                label={t('auth.adminUsername')}
                 name="username"
                 value={adminRegister.username}
                 onChange={onField(setAdminRegister)}
-                helperText="This username is used to sign in as admin."
+                helperText={t('auth.adminUsernameHint')}
               />
               <TextField
-                label="Password"
+                label={t('auth.password')}
                 type="password"
                 name="password"
                 value={adminRegister.password}
                 onChange={onField(setAdminRegister)}
               />
               <TextField
-                label="Pena name"
+                label={t('auth.adminPenaName')}
                 name="name"
                 value={adminRegister.name}
                 onChange={onField(setAdminRegister)}
-                helperText="This is the name of the pena created for your admin account."
+                helperText={t('auth.adminPenaNameHint')}
               />
             </Stack>
           )}
@@ -197,39 +194,39 @@ export default function AuthPanel({ auth }) {
           {mode === 'register' && accountType === 'user' && (
             <Stack spacing={2}>
               <TextField
-                label="Username"
+                label={t('auth.username')}
                 name="username"
                 value={userRegister.username}
                 onChange={onField(setUserRegister)}
               />
               <TextField
-                label="Password"
+                label={t('auth.password')}
                 type="password"
                 name="password"
                 value={userRegister.password}
                 onChange={onField(setUserRegister)}
               />
               <TextField
-                label="Name"
+                label={t('auth.userName')}
                 name="name"
                 value={userRegister.name}
                 onChange={onField(setUserRegister)}
               />
               <TextField
-                label="Surname 1"
+                label={t('auth.userSurname1')}
                 name="surname1"
                 value={userRegister.surname1}
                 onChange={onField(setUserRegister)}
               />
               <TextField
-                label="Surname 2"
+                label={t('auth.userSurname2')}
                 name="surname2"
                 value={userRegister.surname2}
                 onChange={onField(setUserRegister)}
               />
               <TextField
                 select
-                label="Nationality"
+                label={t('auth.userNationality')}
                 name="nationality"
                 value={userRegister.nationality}
                 onChange={onField(setUserRegister)}
@@ -254,8 +251,8 @@ export default function AuthPanel({ auth }) {
 
           <Typography variant="caption" color="text.secondary">
             {accountType === 'admin'
-              ? 'Admins manage seasons, lineups, scoring rules and invite links.'
-              : 'Players join penas with invite codes and participate in season matches.'}
+              ? t('auth.adminFooter')
+              : t('auth.playerFooter')}
           </Typography>
         </Stack>
       </CardContent>
