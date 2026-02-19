@@ -31,7 +31,7 @@ const normalizeLanguage = (value) => {
   if (!value) {
     return null
   }
-  const normalized = String(value).toLowerCase().split('-')[0]
+  const normalized = String(value).trim().toLowerCase().split('-')[0]
   if (SUPPORTED_LANGUAGES.includes(normalized)) {
     return normalized
   }

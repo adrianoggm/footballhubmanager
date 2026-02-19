@@ -33,26 +33,53 @@ const initialAdmin = {
 
 const mapAuthErrorMessage = (error, t) => {
   const raw = String(error?.message || '').toLowerCase()
+  if (error?.status === 401) {
+    return t('auth.errors.invalidCredentials')
+  }
+  if (error?.status === 409) {
+    return t('auth.errors.usernameExists')
+  }
   if (!raw) {
     return t('auth.errors.generic')
   }
-  if (raw.includes('invalid credentials')) {
+  if (raw.includes('invalid credentials') || raw.includes('credenciales inválidas')) {
     return t('auth.errors.invalidCredentials')
   }
-  if (raw.includes('username already exists')) {
+  if (
+    raw.includes('username already exists') ||
+    raw.includes('usuario ya existe') ||
+    raw.includes('nombre de usuario ya existe')
+  ) {
     return t('auth.errors.usernameExists')
   }
-  if (raw.includes('invalid user registration data')) {
+  if (
+    raw.includes('invalid user registration data') ||
+    raw.includes('datos de registro de jugador inválidos') ||
+    raw.includes('datos de registro de usuario inválidos')
+  ) {
     return t('auth.errors.invalidUserRegistrationData')
   }
-  if (raw.includes('invalid admin registration data')) {
+  if (
+    raw.includes('invalid admin registration data') ||
+    raw.includes('datos de registro de admin inválidos')
+  ) {
     return t('auth.errors.invalidAdminRegistrationData')
   }
-  if (raw.includes('invalid nationality')) {
+  if (raw.includes('invalid nationality') || raw.includes('nacionalidad inválida')) {
     return t('auth.errors.invalidNationality')
   }
   if (raw.includes('failed to fetch') || raw.includes('network')) {
     return t('auth.errors.network')
+  }
+  if (
+    error?.status === 400 ||
+    error?.status === 422 ||
+    raw.includes('required') ||
+    raw.includes('field') ||
+    raw.includes('validation') ||
+    raw.includes('obligatorio')
+  ) {
+    return t('auth.errors.validation')
   }
   return t('auth.errors.generic')
 }

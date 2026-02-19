@@ -71,6 +71,7 @@ export const messages = {
         invalidUserRegistrationData: 'Invalid user registration data.',
         invalidAdminRegistrationData: 'Invalid admin registration data.',
         invalidNationality: 'Invalid nationality.',
+        validation: 'Please review the required fields and try again.',
         network: 'Could not reach the server. Check your connection and try again.',
         generic: 'Authentication request failed. Please try again.'
       }
@@ -80,7 +81,12 @@ export const messages = {
         loggedAs: 'Logged as',
         refresh: 'Refresh',
         refreshData: 'Refresh data',
-        logout: 'Logout'
+        logout: 'Logout',
+        errors: {
+          network: 'Could not reach the server. Check your connection and try again.',
+          forbidden: 'You do not have permission to perform this action.',
+          generic: 'Request failed. Please try again.'
+        }
       },
       admin: {
         panelTitle: 'Admin Workspace',
@@ -159,6 +165,7 @@ export const messages = {
           squadTitle: 'Season Squad Management',
           createSeasonFirst: 'Create at least one season to manage season squads.',
           historicalMembersLabel: 'Historical members to add',
+          selectedCount: '{count} selected',
           helperSelectSeason: 'Select a season first.',
           helperSome: 'Only historical members not yet registered in this season are listed.',
           helperNone: 'All historical members are already in this season.',
@@ -184,6 +191,8 @@ export const messages = {
           matchDate: 'Match date',
           homeTeam: 'Home team name',
           awayTeam: 'Away team name',
+          homeTeamPlaceholder: 'e.g. Team A',
+          awayTeamPlaceholder: 'e.g. Team B',
           homeLineup: 'Home lineup guids',
           awayLineup: 'Away lineup guids',
           lineupGuidsHelper: 'Comma or line-break separated player GUIDs',
@@ -334,6 +343,7 @@ export const messages = {
         invalidUserRegistrationData: 'Datos de registro de jugador inválidos.',
         invalidAdminRegistrationData: 'Datos de registro de admin inválidos.',
         invalidNationality: 'Nacionalidad inválida.',
+        validation: 'Revisa los campos obligatorios e inténtalo de nuevo.',
         network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
         generic: 'La solicitud de autenticación falló. Inténtalo de nuevo.'
       }
@@ -343,7 +353,12 @@ export const messages = {
         loggedAs: 'Sesión iniciada como',
         refresh: 'Refrescar',
         refreshData: 'Refrescar datos',
-        logout: 'Cerrar sesión'
+        logout: 'Cerrar sesión',
+        errors: {
+          network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+          forbidden: 'No tienes permisos para realizar esta acción.',
+          generic: 'La solicitud falló. Inténtalo de nuevo.'
+        }
       },
       admin: {
         panelTitle: 'Espacio de administración',
@@ -423,6 +438,7 @@ export const messages = {
           squadTitle: 'Gestión de plantilla por temporada',
           createSeasonFirst: 'Crea al menos una temporada para gestionar plantillas.',
           historicalMembersLabel: 'Miembros históricos para añadir',
+          selectedCount: '{count} seleccionados',
           helperSelectSeason: 'Primero selecciona una temporada.',
           helperSome:
             'Solo se listan miembros históricos que todavía no están registrados en esta temporada.',
@@ -449,6 +465,8 @@ export const messages = {
           matchDate: 'Fecha del partido',
           homeTeam: 'Nombre del local',
           awayTeam: 'Nombre del visitante',
+          homeTeamPlaceholder: 'p. ej. Equipo A',
+          awayTeamPlaceholder: 'p. ej. Equipo B',
           homeLineup: 'GUIDs alineación local',
           awayLineup: 'GUIDs alineación visitante',
           lineupGuidsHelper: 'Separa GUIDs por comas o saltos de línea',

@@ -37,8 +37,8 @@ const defaultSeasonForm = () => ({
 
 const defaultMatchForm = () => ({
   match_date: todayIso(),
-  home_team_name: 'Home',
-  away_team_name: 'Away',
+  home_team_name: '',
+  away_team_name: '',
   home_player_guids: '',
   away_player_guids: ''
 })
@@ -103,6 +103,20 @@ const buildNextSeasonDateRange = (seasons) => {
     start_date: addDaysIso(latestSeasonEndDate, 1),
     end_date: addDaysIso(latestSeasonEndDate, 90)
   }
+}
+
+const mapDashboardErrorMessage = (error, t) => {
+  const raw = String(error?.message || '').toLowerCase()
+  if (!raw) {
+    return t('dashboard.common.errors.generic')
+  }
+  if (error?.status === 403 || raw.includes('forbidden')) {
+    return t('dashboard.common.errors.forbidden')
+  }
+  if (raw.includes('failed to fetch') || raw.includes('network')) {
+    return t('dashboard.common.errors.network')
+  }
+  return error.message
 }
 
 const formatPlayerDisplayName = (player) => {
@@ -181,6 +195,11 @@ export default function AdminDashboard({ session, onLogout }) {
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
     [penas, selectedPenaGuid]
+  )
+
+  const errorMessage = useMemo(
+    () => (error ? mapDashboardErrorMessage(error, t) : ''),
+    [error, t]
   )
 
   const registeredSeasonPlayerGuids = useMemo(
@@ -678,7 +697,7 @@ export default function AdminDashboard({ session, onLogout }) {
       </Card>
 
       {loading && <LinearProgress />}
-      {error && <Alert severity="error">{error.message}</Alert>}
+      {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
       {!selectedPenaGuid && (
@@ -1047,7 +1066,10 @@ export default function AdminDashboard({ session, onLogout }) {
                     onChange={handleSelectHistoricalPlayers}
                     SelectProps={{
                       multiple: true,
-                      renderValue: (selected) => `${selected.length} selected`
+                      renderValue: (selected) =>
+                        t('dashboard.admin.players.selectedCount', {
+                          count: selected.length
+                        })
                     }}
                     disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
                     helperText={
@@ -1230,6 +1252,7 @@ export default function AdminDashboard({ session, onLogout }) {
                       label={t('dashboard.admin.matches.homeTeam')}
                       value={matchForm.home_team_name}
                       onChange={onMatchField('home_team_name')}
+                      placeholder={t('dashboard.admin.matches.homeTeamPlaceholder')}
                       disabled={!activeSeason}
                       fullWidth
                     />
@@ -1237,6 +1260,7 @@ export default function AdminDashboard({ session, onLogout }) {
                       label={t('dashboard.admin.matches.awayTeam')}
                       value={matchForm.away_team_name}
                       onChange={onMatchField('away_team_name')}
+                      placeholder={t('dashboard.admin.matches.awayTeamPlaceholder')}
                       disabled={!activeSeason}
                       fullWidth
                     />

@@ -36,6 +36,20 @@ const defaultMembershipForm = () => ({
 
 const asText = (value) => value ?? ''
 
+const mapDashboardErrorMessage = (error, t) => {
+  const raw = String(error?.message || '').toLowerCase()
+  if (!raw) {
+    return t('dashboard.common.errors.generic')
+  }
+  if (error?.status === 403 || raw.includes('forbidden')) {
+    return t('dashboard.common.errors.forbidden')
+  }
+  if (raw.includes('failed to fetch') || raw.includes('network')) {
+    return t('dashboard.common.errors.network')
+  }
+  return error.message
+}
+
 export default function UserDashboard({ session, onLogout }) {
   const { t } = useI18n()
   const [initializing, setInitializing] = useState(true)
@@ -56,6 +70,11 @@ export default function UserDashboard({ session, onLogout }) {
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
     [penas, selectedPenaGuid]
+  )
+
+  const errorMessage = useMemo(
+    () => (error ? mapDashboardErrorMessage(error, t) : ''),
+    [error, t]
   )
 
   const runAction = async (action, successMessage = '') => {
@@ -264,7 +283,7 @@ export default function UserDashboard({ session, onLogout }) {
       </Card>
 
       {loading && <LinearProgress />}
-      {error && <Alert severity="error">{error.message}</Alert>}
+      {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
       <Grid container spacing={3}>
