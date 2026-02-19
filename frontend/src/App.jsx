@@ -1,4 +1,4 @@
-import { Alert, Box, Chip, Container, Grid, Stack, Typography } from '@mui/material'
+import { Alert, Box, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material'
 import AuthPanel from './components/AuthPanel.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
 import UserDashboard from './components/UserDashboard.jsx'
@@ -20,95 +20,206 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', py: { xs: 3, md: 5 } }}>
         <Box
           sx={{
             position: 'absolute',
-            width: 420,
-            height: 420,
+            width: 520,
+            height: 520,
             borderRadius: '50%',
-            right: -120,
-            top: -120,
-            background: 'radial-gradient(circle, rgba(37,99,235,0.22) 0%, rgba(37,99,235,0) 70%)'
+            right: -180,
+            top: -200,
+            background: 'radial-gradient(circle, rgba(15,118,110,0.3) 0%, rgba(15,118,110,0) 72%)',
+            animation: 'floatOrb 16s ease-in-out infinite'
           }}
         />
         <Box
           sx={{
             position: 'absolute',
-            width: 360,
-            height: 360,
+            width: 480,
+            height: 480,
             borderRadius: '50%',
-            left: -160,
-            bottom: -120,
-            background: 'radial-gradient(circle, rgba(17,24,39,0.16) 0%, rgba(17,24,39,0) 70%)'
+            left: -210,
+            bottom: -180,
+            background: 'radial-gradient(circle, rgba(180,83,9,0.24) 0%, rgba(180,83,9,0) 72%)',
+            animation: 'floatOrb 20s ease-in-out infinite reverse'
           }}
         />
 
-        <Container maxWidth="xl" sx={{ py: { xs: 4, md: 8 }, position: 'relative' }}>
-          <Grid container spacing={5} alignItems="center">
-            <Grid item xs={12} md={7}>
+        <Container maxWidth="xl" sx={{ position: 'relative' }}>
+          <Grid container spacing={{ xs: 3, md: 5 }} alignItems="start">
+            <Grid item xs={12} md={4}>
+              <Box sx={{ position: { md: 'sticky' }, top: { md: 28 } }}>
+                <Stack spacing={2.5}>
+                  <Stack spacing={0.5}>
+                    <Typography
+                      variant="overline"
+                      sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
+                    >
+                      Authentication
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Use this panel to sign in or create your account.
+                    </Typography>
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: -0.8 }}>
+                    Welcome to footballhubmanager
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Login or register on the left panel to access your role-specific experience
+                    as admin or player.
+                  </Typography>
+                  <AuthPanel auth={auth} />
+                </Stack>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
               <Stack spacing={3}>
-                <Chip
-                  label="Community football manager"
-                  color="secondary"
-                  sx={{ width: 'fit-content', fontWeight: 600 }}
-                />
+                <Stack spacing={0.5}>
+                  <Typography
+                    variant="overline"
+                    sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
+                  >
+                    Product overview
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Core value and capabilities for admins and players.
+                  </Typography>
+                </Stack>
                 <Typography
                   variant="h2"
-                  sx={{ fontWeight: 800, lineHeight: 1.05, maxWidth: 720, letterSpacing: -1.6 }}
+                  sx={{ fontWeight: 800, lineHeight: 1.04, maxWidth: 860, letterSpacing: -1.8 }}
                 >
-                  Run your pena season from one place.
+                  Run your pena from invite to final standings in one place.
                 </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 640, fontWeight: 400 }}>
-                  Create seasons, configure scoring rules, generate join codes, call up lineups, and
-                  track standings match by match.
+                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 760, fontWeight: 400 }}>
+                  footballhubmanager centralizes seasons, memberships, matches, and rankings with clear
+                  workflows for admins and players.
                 </Typography>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    borderRadius: 4,
+                    p: { xs: 2.5, md: 3.5 },
+                    border: '1px solid rgba(31,41,55,0.1)',
+                    background:
+                      'linear-gradient(145deg, rgba(255,255,252,0.95) 0%, rgba(227,245,240,0.8) 56%, rgba(255,241,225,0.74) 100%)'
+                  }}
+                >
+                  <Stack spacing={1.5}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      What you can do today
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      Create and activate seasons, generate invitation tokens, let players join
+                      safely, and monitor standings by selected season.
+                    </Typography>
+                  </Stack>
+                </Paper>
+
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Season control
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        Admin workspace
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Points by win/draw/loss are configurable per season.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        Manage pena context, seasons, invite tokens and competitive tracking
+                        without leaving the same dashboard.
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Match orchestration
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        Player experience
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Create detailed matches with full home/away lineups.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        Join penas with invite tokens, pick your current pena, keep profile and
+                        membership updated, and follow fixtures and standings.
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Invite flow
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        Context-first navigation
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Share secure join codes with players in seconds.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        Admin screens require selected managed pena. Player screens require current
+                        pena membership. The app always routes to the right setup step.
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.7)' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        Live standings
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
+                        minHeight: '100%',
+                        border: '1px solid rgba(31,41,55,0.1)',
+                        bgcolor: 'rgba(255,253,247,0.86)'
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        MVP now, V2 ready
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Track wins, draws, losses and points for the current season.
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                        Current scope delivers auth, seasons, invitations, standings, memberships,
+                        and read-only match flow, with expansion space for roster and match detail.
                       </Typography>
-                    </Box>
+                    </Paper>
                   </Grid>
                 </Grid>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    borderRadius: 4,
+                    p: { xs: 2.5, md: 3 },
+                    border: '1px dashed rgba(180,83,9,0.3)',
+                    bgcolor: 'rgba(255,246,230,0.72)'
+                  }}
+                >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">
+                    <Chip label="Fast onboarding" size="small" color="secondary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Register as admin to create your competition, or as player to join a pena in
+                      seconds with an invite token.
+                    </Typography>
+                  </Stack>
+                </Paper>
               </Stack>
-            </Grid>
-            <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: { md: 'flex-end' } }}>
-              <AuthPanel auth={auth} />
             </Grid>
           </Grid>
         </Container>
@@ -120,7 +231,7 @@ export default function App() {
     <Container maxWidth="lg" sx={{ py: 6 }}>
       <Stack spacing={4}>
         <Box>
-          <Typography variant="h3">PenaHub</Typography>
+          <Typography variant="h3">footballhubmanager</Typography>
         </Box>
 
         {isAuthenticated && isAdmin && (

@@ -1,13 +1,27 @@
 :root {
   font-family: "Space Grotesk", system-ui, sans-serif;
   color: #0f172a;
-  background: radial-gradient(1200px 600px at 20% -10%, #f1efe9, #e8eef3 40%, #f7f4ee 80%);
+  background:
+    radial-gradient(900px 520px at 92% 12%, #fdebd1 0%, rgba(253, 235, 209, 0) 62%),
+    radial-gradient(1200px 640px at 12% -10%, #dff2ec 0%, #eef4eb 38%, #f9f3e6 82%);
   line-height: 1.5;
   font-weight: 400;
 }
 
 * {
   box-sizing: border-box;
+}
+
+@keyframes floatOrb {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, 26px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 body {

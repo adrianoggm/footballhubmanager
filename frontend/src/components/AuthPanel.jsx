@@ -78,6 +78,11 @@ export default function AuthPanel({ auth }) {
         ? 'Create admin account'
         : 'Create player account'
 
+  const panelDescription =
+    mode === 'register' && accountType === 'admin'
+      ? 'Create your admin login and your first pena in one step.'
+      : 'Manage your pena seasons, call-ups, matches and standings from one panel.'
+
   useEffect(() => {
     const loadNationalities = async () => {
       try {
@@ -96,17 +101,21 @@ export default function AuthPanel({ auth }) {
         maxWidth: 460,
         width: '100%',
         borderRadius: 4,
-        boxShadow: '0 18px 48px rgba(15, 23, 42, 0.16)'
+        bgcolor: 'rgba(255,253,248,0.93)',
+        border: '1px solid rgba(31,41,55,0.1)',
+        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 118, 110, 0.16)'
       }}
     >
       <CardContent sx={{ p: 4 }}>
         <Stack spacing={3}>
           <Stack spacing={1}>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {mode === 'login' ? 'Sign in to PenaHub' : 'Create your PenaHub account'}
+              {mode === 'login'
+                ? 'Sign in to footballhubmanager'
+                : 'Create your footballhubmanager account'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Manage your pena seasons, call-ups, matches and standings from one panel.
+              {panelDescription}
             </Typography>
           </Stack>
 
@@ -157,11 +166,16 @@ export default function AuthPanel({ auth }) {
 
           {mode === 'register' && accountType === 'admin' && (
             <Stack spacing={2}>
+              <Alert severity="info">
+                <strong>Admin username</strong> is for login. <strong>Pena name</strong> is the club
+                created at registration.
+              </Alert>
               <TextField
-                label="Username"
+                label="Admin username"
                 name="username"
                 value={adminRegister.username}
                 onChange={onField(setAdminRegister)}
+                helperText="This username is used to sign in as admin."
               />
               <TextField
                 label="Password"
@@ -171,10 +185,11 @@ export default function AuthPanel({ auth }) {
                 onChange={onField(setAdminRegister)}
               />
               <TextField
-                label="Display name"
+                label="Pena name"
                 name="name"
                 value={adminRegister.name}
                 onChange={onField(setAdminRegister)}
+                helperText="This is the name of the pena created for your admin account."
               />
             </Stack>
           )}
