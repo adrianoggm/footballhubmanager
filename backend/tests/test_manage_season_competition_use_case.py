@@ -390,6 +390,8 @@ class _FakeRepo:
         return self._match()
 
     def update_match_result_for_admin(self, **kwargs):
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
         self.last_payload = kwargs
         return self._match()
 
@@ -680,7 +682,7 @@ def test_create_match_rejects_same_player_before_repo():
         )
 
 
-def test_create_match_and_update_result_positive():
+def test_create_match_and_update_result_is_blocked():
     repo = _FakeRepo()
     use_case = ManageSeasonCompetitionUseCase(repo)
     created = use_case.create_match_for_admin(
@@ -695,15 +697,16 @@ def test_create_match_and_update_result_positive():
     )
     assert created.guid == "match-guid"
 
-    updated = use_case.update_match_result_for_admin(
-        pena_guid="pena-guid",
-        season_guid="season-guid",
-        match_guid="match-guid",
-        admin_id=1,
-        update=SeasonMatchResultUpdate(home_score=2, away_score=1),
-    )
-    assert updated.home_score == 2
-    assert updated.away_score == 1
+    with pytest.raises(InvalidSeasonMatchDataError):
+        ManageSeasonCompetitionUseCase(
+            _FakeRepo(should_raise_invalid_match_data=True)
+        ).update_match_result_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=1,
+            update=SeasonMatchResultUpdate(home_score=2, away_score=1),
+        )
 
 
 def test_update_match_rejects_negative_scores():

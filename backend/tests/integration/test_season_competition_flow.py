@@ -158,15 +158,47 @@ def test_season_competition_happy_path():
     assert status == 201, match_created
     match_guid = match_created["guid"]
 
-    status, match_updated = _request(
+    status, blocked = _request(
         "PATCH",
         f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/result",
         token=admin_token,
         payload={"home_score": 2, "away_score": 1},
     )
-    assert status == 200, match_updated
-    assert match_updated["home_score"] == 2
-    assert match_updated["away_score"] == 1
+    assert status == 400, blocked
+    assert blocked["detail"] == "Manual match result updates are disabled. Use match stats endpoint"
+
+    status, stats_updated = _request(
+        "PATCH",
+        f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stats",
+        token=admin_token,
+        payload={
+            "home_team": {
+                "players": [
+                    {
+                        "player_guid": user_one_player_guid,
+                        "goals": 2,
+                        "assists": 1,
+                        "saves": 0,
+                        "rating": 8.0,
+                    }
+                ]
+            },
+            "away_team": {
+                "players": [
+                    {
+                        "player_guid": user_two_player_guid,
+                        "goals": 1,
+                        "assists": 0,
+                        "saves": 0,
+                        "rating": 7.0,
+                    }
+                ]
+            },
+        },
+    )
+    assert status == 200, stats_updated
+    assert stats_updated["home_team"]["score"] == 2
+    assert stats_updated["away_team"]["score"] == 1
 
     status, standings = _request(
         "GET",
@@ -1031,7 +1063,7 @@ def test_season_competition_update_lineups_and_delete_match():
     assert stats_updated["home_team"]["score"] == 2
     assert stats_updated["away_team"]["score"] == 1
 
-    status, locked = _request(
+    status, reopened = _request(
         "PATCH",
         f"{API_V1}/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/lineups",
         token=admin_token,
@@ -1040,8 +1072,16 @@ def test_season_competition_update_lineups_and_delete_match():
             "away_team": {"player_guids": player_guids[2:]},
         },
     )
-    assert status == 409, locked
-    assert locked["detail"] == "Cannot update lineups after match stats have been recorded"
+    assert status == 200, reopened
+    assert reopened["status"] == "open"
+    assert reopened["home_team"]["score"] == 0
+    assert reopened["away_team"]["score"] == 0
+    assert {item["player_guid"] for item in reopened["home_team"]["players"]} == set(
+        player_guids[:2]
+    )
+    assert {item["player_guid"] for item in reopened["away_team"]["players"]} == set(
+        player_guids[2:]
+    )
 
     status, deleted = _request(
         "DELETE",

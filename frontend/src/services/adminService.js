@@ -92,6 +92,13 @@ export class AdminService {
     )
   }
 
+  updateMatchLineups(penaGuid, seasonGuid, matchGuid, payload) {
+    return httpClient.patch(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/lineups`,
+      payload
+    )
+  }
+
   createDetailedMatch(penaGuid, seasonGuid, payload) {
     return httpClient.post(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/detailed`,

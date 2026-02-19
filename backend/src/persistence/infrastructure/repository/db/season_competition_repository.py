@@ -6,7 +6,6 @@ from persistence.application.ports.season_competition_repository import (
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
     MatchesPageResult,
-    MatchLineupLockedError,
     MatchNotFoundError,
     MatchPlayersNotInSeasonError,
     MatchPlayerStatsResult,
@@ -371,9 +370,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             + SeasonPlayer.draws * season.points_draw
             + SeasonPlayer.losses * season.points_loss
         ).label("points")
-        played_expr = (SeasonPlayer.wins + SeasonPlayer.draws + SeasonPlayer.losses).label(
-            "played"
-        )
+        played_expr = (SeasonPlayer.wins + SeasonPlayer.draws + SeasonPlayer.losses).label("played")
         season_player_stats = (
             select(
                 TeamPlayer.id_player.label("id_player"),
@@ -550,99 +547,8 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         away_score: int,
         update_standings: bool,
     ) -> MatchResult:
-        if home_score < 0 or away_score < 0:
-            self.session.rollback()
-            raise InvalidSeasonPlayerStatsError()
-
-        pena = self._get_pena(pena_guid)
-        if pena.id_admin != admin_id:
-            self.session.rollback()
-            raise PenaNotManagedByAdminError()
-        season = self._get_season(pena_id=pena.id, season_guid=season_guid)
-
-        bundle = self._get_match_teams(
-            season_id=season.id,
-            match_guid=match_guid,
-            for_update=True,
-        )
-        if not bundle:
-            self.session.rollback()
-            raise MatchNotFoundError()
-
-        football_match, home_team, away_team = bundle
-        home_team_players = self._list_team_players(home_team.id, for_update=True)
-        away_team_players = self._list_team_players(away_team.id, for_update=True)
-        if not home_team_players or not away_team_players:
-            self.session.rollback()
-            raise MatchNotFoundError()
-        if len(home_team_players) != 1 or len(away_team_players) != 1:
-            self.session.rollback()
-            raise InvalidMatchDataError()
-
-        home_player = self._get_player_by_id(home_team_players[0].id_player)
-        away_player = self._get_player_by_id(away_team_players[0].id_player)
-        standings_applied = self._match_standings_applied(home_team_players, away_team_players)
-        if standings_applied and not update_standings:
-            self.session.rollback()
-            raise InvalidSeasonPlayerStatsError()
-
-        if standings_applied or update_standings:
-            home_season_players = self._team_season_players(
-                pena_id=pena.id,
-                season_id=season.id,
-                team_players=home_team_players,
-            )
-            away_season_players = self._team_season_players(
-                pena_id=pena.id,
-                season_id=season.id,
-                team_players=away_team_players,
-            )
-            if standings_applied:
-                self._apply_team_outcome_delta(
-                    home_team_stats=home_season_players,
-                    away_team_stats=away_season_players,
-                    home_score=sum(player.goals for player in home_team_players),
-                    away_score=sum(player.goals for player in away_team_players),
-                    delta=-1,
-                )
-        else:
-            home_season_players = []
-            away_season_players = []
-
-        # Result endpoint stores team score without detailed per-player goals.
-        for player in home_team_players:
-            player.goals = 0
-        for player in away_team_players:
-            player.goals = 0
-        home_team_players[0].goals = home_score
-        away_team_players[0].goals = away_score
-
-        if update_standings:
-            self._apply_team_outcome_delta(
-                home_team_stats=home_season_players,
-                away_team_stats=away_season_players,
-                home_score=home_score,
-                away_score=away_score,
-                delta=1,
-            )
-            for player in home_team_players + away_team_players:
-                if player.rating < 0:
-                    player.rating = 0.0
-
-        match_status = self._match_status_from_players(home_team_players, away_team_players)
-        self.session.commit()
-        return MatchResult(
-            guid=football_match.guid,
-            season_guid=season.guid,
-            match_date=football_match.match_date,
-            home_player_guid=home_player.guid,
-            away_player_guid=away_player.guid,
-            home_player_name=home_team.name,
-            away_player_name=away_team.name,
-            status=match_status,
-            home_score=home_score,
-            away_score=away_score,
-        )
+        self.session.rollback()
+        raise InvalidMatchDataError()
 
     def update_match_for_admin(
         self,
@@ -835,9 +741,26 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         if not home_team_players or not away_team_players:
             self.session.rollback()
             raise MatchNotFoundError()
-        if self._lineup_update_locked(home_team_players, away_team_players):
-            self.session.rollback()
-            raise MatchLineupLockedError()
+
+        standings_applied = self._match_standings_applied(home_team_players, away_team_players)
+        if standings_applied:
+            home_season_players = self._team_season_players(
+                pena_id=pena.id,
+                season_id=season.id,
+                team_players=home_team_players,
+            )
+            away_season_players = self._team_season_players(
+                pena_id=pena.id,
+                season_id=season.id,
+                team_players=away_team_players,
+            )
+            self._apply_team_outcome_delta(
+                home_team_stats=home_season_players,
+                away_team_stats=away_season_players,
+                home_score=sum(player.goals for player in home_team_players),
+                away_score=sum(player.goals for player in away_team_players),
+                delta=-1,
+            )
 
         home_players = self._resolve_match_players(
             pena_id=pena.id,

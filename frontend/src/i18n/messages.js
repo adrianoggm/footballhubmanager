@@ -193,7 +193,7 @@ export const messages = {
           description: 'Create a detailed season match and start the lineup process in one action.',
           seasonMatchesTitle: 'Season Matches',
           seasonMatchesDescription:
-            'Matches stay open after lineup creation. Register team/player stats to close them and compute final data.',
+            'Results are derived from player stats. Manage lineups and stats from one editor.',
           noMatchesYet: 'No matches created for this season yet.',
           saveResult: 'Save Result',
           date: 'Date',
@@ -204,18 +204,23 @@ export const messages = {
           statusClosed: 'Closed',
           actions: 'Actions',
           result: 'Result',
+          resultSource: 'Update source',
           finalScore: 'Final score',
           scoreFromStats: 'Set score from team/player stats.',
           manageStats: 'Manage stats',
+          manageMatch: 'Manage match',
           statsEditorTitle: 'Match stats: {home} vs {away}',
           statsEditorDescription:
             'Update player stats to close the match and recalculate standings.',
+          lineupsReopenHint:
+            'Updating lineups on a closed match reopens it and removes its current standings impact.',
           teamStats: 'Team stats: {team}',
           goals: 'Goals',
           assists: 'Assists',
           saves: 'Saves',
           rating: 'Rating',
           saveStats: 'Save stats',
+          saveLineups: 'Save lineups',
           closeEditor: 'Close editor',
           matchDate: 'Match date',
           homeTeam: 'Home team name',
@@ -245,6 +250,7 @@ export const messages = {
           detailedMatchCreated: 'Detailed match created',
           matchResultUpdated: 'Match result updated',
           matchStatsUpdated: 'Match stats updated',
+          lineupsUpdated: 'Lineups updated',
           joinCodeGenerated: 'Join code generated',
           guestCreatedAdded: 'Guest created and added to active season',
           guestCreated: 'Guest player created',
@@ -253,6 +259,7 @@ export const messages = {
         },
         errors: {
           lineupsRequired: 'Home and away lineups must include at least one player guid',
+          lineupsOverlap: 'The same player cannot be in both lineups',
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
             'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
@@ -501,7 +508,7 @@ export const messages = {
           description: 'Crea un partido detallado y lanza el flujo de alineaciones en una acción.',
           seasonMatchesTitle: 'Partidos de temporada',
           seasonMatchesDescription:
-            'Los partidos quedan abiertos al crear la convocatoria. Registra estadísticas de equipo/jugadores para cerrarlos y calcular los datos finales.',
+            'El resultado se calcula desde estadísticas de jugadores. Gestiona convocatoria y estadísticas en un mismo editor.',
           noMatchesYet: 'Todavía no hay partidos creados para esta temporada.',
           saveResult: 'Guardar resultado',
           date: 'Fecha',
@@ -512,18 +519,23 @@ export const messages = {
           statusClosed: 'Cerrado',
           actions: 'Acciones',
           result: 'Resultado',
+          resultSource: 'Origen de actualización',
           finalScore: 'Marcador final',
           scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
           manageStats: 'Editar estadísticas',
+          manageMatch: 'Gestionar partido',
           statsEditorTitle: 'Estadísticas: {home} vs {away}',
           statsEditorDescription:
             'Actualiza estadísticas por jugador para cerrar el partido y recalcular la clasificación.',
+          lineupsReopenHint:
+            'Actualizar convocatorias en un partido cerrado lo reabre y elimina su impacto actual en la clasificación.',
           teamStats: 'Datos del equipo: {team}',
           goals: 'Goles',
           assists: 'Asistencias',
           saves: 'Paradas',
           rating: 'Valoración',
           saveStats: 'Guardar estadísticas',
+          saveLineups: 'Guardar convocatorias',
           closeEditor: 'Cerrar editor',
           matchDate: 'Fecha del partido',
           homeTeam: 'Nombre del local',
@@ -553,6 +565,7 @@ export const messages = {
           detailedMatchCreated: 'Partido detallado creado',
           matchResultUpdated: 'Resultado del partido actualizado',
           matchStatsUpdated: 'Estadísticas del partido actualizadas',
+          lineupsUpdated: 'Convocatorias actualizadas',
           joinCodeGenerated: 'Código de acceso generado',
           guestCreatedAdded: 'Invitado creado y añadido a la temporada activa',
           guestCreated: 'Jugador invitado creado',
@@ -562,6 +575,8 @@ export const messages = {
         errors: {
           lineupsRequired:
             'La alineación local y visitante debe incluir al menos un GUID de jugador',
+          lineupsOverlap:
+            'Un mismo jugador no puede estar en las dos convocatorias',
           invalidMatchResult:
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:

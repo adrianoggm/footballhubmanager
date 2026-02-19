@@ -591,7 +591,7 @@ def update_season_match_result(
     except InvalidSeasonMatchDataError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Result update is only valid for 1v1 matches. Use match stats for team matches",
+            detail="Manual match result updates are disabled. Use match stats endpoint",
         )
     except PenaSeasonPenaNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
