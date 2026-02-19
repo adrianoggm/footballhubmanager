@@ -10,11 +10,14 @@ import {
   LinearProgress,
   MenuItem,
   Stack,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  TableContainer,
   TextField,
   Typography
 } from '@mui/material'
@@ -133,6 +136,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
+  const [activeSection, setActiveSection] = useState('overview')
 
   const [activeSeason, setActiveSeason] = useState(null)
   const [seasonList, setSeasonList] = useState([])
@@ -170,6 +174,11 @@ export default function AdminDashboard({ session, onLogout }) {
   const selectedSeason = useMemo(
     () => seasonList.find((item) => item.guid === selectedSeasonGuid) || null,
     [seasonList, selectedSeasonGuid]
+  )
+
+  const selectedPena = useMemo(
+    () => penas.find((item) => item.guid === selectedPenaGuid) || null,
+    [penas, selectedPenaGuid]
   )
 
   const registeredSeasonPlayerGuids = useMemo(
@@ -494,8 +503,17 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const handleSeasonSelection = (event) => {
-    setSelectedSeasonGuid(event.target.value)
+    const nextSeasonGuid = event.target.value
+    setSelectedSeasonGuid(nextSeasonGuid)
     setSelectedHistoricalGuids([])
+    if (!selectedPenaGuid || !nextSeasonGuid) {
+      setStandings([])
+      return
+    }
+    runAction(
+      () => loadStandings(selectedPenaGuid, nextSeasonGuid),
+      ''
+    )
   }
 
   const handleSelectHistoricalPlayers = (event) => {
@@ -519,6 +537,24 @@ export default function AdminDashboard({ session, onLogout }) {
     }, `${totalSelected} player${totalSelected === 1 ? '' : 's'} added to season`)
   }
 
+  const handleRefreshStandings = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid) {
+      return
+    }
+    await runAction(
+      () => loadStandings(selectedPenaGuid, selectedSeasonGuid),
+      'Standings updated'
+    )
+  }
+
+  const activeSeasonLabel = activeSeason
+    ? `${formatDate(activeSeason.start_date)} - ${formatDate(activeSeason.end_date)}`
+    : 'No active season'
+
+  const selectedSeasonLabel = selectedSeason
+    ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
+    : 'No season selected'
+
   if (initializing) {
     return (
       <Stack spacing={2}>
@@ -530,37 +566,94 @@ export default function AdminDashboard({ session, onLogout }) {
 
   return (
     <Stack spacing={3}>
-      <Card>
+      <Card
+        sx={{
+          border: '1px solid rgba(15, 23, 42, 0.08)',
+          background:
+            'linear-gradient(135deg, rgba(255,255,250,0.95) 0%, rgba(230,245,239,0.72) 70%, rgba(255,238,217,0.62) 100%)'
+        }}
+      >
         <CardContent>
-          <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h4">Admin Panel</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Logged as <strong>{session?.user_guid || '-'}</strong>
-              </Typography>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <TextField
-                select
-                size="small"
-                label="Pena"
-                value={selectedPenaGuid}
-                onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                sx={{ minWidth: 320 }}
-              >
-                {penas.map((pena) => (
-                  <MenuItem key={pena.guid} value={pena.guid}>
-                    {pena.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Button variant="outlined" onClick={() => runAction(loadDashboard, '')} disabled={loading}>
-                Refresh
-              </Button>
-              <Button variant="text" onClick={onLogout} disabled={loading}>
-                Logout
-              </Button>
+          <Stack spacing={2.5}>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={2}
+              alignItems={{ md: 'center' }}
+              justifyContent="space-between"
+            >
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                  Admin Workspace
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Logged as <strong>{session?.user_guid || '-'}</strong>
+                </Typography>
+              </Box>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <Button variant="outlined" onClick={() => runAction(loadDashboard, '')} disabled={loading}>
+                  Refresh data
+                </Button>
+                <Button variant="text" onClick={onLogout} disabled={loading}>
+                  Logout
+                </Button>
+              </Stack>
             </Stack>
+
+            <Grid container spacing={1.5}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  select
+                  size="small"
+                  label="Current pena"
+                  value={selectedPenaGuid}
+                  onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                  fullWidth
+                >
+                  {penas.map((pena) => (
+                    <MenuItem key={pena.guid} value={pena.guid}>
+                      {pena.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  select
+                  size="small"
+                  label="Reference season"
+                  value={selectedSeasonGuid}
+                  onChange={handleSeasonSelection}
+                  disabled={!seasonList.length}
+                  fullWidth
+                >
+                  {seasonList.map((season) => (
+                    <MenuItem key={season.guid} value={season.guid}>
+                      {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                      {activeSeason?.guid === season.guid ? ' (Active)' : ''}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            </Grid>
+
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Chip size="small" color="secondary" label={`Pena: ${selectedPena?.name || '-'}`} />
+              <Chip size="small" color={activeSeason ? 'success' : 'warning'} label={`Active season: ${activeSeasonLabel}`} />
+              <Chip size="small" color="primary" label={`Selected season: ${selectedSeasonLabel}`} />
+            </Stack>
+
+            <Tabs
+              value={activeSection}
+              onChange={(_, value) => setActiveSection(value)}
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              <Tab value="overview" label="Overview" />
+              <Tab value="seasons" label="Seasons" />
+              <Tab value="players" label="Players" />
+              <Tab value="matches" label="Matches" />
+              <Tab value="standings" label="Standings" />
+            </Tabs>
           </Stack>
         </CardContent>
       </Card>
@@ -576,26 +669,193 @@ export default function AdminDashboard({ session, onLogout }) {
         </Alert>
       )}
 
-      {selectedPenaGuid && (
-        <Grid container spacing={3}>
+      {selectedPenaGuid && activeSection === 'overview' && (
+        <Grid container spacing={2.5}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  Current Pena
+                </Typography>
+                <Typography variant="h6">{selectedPena?.name || '-'}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  Active Season
+                </Typography>
+                <Typography variant="h6">{activeSeason ? 'Configured' : 'Missing'}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  Total Seasons
+                </Typography>
+                <Typography variant="h6">{seasonList.length}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  Season Players
+                </Typography>
+                <Typography variant="h6">{seasonRoster.length}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={5}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h6">Invite Players</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Generate a one-time join token and share it with players.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={handleGenerateJoinCode}
+                    disabled={loading}
+                  >
+                    Generate Join Code
+                  </Button>
+                  {tokenPayload && (
+                    <Alert severity="info">
+                      <Typography variant="body2">
+                        <strong>Code:</strong> {tokenPayload.token}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Expires:</strong> {formatEpochSeconds(tokenPayload.expires_at)}
+                      </Typography>
+                    </Alert>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
           <Grid item xs={12} md={7}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h6">Quick Actions</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Jump directly to a workflow and keep the dashboard focused.
+                  </Typography>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button variant="outlined" onClick={() => setActiveSection('seasons')}>
+                      Manage Seasons
+                    </Button>
+                    <Button variant="outlined" onClick={() => setActiveSection('players')}>
+                      Manage Players
+                    </Button>
+                    <Button variant="outlined" onClick={() => setActiveSection('matches')}>
+                      Create Match
+                    </Button>
+                    <Button variant="outlined" onClick={() => setActiveSection('standings')}>
+                      View Standings
+                    </Button>
+                  </Stack>
+                  {lastCreatedMatch ? (
+                    <Alert severity="success">
+                      Last match created: <strong>{lastCreatedMatch.guid}</strong> for{' '}
+                      <strong>{formatDate(lastCreatedMatch.match_date)}</strong>.
+                    </Alert>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No detailed match created in this session yet.
+                    </Typography>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ sm: 'center' }}
+                    justifyContent="space-between"
+                    spacing={1}
+                  >
+                    <Typography variant="h6">Standings Snapshot</Typography>
+                    <Button
+                      variant="text"
+                      onClick={handleRefreshStandings}
+                      disabled={loading || !selectedSeasonGuid}
+                    >
+                      Refresh standings
+                    </Button>
+                  </Stack>
+                  {!selectedSeasonGuid && (
+                    <Typography variant="body2" color="text.secondary">
+                      Select a season to load standings.
+                    </Typography>
+                  )}
+                  {selectedSeasonGuid && (
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Player</TableCell>
+                            <TableCell align="right">W</TableCell>
+                            <TableCell align="right">D</TableCell>
+                            <TableCell align="right">L</TableCell>
+                            <TableCell align="right">Pts</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {standings.slice(0, 5).map((player) => (
+                            <TableRow key={player.player_guid}>
+                              <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                              <TableCell align="right">{player.wins}</TableCell>
+                              <TableCell align="right">{player.draws}</TableCell>
+                              <TableCell align="right">{player.losses}</TableCell>
+                              <TableCell align="right">{player.points}</TableCell>
+                            </TableRow>
+                          ))}
+                          {!standings.length && (
+                            <TableRow>
+                              <TableCell colSpan={5}>No standings available for this season yet.</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {selectedPenaGuid && activeSection === 'seasons' && (
+        <Grid container spacing={2.5}>
+          <Grid item xs={12} md={8}>
             <Card>
               <CardContent>
                 <Stack spacing={2.5}>
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
-                    <Typography variant="h6">Current Season</Typography>
-                    {activeSeason && (
-                      <Chip
-                        size="small"
-                        color="secondary"
-                        label={`${formatDate(activeSeason.start_date)} - ${formatDate(activeSeason.end_date)}`}
-                      />
-                    )}
+                  <Stack direction="row" alignItems="center" spacing={1.25}>
+                    <Typography variant="h6">Season Configuration</Typography>
+                    {activeSeason && <Chip size="small" color="secondary" label={activeSeasonLabel} />}
                   </Stack>
 
                   {!activeSeason && (
                     <Alert severity="warning">
-                      No active season found for today. Create one to start match orchestration.
+                      No active season found for today. Create one to start orchestration.
                     </Alert>
                   )}
 
@@ -617,11 +877,13 @@ export default function AdminDashboard({ session, onLogout }) {
                       fullWidth
                     />
                   </Stack>
+
                   {latestSeasonEndDate && (
                     <Button variant="text" onClick={handlePrefillNextSeason} disabled={loading}>
                       Use dates after latest season
                     </Button>
                   )}
+
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       type="number"
@@ -645,11 +907,8 @@ export default function AdminDashboard({ session, onLogout }) {
                       fullWidth
                     />
                   </Stack>
-                  <Button
-                    variant="contained"
-                    onClick={handleCreateSeason}
-                    disabled={loading}
-                  >
+
+                  <Button variant="contained" onClick={handleCreateSeason} disabled={loading}>
                     Create Season
                   </Button>
                   <Typography variant="caption" color="text.secondary">
@@ -658,7 +917,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
                   <Divider />
 
-                  <Typography variant="subtitle1">Season Scoring Rules</Typography>
+                  <Typography variant="subtitle1">Active Season Scoring Rules</Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     <TextField
                       type="number"
@@ -697,39 +956,142 @@ export default function AdminDashboard({ session, onLogout }) {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">Season History</Typography>
+                  {!historySeasons.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      No previous seasons found.
+                    </Typography>
+                  )}
+                  {historySeasons.map((season) => (
+                    <Box
+                      key={season.guid}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: '1px solid rgba(15,23,42,0.08)',
+                        backgroundColor: 'rgba(255,255,255,0.6)'
+                      }}
+                    >
+                      <Typography variant="body2">
+                        {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        W:{season.points_win} / D:{season.points_draw} / L:{season.points_loss}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {selectedPenaGuid && activeSection === 'players' && (
+        <Grid container spacing={2.5}>
+          <Grid item xs={12} md={8}>
             <Card>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="h6">Invite Players</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Generate a one-time join token to share with users.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={handleGenerateJoinCode}
-                    disabled={loading}
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ sm: 'center' }}
+                    justifyContent="space-between"
+                    spacing={1.5}
                   >
-                    Generate Join Code
-                  </Button>
-                  {tokenPayload && (
-                    <Alert severity="info">
-                      <Typography variant="body2">
-                        <strong>Code:</strong> {tokenPayload.token}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Expires:</strong> {formatEpochSeconds(tokenPayload.expires_at)}
-                      </Typography>
-                    </Alert>
+                    <Typography variant="h6">Season Squad Management</Typography>
+                    {selectedSeason && <Chip size="small" color="primary" label={selectedSeasonLabel} />}
+                  </Stack>
+
+                  {!seasonList.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      Create at least one season to manage season squads.
+                    </Typography>
+                  )}
+
+                  <TextField
+                    select
+                    label="Historical members to add"
+                    value={selectedHistoricalGuids}
+                    onChange={handleSelectHistoricalPlayers}
+                    SelectProps={{
+                      multiple: true,
+                      renderValue: (selected) => `${selected.length} selected`
+                    }}
+                    disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
+                    helperText={
+                      !selectedSeasonGuid
+                        ? 'Select a season first.'
+                        : availableHistoricalPlayers.length
+                          ? 'Only historical members not yet registered in this season are listed.'
+                          : 'All historical members are already in this season.'
+                    }
+                    fullWidth
+                  >
+                    {availableHistoricalPlayers.map((player) => (
+                      <MenuItem key={player.guid} value={player.guid}>
+                        {formatPlayerDisplayName(player)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={handleRegisterHistoricalPlayersInSeason}
+                      disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
+                    >
+                      Add Selected To Season
+                    </Button>
+                    <Typography variant="body2" color="text.secondary">
+                      Registered: {seasonRoster.length} | Available: {availableHistoricalPlayers.length}
+                    </Typography>
+                  </Stack>
+
+                  {seasonRosterLoading && <LinearProgress />}
+
+                  {selectedSeasonGuid && !seasonRosterLoading && (
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Player</TableCell>
+                            <TableCell align="right">W</TableCell>
+                            <TableCell align="right">D</TableCell>
+                            <TableCell align="right">L</TableCell>
+                            <TableCell align="right">Pts</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {seasonRoster.map((player) => (
+                            <TableRow key={player.player_guid}>
+                              <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                              <TableCell align="right">{player.wins}</TableCell>
+                              <TableCell align="right">{player.draws}</TableCell>
+                              <TableCell align="right">{player.losses}</TableCell>
+                              <TableCell align="right">{player.points}</TableCell>
+                            </TableRow>
+                          ))}
+                          {!seasonRoster.length && (
+                            <TableRow>
+                              <TableCell colSpan={5}>No players registered in this season yet.</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
                   )}
                 </Stack>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={5}>
-            <Card>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
                   <Typography variant="h6">Guest Players</Typography>
@@ -810,124 +1172,12 @@ export default function AdminDashboard({ session, onLogout }) {
               </CardContent>
             </Card>
           </Grid>
+        </Grid>
+      )}
 
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    alignItems={{ sm: 'center' }}
-                    justifyContent="space-between"
-                    spacing={1.5}
-                  >
-                    <Typography variant="h6">Season Squad Management</Typography>
-                    {selectedSeason && (
-                      <Chip
-                        size="small"
-                        color="primary"
-                        label={`${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`}
-                      />
-                    )}
-                  </Stack>
-
-                  <TextField
-                    select
-                    label="Season"
-                    value={selectedSeasonGuid}
-                    onChange={handleSeasonSelection}
-                    fullWidth
-                  >
-                    {seasonList.map((season) => (
-                      <MenuItem key={season.guid} value={season.guid}>
-                        {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                        {activeSeason?.guid === season.guid ? ' (Active)' : ''}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  {!seasonList.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      Create at least one season to manage season squads.
-                    </Typography>
-                  )}
-
-                  <TextField
-                    select
-                    label="Historical members to add"
-                    value={selectedHistoricalGuids}
-                    onChange={handleSelectHistoricalPlayers}
-                    SelectProps={{
-                      multiple: true,
-                      renderValue: (selected) => `${selected.length} selected`
-                    }}
-                    disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
-                    helperText={
-                      !selectedSeasonGuid
-                        ? 'Select a season first.'
-                        : availableHistoricalPlayers.length
-                          ? 'Only historical members not yet registered in this season are listed.'
-                          : 'All historical members are already in this season.'
-                    }
-                    fullWidth
-                  >
-                    {availableHistoricalPlayers.map((player) => (
-                      <MenuItem key={player.guid} value={player.guid}>
-                        {formatPlayerDisplayName(player)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      onClick={handleRegisterHistoricalPlayersInSeason}
-                      disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
-                    >
-                      Add Selected To Season
-                    </Button>
-                    <Typography variant="body2" color="text.secondary">
-                      Registered: {seasonRoster.length} | Available historical: {availableHistoricalPlayers.length}
-                    </Typography>
-                  </Stack>
-
-                  {seasonRosterLoading && <LinearProgress />}
-
-                  {selectedSeasonGuid && !seasonRosterLoading && (
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Player</TableCell>
-                          <TableCell align="right">W</TableCell>
-                          <TableCell align="right">D</TableCell>
-                          <TableCell align="right">L</TableCell>
-                          <TableCell align="right">Pts</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {seasonRoster.map((player) => (
-                          <TableRow key={player.player_guid}>
-                            <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                            <TableCell align="right">{player.wins}</TableCell>
-                            <TableCell align="right">{player.draws}</TableCell>
-                            <TableCell align="right">{player.losses}</TableCell>
-                            <TableCell align="right">{player.points}</TableCell>
-                          </TableRow>
-                        ))}
-                        {!seasonRoster.length && (
-                          <TableRow>
-                            <TableCell colSpan={5}>No players registered in this season yet.</TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={7}>
+      {selectedPenaGuid && activeSection === 'matches' && (
+        <Grid container spacing={2.5}>
+          <Grid item xs={12} md={8}>
             <Card>
               <CardContent>
                 <Stack spacing={2}>
@@ -995,87 +1245,117 @@ export default function AdminDashboard({ session, onLogout }) {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={5}>
-            <Card>
+          <Grid item xs={12} md={4}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">Current Standings</Typography>
-                  {!activeSeason && (
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">Lineup Helper</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Use these player GUIDs from the selected season roster to compose lineups.
+                  </Typography>
+                  {!selectedSeasonGuid && (
                     <Typography variant="body2" color="text.secondary">
-                      Standings will appear once the active season exists.
+                      Select a season to display roster GUIDs.
                     </Typography>
                   )}
-                  {activeSeason && (
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Player</TableCell>
-                          <TableCell align="right">W</TableCell>
-                          <TableCell align="right">D</TableCell>
-                          <TableCell align="right">L</TableCell>
-                          <TableCell align="right">Pts</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {standings.map((player) => (
-                          <TableRow key={player.player_guid}>
-                            <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
-                            <TableCell align="right">{player.wins}</TableCell>
-                            <TableCell align="right">{player.draws}</TableCell>
-                            <TableCell align="right">{player.losses}</TableCell>
-                            <TableCell align="right">{player.points}</TableCell>
-                          </TableRow>
-                        ))}
-                        {!standings.length && (
+                  {selectedSeasonGuid && seasonRosterLoading && <LinearProgress />}
+                  {selectedSeasonGuid && !seasonRosterLoading && (
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
                           <TableRow>
-                            <TableCell colSpan={5}>No season players registered yet.</TableCell>
+                            <TableCell>Player</TableCell>
+                            <TableCell>GUID</TableCell>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                        </TableHead>
+                        <TableBody>
+                          {seasonRoster.slice(0, 20).map((player) => (
+                            <TableRow key={player.player_guid}>
+                              <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                              <TableCell>{player.player_guid}</TableCell>
+                            </TableRow>
+                          ))}
+                          {!seasonRoster.length && (
+                            <TableRow>
+                              <TableCell colSpan={2}>No players available in the selected season.</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
                   )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">Previous Seasons</Typography>
-                  {!historySeasons.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      No previous seasons found.
-                    </Typography>
-                  )}
-                  <Stack spacing={1}>
-                    {historySeasons.map((season) => (
-                      <Box
-                        key={season.guid}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          p: 1.5,
-                          borderRadius: 2,
-                          bgcolor: 'rgba(17, 24, 39, 0.04)'
-                        }}
-                      >
-                        <Typography variant="body2">
-                          {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          W:{season.points_win} / D:{season.points_draw} / L:{season.points_loss}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
                 </Stack>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
+      )}
+
+      {selectedPenaGuid && activeSection === 'standings' && (
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ sm: 'center' }}
+                justifyContent="space-between"
+                spacing={1.5}
+              >
+                <Box>
+                  <Typography variant="h6">Season Standings</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Showing data for: {selectedSeasonLabel}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  onClick={handleRefreshStandings}
+                  disabled={loading || !selectedSeasonGuid}
+                >
+                  Refresh standings
+                </Button>
+              </Stack>
+
+              {!selectedSeasonGuid && (
+                <Typography variant="body2" color="text.secondary">
+                  Select a season in the header to load standings.
+                </Typography>
+              )}
+
+              {selectedSeasonGuid && (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Player</TableCell>
+                        <TableCell align="right">W</TableCell>
+                        <TableCell align="right">D</TableCell>
+                        <TableCell align="right">L</TableCell>
+                        <TableCell align="right">Pts</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {standings.map((player) => (
+                        <TableRow key={player.player_guid}>
+                          <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                          <TableCell align="right">{player.wins}</TableCell>
+                          <TableCell align="right">{player.draws}</TableCell>
+                          <TableCell align="right">{player.losses}</TableCell>
+                          <TableCell align="right">{player.points}</TableCell>
+                        </TableRow>
+                      ))}
+                      {!standings.length && (
+                        <TableRow>
+                          <TableCell colSpan={5}>No season players registered yet.</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Stack>
+          </CardContent>
+        </Card>
       )}
     </Stack>
   )
