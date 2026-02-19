@@ -22,6 +22,9 @@ class SeasonPlayerResult:
     nationality: str
     nickname: str | None
     position: str | None
+    played: int
+    goals: int
+    assists: int
     wins: int
     losses: int
     draws: int
@@ -57,6 +60,7 @@ class MatchResult:
     away_player_guid: str
     home_player_name: str
     away_player_name: str
+    status: str
     home_score: int
     away_score: int
 
@@ -100,6 +104,7 @@ class MatchDetailResult:
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team: MatchTeamResult
     away_team: MatchTeamResult
 
@@ -109,6 +114,7 @@ class MatchSummaryResult:
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team_name: str
     away_team_name: str
     home_score: int

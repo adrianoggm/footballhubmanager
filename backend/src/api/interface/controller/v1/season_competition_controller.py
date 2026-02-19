@@ -64,6 +64,9 @@ class SeasonPlayerResponse(BaseModel):
     nationality: str
     nickname: str | None
     position: str | None
+    played: int
+    goals: int
+    assists: int
     wins: int
     losses: int
     draws: int
@@ -125,6 +128,7 @@ class SeasonMatchResponse(BaseModel):
     away_player_guid: str
     home_player_name: str
     away_player_name: str
+    status: str
     home_score: int
     away_score: int
 
@@ -193,6 +197,7 @@ class SeasonMatchDetailResponse(BaseModel):
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team: SeasonMatchTeamResponse
     away_team: SeasonMatchTeamResponse
 
@@ -201,6 +206,7 @@ class SeasonMatchSummaryResponse(BaseModel):
     guid: str
     season_guid: str
     match_date: date
+    status: str
     home_team_name: str
     away_team_name: str
     home_score: int
@@ -247,6 +253,7 @@ def _match_detail_response(item: SeasonMatchDetailInfo) -> SeasonMatchDetailResp
         guid=item.guid,
         season_guid=item.season_guid,
         match_date=item.match_date,
+        status=item.status,
         home_team=_match_team_response(item.home_team),
         away_team=_match_team_response(item.away_team),
     )
@@ -462,9 +469,16 @@ def list_season_players(
     nickname: str | None = Query(default=None),
     position: str | None = Query(default=None),
     search: str | None = Query(default=None),
-    order_by: Literal["quality_level", "wins", "losses", "draws", "points"] = Query(
-        default="quality_level"
-    ),
+    order_by: Literal[
+        "quality_level",
+        "played",
+        "goals",
+        "assists",
+        "wins",
+        "losses",
+        "draws",
+        "points",
+    ] = Query(default="quality_level"),
     order_dir: Literal["asc", "desc"] = Query(default="desc"),
     db: Session = Depends(get_db),
     _session=Depends(authorize_pena_access),
@@ -573,6 +587,11 @@ def update_season_match_result(
     except InvalidSeasonPlayerUpdateDataError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid match result data"
+        )
+    except InvalidSeasonMatchDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Result update is only valid for 1v1 matches. Use match stats for team matches",
         )
     except PenaSeasonPenaNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")

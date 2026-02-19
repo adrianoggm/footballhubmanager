@@ -371,6 +371,24 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             + SeasonPlayer.draws * season.points_draw
             + SeasonPlayer.losses * season.points_loss
         ).label("points")
+        played_expr = (SeasonPlayer.wins + SeasonPlayer.draws + SeasonPlayer.losses).label(
+            "played"
+        )
+        season_player_stats = (
+            select(
+                TeamPlayer.id_player.label("id_player"),
+                func.coalesce(func.sum(TeamPlayer.goals), 0).label("goals"),
+                func.coalesce(func.sum(TeamPlayer.assists), 0).label("assists"),
+            )
+            .select_from(TeamPlayer)
+            .join(Team, Team.id == TeamPlayer.id_team)
+            .join(FootballMatch, FootballMatch.id == Team.id_match)
+            .where(FootballMatch.id_season == season.id)
+            .group_by(TeamPlayer.id_player)
+            .subquery()
+        )
+        goals_expr = func.coalesce(season_player_stats.c.goals, 0).label("goals")
+        assists_expr = func.coalesce(season_player_stats.c.assists, 0).label("assists")
 
         stmt = (
             select(
@@ -381,6 +399,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 Player.nationality.label("nationality"),
                 PenaPlayer.nickname.label("nickname"),
                 PenaPlayer.position.label("position"),
+                played_expr,
+                goals_expr,
+                assists_expr,
                 SeasonPlayer.wins.label("wins"),
                 SeasonPlayer.losses.label("losses"),
                 SeasonPlayer.draws.label("draws"),
@@ -396,6 +417,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                     PenaPlayer.id_pena == SeasonPlayer.id_pena,
                 ),
             )
+            .outerjoin(
+                season_player_stats,
+                season_player_stats.c.id_player == SeasonPlayer.id_player,
+            )
             .where(
                 SeasonPlayer.id_pena == pena.id,
                 SeasonPlayer.id_season == season.id,
@@ -404,7 +429,12 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
 
         stmt = self._apply_season_player_filters(stmt, filters)
         stmt = self._apply_player_order(
-            stmt, order_by=order_by, order_dir=order_dir, points_expr=points_expr
+            stmt,
+            order_by=order_by,
+            order_dir=order_dir,
+            points_expr=points_expr,
+            goals_expr=goals_expr,
+            assists_expr=assists_expr,
         )
         total = int(
             self.session.execute(select(func.count()).select_from(stmt.subquery())).scalar() or 0
@@ -504,6 +534,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             away_player_guid=away_player.guid,
             home_player_name=f"{home_player.name} {home_player.surname1}",
             away_player_name=f"{away_player.name} {away_player.surname1}",
+            status="open",
             home_score=0,
             away_score=0,
         )
@@ -529,7 +560,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             raise PenaNotManagedByAdminError()
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
 
-        bundle = self._get_match_bundle(
+        bundle = self._get_match_teams(
             season_id=season.id,
             match_guid=match_guid,
             for_update=True,
@@ -538,53 +569,67 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.rollback()
             raise MatchNotFoundError()
 
-        football_match, home_team, away_team, home_team_player, away_team_player = bundle
-        if (
-            len(self._list_team_players(home_team.id, for_update=False)) != 1
-            or len(self._list_team_players(away_team.id, for_update=False)) != 1
-        ):
+        football_match, home_team, away_team = bundle
+        home_team_players = self._list_team_players(home_team.id, for_update=True)
+        away_team_players = self._list_team_players(away_team.id, for_update=True)
+        if not home_team_players or not away_team_players:
+            self.session.rollback()
+            raise MatchNotFoundError()
+        if len(home_team_players) != 1 or len(away_team_players) != 1:
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        home_player = self._get_player_by_id(home_team_players[0].id_player)
+        away_player = self._get_player_by_id(away_team_players[0].id_player)
+        standings_applied = self._match_standings_applied(home_team_players, away_team_players)
+        if standings_applied and not update_standings:
             self.session.rollback()
             raise InvalidSeasonPlayerStatsError()
-        home_player = self._get_player_by_id(home_team_player.id_player)
-        away_player = self._get_player_by_id(away_team_player.id_player)
 
-        if update_standings:
-            home_season_player = self._get_season_player(
+        if standings_applied or update_standings:
+            home_season_players = self._team_season_players(
                 pena_id=pena.id,
                 season_id=season.id,
-                player_id=home_player.id,
-                for_update=True,
+                team_players=home_team_players,
             )
-            away_season_player = self._get_season_player(
+            away_season_players = self._team_season_players(
                 pena_id=pena.id,
                 season_id=season.id,
-                player_id=away_player.id,
-                for_update=True,
+                team_players=away_team_players,
             )
-
-            # If rating >= 0, standings were already applied with previous score.
-            if home_team_player.rating >= 0 and away_team_player.rating >= 0:
-                self._apply_outcome_delta(
-                    home_player_stats=home_season_player,
-                    away_player_stats=away_season_player,
-                    home_score=home_team_player.goals,
-                    away_score=away_team_player.goals,
+            if standings_applied:
+                self._apply_team_outcome_delta(
+                    home_team_stats=home_season_players,
+                    away_team_stats=away_season_players,
+                    home_score=sum(player.goals for player in home_team_players),
+                    away_score=sum(player.goals for player in away_team_players),
                     delta=-1,
                 )
+        else:
+            home_season_players = []
+            away_season_players = []
 
-            self._apply_outcome_delta(
-                home_player_stats=home_season_player,
-                away_player_stats=away_season_player,
+        # Result endpoint stores team score without detailed per-player goals.
+        for player in home_team_players:
+            player.goals = 0
+        for player in away_team_players:
+            player.goals = 0
+        home_team_players[0].goals = home_score
+        away_team_players[0].goals = away_score
+
+        if update_standings:
+            self._apply_team_outcome_delta(
+                home_team_stats=home_season_players,
+                away_team_stats=away_season_players,
                 home_score=home_score,
                 away_score=away_score,
                 delta=1,
             )
-            home_team_player.rating = 0.0
-            away_team_player.rating = 0.0
+            for player in home_team_players + away_team_players:
+                if player.rating < 0:
+                    player.rating = 0.0
 
-        home_team_player.goals = home_score
-        away_team_player.goals = away_score
-
+        match_status = self._match_status_from_players(home_team_players, away_team_players)
         self.session.commit()
         return MatchResult(
             guid=football_match.guid,
@@ -594,8 +639,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             away_player_guid=away_player.guid,
             home_player_name=home_team.name,
             away_player_name=away_team.name,
-            home_score=home_team_player.goals,
-            away_score=away_team_player.goals,
+            status=match_status,
+            home_score=home_score,
+            away_score=away_score,
         )
 
     def update_match_for_admin(
@@ -957,13 +1003,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         for football_match in matches:
             home_team = teams_by_id[football_match.id_home_team]
             away_team = teams_by_id[football_match.id_away_team]
-            home_score, home_players = team_stats.get(home_team.id, (0, 0))
-            away_score, away_players = team_stats.get(away_team.id, (0, 0))
+            home_score, home_players, home_closed = team_stats.get(home_team.id, (0, 0, False))
+            away_score, away_players, away_closed = team_stats.get(away_team.id, (0, 0, False))
             items.append(
                 MatchSummaryResult(
                     guid=football_match.guid,
                     season_guid=season.guid,
                     match_date=football_match.match_date,
+                    status="closed" if home_closed and away_closed else "open",
                     home_team_name=home_team.name,
                     away_team_name=away_team.name,
                     home_score=home_score,
@@ -1184,8 +1231,24 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         ).first()
         return bool(row)
 
-    @staticmethod
+    def _get_season_player_match_totals(self, *, season_id: int, player_id: int) -> tuple[int, int]:
+        row = self.session.execute(
+            select(
+                func.coalesce(func.sum(TeamPlayer.goals), 0).label("goals"),
+                func.coalesce(func.sum(TeamPlayer.assists), 0).label("assists"),
+            )
+            .select_from(TeamPlayer)
+            .join(Team, Team.id == TeamPlayer.id_team)
+            .join(FootballMatch, FootballMatch.id == Team.id_match)
+            .where(
+                TeamPlayer.id_player == player_id,
+                FootballMatch.id_season == season_id,
+            )
+        ).one()
+        return int(row.goals), int(row.assists)
+
     def _to_season_player_result(
+        self,
         *,
         player: Player,
         link: PenaPlayer,
@@ -1194,6 +1257,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         points_draw: int,
         points_loss: int,
     ) -> SeasonPlayerResult:
+        goals, assists = self._get_season_player_match_totals(
+            season_id=season_player.id_season,
+            player_id=player.id,
+        )
         return SeasonPlayerResult(
             player_guid=player.guid,
             name=player.name,
@@ -1202,6 +1269,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             nationality=player.nationality,
             nickname=link.nickname,
             position=link.position,
+            played=season_player.wins + season_player.draws + season_player.losses,
+            goals=goals,
+            assists=assists,
             wins=season_player.wins,
             losses=season_player.losses,
             draws=season_player.draws,
@@ -1241,9 +1311,20 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         return stmt
 
     @staticmethod
-    def _apply_player_order(stmt, *, order_by: str, order_dir: str, points_expr):
+    def _apply_player_order(
+        stmt,
+        *,
+        order_by: str,
+        order_dir: str,
+        points_expr,
+        goals_expr,
+        assists_expr,
+    ):
         columns = {
             "quality_level": SeasonPlayer.quality_level,
+            "played": SeasonPlayer.wins + SeasonPlayer.draws + SeasonPlayer.losses,
+            "goals": goals_expr,
+            "assists": assists_expr,
             "wins": SeasonPlayer.wins,
             "losses": SeasonPlayer.losses,
             "draws": SeasonPlayer.draws,
@@ -1266,6 +1347,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             nationality=values["nationality"],
             nickname=values["nickname"],
             position=values["position"],
+            played=int(values["played"]),
+            goals=int(values["goals"]),
+            assists=int(values["assists"]),
             wins=int(values["wins"]),
             losses=int(values["losses"]),
             draws=int(values["draws"]),
@@ -1398,7 +1482,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             raise MatchNotFoundError()
         return teams_by_id
 
-    def _get_team_match_summary_stats(self, team_ids: set[int]) -> dict[int, tuple[int, int]]:
+    def _get_team_match_summary_stats(self, team_ids: set[int]) -> dict[int, tuple[int, int, bool]]:
         if not team_ids:
             return {}
 
@@ -1407,11 +1491,19 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 TeamPlayer.id_team.label("team_id"),
                 func.coalesce(func.sum(TeamPlayer.goals), 0).label("score"),
                 func.count(TeamPlayer.id_player).label("players"),
+                func.min(TeamPlayer.rating).label("min_rating"),
             )
             .where(TeamPlayer.id_team.in_(team_ids))
             .group_by(TeamPlayer.id_team)
         ).all()
-        return {int(row.team_id): (int(row.score), int(row.players)) for row in rows}
+        return {
+            int(row.team_id): (
+                int(row.score),
+                int(row.players),
+                row.min_rating is not None and float(row.min_rating) >= 0.0,
+            )
+            for row in rows
+        }
 
     def _resolve_match_players(
         self,
@@ -1527,6 +1619,18 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             return False
         return all(player.rating >= 0 for player in home_team_players + away_team_players)
 
+    @classmethod
+    def _match_status_from_players(
+        cls,
+        home_team_players: list[TeamPlayer],
+        away_team_players: list[TeamPlayer],
+    ) -> str:
+        return (
+            "closed"
+            if cls._match_standings_applied(home_team_players, away_team_players)
+            else "open"
+        )
+
     @staticmethod
     def _lineup_update_locked(
         home_team_players: list[TeamPlayer],
@@ -1604,6 +1708,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             guid=football_match.guid,
             season_guid=season_guid,
             match_date=football_match.match_date,
+            status=self._match_status_from_players(home_players, away_players),
             home_team=self._build_match_team_result(
                 team=home_team,
                 team_players=home_players,
