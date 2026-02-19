@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'PenaHub',
-        short_name: 'PenaHub',
+        name: 'footballhubmanager',
+        short_name: 'footballhubmanager',
         start_url: '/',
         display: 'standalone',
         background_color: '#f4f1ec',
