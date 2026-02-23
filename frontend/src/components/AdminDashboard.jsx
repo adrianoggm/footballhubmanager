@@ -2121,11 +2121,11 @@ export default function AdminDashboard({ session, onLogout }) {
                       <TableRow>
                         <TableCell>{t('dashboard.admin.table.player')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
+                        <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                       </TableRow>
                     </TableHead>
@@ -2136,11 +2136,11 @@ export default function AdminDashboard({ session, onLogout }) {
                           <TableCell align="right">
                             {player.played ?? player.wins + player.draws + player.losses}
                           </TableCell>
-                          <TableCell align="right">{player.goals ?? 0}</TableCell>
-                          <TableCell align="right">{player.assists ?? 0}</TableCell>
                           <TableCell align="right">{player.wins}</TableCell>
                           <TableCell align="right">{player.draws}</TableCell>
                           <TableCell align="right">{player.losses}</TableCell>
+                          <TableCell align="right">{player.goals ?? 0}</TableCell>
+                          <TableCell align="right">{player.assists ?? 0}</TableCell>
                           <TableCell align="right">{player.points}</TableCell>
                         </TableRow>
                       ))}
