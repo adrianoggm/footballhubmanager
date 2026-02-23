@@ -209,6 +209,11 @@ export const messages = {
           scoreFromStats: 'Set score from team/player stats.',
           manageStats: 'Manage stats',
           manageMatch: 'Manage match',
+          deleteMatch: 'Delete',
+          deleteMatchTitle: 'Delete match',
+          cancelDelete: 'Cancel',
+          deleteMatchConfirm:
+            'Delete match {home} vs {away} ({date})? This action cannot be undone.',
           statsEditorTitle: 'Match stats: {home} vs {away}',
           statsEditorDescription:
             'Update player stats to close the match and recalculate standings.',
@@ -257,6 +262,7 @@ export const messages = {
           seasonCreated: 'Season created',
           seasonPointsUpdated: 'Season points updated',
           detailedMatchCreated: 'Detailed match created',
+          matchDeleted: 'Match deleted',
           matchResultUpdated: 'Match result updated',
           matchStatsUpdated: 'Match stats updated',
           lineupsUpdated: 'Lineups updated',
@@ -533,6 +539,11 @@ export const messages = {
           scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
           manageStats: 'Editar estadísticas',
           manageMatch: 'Gestionar partido',
+          deleteMatch: 'Eliminar',
+          deleteMatchTitle: 'Eliminar partido',
+          cancelDelete: 'Cancelar',
+          deleteMatchConfirm:
+            '¿Eliminar el partido {home} vs {away} ({date})? Esta acción no se puede deshacer.',
           statsEditorTitle: 'Estadísticas: {home} vs {away}',
           statsEditorDescription:
             'Actualiza estadísticas por jugador para cerrar el partido y recalcular la clasificación.',
@@ -581,6 +592,7 @@ export const messages = {
           seasonCreated: 'Temporada creada',
           seasonPointsUpdated: 'Puntuación de temporada actualizada',
           detailedMatchCreated: 'Partido detallado creado',
+          matchDeleted: 'Partido eliminado',
           matchResultUpdated: 'Resultado del partido actualizado',
           matchStatsUpdated: 'Estadísticas del partido actualizadas',
           lineupsUpdated: 'Convocatorias actualizadas',

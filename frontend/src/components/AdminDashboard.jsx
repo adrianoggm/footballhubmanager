@@ -5,6 +5,11 @@ import {
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Grid,
   LinearProgress,
@@ -21,7 +26,7 @@ import {
   TextField,
   Typography
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
 import { adminService } from '../services/adminService.js'
 import LineupDragBuilder from './LineupDragBuilder.jsx'
@@ -204,7 +209,10 @@ const collectPagedItems = async (fetchPage) => {
 
 export default function AdminDashboard({ session, onLogout }) {
   const { language, t } = useI18n()
+  const seasonMatchesRequestIdRef = useRef(0)
   const [loading, setLoading] = useState(false)
+  const [deletingMatchGuid, setDeletingMatchGuid] = useState('')
+  const [pendingDeleteMatch, setPendingDeleteMatch] = useState(null)
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState('')
@@ -222,6 +230,7 @@ export default function AdminDashboard({ session, onLogout }) {
   const [selectedHistoricalGuids, setSelectedHistoricalGuids] = useState([])
   const [standings, setStandings] = useState([])
   const [seasonMatches, setSeasonMatches] = useState([])
+  const [hiddenDeletedMatchGuids, setHiddenDeletedMatchGuids] = useState([])
   const [seasonMatchesLoading, setSeasonMatchesLoading] = useState(false)
   const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
   const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
@@ -318,6 +327,17 @@ export default function AdminDashboard({ session, onLogout }) {
     [matchLineupsDraft]
   )
 
+  const hiddenDeletedMatchGuidSet = useMemo(
+    () => new Set(hiddenDeletedMatchGuids),
+    [hiddenDeletedMatchGuids]
+  )
+
+  const visibleSeasonMatches = useMemo(
+    () =>
+      seasonMatches.filter((match) => !hiddenDeletedMatchGuidSet.has(match.guid)),
+    [seasonMatches, hiddenDeletedMatchGuidSet]
+  )
+
   const onSeasonField = (name) => (event) => {
     const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
     setSeasonForm((prev) => ({ ...prev, [name]: value }))
@@ -401,8 +421,15 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const loadSeasonMatches = async (penaGuid, seasonGuid) => {
+    const requestId = seasonMatchesRequestIdRef.current + 1
+    seasonMatchesRequestIdRef.current = requestId
+
     if (!seasonGuid) {
+      if (requestId !== seasonMatchesRequestIdRef.current) {
+        return
+      }
       setSeasonMatches([])
+      setHiddenDeletedMatchGuids([])
       setSelectedMatchGuid('')
       setSelectedMatchDetail(null)
       setMatchLineupsDraft(null)
@@ -410,6 +437,9 @@ export default function AdminDashboard({ session, onLogout }) {
       return
     }
     const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, { pageSize: 100 })
+    if (requestId !== seasonMatchesRequestIdRef.current) {
+      return
+    }
     const nextMatches = matchesPage.items || []
     setSeasonMatches(nextMatches)
     const stillExists = nextMatches.some((item) => item.guid === selectedMatchGuid)
@@ -740,6 +770,7 @@ export default function AdminDashboard({ session, onLogout }) {
     const nextSeasonGuid = event.target.value
     setSelectedSeasonGuid(nextSeasonGuid)
     setSelectedHistoricalGuids([])
+    setHiddenDeletedMatchGuids([])
     setMatchForm((prev) => ({
       ...prev,
       home_player_guids: [],
@@ -810,6 +841,97 @@ export default function AdminDashboard({ session, onLogout }) {
       setError(requestError)
     } finally {
       setMatchStatsLoading(false)
+    }
+  }
+
+  const handleRequestDeleteSeasonMatch = (match) => {
+    if (!match?.guid) {
+      return
+    }
+    setPendingDeleteMatch(match)
+  }
+
+  const handleCancelDeleteSeasonMatch = () => {
+    if (deletingMatchGuid) {
+      return
+    }
+    setPendingDeleteMatch(null)
+  }
+
+  const handleDeleteSeasonMatch = async () => {
+    const match = pendingDeleteMatch
+    if (!selectedPenaGuid || !selectedSeasonGuid || !match?.guid) {
+      return
+    }
+    setPendingDeleteMatch(null)
+
+    const previousSeasonMatches = seasonMatches
+    const previousSelectedMatchGuid = selectedMatchGuid
+    const previousSelectedMatchDetail = selectedMatchDetail
+    const previousMatchLineupsDraft = matchLineupsDraft
+    const previousMatchStatsDraft = matchStatsDraft
+    const deletedWasSelected = selectedMatchGuid === match.guid
+
+    // Cancel any in-flight matches fetch to avoid stale overwrite.
+    seasonMatchesRequestIdRef.current += 1
+
+    // Optimistic update: remove from table right away.
+    setHiddenDeletedMatchGuids((current) =>
+      current.includes(match.guid) ? current : [...current, match.guid]
+    )
+    setSeasonMatches((current) => current.filter((item) => item.guid !== match.guid))
+    if (deletedWasSelected) {
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
+      setMatchLineupsDraft(null)
+      setMatchStatsDraft(null)
+    }
+
+    setDeletingMatchGuid(match.guid)
+    setError(null)
+    setNotice('')
+    try {
+      if (import.meta.env.DEV) {
+        console.debug('[AdminDashboard] delete request start', { matchGuid: match.guid })
+      }
+      await adminService.deleteSeasonMatch(selectedPenaGuid, selectedSeasonGuid, match.guid)
+      if (import.meta.env.DEV) {
+        console.debug('[AdminDashboard] delete request success', { matchGuid: match.guid })
+      }
+      try {
+        await loadStandings(selectedPenaGuid, selectedSeasonGuid)
+      } catch (refreshError) {
+        if (refreshError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(refreshError)
+      }
+      setNotice(t('dashboard.admin.notices.matchDeleted'))
+    } catch (deleteError) {
+      // Rollback optimistic state only if delete itself failed.
+      setHiddenDeletedMatchGuids((current) => current.filter((guid) => guid !== match.guid))
+      setSeasonMatches(previousSeasonMatches)
+      if (deletedWasSelected) {
+        setSelectedMatchGuid(previousSelectedMatchGuid)
+        setSelectedMatchDetail(previousSelectedMatchDetail)
+        setMatchLineupsDraft(previousMatchLineupsDraft)
+        setMatchStatsDraft(previousMatchStatsDraft)
+      }
+      if (deleteError?.status === 401) {
+        await onLogout()
+        return
+      }
+      if (import.meta.env.DEV) {
+        console.debug('[AdminDashboard] delete request error', {
+          matchGuid: match.guid,
+          status: deleteError?.status,
+          message: deleteError?.message
+        })
+      }
+      setError(deleteError)
+    } finally {
+      setDeletingMatchGuid('')
     }
   }
 
@@ -1695,12 +1817,12 @@ export default function AdminDashboard({ session, onLogout }) {
                       {t('dashboard.admin.overview.selectSeasonToLoad')}
                     </Typography>
                   )}
-                  {selectedSeasonGuid && !seasonMatchesLoading && !seasonMatches.length && (
+                  {selectedSeasonGuid && !seasonMatchesLoading && !visibleSeasonMatches.length && (
                     <Typography variant="body2" color="text.secondary">
                       {t('dashboard.admin.matches.noMatchesYet')}
                     </Typography>
                   )}
-                  {selectedSeasonGuid && !seasonMatchesLoading && seasonMatches.length > 0 && (
+                  {selectedSeasonGuid && !seasonMatchesLoading && visibleSeasonMatches.length > 0 && (
                     <TableContainer>
                       <Table size="small">
                         <TableHead>
@@ -1715,7 +1837,7 @@ export default function AdminDashboard({ session, onLogout }) {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {seasonMatches.map((match) => {
+                          {visibleSeasonMatches.map((match) => {
                             const status = String(match.status || 'open').toLowerCase()
                             const isClosed = status === 'closed'
 
@@ -1742,14 +1864,31 @@ export default function AdminDashboard({ session, onLogout }) {
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant={selectedMatchGuid === match.guid ? 'contained' : 'text'}
-                                    size="small"
-                                    onClick={() => handleOpenMatchStats(match.guid)}
-                                    disabled={loading || matchStatsLoading}
-                                  >
-                                    {t('dashboard.admin.matches.manageMatch')}
-                                  </Button>
+                                  <Stack direction="row" spacing={1}>
+                                    <Button
+                                      variant={selectedMatchGuid === match.guid ? 'contained' : 'text'}
+                                      size="small"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        handleOpenMatchStats(match.guid)
+                                      }}
+                                      disabled={matchStatsLoading || deletingMatchGuid === match.guid}
+                                    >
+                                      {t('dashboard.admin.matches.manageMatch')}
+                                    </Button>
+                                    <Button
+                                      variant="text"
+                                      color="error"
+                                      size="small"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        handleRequestDeleteSeasonMatch(match)
+                                      }}
+                                      disabled={deletingMatchGuid === match.guid}
+                                    >
+                                      {t('dashboard.admin.matches.deleteMatch')}
+                                    </Button>
+                                  </Stack>
                                 </TableCell>
                               </TableRow>
                             )
@@ -2018,6 +2157,39 @@ export default function AdminDashboard({ session, onLogout }) {
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={Boolean(pendingDeleteMatch)}
+        onClose={handleCancelDeleteSeasonMatch}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('dashboard.admin.matches.deleteMatchTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingDeleteMatch
+              ? t('dashboard.admin.matches.deleteMatchConfirm', {
+                home: pendingDeleteMatch.home_team_name,
+                away: pendingDeleteMatch.away_team_name,
+                date: formatDate(pendingDeleteMatch.match_date)
+              })
+              : ''}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDeleteSeasonMatch} disabled={Boolean(deletingMatchGuid)}>
+            {t('dashboard.admin.matches.cancelDelete')}
+          </Button>
+          <Button
+            onClick={handleDeleteSeasonMatch}
+            color="error"
+            variant="contained"
+            disabled={Boolean(deletingMatchGuid)}
+          >
+            {t('dashboard.admin.matches.deleteMatch')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   )
 }

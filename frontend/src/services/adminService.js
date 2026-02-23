@@ -99,6 +99,10 @@ export class AdminService {
     )
   }
 
+  deleteSeasonMatch(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`)
+  }
+
   createDetailedMatch(penaGuid, seasonGuid, payload) {
     return httpClient.post(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/detailed`,

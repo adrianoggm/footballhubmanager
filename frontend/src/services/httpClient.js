@@ -26,9 +26,21 @@ export class HttpClient {
     })
 
     const contentType = response.headers.get('content-type') || ''
-    const payload = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text()
+    const hasNoContentStatus = response.status === 204 || response.status === 205
+    const rawPayload = hasNoContentStatus ? '' : await response.text()
+
+    let payload = null
+    if (rawPayload) {
+      if (contentType.includes('application/json')) {
+        try {
+          payload = JSON.parse(rawPayload)
+        } catch {
+          payload = rawPayload
+        }
+      } else {
+        payload = rawPayload
+      }
+    }
 
     if (!response.ok) {
       let message = response.statusText || 'Request failed'

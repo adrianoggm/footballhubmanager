@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { I18nContext } from './I18nProvider.jsx'
+import { I18nContext } from './context.js'
 
 export function useI18n() {
   const context = useContext(I18nContext)
