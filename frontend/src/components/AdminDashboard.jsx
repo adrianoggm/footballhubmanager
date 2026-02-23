@@ -24,6 +24,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
 import { adminService } from '../services/adminService.js'
+import LineupDragBuilder from './LineupDragBuilder.jsx'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
@@ -39,8 +40,8 @@ const defaultMatchForm = () => ({
   match_date: todayIso(),
   home_team_name: '',
   away_team_name: '',
-  home_player_guids: '',
-  away_player_guids: ''
+  home_player_guids: [],
+  away_player_guids: []
 })
 
 const defaultGuestForm = () => ({
@@ -57,6 +58,18 @@ const splitGuids = (value) =>
     .split(/[\n,]/g)
     .map((item) => item.trim())
     .filter(Boolean)
+
+const normalizePlayerGuids = (value) => {
+  if (Array.isArray(value)) {
+    return Array.from(
+      new Set(value.map((item) => String(item || '').trim()).filter(Boolean))
+    )
+  }
+  if (typeof value === 'string') {
+    return Array.from(new Set(splitGuids(value)))
+  }
+  return []
+}
 
 const setUnionSize = (left, right) => new Set([...left, ...right]).size
 
@@ -123,7 +136,31 @@ const mapDashboardErrorMessage = (error, t) => {
 
 const formatPlayerDisplayName = (player) => {
   const fullName = [player.name, player.surname1, player.surname2].filter(Boolean).join(' ')
-  return player.nickname ? `${player.nickname} (${fullName})` : fullName
+  if (player.nickname && fullName) {
+    return `${player.nickname} (${fullName})`
+  }
+  if (player.nickname) {
+    return player.nickname
+  }
+  return fullName || player.player_guid || player.guid || ''
+}
+
+const buildLineupPlayerOptions = (...groups) => {
+  const byGuid = new Map()
+  groups
+    .flat()
+    .filter(Boolean)
+    .forEach((player) => {
+      const guid = String(player.player_guid || player.guid || '').trim()
+      if (!guid || byGuid.has(guid)) {
+        return
+      }
+      byGuid.set(guid, {
+        guid,
+        label: formatPlayerDisplayName(player) || guid
+      })
+    })
+  return Array.from(byGuid.values())
 }
 
 const buildTeamStatsDraft = (team) => ({
@@ -142,8 +179,8 @@ const buildMatchStatsDraft = (detail) => ({
 })
 
 const buildMatchLineupsDraft = (detail) => ({
-  home_player_guids: (detail?.home_team?.players || []).map((player) => player.player_guid).join('\n'),
-  away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid).join('\n')
+  home_player_guids: (detail?.home_team?.players || []).map((player) => player.player_guid),
+  away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid)
 })
 
 const collectPagedItems = async (fetchPage) => {
@@ -246,6 +283,41 @@ export default function AdminDashboard({ session, onLogout }) {
     [historicalPlayers, registeredSeasonPlayerGuids]
   )
 
+  const createMatchLineupPlayers = useMemo(
+    () => buildLineupPlayerOptions(seasonRoster),
+    [seasonRoster]
+  )
+
+  const matchEditorLineupPlayers = useMemo(
+    () =>
+      buildLineupPlayerOptions(
+        seasonRoster,
+        selectedMatchDetail?.home_team?.players || [],
+        selectedMatchDetail?.away_team?.players || []
+      ),
+    [seasonRoster, selectedMatchDetail]
+  )
+
+  const matchFormHomeGuids = useMemo(
+    () => normalizePlayerGuids(matchForm.home_player_guids),
+    [matchForm.home_player_guids]
+  )
+
+  const matchFormAwayGuids = useMemo(
+    () => normalizePlayerGuids(matchForm.away_player_guids),
+    [matchForm.away_player_guids]
+  )
+
+  const matchDraftHomeGuids = useMemo(
+    () => normalizePlayerGuids(matchLineupsDraft?.home_player_guids),
+    [matchLineupsDraft]
+  )
+
+  const matchDraftAwayGuids = useMemo(
+    () => normalizePlayerGuids(matchLineupsDraft?.away_player_guids),
+    [matchLineupsDraft]
+  )
+
   const onSeasonField = (name) => (event) => {
     const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
     setSeasonForm((prev) => ({ ...prev, [name]: value }))
@@ -257,6 +329,27 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const onMatchField = (name) => (event) => {
     setMatchForm((prev) => ({ ...prev, [name]: event.target.value }))
+  }
+
+  const onMatchFormLineupsChange = ({ homePlayerGuids, awayPlayerGuids }) => {
+    setMatchForm((prev) => ({
+      ...prev,
+      home_player_guids: homePlayerGuids,
+      away_player_guids: awayPlayerGuids
+    }))
+  }
+
+  const onMatchLineupsDraftChange = ({ homePlayerGuids, awayPlayerGuids }) => {
+    setMatchLineupsDraft((prev) => {
+      if (!prev) {
+        return prev
+      }
+      return {
+        ...prev,
+        home_player_guids: homePlayerGuids,
+        away_player_guids: awayPlayerGuids
+      }
+    })
   }
 
   const onGuestField = (name) => (event) => {
@@ -573,10 +666,14 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!selectedPenaGuid || !activeSeason) {
       return
     }
-    const homeLineup = splitGuids(matchForm.home_player_guids)
-    const awayLineup = splitGuids(matchForm.away_player_guids)
+    const homeLineup = normalizePlayerGuids(matchForm.home_player_guids)
+    const awayLineup = normalizePlayerGuids(matchForm.away_player_guids)
     if (!homeLineup.length || !awayLineup.length) {
       setError(new Error(t('dashboard.admin.errors.lineupsRequired')))
+      return
+    }
+    if (setUnionSize(homeLineup, awayLineup) !== homeLineup.length + awayLineup.length) {
+      setError(new Error(t('dashboard.admin.errors.lineupsOverlap')))
       return
     }
     await runAction(async () => {
@@ -643,6 +740,11 @@ export default function AdminDashboard({ session, onLogout }) {
     const nextSeasonGuid = event.target.value
     setSelectedSeasonGuid(nextSeasonGuid)
     setSelectedHistoricalGuids([])
+    setMatchForm((prev) => ({
+      ...prev,
+      home_player_guids: [],
+      away_player_guids: []
+    }))
     setSelectedMatchGuid('')
     setSelectedMatchDetail(null)
     setMatchLineupsDraft(null)
@@ -711,25 +813,12 @@ export default function AdminDashboard({ session, onLogout }) {
     }
   }
 
-  const onMatchLineupsDraftField = (field) => (event) => {
-    const value = event.target.value
-    setMatchLineupsDraft((prev) => {
-      if (!prev) {
-        return prev
-      }
-      return {
-        ...prev,
-        [field]: value
-      }
-    })
-  }
-
   const handleSaveMatchLineups = async () => {
     if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !matchLineupsDraft) {
       return
     }
-    const homePlayerGuids = splitGuids(matchLineupsDraft.home_player_guids)
-    const awayPlayerGuids = splitGuids(matchLineupsDraft.away_player_guids)
+    const homePlayerGuids = normalizePlayerGuids(matchLineupsDraft.home_player_guids)
+    const awayPlayerGuids = normalizePlayerGuids(matchLineupsDraft.away_player_guids)
     if (!homePlayerGuids.length || !awayPlayerGuids.length) {
       setError(new Error(t('dashboard.admin.errors.lineupsRequired')))
       return
@@ -1502,7 +1591,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
       {selectedPenaGuid && activeSection === 'matches' && (
         <Grid container spacing={2.5}>
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Stack spacing={2}>
@@ -1536,24 +1625,42 @@ export default function AdminDashboard({ session, onLogout }) {
                       fullWidth
                     />
                   </Stack>
-                  <TextField
-                    label={t('dashboard.admin.matches.homeLineup')}
-                    value={matchForm.home_player_guids}
-                    onChange={onMatchField('home_player_guids')}
-                    disabled={!activeSeason}
-                    multiline
-                    minRows={3}
-                    helperText={t('dashboard.admin.matches.lineupGuidsHelper')}
-                  />
-                  <TextField
-                    label={t('dashboard.admin.matches.awayLineup')}
-                    value={matchForm.away_player_guids}
-                    onChange={onMatchField('away_player_guids')}
-                    disabled={!activeSeason}
-                    multiline
-                    minRows={3}
-                    helperText={t('dashboard.admin.matches.lineupGuidsHelper')}
-                  />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {t('dashboard.admin.matches.lineupHelperTitle')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.admin.matches.lineupHelperDescription')}
+                  </Typography>
+                  {!selectedSeasonGuid && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.matches.lineupHelperSelectSeason')}
+                    </Typography>
+                  )}
+                  {selectedSeasonGuid && seasonRosterLoading && <LinearProgress />}
+                  {selectedSeasonGuid && !seasonRosterLoading && !seasonRoster.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.matches.noPlayersAvailable')}
+                    </Typography>
+                  )}
+                  {selectedSeasonGuid && !seasonRosterLoading && seasonRoster.length > 0 && (
+                    <LineupDragBuilder
+                      players={createMatchLineupPlayers}
+                      homeGuids={matchFormHomeGuids}
+                      awayGuids={matchFormAwayGuids}
+                      onChange={onMatchFormLineupsChange}
+                      availableTitle={t('dashboard.admin.matches.availablePlayers')}
+                      homeTitle={matchForm.home_team_name || t('dashboard.admin.matches.homeLineup')}
+                      awayTitle={matchForm.away_team_name || t('dashboard.admin.matches.awayLineup')}
+                      helperText={t('dashboard.admin.matches.lineupBoardHint')}
+                      emptyText={t('dashboard.admin.matches.lineupEmpty')}
+                      addHomeText={t('dashboard.admin.matches.addToHome')}
+                      addAwayText={t('dashboard.admin.matches.addToAway')}
+                      moveHomeText={t('dashboard.admin.matches.moveToHome')}
+                      moveAwayText={t('dashboard.admin.matches.moveToAway')}
+                      removeText={t('dashboard.admin.matches.removeFromLineup')}
+                      disabled={loading || !activeSeason}
+                    />
+                  )}
                   <Button
                     variant="contained"
                     onClick={handleCreateDetailedMatch}
@@ -1568,52 +1675,6 @@ export default function AdminDashboard({ session, onLogout }) {
                         date: formatDate(lastCreatedMatch.match_date)
                       })}
                     </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack spacing={1.5}>
-                  <Typography variant="h6">{t('dashboard.admin.matches.lineupHelperTitle')}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.matches.lineupHelperDescription')}
-                  </Typography>
-                  {!selectedSeasonGuid && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.matches.lineupHelperSelectSeason')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && seasonRosterLoading && <LinearProgress />}
-                  {selectedSeasonGuid && !seasonRosterLoading && (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                            <TableCell>{t('dashboard.admin.table.guid')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {seasonRoster.slice(0, 20).map((player) => (
-                            <TableRow key={player.player_guid}>
-                              <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                              <TableCell>{player.player_guid}</TableCell>
-                            </TableRow>
-                          ))}
-                          {!seasonRoster.length && (
-                            <TableRow>
-                              <TableCell colSpan={2}>
-                                {t('dashboard.admin.matches.noPlayersAvailable')}
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
                   )}
                 </Stack>
               </CardContent>
@@ -1740,30 +1801,23 @@ export default function AdminDashboard({ session, onLogout }) {
                             </Alert>
                           )}
 
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} md={6}>
-                              <TextField
-                                label={t('dashboard.admin.matches.homeLineup')}
-                                value={matchLineupsDraft.home_player_guids}
-                                onChange={onMatchLineupsDraftField('home_player_guids')}
-                                multiline
-                                minRows={3}
-                                helperText={t('dashboard.admin.matches.lineupGuidsHelper')}
-                                fullWidth
-                              />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                              <TextField
-                                label={t('dashboard.admin.matches.awayLineup')}
-                                value={matchLineupsDraft.away_player_guids}
-                                onChange={onMatchLineupsDraftField('away_player_guids')}
-                                multiline
-                                minRows={3}
-                                helperText={t('dashboard.admin.matches.lineupGuidsHelper')}
-                                fullWidth
-                              />
-                            </Grid>
-                          </Grid>
+                          <LineupDragBuilder
+                            players={matchEditorLineupPlayers}
+                            homeGuids={matchDraftHomeGuids}
+                            awayGuids={matchDraftAwayGuids}
+                            onChange={onMatchLineupsDraftChange}
+                            availableTitle={t('dashboard.admin.matches.availablePlayers')}
+                            homeTitle={selectedMatchDetail.home_team.team_name || t('dashboard.admin.matches.homeLineup')}
+                            awayTitle={selectedMatchDetail.away_team.team_name || t('dashboard.admin.matches.awayLineup')}
+                            helperText={t('dashboard.admin.matches.lineupBoardHint')}
+                            emptyText={t('dashboard.admin.matches.lineupEmpty')}
+                            addHomeText={t('dashboard.admin.matches.addToHome')}
+                            addAwayText={t('dashboard.admin.matches.addToAway')}
+                            moveHomeText={t('dashboard.admin.matches.moveToHome')}
+                            moveAwayText={t('dashboard.admin.matches.moveToAway')}
+                            removeText={t('dashboard.admin.matches.removeFromLineup')}
+                            disabled={loading || matchStatsLoading}
+                          />
 
                           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                             <Button

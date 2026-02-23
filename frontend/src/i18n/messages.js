@@ -227,15 +227,24 @@ export const messages = {
           awayTeam: 'Away team name',
           homeTeamPlaceholder: 'e.g. Team A',
           awayTeamPlaceholder: 'e.g. Team B',
-          homeLineup: 'Home lineup guids',
-          awayLineup: 'Away lineup guids',
+          homeLineup: 'Home lineup',
+          awayLineup: 'Away lineup',
           lineupGuidsHelper: 'Comma or line-break separated player GUIDs',
+          availablePlayers: 'Available players',
+          lineupBoardHint:
+            'Drag players between lists. On touch devices you can also use quick action buttons.',
+          lineupEmpty: 'No players in this list.',
+          addToHome: 'Add home',
+          addToAway: 'Add away',
+          moveToHome: 'To home',
+          moveToAway: 'To away',
+          removeFromLineup: 'Remove',
           createDetailedMatch: 'Create Detailed Match',
           matchCreated: 'Match {guid} created for {date}.',
           lineupHelperTitle: 'Lineup Helper',
           lineupHelperDescription:
-            'Use these player GUIDs from the selected season roster to compose lineups.',
-          lineupHelperSelectSeason: 'Select a season to display roster GUIDs.',
+            'Select players from the active season roster to compose lineups.',
+          lineupHelperSelectSeason: 'Select a season to display roster players.',
           noPlayersAvailable: 'No players available in the selected season.'
         },
         standings: {
@@ -258,7 +267,7 @@ export const messages = {
           standingsUpdated: 'Standings updated'
         },
         errors: {
-          lineupsRequired: 'Home and away lineups must include at least one player guid',
+          lineupsRequired: 'Home and away lineups must include at least one player',
           lineupsOverlap: 'The same player cannot be in both lineups',
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
@@ -542,15 +551,24 @@ export const messages = {
           awayTeam: 'Nombre del visitante',
           homeTeamPlaceholder: 'p. ej. Equipo A',
           awayTeamPlaceholder: 'p. ej. Equipo B',
-          homeLineup: 'GUIDs alineación local',
-          awayLineup: 'GUIDs alineación visitante',
+          homeLineup: 'Alineación local',
+          awayLineup: 'Alineación visitante',
           lineupGuidsHelper: 'Separa GUIDs por comas o saltos de línea',
+          availablePlayers: 'Jugadores disponibles',
+          lineupBoardHint:
+            'Arrastra jugadores entre listas. En móvil también puedes usar los botones rápidos.',
+          lineupEmpty: 'No hay jugadores en esta lista.',
+          addToHome: 'Añadir local',
+          addToAway: 'Añadir visitante',
+          moveToHome: 'Mover a local',
+          moveToAway: 'Mover a visitante',
+          removeFromLineup: 'Quitar',
           createDetailedMatch: 'Crear partido detallado',
           matchCreated: 'Partido {guid} creado para {date}.',
           lineupHelperTitle: 'Asistente de alineación',
           lineupHelperDescription:
-            'Usa estos GUIDs de jugadores de la plantilla seleccionada para componer alineaciones.',
-          lineupHelperSelectSeason: 'Selecciona una temporada para mostrar GUIDs de plantilla.',
+            'Selecciona jugadores de la plantilla activa para componer alineaciones.',
+          lineupHelperSelectSeason: 'Selecciona una temporada para mostrar jugadores de plantilla.',
           noPlayersAvailable: 'No hay jugadores disponibles en la temporada seleccionada.'
         },
         standings: {
@@ -574,7 +592,7 @@ export const messages = {
         },
         errors: {
           lineupsRequired:
-            'La alineación local y visitante debe incluir al menos un GUID de jugador',
+            'La alineación local y visitante debe incluir al menos un jugador',
           lineupsOverlap:
             'Un mismo jugador no puede estar en las dos convocatorias',
           invalidMatchResult:
