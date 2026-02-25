@@ -326,6 +326,8 @@ export const messages = {
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
             'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
+          selectedSeasonStartDateRequired: 'Season start date is required',
+          selectedSeasonEndDateRequired: 'Season end date is required',
           invalidSeasonRange: 'Season start date must be before or equal to end date',
           invalidSeasonPoints: 'Season points must be integers greater than or equal to zero',
           invalidSeasonPlayerStats:
@@ -711,6 +713,10 @@ export const messages = {
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
             'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
+          selectedSeasonStartDateRequired:
+            'La fecha de inicio de la temporada es obligatoria',
+          selectedSeasonEndDateRequired:
+            'La fecha de fin de la temporada es obligatoria',
           invalidSeasonRange:
             'La fecha de inicio de temporada debe ser anterior o igual a la fecha de fin',
           invalidSeasonPoints:

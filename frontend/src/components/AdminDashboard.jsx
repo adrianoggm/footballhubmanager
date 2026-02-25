@@ -11,12 +11,10 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
-  FormControlLabel,
   Grid,
   LinearProgress,
   MenuItem,
   Stack,
-  Switch,
   Tab,
   Tabs,
   Table,
@@ -29,9 +27,14 @@ import {
   Typography
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAdminMatches } from '../hooks/useAdminMatches.js'
+import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
+import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { adminService } from '../services/adminService.js'
-import LineupDragBuilder from './LineupDragBuilder.jsx'
+import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
+import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
+import AdminSeasonsSection from './admin/AdminSeasonsSection.jsx'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
@@ -369,14 +372,19 @@ export default function AdminDashboard({ session, onLogout }) {
     [seasonMatches, hiddenDeletedMatchGuidSet]
   )
 
+  const {
+    selectedSeasonDateErrors,
+    onSelectedSeasonField,
+    validateSelectedSeasonForm,
+    resetSelectedSeasonDateErrors
+  } = useAdminSeasons({
+    setSelectedSeasonForm,
+    t
+  })
+
   const onSeasonField = (name) => (event) => {
     const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
     setSeasonForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const onSelectedSeasonField = (name) => (event) => {
-    const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
-    setSelectedSeasonForm((prev) => ({ ...prev, [name]: value }))
   }
 
   const onMatchField = (name) => (event) => {
@@ -414,6 +422,21 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const onMembershipDraftField = (name) => (event) => {
     setMembershipDraft((prev) => ({ ...prev, [name]: event.target.value }))
+  }
+
+  const onImportPreviousSeasonRosterChange = (event) => {
+    setImportPreviousSeasonRoster(event.target.checked)
+  }
+
+  const onImportSourceSeasonGuidChange = (event) => {
+    setImportSourceSeasonGuid(event.target.value)
+  }
+
+  const closeMatchEditor = () => {
+    setSelectedMatchGuid('')
+    setSelectedMatchDetail(null)
+    setMatchLineupsDraft(null)
+    setMatchStatsDraft(null)
   }
 
   const runAction = async (action, successMessage) => {
@@ -730,6 +753,7 @@ export default function AdminDashboard({ session, onLogout }) {
   useEffect(() => {
     if (!selectedSeason) {
       setSelectedSeasonForm(defaultSeasonForm)
+      resetSelectedSeasonDateErrors()
       return
     }
     setSelectedSeasonForm({
@@ -739,7 +763,8 @@ export default function AdminDashboard({ session, onLogout }) {
       points_draw: selectedSeason.points_draw,
       points_loss: selectedSeason.points_loss
     })
-  }, [selectedSeason])
+    resetSelectedSeasonDateErrors()
+  }, [selectedSeason, resetSelectedSeasonDateErrors])
 
   const applySeasonContext = (nextSeasonGuid) => {
     setSelectedSeasonGuid(nextSeasonGuid)
@@ -836,8 +861,7 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
-    if (selectedSeasonForm.start_date > selectedSeasonForm.end_date) {
-      setError(new Error(t('dashboard.admin.errors.invalidSeasonRange')))
+    if (!validateSelectedSeasonForm(selectedSeasonForm)) {
       return
     }
     const pointsValues = [
@@ -1371,6 +1395,79 @@ export default function AdminDashboard({ session, onLogout }) {
     ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
     : t('dashboard.admin.status.noSeasonSelected')
 
+  const playersSection = useAdminPlayers({
+    state: {
+      selectedSeason,
+      selectedSeasonLabel,
+      seasonList,
+      selectedHistoricalGuids,
+      availableHistoricalPlayers,
+      loading,
+      selectedSeasonGuid,
+      seasonRosterLoading,
+      seasonRoster,
+      historicalPlayers,
+      guestForm,
+      nationalities
+    },
+    actions: {
+      handleSelectHistoricalPlayers,
+      handleRegisterHistoricalPlayersInSeason,
+      handleEditSeasonPlayer,
+      handleRequestRemoveSeasonPlayer,
+      onGuestField,
+      handleCreateGuestPlayer,
+      handleEditMembershipPlayer,
+      handleRequestRemoveMembershipPlayer
+    },
+    helpers: {
+      t,
+      formatPlayerDisplayName
+    }
+  })
+
+  const matchesSection = useAdminMatches({
+    state: {
+      selectedSeasonGuid,
+      seasonRosterLoading,
+      seasonRoster,
+      createMatchLineupPlayers,
+      matchFormHomeGuids,
+      matchFormAwayGuids,
+      matchForm,
+      loading,
+      lastCreatedMatch,
+      seasonMatchesLoading,
+      visibleSeasonMatches,
+      selectedMatchGuid,
+      deletingMatchGuid,
+      matchStatsLoading,
+      selectedMatchDetail,
+      matchLineupsDraft,
+      matchStatsDraft,
+      matchEditorLineupPlayers,
+      matchDraftHomeGuids,
+      matchDraftAwayGuids
+    },
+    actions: {
+      onMatchField,
+      onMatchFormLineupsChange,
+      handleCreateDetailedMatch,
+      handleOpenMatchStats,
+      handleRequestDeleteSeasonMatch,
+      onMatchLineupsDraftChange,
+      handleSaveMatchLineups,
+      onMatchStatsDraftField,
+      handleSaveMatchStats,
+      closeMatchEditor
+    },
+    helpers: {
+      t,
+      formatDate,
+      formatPlayerDisplayName
+    }
+  })
+
   if (initializing) {
     return (
       <Stack spacing={2}>
@@ -1683,902 +1780,55 @@ export default function AdminDashboard({ session, onLogout }) {
       )}
 
       {selectedPenaGuid && activeSection === 'seasons' && (
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} md={8}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2.5}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={1.25}>
-                    <Typography variant="h6">{t('dashboard.admin.seasons.configTitle')}</Typography>
-                    {activeSeason && <Chip size="small" color="secondary" label={activeSeasonLabel} />}
-                    {selectedSeason && <Chip size="small" color="primary" label={selectedSeasonLabel} />}
-                  </Stack>
-
-                  {!activeSeason && (
-                    <Alert severity="warning">
-                      {t('dashboard.admin.seasons.noActiveWarning')}
-                    </Alert>
-                  )}
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <TextField
-                      type="date"
-                      label={t('dashboard.admin.seasons.startDate')}
-                      InputLabelProps={{ shrink: true }}
-                      value={seasonForm.start_date}
-                      onChange={onSeasonField('start_date')}
-                      fullWidth
-                    />
-                    <TextField
-                      type="date"
-                      label={t('dashboard.admin.seasons.endDate')}
-                      InputLabelProps={{ shrink: true }}
-                      value={seasonForm.end_date}
-                      onChange={onSeasonField('end_date')}
-                      fullWidth
-                    />
-                  </Stack>
-
-                  {latestSeasonEndDate && (
-                    <Button variant="text" onClick={handlePrefillNextSeason} disabled={loading}>
-                      {t('dashboard.admin.seasons.useAfterLatest')}
-                    </Button>
-                  )}
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <TextField
-                      type="number"
-                      label={t('dashboard.admin.seasons.winPoints')}
-                      value={seasonForm.points_win}
-                      onChange={onSeasonField('points_win')}
-                      fullWidth
-                    />
-                    <TextField
-                      type="number"
-                      label={t('dashboard.admin.seasons.drawPoints')}
-                      value={seasonForm.points_draw}
-                      onChange={onSeasonField('points_draw')}
-                      fullWidth
-                    />
-                    <TextField
-                      type="number"
-                      label={t('dashboard.admin.seasons.lossPoints')}
-                      value={seasonForm.points_loss}
-                      onChange={onSeasonField('points_loss')}
-                      fullWidth
-                    />
-                  </Stack>
-
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={importPreviousSeasonRoster}
-                        onChange={(event) => setImportPreviousSeasonRoster(event.target.checked)}
-                        disabled={loading || !seasonImportCandidates.length}
-                      />
-                    }
-                    label={t('dashboard.admin.seasons.importPreviousToggle')}
-                  />
-                  {importPreviousSeasonRoster && seasonImportCandidates.length > 0 && (
-                    <TextField
-                      select
-                      label={t('dashboard.admin.seasons.importSourceLabel')}
-                      value={importSourceSeasonGuid}
-                      onChange={(event) => setImportSourceSeasonGuid(event.target.value)}
-                      helperText={t('dashboard.admin.seasons.importSourceHelper')}
-                      fullWidth
-                    >
-                      {seasonImportCandidates.map((season) => (
-                        <MenuItem key={season.guid} value={season.guid}>
-                          {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                  {importPreviousSeasonRoster && !seasonImportCandidates.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.seasons.importSourceEmpty')}
-                    </Typography>
-                  )}
-
-                  <Button variant="contained" onClick={handleCreateSeason} disabled={loading}>
-                    {t('dashboard.admin.seasons.createSeason')}
-                  </Button>
-                  <Typography variant="caption" color="text.secondary">
-                    {t('dashboard.admin.seasons.overlapHint')}
-                  </Typography>
-
-                  <Divider />
-
-                  <Typography variant="subtitle1">{t('dashboard.admin.seasons.selectedSeasonConfigTitle')}</Typography>
-                  {!selectedSeasonGuid && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.seasons.selectSeasonHint')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && (
-                    <>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                        <TextField
-                          type="date"
-                          label={t('dashboard.admin.seasons.startDate')}
-                          InputLabelProps={{ shrink: true }}
-                          value={selectedSeasonForm.start_date}
-                          onChange={onSelectedSeasonField('start_date')}
-                          fullWidth
-                        />
-                        <TextField
-                          type="date"
-                          label={t('dashboard.admin.seasons.endDate')}
-                          InputLabelProps={{ shrink: true }}
-                          value={selectedSeasonForm.end_date}
-                          onChange={onSelectedSeasonField('end_date')}
-                          fullWidth
-                        />
-                      </Stack>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                        <TextField
-                          type="number"
-                          label={t('dashboard.admin.seasons.winPoints')}
-                          value={selectedSeasonForm.points_win}
-                          onChange={onSelectedSeasonField('points_win')}
-                          fullWidth
-                        />
-                        <TextField
-                          type="number"
-                          label={t('dashboard.admin.seasons.drawPoints')}
-                          value={selectedSeasonForm.points_draw}
-                          onChange={onSelectedSeasonField('points_draw')}
-                          fullWidth
-                        />
-                        <TextField
-                          type="number"
-                          label={t('dashboard.admin.seasons.lossPoints')}
-                          value={selectedSeasonForm.points_loss}
-                          onChange={onSelectedSeasonField('points_loss')}
-                          fullWidth
-                        />
-                      </Stack>
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                        <Button
-                          variant="outlined"
-                          onClick={handleUpdateSelectedSeason}
-                          disabled={loading || !selectedSeasonGuid}
-                        >
-                          {t('dashboard.admin.seasons.saveSelectedSeason')}
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={handleRequestDeleteSelectedSeason}
-                          disabled={loading || !selectedSeasonGuid}
-                        >
-                          {t('dashboard.admin.seasons.deleteSelectedSeason')}
-                        </Button>
-                      </Stack>
-                    </>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack spacing={1.5}>
-                  <Typography variant="h6">{t('dashboard.admin.seasons.historyTitle')}</Typography>
-                  {!historySeasons.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.seasons.noHistory')}
-                    </Typography>
-                  )}
-                  {historySeasons.map((season) => (
-                    <Box
-                      key={season.guid}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 2,
-                        border:
-                          selectedSeasonGuid === season.guid
-                            ? '1px solid rgba(25,118,210,0.35)'
-                            : '1px solid rgba(15,23,42,0.08)',
-                        backgroundColor: 'rgba(255,255,255,0.6)'
-                      }}
-                    >
-                      <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={1}
-                        alignItems={{ sm: 'center' }}
-                        justifyContent="space-between"
-                      >
-                        <Box>
-                          <Typography variant="body2">
-                            {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {t('dashboard.admin.seasons.historyPoints', {
-                              win: season.points_win,
-                              draw: season.points_draw,
-                              loss: season.points_loss
-                            })}
-                          </Typography>
-                        </Box>
-                        <Button
-                          size="small"
-                          variant={selectedSeasonGuid === season.guid ? 'contained' : 'text'}
-                          onClick={() => handleSelectSeasonFromHistory(season.guid)}
-                          disabled={selectedSeasonGuid === season.guid}
-                        >
-                          {selectedSeasonGuid === season.guid
-                            ? t('dashboard.admin.seasons.selectedSeasonAction')
-                            : t('dashboard.admin.seasons.selectSeasonAction')}
-                        </Button>
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-        </Grid>
+        <AdminSeasonsSection
+          state={{
+            activeSeason,
+            selectedSeason,
+            activeSeasonLabel,
+            selectedSeasonLabel,
+            latestSeasonEndDate,
+            seasonForm,
+            importPreviousSeasonRoster,
+            importSourceSeasonGuid,
+            seasonImportCandidates,
+            loading,
+            historySeasons,
+            selectedSeasonGuid,
+            selectedSeasonForm,
+            selectedSeasonDateErrors
+          }}
+          actions={{
+            onSeasonField,
+            handlePrefillNextSeason,
+            onImportPreviousSeasonRosterChange,
+            onImportSourceSeasonGuidChange,
+            handleCreateSeason,
+            onSelectedSeasonField,
+            handleUpdateSelectedSeason,
+            handleRequestDeleteSelectedSeason,
+            handleSelectSeasonFromHistory
+          }}
+          helpers={{
+            t,
+            formatDate
+          }}
+        />
       )}
 
       {selectedPenaGuid && activeSection === 'players' && (
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} md={8}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    alignItems={{ sm: 'center' }}
-                    justifyContent="space-between"
-                    spacing={1.5}
-                  >
-                    <Typography variant="h6">{t('dashboard.admin.players.squadTitle')}</Typography>
-                    {selectedSeason && <Chip size="small" color="primary" label={selectedSeasonLabel} />}
-                  </Stack>
-
-                  {!seasonList.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.players.createSeasonFirst')}
-                    </Typography>
-                  )}
-
-                  <TextField
-                    select
-                    label={t('dashboard.admin.players.historicalMembersLabel')}
-                    value={selectedHistoricalGuids}
-                    onChange={handleSelectHistoricalPlayers}
-                    SelectProps={{
-                      multiple: true,
-                      renderValue: (selected) =>
-                        t('dashboard.admin.players.selectedCount', {
-                          count: selected.length
-                        })
-                    }}
-                    disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
-                    helperText={
-                      !selectedSeasonGuid
-                        ? t('dashboard.admin.players.helperSelectSeason')
-                        : availableHistoricalPlayers.length
-                          ? t('dashboard.admin.players.helperSome')
-                          : t('dashboard.admin.players.helperNone')
-                    }
-                    fullWidth
-                  >
-                    {availableHistoricalPlayers.map((player) => (
-                      <MenuItem key={player.guid} value={player.guid}>
-                        {formatPlayerDisplayName(player)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      onClick={handleRegisterHistoricalPlayersInSeason}
-                      disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
-                    >
-                      {t('dashboard.admin.players.addSelectedToSeason')}
-                    </Button>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.players.registeredAvailable', {
-                        registered: seasonRoster.length,
-                        available: availableHistoricalPlayers.length
-                      })}
-                    </Typography>
-                  </Stack>
-
-                  {seasonRosterLoading && <LinearProgress />}
-
-                  {selectedSeasonGuid && !seasonRosterLoading && (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
-                            <TableCell>{t('dashboard.admin.players.actions')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {seasonRoster.map((player) => (
-                            <TableRow key={player.player_guid}>
-                              <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                              <TableCell align="right">
-                                {player.played ?? player.wins + player.draws + player.losses}
-                              </TableCell>
-                              <TableCell align="right">{player.wins}</TableCell>
-                              <TableCell align="right">{player.draws}</TableCell>
-                              <TableCell align="right">{player.losses}</TableCell>
-                              <TableCell align="right">{player.goals ?? 0}</TableCell>
-                              <TableCell align="right">{player.assists ?? 0}</TableCell>
-                              <TableCell align="right">{player.points}</TableCell>
-                              <TableCell>
-                                <Stack direction="row" spacing={1}>
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    onClick={() => handleEditSeasonPlayer(player)}
-                                    disabled={loading}
-                                  >
-                                    {t('dashboard.admin.players.editSeasonPlayer')}
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    color="error"
-                                    onClick={() => handleRequestRemoveSeasonPlayer(player)}
-                                    disabled={loading}
-                                  >
-                                    {t('dashboard.admin.players.removeFromSeason')}
-                                  </Button>
-                                </Stack>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {!seasonRoster.length && (
-                            <TableRow>
-                              <TableCell colSpan={9}>
-                                {t('dashboard.admin.players.noPlayersInSeason')}
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Stack spacing={2.5}>
-              <Card>
-                <CardContent>
-                  <Stack spacing={2}>
-                    <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.guest.description')}
-                    </Typography>
-                    <TextField
-                      label={t('dashboard.admin.guest.name')}
-                      value={guestForm.name}
-                      onChange={onGuestField('name')}
-                      fullWidth
-                    />
-                    <TextField
-                      label={t('dashboard.admin.guest.surname1')}
-                      value={guestForm.surname1}
-                      onChange={onGuestField('surname1')}
-                      fullWidth
-                    />
-                    <TextField
-                      label={t('dashboard.admin.guest.surname2')}
-                      value={guestForm.surname2}
-                      onChange={onGuestField('surname2')}
-                      fullWidth
-                    />
-                    {nationalities.length > 0 ? (
-                      <TextField
-                        select
-                        label={t('dashboard.admin.guest.nationality')}
-                        value={guestForm.nationality}
-                        onChange={onGuestField('nationality')}
-                        fullWidth
-                      >
-                        {nationalities.map((nationality) => (
-                          <MenuItem key={nationality} value={nationality}>
-                            {nationality}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    ) : (
-                      <TextField
-                        label={t('dashboard.admin.guest.nationality')}
-                        value={guestForm.nationality}
-                        onChange={onGuestField('nationality')}
-                        fullWidth
-                      />
-                    )}
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                      <TextField
-                        label={t('dashboard.admin.guest.nickname')}
-                        value={guestForm.nickname}
-                        onChange={onGuestField('nickname')}
-                        fullWidth
-                      />
-                      <TextField
-                        label={t('dashboard.admin.guest.position')}
-                        value={guestForm.position}
-                        onChange={onGuestField('position')}
-                        fullWidth
-                      />
-                    </Stack>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                      <Button
-                        variant="outlined"
-                        onClick={() => handleCreateGuestPlayer(false)}
-                        disabled={loading}
-                      >
-                        {t('dashboard.admin.guest.createGuest')}
-                      </Button>
-                      <Button
-                        variant="contained"
-                        onClick={() => handleCreateGuestPlayer(true)}
-                        disabled={loading || !selectedSeasonGuid}
-                      >
-                        {t('dashboard.admin.guest.createAndAdd')}
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent>
-                  <Stack spacing={1.5}>
-                    <Typography variant="h6">{t('dashboard.admin.members.title')}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.members.description')}
-                    </Typography>
-                    {!historicalPlayers.length && (
-                      <Typography variant="body2" color="text.secondary">
-                        {t('dashboard.admin.members.noMembers')}
-                      </Typography>
-                    )}
-                    {historicalPlayers.length > 0 && (
-                      <TableContainer>
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                              <TableCell>{t('dashboard.admin.members.nickname')}</TableCell>
-                              <TableCell>{t('dashboard.admin.members.position')}</TableCell>
-                              <TableCell>{t('dashboard.admin.members.actions')}</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {historicalPlayers.map((player) => (
-                              <TableRow key={player.guid}>
-                                <TableCell>{[player.name, player.surname1, player.surname2].filter(Boolean).join(' ')}</TableCell>
-                                <TableCell>{player.nickname || '-'}</TableCell>
-                                <TableCell>{player.position || '-'}</TableCell>
-                                <TableCell>
-                                  <Stack direction="row" spacing={1}>
-                                    <Button
-                                      size="small"
-                                      variant="text"
-                                      onClick={() => handleEditMembershipPlayer(player)}
-                                      disabled={loading}
-                                    >
-                                      {t('dashboard.admin.members.edit')}
-                                    </Button>
-                                    <Button
-                                      size="small"
-                                      variant="text"
-                                      color="error"
-                                      onClick={() => handleRequestRemoveMembershipPlayer(player)}
-                                      disabled={loading}
-                                    >
-                                      {t('dashboard.admin.members.remove')}
-                                    </Button>
-                                  </Stack>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Stack>
-          </Grid>
-        </Grid>
+        <AdminPlayersSection
+          state={playersSection.state}
+          actions={playersSection.actions}
+          helpers={playersSection.helpers}
+        />
       )}
 
       {selectedPenaGuid && activeSection === 'matches' && (
-        <Grid container spacing={2.5}>
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">{t('dashboard.admin.matches.title')}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.matches.description')}
-                  </Typography>
-                  <TextField
-                    type="date"
-                    label={t('dashboard.admin.matches.matchDate')}
-                    InputLabelProps={{ shrink: true }}
-                    value={matchForm.match_date}
-                    onChange={onMatchField('match_date')}
-                    disabled={!selectedSeasonGuid}
-                  />
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <TextField
-                      label={t('dashboard.admin.matches.homeTeam')}
-                      value={matchForm.home_team_name}
-                      onChange={onMatchField('home_team_name')}
-                      placeholder={t('dashboard.admin.matches.homeTeamPlaceholder')}
-                      disabled={!selectedSeasonGuid}
-                      fullWidth
-                    />
-                    <TextField
-                      label={t('dashboard.admin.matches.awayTeam')}
-                      value={matchForm.away_team_name}
-                      onChange={onMatchField('away_team_name')}
-                      placeholder={t('dashboard.admin.matches.awayTeamPlaceholder')}
-                      disabled={!selectedSeasonGuid}
-                      fullWidth
-                    />
-                  </Stack>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {t('dashboard.admin.matches.lineupHelperTitle')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.matches.lineupHelperDescription')}
-                  </Typography>
-                  {!selectedSeasonGuid && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.matches.lineupHelperSelectSeason')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && seasonRosterLoading && <LinearProgress />}
-                  {selectedSeasonGuid && !seasonRosterLoading && !seasonRoster.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.matches.noPlayersAvailable')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && !seasonRosterLoading && seasonRoster.length > 0 && (
-                    <LineupDragBuilder
-                      players={createMatchLineupPlayers}
-                      homeGuids={matchFormHomeGuids}
-                      awayGuids={matchFormAwayGuids}
-                      onChange={onMatchFormLineupsChange}
-                      availableTitle={t('dashboard.admin.matches.availablePlayers')}
-                      homeTitle={matchForm.home_team_name || t('dashboard.admin.matches.homeLineup')}
-                      awayTitle={matchForm.away_team_name || t('dashboard.admin.matches.awayLineup')}
-                      helperText={t('dashboard.admin.matches.lineupBoardHint')}
-                      emptyText={t('dashboard.admin.matches.lineupEmpty')}
-                      addHomeText={t('dashboard.admin.matches.addToHome')}
-                      addAwayText={t('dashboard.admin.matches.addToAway')}
-                      moveHomeText={t('dashboard.admin.matches.moveToHome')}
-                      moveAwayText={t('dashboard.admin.matches.moveToAway')}
-                      removeText={t('dashboard.admin.matches.removeFromLineup')}
-                      disabled={loading || !selectedSeasonGuid}
-                    />
-                  )}
-                  <Button
-                    variant="contained"
-                    onClick={handleCreateDetailedMatch}
-                    disabled={loading || !selectedSeasonGuid}
-                  >
-                    {t('dashboard.admin.matches.createDetailedMatch')}
-                  </Button>
-                  {lastCreatedMatch && (
-                    <Alert severity="success">
-                      {t('dashboard.admin.matches.matchCreated', {
-                        guid: lastCreatedMatch.guid,
-                        date: formatDate(lastCreatedMatch.match_date)
-                      })}
-                    </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">{t('dashboard.admin.matches.seasonMatchesTitle')}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.matches.seasonMatchesDescription')}
-                  </Typography>
-                  {seasonMatchesLoading && <LinearProgress />}
-                  {!selectedSeasonGuid && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.overview.selectSeasonToLoad')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && !seasonMatchesLoading && !visibleSeasonMatches.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.matches.noMatchesYet')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && !seasonMatchesLoading && visibleSeasonMatches.length > 0 && (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.resultSource')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {visibleSeasonMatches.map((match) => {
-                            const status = String(match.status || 'open').toLowerCase()
-                            const isClosed = status === 'closed'
-
-                            return (
-                              <TableRow key={match.guid}>
-                                <TableCell>{formatDate(match.match_date)}</TableCell>
-                                <TableCell>{match.home_team_name}</TableCell>
-                                <TableCell>{match.away_team_name}</TableCell>
-                                <TableCell>
-                                  <Chip
-                                    size="small"
-                                    color={isClosed ? 'success' : 'warning'}
-                                    label={
-                                      isClosed
-                                        ? t('dashboard.admin.matches.statusClosed')
-                                        : t('dashboard.admin.matches.statusOpen')
-                                    }
-                                  />
-                                </TableCell>
-                                <TableCell>{match.home_score} - {match.away_score}</TableCell>
-                                <TableCell>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {t('dashboard.admin.matches.scoreFromStats')}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>
-                                  <Stack direction="row" spacing={1}>
-                                    <Button
-                                      variant={selectedMatchGuid === match.guid ? 'contained' : 'text'}
-                                      size="small"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        handleOpenMatchStats(match.guid)
-                                      }}
-                                      disabled={matchStatsLoading || deletingMatchGuid === match.guid}
-                                    >
-                                      {t('dashboard.admin.matches.manageMatch')}
-                                    </Button>
-                                    <Button
-                                      variant="text"
-                                      color="error"
-                                      size="small"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        handleRequestDeleteSeasonMatch(match)
-                                      }}
-                                      disabled={deletingMatchGuid === match.guid}
-                                    >
-                                      {t('dashboard.admin.matches.deleteMatch')}
-                                    </Button>
-                                  </Stack>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-
-                  {selectedSeasonGuid && matchStatsLoading && <LinearProgress />}
-                  {selectedSeasonGuid &&
-                    !matchStatsLoading &&
-                    selectedMatchDetail &&
-                    matchLineupsDraft &&
-                    matchStatsDraft && (
-                    <Card variant="outlined" sx={{ mt: 1 }}>
-                      <CardContent>
-                        <Stack spacing={2}>
-                          <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                              {t('dashboard.admin.matches.statsEditorTitle', {
-                                home: selectedMatchDetail.home_team.team_name,
-                                away: selectedMatchDetail.away_team.team_name
-                              })}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {t('dashboard.admin.matches.statsEditorDescription')}
-                            </Typography>
-                          </Box>
-
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="body2" color="text.secondary">
-                              {t('dashboard.admin.matches.status')}:
-                            </Typography>
-                            <Chip
-                              size="small"
-                              color={selectedMatchDetail.status === 'closed' ? 'success' : 'warning'}
-                              label={
-                                selectedMatchDetail.status === 'closed'
-                                  ? t('dashboard.admin.matches.statusClosed')
-                                  : t('dashboard.admin.matches.statusOpen')
-                              }
-                            />
-                          </Stack>
-
-                          {selectedMatchDetail.status === 'closed' && (
-                            <Alert severity="warning">
-                              {t('dashboard.admin.matches.lineupsReopenHint')}
-                            </Alert>
-                          )}
-
-                          <LineupDragBuilder
-                            players={matchEditorLineupPlayers}
-                            homeGuids={matchDraftHomeGuids}
-                            awayGuids={matchDraftAwayGuids}
-                            onChange={onMatchLineupsDraftChange}
-                            availableTitle={t('dashboard.admin.matches.availablePlayers')}
-                            homeTitle={selectedMatchDetail.home_team.team_name || t('dashboard.admin.matches.homeLineup')}
-                            awayTitle={selectedMatchDetail.away_team.team_name || t('dashboard.admin.matches.awayLineup')}
-                            helperText={t('dashboard.admin.matches.lineupBoardHint')}
-                            emptyText={t('dashboard.admin.matches.lineupEmpty')}
-                            addHomeText={t('dashboard.admin.matches.addToHome')}
-                            addAwayText={t('dashboard.admin.matches.addToAway')}
-                            moveHomeText={t('dashboard.admin.matches.moveToHome')}
-                            moveAwayText={t('dashboard.admin.matches.moveToAway')}
-                            removeText={t('dashboard.admin.matches.removeFromLineup')}
-                            disabled={loading || matchStatsLoading}
-                          />
-
-                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                            <Button
-                              variant="outlined"
-                              onClick={handleSaveMatchLineups}
-                              disabled={loading || matchStatsLoading}
-                            >
-                              {t('dashboard.admin.matches.saveLineups')}
-                            </Button>
-                          </Stack>
-
-                          <Grid container spacing={2}>
-                            {[
-                              { key: 'home_team', team: selectedMatchDetail.home_team },
-                              { key: 'away_team', team: selectedMatchDetail.away_team }
-                            ].map(({ key, team }) => (
-                              <Grid key={key} item xs={12} md={6}>
-                                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                  {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
-                                </Typography>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                                      <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
-                                      <TableCell>{t('dashboard.admin.matches.assists')}</TableCell>
-                                      <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
-                                      <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {team.players.map((player) => (
-                                      <TableRow key={player.player_guid}>
-                                        <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                                        <TableCell>
-                                          <TextField
-                                            type="number"
-                                            size="small"
-                                            value={
-                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.goals ??
-                                              '0'
-                                            }
-                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'goals')}
-                                            inputProps={{ min: 0 }}
-                                            sx={{ maxWidth: 90 }}
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <TextField
-                                            type="number"
-                                            size="small"
-                                            value={
-                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.assists ??
-                                              '0'
-                                            }
-                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'assists')}
-                                            inputProps={{ min: 0 }}
-                                            sx={{ maxWidth: 90 }}
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <TextField
-                                            type="number"
-                                            size="small"
-                                            value={
-                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.saves ??
-                                              '0'
-                                            }
-                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'saves')}
-                                            inputProps={{ min: 0 }}
-                                            sx={{ maxWidth: 90 }}
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <TextField
-                                            type="number"
-                                            size="small"
-                                            value={
-                                              matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.rating ??
-                                              '0'
-                                            }
-                                            onChange={onMatchStatsDraftField(key, player.player_guid, 'rating')}
-                                            inputProps={{ min: 0, step: 0.1 }}
-                                            sx={{ maxWidth: 90 }}
-                                          />
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </Grid>
-                            ))}
-                          </Grid>
-
-                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                            <Button
-                              variant="contained"
-                              onClick={handleSaveMatchStats}
-                              disabled={loading || matchStatsLoading}
-                            >
-                              {t('dashboard.admin.matches.saveStats')}
-                            </Button>
-                            <Button
-                              variant="text"
-                              onClick={() => {
-                                setSelectedMatchGuid('')
-                                setSelectedMatchDetail(null)
-                                setMatchLineupsDraft(null)
-                                setMatchStatsDraft(null)
-                              }}
-                              disabled={loading}
-                            >
-                              {t('dashboard.admin.matches.closeEditor')}
-                            </Button>
-                          </Stack>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        <AdminMatchesSection
+          state={matchesSection.state}
+          actions={matchesSection.actions}
+          helpers={matchesSection.helpers}
+        />
       )}
 
       {selectedPenaGuid && activeSection === 'standings' && (
