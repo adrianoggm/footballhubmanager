@@ -224,6 +224,7 @@ const collectPagedItems = async (fetchPage) => {
 export default function AdminDashboard({ session, onLogout }) {
   const { language, t } = useI18n()
   const seasonMatchesRequestIdRef = useRef(0)
+  const penaDataRequestIdRef = useRef(0)
   const [loading, setLoading] = useState(false)
   const [deletingMatchGuid, setDeletingMatchGuid] = useState('')
   const [pendingDeleteMatch, setPendingDeleteMatch] = useState(null)
@@ -500,46 +501,64 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const loadPenaData = async (penaGuid) => {
-    const [active, seasonsPage, penaPlayers] = await Promise.all([
-      adminService.getActiveSeason(penaGuid).catch((requestError) => {
-        if (requestError.status === 404) {
-          return null
+    const requestId = penaDataRequestIdRef.current + 1
+    penaDataRequestIdRef.current = requestId
+    const isStale = () => requestId !== penaDataRequestIdRef.current
+
+    try {
+      const [active, seasonsPage, penaPlayers] = await Promise.all([
+        adminService.getActiveSeason(penaGuid).catch((requestError) => {
+          if (requestError.status === 404) {
+            return null
+          }
+          throw requestError
+        }),
+        adminService.listSeasons(penaGuid, { pageSize: 100 }),
+        loadHistoricalPlayers(penaGuid)
+      ])
+      if (isStale()) {
+        return
+      }
+
+      const seasonItems = seasonsPage.items || []
+      setActiveSeason(active)
+      setSeasonList(seasonItems)
+      setHistoricalPlayers(penaPlayers)
+
+      const nextRange = buildNextSeasonDateRange(seasonItems)
+      const pointsReference = active || seasonItems[0]
+      setSeasonForm({
+        ...nextRange,
+        points_win: pointsReference?.points_win ?? 3,
+        points_draw: pointsReference?.points_draw ?? 1,
+        points_loss: pointsReference?.points_loss ?? 0
+      })
+
+      const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
+      const resolvedSeasonGuid =
+        selectedSeasonGuid && seasonItems.some((item) => item.guid === selectedSeasonGuid)
+          ? selectedSeasonGuid
+          : fallbackSeasonGuid
+      setSelectedSeasonGuid(resolvedSeasonGuid)
+      setSelectedHistoricalGuids([])
+      setEditingMembershipPlayer(null)
+      setMembershipDraft(defaultMembershipDraft)
+      setPendingRemoveMembershipPlayer(null)
+
+      if (resolvedSeasonGuid) {
+        const standingsPage = await adminService.listStandings(penaGuid, resolvedSeasonGuid, { pageSize: 10 })
+        if (isStale()) {
+          return
         }
-        throw requestError
-      }),
-      adminService.listSeasons(penaGuid, { pageSize: 100 }),
-      loadHistoricalPlayers(penaGuid)
-    ])
-
-    const seasonItems = seasonsPage.items || []
-    setActiveSeason(active)
-    setSeasonList(seasonItems)
-    setHistoricalPlayers(penaPlayers)
-
-    const nextRange = buildNextSeasonDateRange(seasonItems)
-    const pointsReference = active || seasonItems[0]
-    setSeasonForm({
-      ...nextRange,
-      points_win: pointsReference?.points_win ?? 3,
-      points_draw: pointsReference?.points_draw ?? 1,
-      points_loss: pointsReference?.points_loss ?? 0
-    })
-
-    const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
-    const resolvedSeasonGuid =
-      selectedSeasonGuid && seasonItems.some((item) => item.guid === selectedSeasonGuid)
-        ? selectedSeasonGuid
-        : fallbackSeasonGuid
-    setSelectedSeasonGuid(resolvedSeasonGuid)
-    setSelectedHistoricalGuids([])
-    setEditingMembershipPlayer(null)
-    setMembershipDraft(defaultMembershipDraft)
-    setPendingRemoveMembershipPlayer(null)
-
-    if (resolvedSeasonGuid) {
-      await loadStandings(penaGuid, resolvedSeasonGuid)
-    } else {
-      setStandings([])
+        setStandings(standingsPage.items || [])
+      } else {
+        setStandings([])
+      }
+    } catch (requestError) {
+      if (isStale()) {
+        return
+      }
+      throw requestError
     }
   }
 
