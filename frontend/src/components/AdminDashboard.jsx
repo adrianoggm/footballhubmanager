@@ -60,6 +60,18 @@ const defaultGuestForm = () => ({
   position: ''
 })
 
+const defaultSeasonPlayerDraft = () => ({
+  wins: '0',
+  draws: '0',
+  losses: '0',
+  quality_level: '0'
+})
+
+const defaultMembershipDraft = () => ({
+  nickname: '',
+  position: ''
+})
+
 const splitGuids = (value) =>
   value
     .split(/[\n,]/g)
@@ -246,13 +258,16 @@ export default function AdminDashboard({ session, onLogout }) {
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
   const [importSourceSeasonGuid, setImportSourceSeasonGuid] = useState('')
-  const [pointsForm, setPointsForm] = useState({
-    points_win: 3,
-    points_draw: 1,
-    points_loss: 0
-  })
+  const [selectedSeasonForm, setSelectedSeasonForm] = useState(defaultSeasonForm)
   const [matchForm, setMatchForm] = useState(defaultMatchForm)
   const [guestForm, setGuestForm] = useState(defaultGuestForm)
+  const [pendingDeleteSeason, setPendingDeleteSeason] = useState(null)
+  const [editingSeasonPlayer, setEditingSeasonPlayer] = useState(null)
+  const [seasonPlayerDraft, setSeasonPlayerDraft] = useState(defaultSeasonPlayerDraft)
+  const [pendingRemoveSeasonPlayer, setPendingRemoveSeasonPlayer] = useState(null)
+  const [editingMembershipPlayer, setEditingMembershipPlayer] = useState(null)
+  const [membershipDraft, setMembershipDraft] = useState(defaultMembershipDraft)
+  const [pendingRemoveMembershipPlayer, setPendingRemoveMembershipPlayer] = useState(null)
 
   const historySeasons = useMemo(() => {
     if (!activeSeason) {
@@ -358,8 +373,9 @@ export default function AdminDashboard({ session, onLogout }) {
     setSeasonForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  const onPointsField = (name) => (event) => {
-    setPointsForm((prev) => ({ ...prev, [name]: Number(event.target.value) }))
+  const onSelectedSeasonField = (name) => (event) => {
+    const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
+    setSelectedSeasonForm((prev) => ({ ...prev, [name]: value }))
   }
 
   const onMatchField = (name) => (event) => {
@@ -389,6 +405,14 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const onGuestField = (name) => (event) => {
     setGuestForm((prev) => ({ ...prev, [name]: event.target.value }))
+  }
+
+  const onSeasonPlayerDraftField = (name) => (event) => {
+    setSeasonPlayerDraft((prev) => ({ ...prev, [name]: event.target.value }))
+  }
+
+  const onMembershipDraftField = (name) => (event) => {
+    setMembershipDraft((prev) => ({ ...prev, [name]: event.target.value }))
   }
 
   const runAction = async (action, successMessage) => {
@@ -508,6 +532,9 @@ export default function AdminDashboard({ session, onLogout }) {
         : fallbackSeasonGuid
     setSelectedSeasonGuid(resolvedSeasonGuid)
     setSelectedHistoricalGuids([])
+    setEditingMembershipPlayer(null)
+    setMembershipDraft(defaultMembershipDraft)
+    setPendingRemoveMembershipPlayer(null)
 
     if (resolvedSeasonGuid) {
       await loadStandings(penaGuid, resolvedSeasonGuid)
@@ -683,14 +710,12 @@ export default function AdminDashboard({ session, onLogout }) {
 
   useEffect(() => {
     if (!selectedSeason) {
-      setPointsForm({
-        points_win: 3,
-        points_draw: 1,
-        points_loss: 0
-      })
+      setSelectedSeasonForm(defaultSeasonForm)
       return
     }
-    setPointsForm({
+    setSelectedSeasonForm({
+      start_date: selectedSeason.start_date,
+      end_date: selectedSeason.end_date,
       points_win: selectedSeason.points_win,
       points_draw: selectedSeason.points_draw,
       points_loss: selectedSeason.points_loss
@@ -701,6 +726,10 @@ export default function AdminDashboard({ session, onLogout }) {
     setSelectedSeasonGuid(nextSeasonGuid)
     setSelectedHistoricalGuids([])
     setHiddenDeletedMatchGuids([])
+    setPendingDeleteSeason(null)
+    setEditingSeasonPlayer(null)
+    setSeasonPlayerDraft(defaultSeasonPlayerDraft)
+    setPendingRemoveSeasonPlayer(null)
     setMatchForm((prev) => ({
       ...prev,
       home_player_guids: [],
@@ -784,15 +813,55 @@ export default function AdminDashboard({ session, onLogout }) {
     }))
   }
 
-  const handleUpdateSeasonPoints = async () => {
+  const handleUpdateSelectedSeason = async () => {
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
+    if (selectedSeasonForm.start_date > selectedSeasonForm.end_date) {
+      setError(new Error(t('dashboard.admin.errors.invalidSeasonRange')))
+      return
+    }
+    const pointsValues = [
+      selectedSeasonForm.points_win,
+      selectedSeasonForm.points_draw,
+      selectedSeasonForm.points_loss
+    ]
+    const pointsValid = pointsValues.every((item) => Number.isInteger(item) && item >= 0)
+    if (!pointsValid) {
+      setError(new Error(t('dashboard.admin.errors.invalidSeasonPoints')))
+      return
+    }
     await runAction(async () => {
-      await adminService.updateSeason(selectedPenaGuid, selectedSeasonGuid, pointsForm)
+      await adminService.updateSeason(selectedPenaGuid, selectedSeasonGuid, selectedSeasonForm)
       await loadPenaData(selectedPenaGuid)
       await loadStandings(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.seasonPointsUpdated'))
+    }, t('dashboard.admin.notices.seasonUpdated'))
+  }
+
+  const handleRequestDeleteSelectedSeason = () => {
+    if (!selectedSeason) {
+      return
+    }
+    setPendingDeleteSeason(selectedSeason)
+  }
+
+  const handleCancelDeleteSeason = () => {
+    if (loading) {
+      return
+    }
+    setPendingDeleteSeason(null)
+  }
+
+  const handleDeleteSeason = async () => {
+    if (!selectedPenaGuid || !pendingDeleteSeason?.guid) {
+      return
+    }
+    const seasonToDelete = pendingDeleteSeason
+    setPendingDeleteSeason(null)
+    await runAction(async () => {
+      await adminService.deleteSeason(selectedPenaGuid, seasonToDelete.guid)
+      await loadPenaData(selectedPenaGuid)
+    }, t('dashboard.admin.notices.seasonDeleted'))
   }
 
   const handleCreateDetailedMatch = async () => {
@@ -906,6 +975,150 @@ export default function AdminDashboard({ session, onLogout }) {
       count: totalSelected,
       suffix: totalSelected === 1 ? '' : language === 'es' ? 'es' : 's'
     }))
+  }
+
+  const handleEditSeasonPlayer = (player) => {
+    setEditingSeasonPlayer(player)
+    setSeasonPlayerDraft({
+      wins: String(player.wins ?? 0),
+      draws: String(player.draws ?? 0),
+      losses: String(player.losses ?? 0),
+      quality_level: String(player.quality_level ?? 0)
+    })
+  }
+
+  const handleCloseEditSeasonPlayer = () => {
+    if (loading) {
+      return
+    }
+    setEditingSeasonPlayer(null)
+    setSeasonPlayerDraft(defaultSeasonPlayerDraft)
+  }
+
+  const handleSaveSeasonPlayer = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !editingSeasonPlayer?.player_guid) {
+      return
+    }
+    const wins = Number(seasonPlayerDraft.wins)
+    const draws = Number(seasonPlayerDraft.draws)
+    const losses = Number(seasonPlayerDraft.losses)
+    const qualityLevel = Number(seasonPlayerDraft.quality_level)
+    const invalid =
+      !Number.isInteger(wins) ||
+      wins < 0 ||
+      !Number.isInteger(draws) ||
+      draws < 0 ||
+      !Number.isInteger(losses) ||
+      losses < 0 ||
+      Number.isNaN(qualityLevel) ||
+      qualityLevel < 0
+    if (invalid) {
+      setError(new Error(t('dashboard.admin.errors.invalidSeasonPlayerStats')))
+      return
+    }
+    await runAction(async () => {
+      await adminService.updateSeasonPlayerStats(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        editingSeasonPlayer.player_guid,
+        {
+          wins,
+          draws,
+          losses,
+          quality_level: qualityLevel
+        }
+      )
+      await Promise.all([
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+        loadStandings(selectedPenaGuid, selectedSeasonGuid)
+      ])
+      setEditingSeasonPlayer(null)
+      setSeasonPlayerDraft(defaultSeasonPlayerDraft)
+    }, t('dashboard.admin.notices.seasonPlayerUpdated'))
+  }
+
+  const handleRequestRemoveSeasonPlayer = (player) => {
+    setPendingRemoveSeasonPlayer(player)
+  }
+
+  const handleCancelRemoveSeasonPlayer = () => {
+    if (loading) {
+      return
+    }
+    setPendingRemoveSeasonPlayer(null)
+  }
+
+  const handleRemoveSeasonPlayer = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !pendingRemoveSeasonPlayer?.player_guid) {
+      return
+    }
+    const playerToRemove = pendingRemoveSeasonPlayer
+    setPendingRemoveSeasonPlayer(null)
+    await runAction(async () => {
+      await adminService.unregisterSeasonPlayer(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        playerToRemove.player_guid
+      )
+      await Promise.all([
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+        loadStandings(selectedPenaGuid, selectedSeasonGuid)
+      ])
+    }, t('dashboard.admin.notices.seasonPlayerRemoved'))
+  }
+
+  const handleEditMembershipPlayer = (player) => {
+    setEditingMembershipPlayer(player)
+    setMembershipDraft({
+      nickname: player.nickname || '',
+      position: player.position || ''
+    })
+  }
+
+  const handleCloseEditMembershipPlayer = () => {
+    if (loading) {
+      return
+    }
+    setEditingMembershipPlayer(null)
+    setMembershipDraft(defaultMembershipDraft)
+  }
+
+  const handleSaveMembershipPlayer = async () => {
+    if (!selectedPenaGuid || !editingMembershipPlayer?.guid) {
+      return
+    }
+    await runAction(async () => {
+      await adminService.updatePenaPlayerMembership(selectedPenaGuid, editingMembershipPlayer.guid, {
+        nickname: membershipDraft.nickname.trim() || null,
+        position: membershipDraft.position.trim() || null
+      })
+      await loadPenaData(selectedPenaGuid)
+      setEditingMembershipPlayer(null)
+      setMembershipDraft(defaultMembershipDraft)
+    }, t('dashboard.admin.notices.membershipUpdatedByAdmin'))
+  }
+
+  const handleRequestRemoveMembershipPlayer = (player) => {
+    setPendingRemoveMembershipPlayer(player)
+  }
+
+  const handleCancelRemoveMembershipPlayer = () => {
+    if (loading) {
+      return
+    }
+    setPendingRemoveMembershipPlayer(null)
+  }
+
+  const handleRemoveMembershipPlayer = async () => {
+    if (!selectedPenaGuid || !pendingRemoveMembershipPlayer?.guid) {
+      return
+    }
+    const playerToRemove = pendingRemoveMembershipPlayer
+    setPendingRemoveMembershipPlayer(null)
+    await runAction(async () => {
+      await adminService.removePenaPlayerMembership(selectedPenaGuid, playerToRemove.guid)
+      await loadPenaData(selectedPenaGuid)
+    }, t('dashboard.admin.notices.membershipRemovedByAdmin'))
   }
 
   const handleRefreshStandings = async () => {
@@ -1558,40 +1771,74 @@ export default function AdminDashboard({ session, onLogout }) {
 
                   <Divider />
 
-                  <Typography variant="subtitle1">{t('dashboard.admin.seasons.scoringRulesTitle')}</Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <TextField
-                      type="number"
-                      label={t('dashboard.admin.seasons.winPoints')}
-                      value={pointsForm.points_win}
-                      onChange={onPointsField('points_win')}
-                      fullWidth
-                      disabled={!selectedSeasonGuid}
-                    />
-                    <TextField
-                      type="number"
-                      label={t('dashboard.admin.seasons.drawPoints')}
-                      value={pointsForm.points_draw}
-                      onChange={onPointsField('points_draw')}
-                      fullWidth
-                      disabled={!selectedSeasonGuid}
-                    />
-                    <TextField
-                      type="number"
-                      label={t('dashboard.admin.seasons.lossPoints')}
-                      value={pointsForm.points_loss}
-                      onChange={onPointsField('points_loss')}
-                      fullWidth
-                      disabled={!selectedSeasonGuid}
-                    />
-                  </Stack>
-                  <Button
-                    variant="outlined"
-                    onClick={handleUpdateSeasonPoints}
-                    disabled={loading || !selectedSeasonGuid}
-                  >
-                    {t('dashboard.admin.seasons.saveScoringRules')}
-                  </Button>
+                  <Typography variant="subtitle1">{t('dashboard.admin.seasons.selectedSeasonConfigTitle')}</Typography>
+                  {!selectedSeasonGuid && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.seasons.selectSeasonHint')}
+                    </Typography>
+                  )}
+                  {selectedSeasonGuid && (
+                    <>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                        <TextField
+                          type="date"
+                          label={t('dashboard.admin.seasons.startDate')}
+                          InputLabelProps={{ shrink: true }}
+                          value={selectedSeasonForm.start_date}
+                          onChange={onSelectedSeasonField('start_date')}
+                          fullWidth
+                        />
+                        <TextField
+                          type="date"
+                          label={t('dashboard.admin.seasons.endDate')}
+                          InputLabelProps={{ shrink: true }}
+                          value={selectedSeasonForm.end_date}
+                          onChange={onSelectedSeasonField('end_date')}
+                          fullWidth
+                        />
+                      </Stack>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                        <TextField
+                          type="number"
+                          label={t('dashboard.admin.seasons.winPoints')}
+                          value={selectedSeasonForm.points_win}
+                          onChange={onSelectedSeasonField('points_win')}
+                          fullWidth
+                        />
+                        <TextField
+                          type="number"
+                          label={t('dashboard.admin.seasons.drawPoints')}
+                          value={selectedSeasonForm.points_draw}
+                          onChange={onSelectedSeasonField('points_draw')}
+                          fullWidth
+                        />
+                        <TextField
+                          type="number"
+                          label={t('dashboard.admin.seasons.lossPoints')}
+                          value={selectedSeasonForm.points_loss}
+                          onChange={onSelectedSeasonField('points_loss')}
+                          fullWidth
+                        />
+                      </Stack>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleUpdateSelectedSeason}
+                          disabled={loading || !selectedSeasonGuid}
+                        >
+                          {t('dashboard.admin.seasons.saveSelectedSeason')}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={handleRequestDeleteSelectedSeason}
+                          disabled={loading || !selectedSeasonGuid}
+                        >
+                          {t('dashboard.admin.seasons.deleteSelectedSeason')}
+                        </Button>
+                      </Stack>
+                    </>
+                  )}
                 </Stack>
               </CardContent>
             </Card>
@@ -1741,6 +1988,7 @@ export default function AdminDashboard({ session, onLogout }) {
                             <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
+                            <TableCell>{t('dashboard.admin.players.actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1756,11 +2004,32 @@ export default function AdminDashboard({ session, onLogout }) {
                               <TableCell align="right">{player.goals ?? 0}</TableCell>
                               <TableCell align="right">{player.assists ?? 0}</TableCell>
                               <TableCell align="right">{player.points}</TableCell>
+                              <TableCell>
+                                <Stack direction="row" spacing={1}>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    onClick={() => handleEditSeasonPlayer(player)}
+                                    disabled={loading}
+                                  >
+                                    {t('dashboard.admin.players.editSeasonPlayer')}
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    color="error"
+                                    onClick={() => handleRequestRemoveSeasonPlayer(player)}
+                                    disabled={loading}
+                                  >
+                                    {t('dashboard.admin.players.removeFromSeason')}
+                                  </Button>
+                                </Stack>
+                              </TableCell>
                             </TableRow>
                           ))}
                           {!seasonRoster.length && (
                             <TableRow>
-                              <TableCell colSpan={8}>
+                              <TableCell colSpan={9}>
                                 {t('dashboard.admin.players.noPlayersInSeason')}
                               </TableCell>
                             </TableRow>
@@ -1775,86 +2044,148 @@ export default function AdminDashboard({ session, onLogout }) {
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.guest.description')}
-                  </Typography>
-                  <TextField
-                    label={t('dashboard.admin.guest.name')}
-                    value={guestForm.name}
-                    onChange={onGuestField('name')}
-                    fullWidth
-                  />
-                  <TextField
-                    label={t('dashboard.admin.guest.surname1')}
-                    value={guestForm.surname1}
-                    onChange={onGuestField('surname1')}
-                    fullWidth
-                  />
-                  <TextField
-                    label={t('dashboard.admin.guest.surname2')}
-                    value={guestForm.surname2}
-                    onChange={onGuestField('surname2')}
-                    fullWidth
-                  />
-                  {nationalities.length > 0 ? (
+            <Stack spacing={2.5}>
+              <Card>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.guest.description')}
+                    </Typography>
                     <TextField
-                      select
-                      label={t('dashboard.admin.guest.nationality')}
-                      value={guestForm.nationality}
-                      onChange={onGuestField('nationality')}
-                      fullWidth
-                    >
-                      {nationalities.map((nationality) => (
-                        <MenuItem key={nationality} value={nationality}>
-                          {nationality}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    <TextField
-                      label={t('dashboard.admin.guest.nationality')}
-                      value={guestForm.nationality}
-                      onChange={onGuestField('nationality')}
-                      fullWidth
-                    />
-                  )}
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <TextField
-                      label={t('dashboard.admin.guest.nickname')}
-                      value={guestForm.nickname}
-                      onChange={onGuestField('nickname')}
+                      label={t('dashboard.admin.guest.name')}
+                      value={guestForm.name}
+                      onChange={onGuestField('name')}
                       fullWidth
                     />
                     <TextField
-                      label={t('dashboard.admin.guest.position')}
-                      value={guestForm.position}
-                      onChange={onGuestField('position')}
+                      label={t('dashboard.admin.guest.surname1')}
+                      value={guestForm.surname1}
+                      onChange={onGuestField('surname1')}
                       fullWidth
                     />
+                    <TextField
+                      label={t('dashboard.admin.guest.surname2')}
+                      value={guestForm.surname2}
+                      onChange={onGuestField('surname2')}
+                      fullWidth
+                    />
+                    {nationalities.length > 0 ? (
+                      <TextField
+                        select
+                        label={t('dashboard.admin.guest.nationality')}
+                        value={guestForm.nationality}
+                        onChange={onGuestField('nationality')}
+                        fullWidth
+                      >
+                        {nationalities.map((nationality) => (
+                          <MenuItem key={nationality} value={nationality}>
+                            {nationality}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    ) : (
+                      <TextField
+                        label={t('dashboard.admin.guest.nationality')}
+                        value={guestForm.nationality}
+                        onChange={onGuestField('nationality')}
+                        fullWidth
+                      />
+                    )}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <TextField
+                        label={t('dashboard.admin.guest.nickname')}
+                        value={guestForm.nickname}
+                        onChange={onGuestField('nickname')}
+                        fullWidth
+                      />
+                      <TextField
+                        label={t('dashboard.admin.guest.position')}
+                        value={guestForm.position}
+                        onChange={onGuestField('position')}
+                        fullWidth
+                      />
+                    </Stack>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => handleCreateGuestPlayer(false)}
+                        disabled={loading}
+                      >
+                        {t('dashboard.admin.guest.createGuest')}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleCreateGuestPlayer(true)}
+                        disabled={loading || !selectedSeasonGuid}
+                      >
+                        {t('dashboard.admin.guest.createAndAdd')}
+                      </Button>
+                    </Stack>
                   </Stack>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleCreateGuestPlayer(false)}
-                      disabled={loading}
-                    >
-                      {t('dashboard.admin.guest.createGuest')}
-                    </Button>
-                    <Button
-                      variant="contained"
-                      onClick={() => handleCreateGuestPlayer(true)}
-                      disabled={loading || !selectedSeasonGuid}
-                    >
-                      {t('dashboard.admin.guest.createAndAdd')}
-                    </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <Stack spacing={1.5}>
+                    <Typography variant="h6">{t('dashboard.admin.members.title')}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.members.description')}
+                    </Typography>
+                    {!historicalPlayers.length && (
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.members.noMembers')}
+                      </Typography>
+                    )}
+                    {historicalPlayers.length > 0 && (
+                      <TableContainer>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                              <TableCell>{t('dashboard.admin.members.nickname')}</TableCell>
+                              <TableCell>{t('dashboard.admin.members.position')}</TableCell>
+                              <TableCell>{t('dashboard.admin.members.actions')}</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {historicalPlayers.map((player) => (
+                              <TableRow key={player.guid}>
+                                <TableCell>{[player.name, player.surname1, player.surname2].filter(Boolean).join(' ')}</TableCell>
+                                <TableCell>{player.nickname || '-'}</TableCell>
+                                <TableCell>{player.position || '-'}</TableCell>
+                                <TableCell>
+                                  <Stack direction="row" spacing={1}>
+                                    <Button
+                                      size="small"
+                                      variant="text"
+                                      onClick={() => handleEditMembershipPlayer(player)}
+                                      disabled={loading}
+                                    >
+                                      {t('dashboard.admin.members.edit')}
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      variant="text"
+                                      color="error"
+                                      onClick={() => handleRequestRemoveMembershipPlayer(player)}
+                                      disabled={loading}
+                                    >
+                                      {t('dashboard.admin.members.remove')}
+                                    </Button>
+                                  </Stack>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    )}
                   </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Stack>
           </Grid>
         </Grid>
       )}
@@ -2305,6 +2636,209 @@ export default function AdminDashboard({ session, onLogout }) {
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={Boolean(pendingDeleteSeason)}
+        onClose={handleCancelDeleteSeason}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('dashboard.admin.seasons.deleteSeasonTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingDeleteSeason
+              ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
+                season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`
+              })
+              : ''}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDeleteSeason} disabled={loading}>
+            {t('dashboard.admin.seasons.cancelDeleteSeason')}
+          </Button>
+          <Button
+            onClick={handleDeleteSeason}
+            color="error"
+            variant="contained"
+            disabled={loading}
+          >
+            {t('dashboard.admin.seasons.deleteSelectedSeason')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingSeasonPlayer)}
+        onClose={handleCloseEditSeasonPlayer}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t('dashboard.admin.players.editSeasonPlayerTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {editingSeasonPlayer
+              ? t('dashboard.admin.players.editSeasonPlayerDescription', {
+                player: formatPlayerDisplayName(editingSeasonPlayer)
+              })
+              : ''}
+          </DialogContentText>
+          <Stack spacing={1.5}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <TextField
+                type="number"
+                label={t('dashboard.admin.table.w')}
+                value={seasonPlayerDraft.wins}
+                onChange={onSeasonPlayerDraftField('wins')}
+                inputProps={{ min: 0 }}
+                fullWidth
+              />
+              <TextField
+                type="number"
+                label={t('dashboard.admin.table.d')}
+                value={seasonPlayerDraft.draws}
+                onChange={onSeasonPlayerDraftField('draws')}
+                inputProps={{ min: 0 }}
+                fullWidth
+              />
+              <TextField
+                type="number"
+                label={t('dashboard.admin.table.l')}
+                value={seasonPlayerDraft.losses}
+                onChange={onSeasonPlayerDraftField('losses')}
+                inputProps={{ min: 0 }}
+                fullWidth
+              />
+            </Stack>
+            <TextField
+              type="number"
+              label={t('dashboard.admin.players.qualityLevel')}
+              value={seasonPlayerDraft.quality_level}
+              onChange={onSeasonPlayerDraftField('quality_level')}
+              inputProps={{ min: 0, step: 0.1 }}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditSeasonPlayer} disabled={loading}>
+            {t('dashboard.admin.players.cancelEditSeasonPlayer')}
+          </Button>
+          <Button onClick={handleSaveSeasonPlayer} variant="contained" disabled={loading}>
+            {t('dashboard.admin.players.saveSeasonPlayer')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pendingRemoveSeasonPlayer)}
+        onClose={handleCancelRemoveSeasonPlayer}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('dashboard.admin.players.removeSeasonPlayerTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingRemoveSeasonPlayer
+              ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
+                player: formatPlayerDisplayName(pendingRemoveSeasonPlayer)
+              })
+              : ''}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelRemoveSeasonPlayer} disabled={loading}>
+            {t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
+          </Button>
+          <Button
+            onClick={handleRemoveSeasonPlayer}
+            variant="contained"
+            color="error"
+            disabled={loading}
+          >
+            {t('dashboard.admin.players.removeFromSeason')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingMembershipPlayer)}
+        onClose={handleCloseEditMembershipPlayer}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t('dashboard.admin.members.editTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {editingMembershipPlayer
+              ? t('dashboard.admin.members.editDescription', {
+                player: [editingMembershipPlayer.name, editingMembershipPlayer.surname1, editingMembershipPlayer.surname2]
+                  .filter(Boolean)
+                  .join(' ')
+              })
+              : ''}
+          </DialogContentText>
+          <Stack spacing={1.5}>
+            <TextField
+              label={t('dashboard.admin.members.nickname')}
+              value={membershipDraft.nickname}
+              onChange={onMembershipDraftField('nickname')}
+              fullWidth
+            />
+            <TextField
+              label={t('dashboard.admin.members.position')}
+              value={membershipDraft.position}
+              onChange={onMembershipDraftField('position')}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditMembershipPlayer} disabled={loading}>
+            {t('dashboard.admin.members.cancelEdit')}
+          </Button>
+          <Button onClick={handleSaveMembershipPlayer} variant="contained" disabled={loading}>
+            {t('dashboard.admin.members.saveEdit')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pendingRemoveMembershipPlayer)}
+        onClose={handleCancelRemoveMembershipPlayer}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('dashboard.admin.members.removeTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingRemoveMembershipPlayer
+              ? t('dashboard.admin.members.removeConfirm', {
+                player: [
+                  pendingRemoveMembershipPlayer.name,
+                  pendingRemoveMembershipPlayer.surname1,
+                  pendingRemoveMembershipPlayer.surname2
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+              })
+              : ''}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelRemoveMembershipPlayer} disabled={loading}>
+            {t('dashboard.admin.members.cancelRemove')}
+          </Button>
+          <Button
+            onClick={handleRemoveMembershipPlayer}
+            variant="contained"
+            color="error"
+            disabled={loading}
+          >
+            {t('dashboard.admin.members.remove')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(pendingDeleteMatch)}

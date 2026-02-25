@@ -38,6 +38,10 @@ export class AdminService {
     return httpClient.patch(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}`, payload)
   }
 
+  deleteSeason(penaGuid, seasonGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}`)
+  }
+
   listPenaPlayers(penaGuid, { page = 1, pageSize = 100, search = '' } = {}) {
     const query = toQueryString({ page, page_size: pageSize, search })
     return httpClient.get(`${API_V1}/penas/${penaGuid}/players${query}`)
@@ -128,6 +132,25 @@ export class AdminService {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/bulk`, {
       player_guids: playerGuids
     })
+  }
+
+  updateSeasonPlayerStats(penaGuid, seasonGuid, playerGuid, payload) {
+    return httpClient.patch(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/${playerGuid}`,
+      payload
+    )
+  }
+
+  unregisterSeasonPlayer(penaGuid, seasonGuid, playerGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/${playerGuid}`)
+  }
+
+  updatePenaPlayerMembership(penaGuid, playerGuid, payload) {
+    return httpClient.patch(`${API_V1}/penas/${penaGuid}/players/${playerGuid}`, payload)
+  }
+
+  removePenaPlayerMembership(penaGuid, playerGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/players/${playerGuid}`)
   }
 
   getNationalities() {

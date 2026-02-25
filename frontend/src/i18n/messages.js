@@ -163,8 +163,14 @@ export const messages = {
           importSourceEmpty: 'There are no seasons available to import from.',
           createSeason: 'Create Season',
           overlapHint: 'New seasons must not overlap existing date ranges.',
-          scoringRulesTitle: 'Selected Season Scoring Rules',
-          saveScoringRules: 'Save Scoring Rules',
+          selectedSeasonConfigTitle: 'Selected Season Configuration',
+          selectSeasonHint: 'Select a season to edit its data.',
+          saveSelectedSeason: 'Save Selected Season',
+          deleteSelectedSeason: 'Delete Selected Season',
+          deleteSeasonTitle: 'Delete season',
+          deleteSeasonConfirm:
+            'Delete season {season}? This may fail if there are dependent records.',
+          cancelDeleteSeason: 'Cancel',
           historyTitle: 'Season History',
           noHistory: 'No previous seasons found.',
           historyPoints: 'W:{win} / D:{draw} / L:{loss}',
@@ -181,7 +187,19 @@ export const messages = {
           helperNone: 'All historical members are already in this season.',
           addSelectedToSeason: 'Add Selected To Season',
           registeredAvailable: 'Registered: {registered} | Available: {available}',
-          noPlayersInSeason: 'No players registered in this season yet.'
+          noPlayersInSeason: 'No players registered in this season yet.',
+          actions: 'Actions',
+          editSeasonPlayer: 'Edit stats',
+          removeFromSeason: 'Remove',
+          editSeasonPlayerTitle: 'Edit season player',
+          editSeasonPlayerDescription: 'Update stats for {player}.',
+          qualityLevel: 'Quality level',
+          cancelEditSeasonPlayer: 'Cancel',
+          saveSeasonPlayer: 'Save',
+          removeSeasonPlayerTitle: 'Remove player from season',
+          removeSeasonPlayerConfirm:
+            'Remove {player} from selected season? This action can be blocked if the player already has matches.',
+          cancelRemoveSeasonPlayer: 'Cancel'
         },
         guest: {
           title: 'Guest Players',
@@ -194,6 +212,23 @@ export const messages = {
           position: 'Position',
           createGuest: 'Create Guest',
           createAndAdd: 'Create + Add To Season'
+        },
+        members: {
+          title: 'Pena Members',
+          description: 'Manage nickname/position and remove memberships as admin.',
+          noMembers: 'No members linked to this pena yet.',
+          nickname: 'Nickname',
+          position: 'Position',
+          actions: 'Actions',
+          edit: 'Edit',
+          remove: 'Remove',
+          editTitle: 'Edit membership',
+          editDescription: 'Update membership data for {player}.',
+          cancelEdit: 'Cancel',
+          saveEdit: 'Save',
+          removeTitle: 'Remove membership',
+          removeConfirm: 'Remove {player} from this pena?',
+          cancelRemove: 'Cancel'
         },
         matches: {
           title: 'Create Match + Lineups',
@@ -268,7 +303,8 @@ export const messages = {
         notices: {
           seasonCreated: 'Season created',
           seasonCreatedWithImported: 'Season created and {count} players imported',
-          seasonPointsUpdated: 'Season points updated',
+          seasonUpdated: 'Season updated',
+          seasonDeleted: 'Season deleted',
           detailedMatchCreated: 'Detailed match created',
           matchDeleted: 'Match deleted',
           matchResultUpdated: 'Match result updated',
@@ -278,6 +314,10 @@ export const messages = {
           guestCreatedAdded: 'Guest created and added to selected season',
           guestCreated: 'Guest player created',
           playersAdded: '{count} player{suffix} added to season',
+          seasonPlayerUpdated: 'Season player updated',
+          seasonPlayerRemoved: 'Player removed from season',
+          membershipUpdatedByAdmin: 'Membership updated',
+          membershipRemovedByAdmin: 'Membership removed',
           standingsUpdated: 'Standings updated'
         },
         errors: {
@@ -286,6 +326,10 @@ export const messages = {
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
             'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
+          invalidSeasonRange: 'Season start date must be before or equal to end date',
+          invalidSeasonPoints: 'Season points must be integers greater than or equal to zero',
+          invalidSeasonPlayerStats:
+            'Wins/draws/losses must be integers >= 0 and quality level must be >= 0',
           selectedSeasonRequired:
             'Select a season to complete this action'
         }
@@ -500,8 +544,14 @@ export const messages = {
           importSourceEmpty: 'No hay temporadas disponibles para importar jugadores.',
           createSeason: 'Crear temporada',
           overlapHint: 'Las nuevas temporadas no pueden solaparse con rangos existentes.',
-          scoringRulesTitle: 'Reglas de puntuación de la temporada seleccionada',
-          saveScoringRules: 'Guardar reglas de puntuación',
+          selectedSeasonConfigTitle: 'Configuración de la temporada seleccionada',
+          selectSeasonHint: 'Selecciona una temporada para editar sus datos.',
+          saveSelectedSeason: 'Guardar temporada seleccionada',
+          deleteSelectedSeason: 'Eliminar temporada seleccionada',
+          deleteSeasonTitle: 'Eliminar temporada',
+          deleteSeasonConfirm:
+            '¿Eliminar la temporada {season}? Esta acción puede fallar si hay datos dependientes.',
+          cancelDeleteSeason: 'Cancelar',
           historyTitle: 'Histórico de temporadas',
           noHistory: 'No se encontraron temporadas anteriores.',
           historyPoints: 'V:{win} / E:{draw} / D:{loss}',
@@ -519,7 +569,19 @@ export const messages = {
           helperNone: 'Todos los miembros históricos ya están en esta temporada.',
           addSelectedToSeason: 'Añadir seleccionados a la temporada',
           registeredAvailable: 'Registrados: {registered} | Disponibles: {available}',
-          noPlayersInSeason: 'Aún no hay jugadores registrados en esta temporada.'
+          noPlayersInSeason: 'Aún no hay jugadores registrados en esta temporada.',
+          actions: 'Acciones',
+          editSeasonPlayer: 'Editar stats',
+          removeFromSeason: 'Quitar',
+          editSeasonPlayerTitle: 'Editar jugador de temporada',
+          editSeasonPlayerDescription: 'Actualiza estadísticas de {player}.',
+          qualityLevel: 'Nivel de calidad',
+          cancelEditSeasonPlayer: 'Cancelar',
+          saveSeasonPlayer: 'Guardar',
+          removeSeasonPlayerTitle: 'Quitar jugador de temporada',
+          removeSeasonPlayerConfirm:
+            '¿Quitar a {player} de la temporada seleccionada? Esta acción puede bloquearse si ya tiene partidos.',
+          cancelRemoveSeasonPlayer: 'Cancelar'
         },
         guest: {
           title: 'Jugadores invitados',
@@ -532,6 +594,23 @@ export const messages = {
           position: 'Posición',
           createGuest: 'Crear invitado',
           createAndAdd: 'Crear + añadir a temporada'
+        },
+        members: {
+          title: 'Miembros de la peña',
+          description: 'Gestiona apodo/posición y elimina membresías como admin.',
+          noMembers: 'Todavía no hay miembros vinculados a esta peña.',
+          nickname: 'Apodo',
+          position: 'Posición',
+          actions: 'Acciones',
+          edit: 'Editar',
+          remove: 'Eliminar',
+          editTitle: 'Editar membresía',
+          editDescription: 'Actualiza los datos de membresía de {player}.',
+          cancelEdit: 'Cancelar',
+          saveEdit: 'Guardar',
+          removeTitle: 'Eliminar membresía',
+          removeConfirm: '¿Eliminar a {player} de esta peña?',
+          cancelRemove: 'Cancelar'
         },
         matches: {
           title: 'Crear partido + alineaciones',
@@ -606,7 +685,8 @@ export const messages = {
         notices: {
           seasonCreated: 'Temporada creada',
           seasonCreatedWithImported: 'Temporada creada y {count} jugadores importados',
-          seasonPointsUpdated: 'Puntuación de temporada actualizada',
+          seasonUpdated: 'Temporada actualizada',
+          seasonDeleted: 'Temporada eliminada',
           detailedMatchCreated: 'Partido detallado creado',
           matchDeleted: 'Partido eliminado',
           matchResultUpdated: 'Resultado del partido actualizado',
@@ -616,6 +696,10 @@ export const messages = {
           guestCreatedAdded: 'Invitado creado y añadido a la temporada seleccionada',
           guestCreated: 'Jugador invitado creado',
           playersAdded: '{count} jugador{suffix} añadido a la temporada',
+          seasonPlayerUpdated: 'Jugador de temporada actualizado',
+          seasonPlayerRemoved: 'Jugador quitado de la temporada',
+          membershipUpdatedByAdmin: 'Membresía actualizada',
+          membershipRemovedByAdmin: 'Membresía eliminada',
           standingsUpdated: 'Clasificación actualizada'
         },
         errors: {
@@ -627,6 +711,12 @@ export const messages = {
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
             'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
+          invalidSeasonRange:
+            'La fecha de inicio de temporada debe ser anterior o igual a la fecha de fin',
+          invalidSeasonPoints:
+            'Los puntos de temporada deben ser enteros mayores o iguales a cero',
+          invalidSeasonPlayerStats:
+            'Victorias/empates/derrotas deben ser enteros >= 0 y el nivel de calidad debe ser >= 0',
           selectedSeasonRequired:
             'Selecciona una temporada para completar esta acción'
         }
