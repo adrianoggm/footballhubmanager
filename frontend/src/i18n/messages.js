@@ -156,13 +156,20 @@ export const messages = {
           winPoints: 'Win points',
           drawPoints: 'Draw points',
           lossPoints: 'Loss points',
+          importPreviousToggle: 'Import players from previous season',
+          importSourceLabel: 'Source season',
+          importSourceHelper:
+            'Players registered in the source season will be copied into the new season.',
+          importSourceEmpty: 'There are no seasons available to import from.',
           createSeason: 'Create Season',
           overlapHint: 'New seasons must not overlap existing date ranges.',
-          scoringRulesTitle: 'Active Season Scoring Rules',
+          scoringRulesTitle: 'Selected Season Scoring Rules',
           saveScoringRules: 'Save Scoring Rules',
           historyTitle: 'Season History',
           noHistory: 'No previous seasons found.',
-          historyPoints: 'W:{win} / D:{draw} / L:{loss}'
+          historyPoints: 'W:{win} / D:{draw} / L:{loss}',
+          selectSeasonAction: 'Use season',
+          selectedSeasonAction: 'Selected'
         },
         players: {
           squadTitle: 'Season Squad Management',
@@ -248,7 +255,7 @@ export const messages = {
           matchCreated: 'Match {guid} created for {date}.',
           lineupHelperTitle: 'Lineup Helper',
           lineupHelperDescription:
-            'Select players from the active season roster to compose lineups.',
+            'Select players from the selected season roster to compose lineups.',
           lineupHelperSelectSeason: 'Select a season to display roster players.',
           noPlayersAvailable: 'No players available in the selected season.'
         },
@@ -260,6 +267,7 @@ export const messages = {
         },
         notices: {
           seasonCreated: 'Season created',
+          seasonCreatedWithImported: 'Season created and {count} players imported',
           seasonPointsUpdated: 'Season points updated',
           detailedMatchCreated: 'Detailed match created',
           matchDeleted: 'Match deleted',
@@ -267,7 +275,7 @@ export const messages = {
           matchStatsUpdated: 'Match stats updated',
           lineupsUpdated: 'Lineups updated',
           joinCodeGenerated: 'Join code generated',
-          guestCreatedAdded: 'Guest created and added to active season',
+          guestCreatedAdded: 'Guest created and added to selected season',
           guestCreated: 'Guest player created',
           playersAdded: '{count} player{suffix} added to season',
           standingsUpdated: 'Standings updated'
@@ -278,8 +286,8 @@ export const messages = {
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
             'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
-          activeSeasonRequired:
-            'An active season is required to register a guest into season standings'
+          selectedSeasonRequired:
+            'Select a season to complete this action'
         }
       },
       user: {
@@ -485,13 +493,20 @@ export const messages = {
           winPoints: 'Puntos por victoria',
           drawPoints: 'Puntos por empate',
           lossPoints: 'Puntos por derrota',
+          importPreviousToggle: 'Importar jugadores desde una temporada anterior',
+          importSourceLabel: 'Temporada origen',
+          importSourceHelper:
+            'Los jugadores registrados en la temporada origen se copiarán a la nueva temporada.',
+          importSourceEmpty: 'No hay temporadas disponibles para importar jugadores.',
           createSeason: 'Crear temporada',
           overlapHint: 'Las nuevas temporadas no pueden solaparse con rangos existentes.',
-          scoringRulesTitle: 'Reglas de puntuación de la temporada activa',
+          scoringRulesTitle: 'Reglas de puntuación de la temporada seleccionada',
           saveScoringRules: 'Guardar reglas de puntuación',
           historyTitle: 'Histórico de temporadas',
           noHistory: 'No se encontraron temporadas anteriores.',
-          historyPoints: 'V:{win} / E:{draw} / D:{loss}'
+          historyPoints: 'V:{win} / E:{draw} / D:{loss}',
+          selectSeasonAction: 'Usar temporada',
+          selectedSeasonAction: 'Seleccionada'
         },
         players: {
           squadTitle: 'Gestión de plantilla por temporada',
@@ -578,7 +593,7 @@ export const messages = {
           matchCreated: 'Partido {guid} creado para {date}.',
           lineupHelperTitle: 'Asistente de alineación',
           lineupHelperDescription:
-            'Selecciona jugadores de la plantilla activa para componer alineaciones.',
+            'Selecciona jugadores de la plantilla de la temporada seleccionada para componer alineaciones.',
           lineupHelperSelectSeason: 'Selecciona una temporada para mostrar jugadores de plantilla.',
           noPlayersAvailable: 'No hay jugadores disponibles en la temporada seleccionada.'
         },
@@ -590,6 +605,7 @@ export const messages = {
         },
         notices: {
           seasonCreated: 'Temporada creada',
+          seasonCreatedWithImported: 'Temporada creada y {count} jugadores importados',
           seasonPointsUpdated: 'Puntuación de temporada actualizada',
           detailedMatchCreated: 'Partido detallado creado',
           matchDeleted: 'Partido eliminado',
@@ -597,7 +613,7 @@ export const messages = {
           matchStatsUpdated: 'Estadísticas del partido actualizadas',
           lineupsUpdated: 'Convocatorias actualizadas',
           joinCodeGenerated: 'Código de acceso generado',
-          guestCreatedAdded: 'Invitado creado y añadido a la temporada activa',
+          guestCreatedAdded: 'Invitado creado y añadido a la temporada seleccionada',
           guestCreated: 'Jugador invitado creado',
           playersAdded: '{count} jugador{suffix} añadido a la temporada',
           standingsUpdated: 'Clasificación actualizada'
@@ -611,8 +627,8 @@ export const messages = {
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
             'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
-          activeSeasonRequired:
-            'Se requiere una temporada activa para registrar un invitado en la clasificación'
+          selectedSeasonRequired:
+            'Selecciona una temporada para completar esta acción'
         }
       },
       user: {
