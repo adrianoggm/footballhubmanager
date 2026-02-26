@@ -201,7 +201,7 @@ export default function UserDashboard({ session, onLogout }) {
       })
     }, t('dashboard.user.noticeProfileUpdated'))
   }
-
+4
   const handleJoinPena = async () => {
     const token = joinForm.token.trim()
     if (!token) {
