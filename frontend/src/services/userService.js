@@ -23,6 +23,27 @@ export class UserService {
     return httpClient.get(`${API_V1}/players/me/penas/${penaGuid}`)
   }
 
+  listSeasons(penaGuid, { page = 1, pageSize = 100 } = {}) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons?page=${page}&page_size=${pageSize}`)
+  }
+
+  getActiveSeason(penaGuid, atDate) {
+    const query = atDate ? `?at_date=${encodeURIComponent(atDate)}` : ''
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/active${query}`)
+  }
+
+  listSeasonMatches(penaGuid, seasonGuid, { page = 1, pageSize = 100 } = {}) {
+    return httpClient.get(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches?page=${page}&page_size=${pageSize}`
+    )
+  }
+
+  listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20 } = {}) {
+    return httpClient.get(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings?page=${page}&page_size=${pageSize}`
+    )
+  }
+
   updateMyMembership(penaGuid, payload) {
     return httpClient.patch(`${API_V1}/penas/${penaGuid}/players/me`, payload)
   }
