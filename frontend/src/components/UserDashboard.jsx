@@ -5,6 +5,10 @@ import {
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   LinearProgress,
   MenuItem,
@@ -69,6 +73,7 @@ export default function UserDashboard({ session, onLogout }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState('')
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
 
   const [profile, setProfile] = useState(null)
   const [profileForm, setProfileForm] = useState(defaultProfileForm)
@@ -101,6 +106,17 @@ export default function UserDashboard({ session, onLogout }) {
     () => (error ? mapDashboardErrorMessage(error, t) : ''),
     [error, t]
   )
+  const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
+  const currentStanding = useMemo(() => {
+    if (!currentPlayerGuid || standings.length === 0) {
+      return null
+    }
+    const index = standings.findIndex((item) => item.player_guid === currentPlayerGuid)
+    if (index < 0) {
+      return null
+    }
+    return { ...standings[index], rank: index + 1 }
+  }, [standings, currentPlayerGuid])
 
   const runAction = async (action, successMessage = '') => {
     setLoading(true)
@@ -111,12 +127,14 @@ export default function UserDashboard({ session, onLogout }) {
       if (successMessage) {
         setNotice(successMessage)
       }
+      return true
     } catch (actionError) {
       if (actionError?.status === 401) {
         await onLogout()
-        return
+        return false
       }
       setError(actionError)
+      return false
     } finally {
       setLoading(false)
     }
@@ -320,6 +338,18 @@ export default function UserDashboard({ session, onLogout }) {
     setProfileForm((prev) => ({ ...prev, [name]: event.target.value }))
   }
 
+  const openProfileSettings = () => {
+    if (profile) {
+      setProfileForm({
+        name: asText(profile.name),
+        surname1: asText(profile.surname1),
+        surname2: asText(profile.surname2),
+        nationality: asText(profile.nationality)
+      })
+    }
+    setProfileSettingsOpen(true)
+  }
+
   const onMembershipField = (name) => (event) => {
     setMembershipForm((prev) => ({ ...prev, [name]: event.target.value }))
   }
@@ -329,7 +359,7 @@ export default function UserDashboard({ session, onLogout }) {
   }
 
   const handleUpdateProfile = async () => {
-    await runAction(async () => {
+    return runAction(async () => {
       const updatedProfile = await userService.updateMyProfile(profileForm)
       setProfile(updatedProfile)
       setProfileForm({
@@ -339,6 +369,13 @@ export default function UserDashboard({ session, onLogout }) {
         nationality: asText(updatedProfile.nationality)
       })
     }, t('dashboard.user.noticeProfileUpdated'))
+  }
+
+  const handleSaveProfileFromSettings = async () => {
+    const saved = await handleUpdateProfile()
+    if (saved) {
+      setProfileSettingsOpen(false)
+    }
   }
 
   const handleJoinPena = async () => {
@@ -410,6 +447,9 @@ export default function UserDashboard({ session, onLogout }) {
               </Typography>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
+                {t('dashboard.user.openSettings')}
+              </Button>
               <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
                 {t('dashboard.common.refresh')}
               </Button>
@@ -425,76 +465,32 @@ export default function UserDashboard({ session, onLogout }) {
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={7}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">{t('dashboard.user.profileTitle')}</Typography>
-                <TextField
-                  label={t('dashboard.user.fields.name')}
-                  value={profileForm.name}
-                  onChange={onProfileField('name')}
-                />
-                <TextField
-                  label={t('dashboard.user.fields.surname1')}
-                  value={profileForm.surname1}
-                  onChange={onProfileField('surname1')}
-                />
-                <TextField
-                  label={t('dashboard.user.fields.surname2')}
-                  value={profileForm.surname2}
-                  onChange={onProfileField('surname2')}
-                />
-                <TextField
-                  select
-                  label={t('dashboard.user.fields.nationality')}
-                  value={profileForm.nationality}
-                  onChange={onProfileField('nationality')}
-                >
-                  {nationalities.map((nationality) => (
-                    <MenuItem key={nationality} value={nationality}>
-                      {nationality}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <Button variant="contained" onClick={handleUpdateProfile} disabled={loading}>
-                  {t('dashboard.user.saveProfile')}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={5}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">{t('dashboard.user.joinTitle')}</Typography>
-                <TextField
-                  label={t('dashboard.user.inviteCode')}
-                  value={joinForm.token}
-                  onChange={onJoinField('token')}
-                  placeholder={t('dashboard.user.invitePlaceholder')}
-                />
-                <TextField
-                  label={t('dashboard.user.nicknameOptional')}
-                  value={joinForm.nickname}
-                  onChange={onJoinField('nickname')}
-                />
-                <TextField
-                  label={t('dashboard.user.positionOptional')}
-                  value={joinForm.position}
-                  onChange={onJoinField('position')}
-                />
-                <Button variant="contained" onClick={handleJoinPena} disabled={loading}>
-                  {t('dashboard.user.join')}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="h6">{t('dashboard.user.joinTitle')}</Typography>
+            <TextField
+              label={t('dashboard.user.inviteCode')}
+              value={joinForm.token}
+              onChange={onJoinField('token')}
+              placeholder={t('dashboard.user.invitePlaceholder')}
+            />
+            <TextField
+              label={t('dashboard.user.nicknameOptional')}
+              value={joinForm.nickname}
+              onChange={onJoinField('nickname')}
+            />
+            <TextField
+              label={t('dashboard.user.positionOptional')}
+              value={joinForm.position}
+              onChange={onJoinField('position')}
+            />
+            <Button variant="contained" onClick={handleJoinPena} disabled={loading}>
+              {t('dashboard.user.join')}
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent>
@@ -627,38 +623,106 @@ export default function UserDashboard({ session, onLogout }) {
                                     </Typography>
                                   )}
                                   {standings.length > 0 && (
-                                    <TableContainer>
-                                      <Table size="small">
-                                        <TableHead>
-                                          <TableRow>
-                                            <TableCell>{t('dashboard.user.table.player')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.played')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.w')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.d')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.l')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.goals')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.assists')}</TableCell>
-                                            <TableCell align="right">{t('dashboard.user.table.pts')}</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {standings.map((player) => (
-                                            <TableRow key={player.player_guid}>
-                                              <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
-                                              <TableCell align="right">
-                                                {player.played ?? player.wins + player.draws + player.losses}
-                                              </TableCell>
-                                              <TableCell align="right">{player.wins}</TableCell>
-                                              <TableCell align="right">{player.draws}</TableCell>
-                                              <TableCell align="right">{player.losses}</TableCell>
-                                              <TableCell align="right">{player.goals ?? 0}</TableCell>
-                                              <TableCell align="right">{player.assists ?? 0}</TableCell>
-                                              <TableCell align="right">{player.points}</TableCell>
+                                    <Stack spacing={1.5}>
+                                      {currentStanding && (
+                                        <Stack direction="row" flexWrap="wrap" gap={1}>
+                                          <Chip size="small" color="info" label={t('dashboard.user.youTag')} />
+                                          <Chip
+                                            size="small"
+                                            color="secondary"
+                                            label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
+                                          />
+                                          <Chip
+                                            size="small"
+                                            variant="outlined"
+                                            label={t('dashboard.user.yourPositionLabel', {
+                                              position: currentStanding.position || '-'
+                                            })}
+                                          />
+                                          <Chip
+                                            size="small"
+                                            variant="outlined"
+                                            label={t('dashboard.user.yourPointsLabel', {
+                                              points: currentStanding.points
+                                            })}
+                                          />
+                                          <Chip
+                                            size="small"
+                                            variant="outlined"
+                                            label={t('dashboard.user.yourGoalContributionLabel', {
+                                              goals: currentStanding.goals ?? 0,
+                                              assists: currentStanding.assists ?? 0
+                                            })}
+                                          />
+                                        </Stack>
+                                      )}
+                                      {!currentStanding && currentPlayerGuid && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          {t('dashboard.user.notInStandingsYet')}
+                                        </Typography>
+                                      )}
+                                      <TableContainer>
+                                        <Table size="small">
+                                          <TableHead>
+                                            <TableRow>
+                                              <TableCell>{t('dashboard.user.table.rank')}</TableCell>
+                                              <TableCell>{t('dashboard.user.table.player')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.played')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.w')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.d')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.l')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.goals')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.assists')}</TableCell>
+                                              <TableCell align="right">{t('dashboard.user.table.pts')}</TableCell>
                                             </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </TableContainer>
+                                          </TableHead>
+                                          <TableBody>
+                                            {standings.map((player, index) => {
+                                              const isCurrentPlayer = player.player_guid === currentPlayerGuid
+                                              return (
+                                                <TableRow
+                                                  key={player.player_guid}
+                                                  sx={
+                                                    isCurrentPlayer
+                                                      ? {
+                                                          '& td': {
+                                                            backgroundColor: 'rgba(2, 136, 209, 0.09)',
+                                                            fontWeight: 700
+                                                          }
+                                                        }
+                                                      : undefined
+                                                  }
+                                                >
+                                                  <TableCell>{index + 1}</TableCell>
+                                                  <TableCell>
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                      <span>{player.nickname || `${player.name} ${player.surname1}`}</span>
+                                                      {isCurrentPlayer && (
+                                                        <Chip
+                                                          size="small"
+                                                          color="info"
+                                                          variant="filled"
+                                                          label={t('dashboard.user.youTag')}
+                                                        />
+                                                      )}
+                                                    </Stack>
+                                                  </TableCell>
+                                                  <TableCell align="right">
+                                                    {player.played ?? player.wins + player.draws + player.losses}
+                                                  </TableCell>
+                                                  <TableCell align="right">{player.wins}</TableCell>
+                                                  <TableCell align="right">{player.draws}</TableCell>
+                                                  <TableCell align="right">{player.losses}</TableCell>
+                                                  <TableCell align="right">{player.goals ?? 0}</TableCell>
+                                                  <TableCell align="right">{player.assists ?? 0}</TableCell>
+                                                  <TableCell align="right">{player.points}</TableCell>
+                                                </TableRow>
+                                              )
+                                            })}
+                                          </TableBody>
+                                        </Table>
+                                      </TableContainer>
+                                    </Stack>
                                   )}
                                 </Stack>
                               </CardContent>
@@ -721,11 +785,61 @@ export default function UserDashboard({ session, onLogout }) {
         </CardContent>
       </Card>
 
-      {profile && (
-        <Alert severity="info">
-          {t('dashboard.user.playerGuid', { guid: profile.guid })}
-        </Alert>
-      )}
+      <Dialog
+        open={profileSettingsOpen}
+        onClose={() => setProfileSettingsOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t('dashboard.user.profileSettingsTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('dashboard.user.profileSettingsHint')}
+            </Typography>
+            <TextField
+              label={t('dashboard.user.fields.name')}
+              value={profileForm.name}
+              onChange={onProfileField('name')}
+            />
+            <TextField
+              label={t('dashboard.user.fields.surname1')}
+              value={profileForm.surname1}
+              onChange={onProfileField('surname1')}
+            />
+            <TextField
+              label={t('dashboard.user.fields.surname2')}
+              value={profileForm.surname2}
+              onChange={onProfileField('surname2')}
+            />
+            <TextField
+              select
+              label={t('dashboard.user.fields.nationality')}
+              value={profileForm.nationality}
+              onChange={onProfileField('nationality')}
+            >
+              {nationalities.map((nationality) => (
+                <MenuItem key={nationality} value={nationality}>
+                  {nationality}
+                </MenuItem>
+              ))}
+            </TextField>
+            {profile?.guid && (
+              <Typography variant="caption" color="text.secondary">
+                {t('dashboard.user.playerGuid', { guid: profile.guid })}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProfileSettingsOpen(false)} disabled={loading}>
+            {t('dashboard.user.settingsCancel')}
+          </Button>
+          <Button variant="contained" onClick={handleSaveProfileFromSettings} disabled={loading}>
+            {t('dashboard.user.saveProfile')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   )
 }

@@ -1,4 +1,5 @@
 import { httpClient } from './httpClient.js'
+import { normalizeNationalities } from './catalogUtils.js'
 
 const API_V1 = '/api/v1'
 
@@ -154,7 +155,7 @@ export class AdminService {
   }
 
   getNationalities() {
-    return httpClient.get(`${API_V1}/catalogs/nationalities`)
+    return httpClient.get(`${API_V1}/catalogs/nationalities`).then(normalizeNationalities)
   }
 }
 

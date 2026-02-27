@@ -14,6 +14,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
+import { normalizeNationalities } from '../services/catalogUtils.js'
 import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
@@ -146,10 +147,21 @@ export default function AuthPanel({ auth }) {
   useEffect(() => {
     const loadNationalities = async () => {
       try {
-        const items = await httpClient.get('/api/v1/catalogs/nationalities')
+        const payload = await httpClient.get('/api/v1/catalogs/nationalities')
+        const items = normalizeNationalities(payload)
         setNationalities(items)
+        setUserRegister((prev) => {
+          if (!items.length) {
+            return prev.nationality ? { ...prev, nationality: '' } : prev
+          }
+          if (prev.nationality && items.includes(prev.nationality)) {
+            return prev
+          }
+          return { ...prev, nationality: items[0] }
+        })
       } catch {
         setNationalities([])
+        setUserRegister((prev) => (prev.nationality ? { ...prev, nationality: '' } : prev))
       }
     }
     loadNationalities()
