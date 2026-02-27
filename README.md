@@ -25,3 +25,6 @@ Project documentation is organized in the `docs/` directory.
    - `just check` (format + lint + unit tests)
 4. Run backend using [Backend Guide](docs/backend.md).
 5. Run tests using [Testing Guide](docs/testing.md).
+
+
+hola caracola
