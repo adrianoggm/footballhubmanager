@@ -1,4 +1,5 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { I18nContext } from './context.js'
 import { FALLBACK_LANGUAGE, messages, SUPPORTED_LANGUAGES } from './messages.js'
 
 const STORAGE_KEY = 'footballhubmanager.language'
@@ -57,8 +58,6 @@ const getInitialLanguage = () => {
 
   return FALLBACK_LANGUAGE
 }
-
-export const I18nContext = createContext(null)
 
 export function I18nProvider({ children }) {
   const [language, setLanguageState] = useState(getInitialLanguage)

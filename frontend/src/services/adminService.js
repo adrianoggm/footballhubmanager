@@ -1,4 +1,5 @@
 import { httpClient } from './httpClient.js'
+import { normalizeNationalities } from './catalogUtils.js'
 
 const API_V1 = '/api/v1'
 
@@ -36,6 +37,10 @@ export class AdminService {
 
   updateSeason(penaGuid, seasonGuid, payload) {
     return httpClient.patch(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}`, payload)
+  }
+
+  deleteSeason(penaGuid, seasonGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}`)
   }
 
   listPenaPlayers(penaGuid, { page = 1, pageSize = 100, search = '' } = {}) {
@@ -99,6 +104,10 @@ export class AdminService {
     )
   }
 
+  deleteSeasonMatch(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`)
+  }
+
   createDetailedMatch(penaGuid, seasonGuid, payload) {
     return httpClient.post(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/detailed`,
@@ -126,8 +135,27 @@ export class AdminService {
     })
   }
 
+  updateSeasonPlayerStats(penaGuid, seasonGuid, playerGuid, payload) {
+    return httpClient.patch(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/${playerGuid}`,
+      payload
+    )
+  }
+
+  unregisterSeasonPlayer(penaGuid, seasonGuid, playerGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/${playerGuid}`)
+  }
+
+  updatePenaPlayerMembership(penaGuid, playerGuid, payload) {
+    return httpClient.patch(`${API_V1}/penas/${penaGuid}/players/${playerGuid}`, payload)
+  }
+
+  removePenaPlayerMembership(penaGuid, playerGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/players/${playerGuid}`)
+  }
+
   getNationalities() {
-    return httpClient.get(`${API_V1}/catalogs/nationalities`)
+    return httpClient.get(`${API_V1}/catalogs/nationalities`).then(normalizeNationalities)
   }
 }
 
