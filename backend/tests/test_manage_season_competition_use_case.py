@@ -6,6 +6,7 @@ from persistence.application.ports.season_competition_repository import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
+    MatchNotFoundError,
     MatchesPageResult,
     MatchLineupLockedError,
     MatchPlayerStatsResult,
@@ -32,6 +33,7 @@ from persistence.application.ports.season_competition_repository import (
 )
 from persistence.application.use_cases.manage_season_competition import (
     InvalidSeasonDataError,
+    InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -1000,3 +1002,154 @@ def test_maps_generic_access_and_not_found_errors():
             admin_id=1,
             player_guid="player-guid",
         )
+
+
+def test_get_match_insights_validates_payload():
+    use_case = ManageSeasonCompetitionUseCase(_FakeRepo())
+    with pytest.raises(InvalidSeasonInsightsDataError):
+        use_case.get_match_insights(
+            pena_guid="pena-guid",
+            season_guids=[],
+        )
+
+
+def test_get_match_insights_computes_report_from_closed_matches():
+    class _InsightsRepo(_FakeRepo):
+        def list_season_matches(
+            self, *, pena_guid: str, season_guid: str, page: int, page_size: int
+        ):
+            self.last_payload = {
+                "pena_guid": pena_guid,
+                "season_guid": season_guid,
+                "page": page,
+                "page_size": page_size,
+            }
+            return MatchesPageResult(
+                items=[
+                    MatchSummaryResult(
+                        guid="match-closed",
+                        season_guid=season_guid,
+                        match_date=date(2024, 3, 1),
+                        status="closed",
+                        home_team_name="Home",
+                        away_team_name="Away",
+                        home_score=2,
+                        away_score=1,
+                        home_players=2,
+                        away_players=2,
+                    ),
+                    MatchSummaryResult(
+                        guid="match-open",
+                        season_guid=season_guid,
+                        match_date=date(2024, 3, 2),
+                        status="open",
+                        home_team_name="Home",
+                        away_team_name="Away",
+                        home_score=0,
+                        away_score=0,
+                        home_players=2,
+                        away_players=2,
+                    ),
+                ],
+                page=page,
+                page_size=page_size,
+                total=2,
+            )
+
+        def get_match_detail(self, *, pena_guid: str, season_guid: str, match_guid: str):
+            if match_guid != "match-closed":
+                raise MatchNotFoundError()
+            return MatchDetailResult(
+                guid=match_guid,
+                season_guid=season_guid,
+                match_date=date(2024, 3, 1),
+                status="closed",
+                home_team=MatchTeamResult(
+                    team_guid="home-team-guid",
+                    team_name="Home",
+                    score=2,
+                    total_assists=1,
+                    total_saves=1,
+                    average_rating=7.2,
+                    players=[
+                        MatchPlayerStatsResult(
+                            player_guid="player-a",
+                            name="Ana",
+                            surname1="A",
+                            surname2=None,
+                            nickname="Anita",
+                            position="CM",
+                            goals=1,
+                            assists=1,
+                            saves=0,
+                            rating=7.5,
+                        ),
+                        MatchPlayerStatsResult(
+                            player_guid="player-b",
+                            name="Beto",
+                            surname1="B",
+                            surname2=None,
+                            nickname=None,
+                            position="GK",
+                            goals=1,
+                            assists=0,
+                            saves=1,
+                            rating=7.0,
+                        ),
+                    ],
+                ),
+                away_team=MatchTeamResult(
+                    team_guid="away-team-guid",
+                    team_name="Away",
+                    score=1,
+                    total_assists=1,
+                    total_saves=0,
+                    average_rating=6.9,
+                    players=[
+                        MatchPlayerStatsResult(
+                            player_guid="player-c",
+                            name="Cora",
+                            surname1="C",
+                            surname2=None,
+                            nickname=None,
+                            position="ST",
+                            goals=1,
+                            assists=1,
+                            saves=0,
+                            rating=6.8,
+                        ),
+                        MatchPlayerStatsResult(
+                            player_guid="player-d",
+                            name="Dani",
+                            surname1="D",
+                            surname2=None,
+                            nickname=None,
+                            position="DF",
+                            goals=0,
+                            assists=0,
+                            saves=0,
+                            rating=7.0,
+                        ),
+                    ],
+                ),
+            )
+
+    use_case = ManageSeasonCompetitionUseCase(_InsightsRepo())
+    report = use_case.get_match_insights(
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=4,
+        top_pairs_size=3,
+        leaders_size=2,
+    )
+
+    assert report["scope"] == "selected_season"
+    assert report["season_guids"] == ["season-guid"]
+    assert report["matches_analyzed"] == 1
+    assert report["goals_per_match"] == 3.0
+    assert report["assists_per_match"] == 2.0
+    assert report["saves_per_match"] == 1.0
+    assert len(report["timeline_by_match"]) == 1
+    assert report["timeline_by_match"][0]["label"] == "M1"
+    assert len(report["leaders"]["scorers"]) == 2

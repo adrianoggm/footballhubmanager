@@ -323,6 +323,10 @@ class SeasonPlayerInMatchError(Exception):
     pass
 
 
+class InvalidSeasonInsightsDataError(Exception):
+    pass
+
+
 class ManageSeasonCompetitionUseCase:
     def __init__(self, repository: SeasonCompetitionRepository):
         self.repository = repository
@@ -796,6 +800,34 @@ class ManageSeasonCompetitionUseCase:
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
 
+    def get_match_insights(
+        self,
+        *,
+        pena_guid: str,
+        season_guids: list[str],
+        scope: str | None = None,
+        matrix_size: int = 8,
+        top_pairs_size: int = 10,
+        leaders_size: int = 5,
+    ) -> dict:
+        cleaned_season_guids = self._normalize_insight_season_guids(season_guids)
+        if matrix_size < 2 or top_pairs_size < 1 or leaders_size < 1:
+            raise InvalidSeasonInsightsDataError()
+
+        details = self._collect_match_insight_details(
+            pena_guid=pena_guid,
+            season_guids=cleaned_season_guids,
+        )
+        report = self._build_match_insights_report(
+            details,
+            matrix_size=matrix_size,
+            top_pairs_size=top_pairs_size,
+            leaders_size=leaders_size,
+        )
+        report["scope"] = scope
+        report["season_guids"] = cleaned_season_guids
+        return report
+
     def list_season_matches(
         self, *, pena_guid: str, season_guid: str, page: int = 1, page_size: int = 20
     ) -> SeasonMatchesPage:
@@ -844,6 +876,490 @@ class ManageSeasonCompetitionUseCase:
         except RepositorySeasonNotFoundError as exc:
             raise PenaSeasonNotFoundError() from exc
         return self._to_page(result)
+
+    def _collect_match_insight_details(
+        self, *, pena_guid: str, season_guids: list[str], page_size: int = 100
+    ) -> list[MatchDetailResult]:
+        details: list[MatchDetailResult] = []
+        for season_guid in season_guids:
+            page = 1
+            while True:
+                try:
+                    matches_page = self.repository.list_season_matches(
+                        pena_guid=pena_guid,
+                        season_guid=season_guid,
+                        page=page,
+                        page_size=page_size,
+                    )
+                except RepositoryPenaNotFoundError as exc:
+                    raise PenaSeasonPenaNotFoundError() from exc
+                except RepositorySeasonNotFoundError as exc:
+                    raise PenaSeasonNotFoundError() from exc
+
+                for match in matches_page.items:
+                    if str(match.status or "").lower() != "closed" or not match.guid:
+                        continue
+                    try:
+                        details.append(
+                            self.repository.get_match_detail(
+                                pena_guid=pena_guid,
+                                season_guid=season_guid,
+                                match_guid=match.guid,
+                            )
+                        )
+                    except RepositoryPenaNotFoundError as exc:
+                        raise PenaSeasonPenaNotFoundError() from exc
+                    except RepositorySeasonNotFoundError as exc:
+                        raise PenaSeasonNotFoundError() from exc
+                    except RepositoryMatchNotFoundError:
+                        # The match may have been removed between summary and detail fetch.
+                        continue
+
+                if page * page_size >= matches_page.total:
+                    break
+                page += 1
+        return details
+
+    @classmethod
+    def _build_match_insights_report(
+        cls,
+        match_details: list[MatchDetailResult],
+        *,
+        matrix_size: int,
+        top_pairs_size: int,
+        leaders_size: int,
+    ) -> dict:
+        player_stats: dict[str, dict] = {}
+        pair_stats: dict[str, dict] = {}
+        teammate_graph: dict[str, dict[str, dict]] = {}
+        seasons_in_report: set[str] = set()
+        season_aggregate_by_guid: dict[str, dict] = {}
+        match_timeline_raw: list[dict] = []
+
+        matches_analyzed = 0
+        total_goals = 0
+        total_assists = 0
+        total_saves = 0
+        total_lineup_entries = 0
+
+        def ensure_season_aggregate(season_guid: str) -> dict:
+            key = str(season_guid or "unknown").strip() or "unknown"
+            if key not in season_aggregate_by_guid:
+                season_aggregate_by_guid[key] = {
+                    "season_guid": key,
+                    "matches": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                    "lineup_entries": 0,
+                    "first_match_date": None,
+                    "last_match_date": None,
+                }
+            return season_aggregate_by_guid[key]
+
+        def ensure_player(player: MatchPlayerStatsResult) -> dict | None:
+            guid = str(player.player_guid or "").strip()
+            if not guid:
+                return None
+            if guid not in player_stats:
+                player_stats[guid] = {
+                    "guid": guid,
+                    "label": cls._format_match_player_name(player),
+                    "appearances": 0,
+                    "wins": 0,
+                    "draws": 0,
+                    "losses": 0,
+                    "goals": 0,
+                    "assists": 0,
+                    "saves": 0,
+                }
+            return player_stats[guid]
+
+        def ensure_pair(left_guid: str, right_guid: str) -> dict:
+            key = cls._pair_key(left_guid, right_guid)
+            if key not in pair_stats:
+                left, right = (
+                    (left_guid, right_guid) if left_guid < right_guid else (right_guid, left_guid)
+                )
+                pair_stats[key] = {
+                    "leftGuid": left,
+                    "rightGuid": right,
+                    "matches": 0,
+                    "wins": 0,
+                    "draws": 0,
+                    "losses": 0,
+                }
+            return pair_stats[key]
+
+        def ensure_edge(from_guid: str, to_guid: str) -> dict:
+            if from_guid not in teammate_graph:
+                teammate_graph[from_guid] = {}
+            edges = teammate_graph[from_guid]
+            if to_guid not in edges:
+                edges[to_guid] = {
+                    "matches": 0,
+                    "wins": 0,
+                    "draws": 0,
+                    "losses": 0,
+                }
+            return edges[to_guid]
+
+        for detail in match_details:
+            if not detail or str(detail.status or "").lower() != "closed":
+                continue
+            matches_analyzed += 1
+
+            season_guid = str(detail.season_guid or "unknown").strip() or "unknown"
+            seasons_in_report.add(season_guid)
+
+            home_score = cls._safe_int(detail.home_team.score)
+            away_score = cls._safe_int(detail.away_team.score)
+            match_goals = home_score + away_score
+            total_goals += match_goals
+
+            match_assists = 0
+            match_saves = 0
+            match_lineup_entries = 0
+
+            outcome_home = (
+                "win" if home_score > away_score else "loss" if home_score < away_score else "draw"
+            )
+            outcome_away = (
+                "win" if away_score > home_score else "loss" if away_score < home_score else "draw"
+            )
+
+            team_entries = [
+                (detail.home_team.players, outcome_home),
+                (detail.away_team.players, outcome_away),
+            ]
+
+            for players_raw, outcome in team_entries:
+                players = cls._normalize_match_players(players_raw)
+                total_lineup_entries += len(players)
+                match_lineup_entries += len(players)
+
+                for player in players:
+                    summary = ensure_player(player)
+                    if not summary:
+                        continue
+                    assists = cls._safe_int(player.assists)
+                    saves = cls._safe_int(player.saves)
+
+                    summary["appearances"] += 1
+                    summary["goals"] += cls._safe_int(player.goals)
+                    summary["assists"] += assists
+                    summary["saves"] += saves
+                    cls._with_outcome(summary, outcome)
+
+                    total_assists += assists
+                    total_saves += saves
+                    match_assists += assists
+                    match_saves += saves
+
+                for index, left_player in enumerate(players):
+                    left_guid = str(left_player.player_guid or "").strip()
+                    if not left_guid:
+                        continue
+                    for right_player in players[index + 1 :]:
+                        right_guid = str(right_player.player_guid or "").strip()
+                        if not right_guid:
+                            continue
+
+                        pair = ensure_pair(left_guid, right_guid)
+                        pair["matches"] += 1
+                        cls._with_outcome(pair, outcome)
+
+                        edge_forward = ensure_edge(left_guid, right_guid)
+                        edge_forward["matches"] += 1
+                        cls._with_outcome(edge_forward, outcome)
+
+                        edge_backward = ensure_edge(right_guid, left_guid)
+                        edge_backward["matches"] += 1
+                        cls._with_outcome(edge_backward, outcome)
+
+            season_aggregate = ensure_season_aggregate(season_guid)
+            season_aggregate["matches"] += 1
+            season_aggregate["goals"] += match_goals
+            season_aggregate["assists"] += match_assists
+            season_aggregate["saves"] += match_saves
+            season_aggregate["lineup_entries"] += match_lineup_entries
+
+            match_date = detail.match_date.isoformat()
+            if (
+                not season_aggregate["first_match_date"]
+                or match_date < season_aggregate["first_match_date"]
+            ):
+                season_aggregate["first_match_date"] = match_date
+            if (
+                not season_aggregate["last_match_date"]
+                or match_date > season_aggregate["last_match_date"]
+            ):
+                season_aggregate["last_match_date"] = match_date
+
+            match_timeline_raw.append(
+                {
+                    "season_guid": season_guid,
+                    "match_guid": str(detail.guid or ""),
+                    "match_date": match_date,
+                    "goals": match_goals,
+                    "assists": match_assists,
+                    "saves": match_saves,
+                    "average_players_per_team": cls._rate(match_lineup_entries, 2),
+                    "home_score": home_score,
+                    "away_score": away_score,
+                }
+            )
+
+        players = []
+        for player in player_stats.values():
+            players.append(
+                {
+                    **player,
+                    "win_rate": cls._rate(player["wins"], player["appearances"]),
+                }
+            )
+        players.sort(key=lambda item: (-item["appearances"], -item["wins"]))
+
+        pair_rows = []
+        for pair in pair_stats.values():
+            left_player = player_stats.get(pair["leftGuid"])
+            right_player = player_stats.get(pair["rightGuid"])
+            pair_rows.append(
+                {
+                    **pair,
+                    "label": f"{left_player['label'] if left_player else pair['leftGuid']} + "
+                    f"{right_player['label'] if right_player else pair['rightGuid']}",
+                    "win_rate": cls._rate(pair["wins"], pair["matches"]),
+                }
+            )
+        pair_rows.sort(key=lambda item: (-item["matches"], -item["wins"]))
+        top_pairs = pair_rows[:top_pairs_size]
+
+        top_teammates_by_player = []
+        for player in players:
+            edges = teammate_graph.get(player["guid"]) or {}
+            if not edges:
+                continue
+            best_partner_guid = None
+            best_partner_stats = None
+            for partner_guid, partner_stats in edges.items():
+                if not best_partner_stats:
+                    best_partner_guid = partner_guid
+                    best_partner_stats = partner_stats
+                    continue
+                if partner_stats["matches"] > best_partner_stats["matches"] or (
+                    partner_stats["matches"] == best_partner_stats["matches"]
+                    and partner_stats["wins"] > best_partner_stats["wins"]
+                ):
+                    best_partner_guid = partner_guid
+                    best_partner_stats = partner_stats
+            if not best_partner_guid or not best_partner_stats:
+                continue
+            partner = player_stats.get(best_partner_guid)
+            top_teammates_by_player.append(
+                {
+                    "player_guid": player["guid"],
+                    "player_label": player["label"],
+                    "partner_guid": best_partner_guid,
+                    "partner_label": partner["label"] if partner else best_partner_guid,
+                    "matches": best_partner_stats["matches"],
+                    "wins": best_partner_stats["wins"],
+                    "draws": best_partner_stats["draws"],
+                    "losses": best_partner_stats["losses"],
+                    "win_rate": cls._rate(
+                        best_partner_stats["wins"], best_partner_stats["matches"]
+                    ),
+                }
+            )
+        top_teammates_by_player.sort(key=lambda item: (-item["matches"], -item["wins"]))
+
+        matrix_players = [
+            {
+                "guid": player["guid"],
+                "label": player["label"],
+                "appearances": player["appearances"],
+            }
+            for player in players[:matrix_size]
+        ]
+
+        matrix_rows = []
+        for row_player in matrix_players:
+            cells = []
+            for column_player in matrix_players:
+                if row_player["guid"] == column_player["guid"]:
+                    cells.append(
+                        {
+                            "player_guid": row_player["guid"],
+                            "teammate_guid": column_player["guid"],
+                            "same_player": True,
+                            "matches": 0,
+                            "wins": 0,
+                            "draws": 0,
+                            "losses": 0,
+                            "win_rate": 0,
+                        }
+                    )
+                    continue
+
+                pair = pair_stats.get(cls._pair_key(row_player["guid"], column_player["guid"]))
+                if not pair:
+                    cells.append(
+                        {
+                            "player_guid": row_player["guid"],
+                            "teammate_guid": column_player["guid"],
+                            "same_player": False,
+                            "matches": 0,
+                            "wins": 0,
+                            "draws": 0,
+                            "losses": 0,
+                            "win_rate": 0,
+                        }
+                    )
+                    continue
+                cells.append(
+                    {
+                        "player_guid": row_player["guid"],
+                        "teammate_guid": column_player["guid"],
+                        "same_player": False,
+                        "matches": pair["matches"],
+                        "wins": pair["wins"],
+                        "draws": pair["draws"],
+                        "losses": pair["losses"],
+                        "win_rate": cls._rate(pair["wins"], pair["matches"]),
+                    }
+                )
+            matrix_rows.append({"player": row_player, "cells": cells})
+
+        timeline_by_match_sorted = sorted(
+            match_timeline_raw,
+            key=lambda item: item["match_guid"],
+            reverse=True,
+        )
+        timeline_by_match_sorted.sort(key=lambda item: item["match_date"])
+        timeline_by_match = []
+        accumulated_goals = 0
+        accumulated_assists = 0
+        accumulated_saves = 0
+        for index, point in enumerate(timeline_by_match_sorted, start=1):
+            accumulated_goals += point["goals"]
+            accumulated_assists += point["assists"]
+            accumulated_saves += point["saves"]
+            timeline_by_match.append(
+                {
+                    **point,
+                    "match_index": index,
+                    "label": f"M{index}",
+                    "running_goals_per_match": cls._rate(accumulated_goals, index),
+                    "running_assists_per_match": cls._rate(accumulated_assists, index),
+                    "running_saves_per_match": cls._rate(accumulated_saves, index),
+                }
+            )
+
+        timeline_by_season = sorted(
+            season_aggregate_by_guid.values(),
+            key=lambda item: (str(item["first_match_date"] or ""), item["season_guid"]),
+        )
+        timeline_by_season = [
+            {
+                "season_guid": item["season_guid"],
+                "matches": item["matches"],
+                "goals_per_match": cls._rate(item["goals"], item["matches"]),
+                "assists_per_match": cls._rate(item["assists"], item["matches"]),
+                "saves_per_match": cls._rate(item["saves"], item["matches"]),
+                "average_players_per_team": cls._rate(item["lineup_entries"], item["matches"] * 2),
+            }
+            for item in timeline_by_season
+        ]
+
+        return {
+            "matches_analyzed": matches_analyzed,
+            "seasons_analyzed": len(seasons_in_report),
+            "total_goals": total_goals,
+            "total_assists": total_assists,
+            "total_saves": total_saves,
+            "goals_per_match": cls._rate(total_goals, matches_analyzed),
+            "assists_per_match": cls._rate(total_assists, matches_analyzed),
+            "saves_per_match": cls._rate(total_saves, matches_analyzed),
+            "average_players_per_team": cls._rate(total_lineup_entries, matches_analyzed * 2),
+            "top_pairs": top_pairs,
+            "top_teammates_by_player": top_teammates_by_player,
+            "matrix_players": matrix_players,
+            "matrix_rows": matrix_rows,
+            "timeline_by_match": timeline_by_match,
+            "timeline_by_season": timeline_by_season,
+            "leaders": {
+                "scorers": cls._top_by_metric(players, "goals", leaders_size),
+                "assisters": cls._top_by_metric(players, "assists", leaders_size),
+                "savers": cls._top_by_metric(players, "saves", leaders_size),
+            },
+        }
+
+    @staticmethod
+    def _format_match_player_name(player: MatchPlayerStatsResult) -> str:
+        full_name = " ".join(
+            value for value in [player.name, player.surname1, player.surname2] if value
+        ).strip()
+        if player.nickname and full_name:
+            return f"{player.nickname} ({full_name})"
+        if player.nickname:
+            return player.nickname
+        return full_name or str(player.player_guid or "-")
+
+    @staticmethod
+    def _normalize_match_players(
+        players: list[MatchPlayerStatsResult],
+    ) -> list[MatchPlayerStatsResult]:
+        seen: set[str] = set()
+        normalized: list[MatchPlayerStatsResult] = []
+        for player in players or []:
+            guid = str(player.player_guid or "").strip()
+            if not guid or guid in seen:
+                continue
+            seen.add(guid)
+            normalized.append(player)
+        return normalized
+
+    @staticmethod
+    def _normalize_insight_season_guids(season_guids: list[str]) -> list[str]:
+        cleaned = [str(item or "").strip() for item in season_guids if str(item or "").strip()]
+        if not cleaned:
+            raise InvalidSeasonInsightsDataError()
+        unique_cleaned = list(dict.fromkeys(cleaned))
+        return unique_cleaned
+
+    @staticmethod
+    def _pair_key(left_guid: str, right_guid: str) -> str:
+        return (
+            f"{left_guid}__{right_guid}" if left_guid < right_guid else f"{right_guid}__{left_guid}"
+        )
+
+    @staticmethod
+    def _with_outcome(bucket: dict, outcome: str) -> None:
+        if outcome == "win":
+            bucket["wins"] += 1
+            return
+        if outcome == "loss":
+            bucket["losses"] += 1
+            return
+        bucket["draws"] += 1
+
+    @staticmethod
+    def _rate(value: int | float, total: int | float) -> float:
+        return float(value) / float(total) if total else 0.0
+
+    @staticmethod
+    def _safe_int(value: int | float | None) -> int:
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _top_by_metric(items: list[dict], metric: str, size: int) -> list[dict]:
+        return sorted(
+            items,
+            key=lambda item: (-item.get(metric, 0), -item.get("appearances", 0)),
+        )[:size]
 
     @staticmethod
     def _validate_stat_value(is_provided: bool, value: int | None) -> None:

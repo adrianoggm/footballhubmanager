@@ -32,14 +32,37 @@ import {
   YAxis
 } from 'recharts'
 
-const getDeltaColor = (value) => {
-  if (value > 0) {
-    return 'success'
+const INSIGHT_ACCENTS = {
+  matches: {
+    main: '#0ea5e9',
+    soft: 'rgba(14, 165, 233, 0.12)',
+    border: 'rgba(14, 165, 233, 0.34)'
+  },
+  seasons: {
+    main: '#8b5cf6',
+    soft: 'rgba(139, 92, 246, 0.12)',
+    border: 'rgba(139, 92, 246, 0.34)'
+  },
+  players: {
+    main: '#14b8a6',
+    soft: 'rgba(20, 184, 166, 0.12)',
+    border: 'rgba(20, 184, 166, 0.34)'
+  },
+  goals: {
+    main: '#ef4444',
+    soft: 'rgba(239, 68, 68, 0.12)',
+    border: 'rgba(239, 68, 68, 0.35)'
+  },
+  assists: {
+    main: '#2563eb',
+    soft: 'rgba(37, 99, 235, 0.12)',
+    border: 'rgba(37, 99, 235, 0.35)'
+  },
+  saves: {
+    main: '#f59e0b',
+    soft: 'rgba(245, 158, 11, 0.14)',
+    border: 'rgba(245, 158, 11, 0.4)'
   }
-  if (value < 0) {
-    return 'error'
-  }
-  return 'default'
 }
 
 const getRateColor = (rate) => {
@@ -54,8 +77,8 @@ const getRateColor = (rate) => {
 
 const metricCardStyles = (accent) => ({
   borderRadius: 3,
-  borderColor: `${accent}.light`,
-  background: `linear-gradient(140deg, rgba(255,255,255,0.98) 0%, rgba(246,250,255,0.92) 100%)`
+  borderColor: accent.border,
+  background: `linear-gradient(140deg, ${accent.soft} 0%, rgba(255,255,255,0.95) 100%)`
 })
 
 const buildMatrixCellSx = (cell, maxSharedMatches) => {
@@ -91,17 +114,6 @@ const matrixLegend = [
   { key: 'high', rate: 0.7, matches: 0.75 }
 ]
 
-const chartLineColors = {
-  goals: '#0ea5e9',
-  assists: '#22c55e',
-  saves: '#f59e0b',
-  runningGoals: '#0284c7',
-  runningAssists: '#16a34a',
-  runningSaves: '#d97706'
-}
-
-const seasonBarColors = ['#0ea5e9', '#22c55e', '#f59e0b', '#6366f1', '#ef4444']
-
 const shortSeasonLabel = (guid) => {
   const value = String(guid || '').trim()
   if (!value) {
@@ -110,7 +122,14 @@ const shortSeasonLabel = (guid) => {
   return value.slice(0, 8)
 }
 
-function InsightMetricCard({ label, value, accent = 'primary' }) {
+const buildMetricDeltaChipSx = (accent) => ({
+  borderColor: accent.border,
+  backgroundColor: accent.soft,
+  color: accent.main,
+  fontWeight: 700
+})
+
+function InsightMetricCard({ label, value, accent = INSIGHT_ACCENTS.matches }) {
   return (
     <Card
       variant="outlined"
@@ -125,7 +144,7 @@ function InsightMetricCard({ label, value, accent = 'primary' }) {
           top: 0,
           bottom: 0,
           width: 4,
-          backgroundColor: `${accent}.main`
+          backgroundColor: accent.main
         }
       }}
     >
@@ -212,7 +231,7 @@ function InsightRankingPanel({ title, emptyText, rows, t, matchLabelKey = 'dashb
   )
 }
 
-function LeadersCard({ title, metricLabel, items, metricKey, emptyText }) {
+function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, emptyText }) {
   return (
     <Card
       variant="outlined"
@@ -254,7 +273,17 @@ function LeadersCard({ title, metricLabel, items, metricKey, emptyText }) {
               >
                 {index + 1}. {item.label}
               </Typography>
-              <Chip size="small" color="primary" label={`${metricLabel}: ${item[metricKey]}`} />
+              <Chip
+                size="small"
+                variant="outlined"
+                sx={{
+                  borderColor: metricAccent.border,
+                  backgroundColor: metricAccent.soft,
+                  color: metricAccent.main,
+                  fontWeight: 700
+                }}
+                label={`${metricLabel}: ${item[metricKey]}`}
+              />
             </Stack>
           ))}
         </Stack>
@@ -387,42 +416,42 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               <InsightMetricCard
                 label={t('dashboard.admin.standings.insightsKpiMatches')}
                 value={insightsReport.matches_analyzed}
-                accent="primary"
+                accent={INSIGHT_ACCENTS.matches}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
                 label={t('dashboard.admin.standings.insightsKpiSeasons')}
                 value={insightsReport.seasons_analyzed}
-                accent="secondary"
+                accent={INSIGHT_ACCENTS.seasons}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
                 label={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
                 value={formatDecimal(insightsReport.goals_per_match)}
-                accent="success"
+                accent={INSIGHT_ACCENTS.goals}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
                 label={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
                 value={formatDecimal(insightsReport.assists_per_match)}
-                accent="info"
+                accent={INSIGHT_ACCENTS.assists}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
                 label={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
                 value={formatDecimal(insightsReport.saves_per_match)}
-                accent="warning"
+                accent={INSIGHT_ACCENTS.saves}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
                 label={t('dashboard.admin.standings.insightsKpiPlayersPerTeam')}
                 value={formatDecimal(insightsReport.average_players_per_team)}
-                accent="primary"
+                accent={INSIGHT_ACCENTS.players}
               />
             </Grid>
           </Grid>
@@ -449,21 +478,24 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                       savesDelta: formatSignedDecimal(insightsComparison.saves_per_match_delta)
                     })}
                   </Alert>
-                          <Stack direction="row" flexWrap="wrap" gap={1}>
-                            <Chip
-                              size="small"
-                              color={getDeltaColor(insightsComparison.goals_per_match_delta)}
-                              label={`G/MP ${formatSignedDecimal(insightsComparison.goals_per_match_delta)}`}
-                            />
-                            <Chip
-                              size="small"
-                              color={getDeltaColor(insightsComparison.assists_per_match_delta)}
-                              label={`A/MP ${formatSignedDecimal(insightsComparison.assists_per_match_delta)}`}
-                            />
-                            <Chip
-                              size="small"
-                              color={getDeltaColor(insightsComparison.saves_per_match_delta)}
-                              label={`S/MP ${formatSignedDecimal(insightsComparison.saves_per_match_delta)}`}
+                  <Stack direction="row" flexWrap="wrap" gap={1}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      sx={buildMetricDeltaChipSx(INSIGHT_ACCENTS.goals)}
+                      label={`G/MP ${formatSignedDecimal(insightsComparison.goals_per_match_delta)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      sx={buildMetricDeltaChipSx(INSIGHT_ACCENTS.assists)}
+                      label={`A/MP ${formatSignedDecimal(insightsComparison.assists_per_match_delta)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      sx={buildMetricDeltaChipSx(INSIGHT_ACCENTS.saves)}
+                      label={`S/MP ${formatSignedDecimal(insightsComparison.saves_per_match_delta)}`}
                     />
                   </Stack>
                 </Stack>
@@ -512,7 +544,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               type="monotone"
                               dataKey="goals"
                               name={t('dashboard.common.matchDetail.goals')}
-                              stroke={chartLineColors.goals}
+                              stroke={INSIGHT_ACCENTS.goals.main}
                               strokeWidth={2}
                               dot={false}
                             />
@@ -520,7 +552,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               type="monotone"
                               dataKey="assists"
                               name={t('dashboard.common.matchDetail.assists')}
-                              stroke={chartLineColors.assists}
+                              stroke={INSIGHT_ACCENTS.assists.main}
                               strokeWidth={2}
                               dot={false}
                             />
@@ -528,7 +560,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               type="monotone"
                               dataKey="saves"
                               name={t('dashboard.common.matchDetail.saves')}
-                              stroke={chartLineColors.saves}
+                              stroke={INSIGHT_ACCENTS.saves.main}
                               strokeWidth={2}
                               dot={false}
                             />
@@ -581,24 +613,27 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               type="monotone"
                               dataKey="running_goals_per_match"
                               name={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
-                              stroke={chartLineColors.runningGoals}
+                              stroke={INSIGHT_ACCENTS.goals.main}
                               strokeWidth={2}
+                              strokeDasharray="6 4"
                               dot={false}
                             />
                             <Line
                               type="monotone"
                               dataKey="running_assists_per_match"
                               name={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
-                              stroke={chartLineColors.runningAssists}
+                              stroke={INSIGHT_ACCENTS.assists.main}
                               strokeWidth={2}
+                              strokeDasharray="6 4"
                               dot={false}
                             />
                             <Line
                               type="monotone"
                               dataKey="running_saves_per_match"
                               name={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
-                              stroke={chartLineColors.runningSaves}
+                              stroke={INSIGHT_ACCENTS.saves.main}
                               strokeWidth={2}
+                              strokeDasharray="6 4"
                               dot={false}
                             />
                           </LineChart>
@@ -649,19 +684,19 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                         <Bar
                           dataKey="goals_per_match"
                           name={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
-                          fill={seasonBarColors[0]}
+                          fill={INSIGHT_ACCENTS.goals.main}
                           radius={[6, 6, 0, 0]}
                         />
                         <Bar
                           dataKey="assists_per_match"
                           name={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
-                          fill={seasonBarColors[1]}
+                          fill={INSIGHT_ACCENTS.assists.main}
                           radius={[6, 6, 0, 0]}
                         />
                         <Bar
                           dataKey="saves_per_match"
                           name={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
-                          fill={seasonBarColors[2]}
+                          fill={INSIGHT_ACCENTS.saves.main}
                           radius={[6, 6, 0, 0]}
                         />
                       </BarChart>
@@ -828,6 +863,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 metricLabel={t('dashboard.common.matchDetail.goals')}
                 items={insightsReport.leaders.scorers}
                 metricKey="goals"
+                metricAccent={INSIGHT_ACCENTS.goals}
                 emptyText={t('dashboard.admin.standings.insightsNoData')}
               />
             </Grid>
@@ -837,6 +873,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 metricLabel={t('dashboard.common.matchDetail.assists')}
                 items={insightsReport.leaders.assisters}
                 metricKey="assists"
+                metricAccent={INSIGHT_ACCENTS.assists}
                 emptyText={t('dashboard.admin.standings.insightsNoData')}
               />
             </Grid>
@@ -846,6 +883,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 metricLabel={t('dashboard.common.matchDetail.saves')}
                 items={insightsReport.leaders.savers}
                 metricKey="saves"
+                metricAccent={INSIGHT_ACCENTS.saves}
                 emptyText={t('dashboard.admin.standings.insightsNoData')}
               />
             </Grid>

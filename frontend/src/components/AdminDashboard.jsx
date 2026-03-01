@@ -31,7 +31,7 @@ import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useI18n } from '../i18n/useI18n.js'
-import { buildMatchInsightsReport, compareMatchInsightSummaries } from '../services/matchInsights.js'
+import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
@@ -235,16 +235,6 @@ const collectPagedItems = async (fetchPage) => {
     page += 1
   }
   return items
-}
-
-const mapInBatches = async (items, batchSize, mapper) => {
-  const results = []
-  for (let start = 0; start < items.length; start += batchSize) {
-    const chunk = items.slice(start, start + batchSize)
-    const chunkResults = await Promise.all(chunk.map(mapper))
-    results.push(...chunkResults)
-  }
-  return results
 }
 
 export default function AdminDashboard({ session, onLogout }) {
@@ -574,15 +564,6 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchLineupsDraft(null)
       setMatchStatsDraft(null)
     }
-  }
-
-  const listAllSeasonMatches = async (penaGuid, seasonGuid) => {
-    if (!seasonGuid) {
-      return []
-    }
-    return collectPagedItems((page) =>
-      adminService.listSeasonMatches(penaGuid, seasonGuid, { page, pageSize: 100 })
-    )
   }
 
   const loadMatchDetail = async (penaGuid, seasonGuid, matchGuid) => {
@@ -1325,43 +1306,10 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!seasonGuids.length) {
       return null
     }
-
-    const allMatchesBySeason = await Promise.all(
-      seasonGuids.map(async (seasonGuid) => ({
-        seasonGuid,
-        matches: await listAllSeasonMatches(penaGuid, seasonGuid)
-      }))
-    )
-
-    const closedMatchRefs = []
-    allMatchesBySeason.forEach(({ seasonGuid, matches }) => {
-      ;(matches || []).forEach((match) => {
-        if (String(match.status || '').toLowerCase() === 'closed' && match.guid) {
-          closedMatchRefs.push({
-            seasonGuid,
-            matchGuid: match.guid
-          })
-        }
-      })
-    })
-
-    const details = await mapInBatches(closedMatchRefs, 8, async ({ seasonGuid, matchGuid }) => {
-      try {
-        return await adminService.getMatchDetail(penaGuid, seasonGuid, matchGuid)
-      } catch (requestError) {
-        if (requestError?.status === 404) {
-          return null
-        }
-        throw requestError
-      }
-    })
-
-    const report = buildMatchInsightsReport(details.filter(Boolean))
-    return {
-      ...report,
+    return adminService.getMatchInsights(penaGuid, {
       scope,
       season_guids: seasonGuids
-    }
+    })
   }
 
   const handleRefreshInsights = async () => {

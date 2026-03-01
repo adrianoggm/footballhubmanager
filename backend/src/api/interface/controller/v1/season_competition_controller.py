@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
 from persistence.application.use_cases import (
     InvalidSeasonMatchDataError,
+    InvalidSeasonInsightsDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonCompetitionUseCase,
@@ -168,6 +169,14 @@ class MatchTeamLineupsRequest(BaseModel):
 class UpdateSeasonMatchLineupsRequest(BaseModel):
     home_team: MatchTeamLineupsRequest
     away_team: MatchTeamLineupsRequest
+
+
+class MatchInsightsRequest(BaseModel):
+    season_guids: list[str] = Field(min_length=1)
+    scope: Literal["selected_season", "all_seasons"] | None = None
+    matrix_size: int = Field(default=8, ge=2, le=20)
+    top_pairs_size: int = Field(default=10, ge=1, le=50)
+    leaders_size: int = Field(default=5, ge=1, le=20)
 
 
 class SeasonMatchPlayerStatsResponse(BaseModel):
@@ -887,6 +896,36 @@ def get_season_match_detail(
     except SeasonMatchNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
     return _match_detail_response(result)
+
+
+@router.post("/penas/{pena_guid}/match-insights")
+def get_match_insights(
+    pena_guid: str,
+    payload: MatchInsightsRequest,
+    db: Session = Depends(get_db),
+    _session=Depends(authorize_pena_access),
+):
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    use_case = ManageSeasonCompetitionUseCase(repository)
+    try:
+        result = use_case.get_match_insights(
+            pena_guid=pena_guid,
+            season_guids=payload.season_guids,
+            scope=payload.scope,
+            matrix_size=payload.matrix_size,
+            top_pairs_size=payload.top_pairs_size,
+            leaders_size=payload.leaders_size,
+        )
+    except InvalidSeasonInsightsDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid match insights request",
+        )
+    except PenaSeasonPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaSeasonNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    return result
 
 
 @router.delete(
