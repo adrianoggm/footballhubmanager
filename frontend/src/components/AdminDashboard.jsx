@@ -1248,7 +1248,10 @@ export default function AdminDashboard({ session, onLogout }) {
         console.debug('[AdminDashboard] delete request success', { matchGuid: match.guid })
       }
       try {
-        await loadStandings(selectedPenaGuid, selectedSeasonGuid)
+        await Promise.all([
+          loadStandings(selectedPenaGuid, selectedSeasonGuid),
+          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster)
+        ])
       } catch (refreshError) {
         if (refreshError?.status === 401) {
           await onLogout()
@@ -1314,6 +1317,7 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchStatsDraft(buildMatchStatsDraft(updated))
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
       ])
     }, t('dashboard.admin.notices.lineupsUpdated'))
@@ -1382,6 +1386,7 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchStatsDraft(buildMatchStatsDraft(updated))
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
       ])
     }, t('dashboard.admin.notices.matchStatsUpdated'))
