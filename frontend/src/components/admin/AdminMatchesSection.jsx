@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Divider,
   Grid,
   LinearProgress,
   Stack,
@@ -18,6 +19,7 @@ import {
   Typography
 } from '@mui/material'
 import LineupDragBuilder from '../LineupDragBuilder.jsx'
+import MatchDetailViewer from '../MatchDetailViewer.jsx'
 
 export default function AdminMatchesSection({ state, actions, helpers }) {
   const { t, formatDate, formatPlayerDisplayName } = helpers
@@ -252,6 +254,15 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                 <Card variant="outlined" sx={{ mt: 1 }}>
                   <CardContent>
                     <Stack spacing={2}>
+                      <MatchDetailViewer
+                        detail={selectedMatchDetail}
+                        t={t}
+                        formatDate={formatDate}
+                        showSubtitle={false}
+                      />
+
+                      <Divider />
+
                       <Box>
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                           {t('dashboard.admin.matches.statsEditorTitle', {

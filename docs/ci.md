@@ -42,7 +42,7 @@ docker compose -f docker/docker-compose.ci.yml up -d --build
 
 ```bash
 python -m pytest backend/tests/integration -q
-```
+``` 
 
 - Always tears down containers with:
 

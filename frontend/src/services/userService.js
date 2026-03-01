@@ -39,6 +39,10 @@ export class UserService {
     )
   }
 
+  getMatchDetail(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`)
+  }
+
   listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20 } = {}) {
     return httpClient.get(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings?page=${page}&page_size=${pageSize}`

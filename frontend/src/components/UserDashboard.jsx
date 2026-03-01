@@ -23,6 +23,7 @@ import {
   Typography
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import MatchDetailViewer from './MatchDetailViewer.jsx'
 import { useI18n } from '../i18n/useI18n.js'
 import { userService } from '../services/userService.js'
 
@@ -89,8 +90,12 @@ export default function UserDashboard({ session, onLogout }) {
   const [standings, setStandings] = useState([])
   const [seasonMatches, setSeasonMatches] = useState([])
   const [seasonDataLoading, setSeasonDataLoading] = useState(false)
+  const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
+  const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
+  const [matchDetailLoading, setMatchDetailLoading] = useState(false)
   const seasonListRequestIdRef = useRef(0)
   const seasonDataRequestIdRef = useRef(0)
+  const matchDetailRequestIdRef = useRef(0)
 
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
@@ -210,6 +215,8 @@ export default function UserDashboard({ session, onLogout }) {
       }
       setStandings([])
       setSeasonMatches([])
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
       return
     }
 
@@ -285,6 +292,8 @@ export default function UserDashboard({ session, onLogout }) {
         setSelectedSeasonGuid('')
         setStandings([])
         setSeasonMatches([])
+        setSelectedMatchGuid('')
+        setSelectedMatchDetail(null)
       }
       return
     }
@@ -333,6 +342,13 @@ export default function UserDashboard({ session, onLogout }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid, selectedSeasonGuid, initializing])
+
+  useEffect(() => {
+    matchDetailRequestIdRef.current += 1
+    setSelectedMatchGuid('')
+    setSelectedMatchDetail(null)
+    setMatchDetailLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid])
 
   const onProfileField = (name) => (event) => {
     setProfileForm((prev) => ({ ...prev, [name]: event.target.value }))
@@ -424,6 +440,44 @@ export default function UserDashboard({ session, onLogout }) {
       await userService.leavePena(selectedPenaGuid)
       await loadDashboard()
     }, t('dashboard.user.noticeLeftPena'))
+  }
+
+  const handleOpenMatchDetail = async (matchGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
+      return
+    }
+    const requestId = matchDetailRequestIdRef.current + 1
+    matchDetailRequestIdRef.current = requestId
+    setSelectedMatchGuid(matchGuid)
+    setMatchDetailLoading(true)
+    setError(null)
+    try {
+      const detail = await userService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid)
+      if (requestId !== matchDetailRequestIdRef.current) {
+        return
+      }
+      setSelectedMatchDetail(detail)
+    } catch (requestError) {
+      if (requestId !== matchDetailRequestIdRef.current) {
+        return
+      }
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === matchDetailRequestIdRef.current) {
+        setMatchDetailLoading(false)
+      }
+    }
+  }
+
+  const handleCloseMatchDetail = () => {
+    matchDetailRequestIdRef.current += 1
+    setSelectedMatchGuid('')
+    setSelectedMatchDetail(null)
+    setMatchDetailLoading(false)
   }
 
   if (initializing) {
@@ -751,6 +805,7 @@ export default function UserDashboard({ session, onLogout }) {
                                             <TableCell>{t('dashboard.user.table.away')}</TableCell>
                                             <TableCell>{t('dashboard.user.table.status')}</TableCell>
                                             <TableCell>{t('dashboard.user.table.result')}</TableCell>
+                                            <TableCell>{t('dashboard.user.table.actions')}</TableCell>
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -765,6 +820,16 @@ export default function UserDashboard({ session, onLogout }) {
                                                   : t('dashboard.user.statusOpen')}
                                               </TableCell>
                                               <TableCell>{match.home_score} - {match.away_score}</TableCell>
+                                              <TableCell>
+                                                <Button
+                                                  size="small"
+                                                  variant="text"
+                                                  onClick={() => handleOpenMatchDetail(match.guid)}
+                                                  disabled={matchDetailLoading}
+                                                >
+                                                  {t('dashboard.common.matchDetail.viewAction')}
+                                                </Button>
+                                              </TableCell>
                                             </TableRow>
                                           ))}
                                         </TableBody>
@@ -784,6 +849,37 @@ export default function UserDashboard({ session, onLogout }) {
           </Stack>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(selectedMatchGuid)}
+        onClose={handleCloseMatchDetail}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>{t('dashboard.common.matchDetail.dialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {matchDetailLoading && <LinearProgress />}
+            {!matchDetailLoading && selectedMatchDetail && (
+              <MatchDetailViewer
+                detail={selectedMatchDetail}
+                t={t}
+                formatDate={formatDate}
+              />
+            )}
+            {!matchDetailLoading && !selectedMatchDetail && (
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.common.matchDetail.noData')}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseMatchDetail}>
+            {t('dashboard.common.matchDetail.closeAction')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={profileSettingsOpen}
