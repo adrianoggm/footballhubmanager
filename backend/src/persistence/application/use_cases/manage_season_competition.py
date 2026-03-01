@@ -12,6 +12,7 @@ from persistence.application.ports.season_competition_repository import (
 )
 from persistence.application.ports.season_competition_repository import (
     MatchDetailResult,
+    MatchInsightRowResult,
     MatchesPageResult,
     MatchPlayerStatsResult,
     MatchPlayerStatsUpdateData,
@@ -878,46 +879,90 @@ class ManageSeasonCompetitionUseCase:
         return self._to_page(result)
 
     def _collect_match_insight_details(
-        self, *, pena_guid: str, season_guids: list[str], page_size: int = 100
+        self, *, pena_guid: str, season_guids: list[str]
     ) -> list[MatchDetailResult]:
+        try:
+            rows = self.repository.list_closed_match_insight_rows(
+                pena_guid=pena_guid,
+                season_guids=season_guids,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+
+        matches_by_key: dict[str, dict] = {}
+        for row in rows:
+            if not row.match_guid:
+                continue
+            key = f"{row.season_guid}::{row.match_guid}"
+            if key not in matches_by_key:
+                matches_by_key[key] = {
+                    "season_guid": row.season_guid,
+                    "match_guid": row.match_guid,
+                    "match_date": row.match_date,
+                    "home_score": row.home_score,
+                    "away_score": row.away_score,
+                    "home_players": [],
+                    "away_players": [],
+                }
+
+            player = MatchPlayerStatsResult(
+                player_guid=row.player_guid,
+                name=row.player_name,
+                surname1=row.player_surname1,
+                surname2=row.player_surname2,
+                nickname=row.player_nickname,
+                position=None,
+                goals=row.goals,
+                assists=row.assists,
+                saves=row.saves,
+                rating=0.0,
+            )
+            if row.team_side == "home":
+                matches_by_key[key]["home_players"].append(player)
+                continue
+            if row.team_side == "away":
+                matches_by_key[key]["away_players"].append(player)
+
+        ordered_matches = sorted(
+            matches_by_key.values(),
+            key=lambda item: (
+                item["match_date"],
+                item["match_guid"],
+            ),
+        )
+
         details: list[MatchDetailResult] = []
-        for season_guid in season_guids:
-            page = 1
-            while True:
-                try:
-                    matches_page = self.repository.list_season_matches(
-                        pena_guid=pena_guid,
-                        season_guid=season_guid,
-                        page=page,
-                        page_size=page_size,
-                    )
-                except RepositoryPenaNotFoundError as exc:
-                    raise PenaSeasonPenaNotFoundError() from exc
-                except RepositorySeasonNotFoundError as exc:
-                    raise PenaSeasonNotFoundError() from exc
-
-                for match in matches_page.items:
-                    if str(match.status or "").lower() != "closed" or not match.guid:
-                        continue
-                    try:
-                        details.append(
-                            self.repository.get_match_detail(
-                                pena_guid=pena_guid,
-                                season_guid=season_guid,
-                                match_guid=match.guid,
-                            )
-                        )
-                    except RepositoryPenaNotFoundError as exc:
-                        raise PenaSeasonPenaNotFoundError() from exc
-                    except RepositorySeasonNotFoundError as exc:
-                        raise PenaSeasonNotFoundError() from exc
-                    except RepositoryMatchNotFoundError:
-                        # The match may have been removed between summary and detail fetch.
-                        continue
-
-                if page * page_size >= matches_page.total:
-                    break
-                page += 1
+        for item in ordered_matches:
+            if not item["home_players"] or not item["away_players"]:
+                continue
+            details.append(
+                MatchDetailResult(
+                    guid=item["match_guid"],
+                    season_guid=item["season_guid"],
+                    match_date=item["match_date"],
+                    status="closed",
+                    home_team=MatchTeamResult(
+                        team_guid=f"{item['match_guid']}:home",
+                        team_name="Home",
+                        score=item["home_score"],
+                        total_assists=sum(player.assists for player in item["home_players"]),
+                        total_saves=sum(player.saves for player in item["home_players"]),
+                        average_rating=0.0,
+                        players=item["home_players"],
+                    ),
+                    away_team=MatchTeamResult(
+                        team_guid=f"{item['match_guid']}:away",
+                        team_name="Away",
+                        score=item["away_score"],
+                        total_assists=sum(player.assists for player in item["away_players"]),
+                        total_saves=sum(player.saves for player in item["away_players"]),
+                        average_rating=0.0,
+                        players=item["away_players"],
+                    ),
+                )
+            )
         return details
 
     @classmethod

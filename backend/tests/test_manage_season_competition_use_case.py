@@ -6,6 +6,7 @@ from persistence.application.ports.season_competition_repository import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
+    MatchInsightRowResult,
     MatchNotFoundError,
     MatchesPageResult,
     MatchLineupLockedError,
@@ -470,6 +471,13 @@ class _FakeRepo:
             "match_guid": match_guid,
         }
         return self._match_detail()
+
+    def list_closed_match_insight_rows(self, *, pena_guid: str, season_guids: list[str]):
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guids": season_guids,
+        }
+        return []
 
     def delete_match_for_admin(self, **kwargs):
         if self.should_raise_invalid_match_data:
@@ -1015,126 +1023,95 @@ def test_get_match_insights_validates_payload():
 
 def test_get_match_insights_computes_report_from_closed_matches():
     class _InsightsRepo(_FakeRepo):
+        def list_closed_match_insight_rows(
+            self, *, pena_guid: str, season_guids: list[str]
+        ) -> list[MatchInsightRowResult]:
+            self.last_payload = {
+                "pena_guid": pena_guid,
+                "season_guids": season_guids,
+            }
+            return [
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=2,
+                    away_score=1,
+                    team_side="home",
+                    player_guid="player-a",
+                    player_name="Ana",
+                    player_surname1="A",
+                    player_surname2=None,
+                    player_nickname="Anita",
+                    goals=1,
+                    assists=1,
+                    saves=0,
+                ),
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=2,
+                    away_score=1,
+                    team_side="home",
+                    player_guid="player-b",
+                    player_name="Beto",
+                    player_surname1="B",
+                    player_surname2=None,
+                    player_nickname=None,
+                    goals=1,
+                    assists=0,
+                    saves=1,
+                ),
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=2,
+                    away_score=1,
+                    team_side="away",
+                    player_guid="player-c",
+                    player_name="Cora",
+                    player_surname1="C",
+                    player_surname2=None,
+                    player_nickname=None,
+                    goals=1,
+                    assists=1,
+                    saves=0,
+                ),
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=2,
+                    away_score=1,
+                    team_side="away",
+                    player_guid="player-d",
+                    player_name="Dani",
+                    player_surname1="D",
+                    player_surname2=None,
+                    player_nickname=None,
+                    goals=0,
+                    assists=0,
+                    saves=0,
+                ),
+            ]
+
+        def get_match_detail(self, *, pena_guid: str, season_guid: str, match_guid: str):
+            raise MatchNotFoundError()
+
         def list_season_matches(
             self, *, pena_guid: str, season_guid: str, page: int, page_size: int
         ):
-            self.last_payload = {
-                "pena_guid": pena_guid,
-                "season_guid": season_guid,
-                "page": page,
-                "page_size": page_size,
-            }
             return MatchesPageResult(
-                items=[
-                    MatchSummaryResult(
-                        guid="match-closed",
-                        season_guid=season_guid,
-                        match_date=date(2024, 3, 1),
-                        status="closed",
-                        home_team_name="Home",
-                        away_team_name="Away",
-                        home_score=2,
-                        away_score=1,
-                        home_players=2,
-                        away_players=2,
-                    ),
-                    MatchSummaryResult(
-                        guid="match-open",
-                        season_guid=season_guid,
-                        match_date=date(2024, 3, 2),
-                        status="open",
-                        home_team_name="Home",
-                        away_team_name="Away",
-                        home_score=0,
-                        away_score=0,
-                        home_players=2,
-                        away_players=2,
-                    ),
-                ],
+                items=[],
                 page=page,
                 page_size=page_size,
-                total=2,
+                total=0,
             )
 
-        def get_match_detail(self, *, pena_guid: str, season_guid: str, match_guid: str):
-            if match_guid != "match-closed":
-                raise MatchNotFoundError()
-            return MatchDetailResult(
-                guid=match_guid,
-                season_guid=season_guid,
-                match_date=date(2024, 3, 1),
-                status="closed",
-                home_team=MatchTeamResult(
-                    team_guid="home-team-guid",
-                    team_name="Home",
-                    score=2,
-                    total_assists=1,
-                    total_saves=1,
-                    average_rating=7.2,
-                    players=[
-                        MatchPlayerStatsResult(
-                            player_guid="player-a",
-                            name="Ana",
-                            surname1="A",
-                            surname2=None,
-                            nickname="Anita",
-                            position="CM",
-                            goals=1,
-                            assists=1,
-                            saves=0,
-                            rating=7.5,
-                        ),
-                        MatchPlayerStatsResult(
-                            player_guid="player-b",
-                            name="Beto",
-                            surname1="B",
-                            surname2=None,
-                            nickname=None,
-                            position="GK",
-                            goals=1,
-                            assists=0,
-                            saves=1,
-                            rating=7.0,
-                        ),
-                    ],
-                ),
-                away_team=MatchTeamResult(
-                    team_guid="away-team-guid",
-                    team_name="Away",
-                    score=1,
-                    total_assists=1,
-                    total_saves=0,
-                    average_rating=6.9,
-                    players=[
-                        MatchPlayerStatsResult(
-                            player_guid="player-c",
-                            name="Cora",
-                            surname1="C",
-                            surname2=None,
-                            nickname=None,
-                            position="ST",
-                            goals=1,
-                            assists=1,
-                            saves=0,
-                            rating=6.8,
-                        ),
-                        MatchPlayerStatsResult(
-                            player_guid="player-d",
-                            name="Dani",
-                            surname1="D",
-                            surname2=None,
-                            nickname=None,
-                            position="DF",
-                            goals=0,
-                            assists=0,
-                            saves=0,
-                            rating=7.0,
-                        ),
-                    ],
-                ),
-            )
-
-    use_case = ManageSeasonCompetitionUseCase(_InsightsRepo())
+    repo = _InsightsRepo()
+    use_case = ManageSeasonCompetitionUseCase(repo)
     report = use_case.get_match_insights(
         pena_guid="pena-guid",
         season_guids=["season-guid"],
@@ -1153,3 +1130,7 @@ def test_get_match_insights_computes_report_from_closed_matches():
     assert len(report["timeline_by_match"]) == 1
     assert report["timeline_by_match"][0]["label"] == "M1"
     assert len(report["leaders"]["scorers"]) == 2
+    assert repo.last_payload == {
+        "pena_guid": "pena-guid",
+        "season_guids": ["season-guid"],
+    }

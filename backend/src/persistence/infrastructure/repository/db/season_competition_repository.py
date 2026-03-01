@@ -5,6 +5,7 @@ from persistence.application.ports.season_competition_repository import (
     InvalidSeasonDateRangeError,
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
+    MatchInsightRowResult,
     MatchesPageResult,
     MatchNotFoundError,
     MatchPlayersNotInSeasonError,
@@ -975,6 +976,117 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             home_team=home_team,
             away_team=away_team,
         )
+
+    def list_closed_match_insight_rows(
+        self,
+        *,
+        pena_guid: str,
+        season_guids: list[str],
+    ) -> list[MatchInsightRowResult]:
+        pena = self._get_pena(pena_guid)
+        cleaned_season_guids = [item.strip() for item in season_guids if item.strip()]
+        if not cleaned_season_guids:
+            return []
+
+        season_rows = self.session.execute(
+            select(Season.id, Season.guid).where(
+                Season.id_pena == pena.id,
+                Season.guid.in_(set(cleaned_season_guids)),
+            )
+        ).all()
+        season_ids_by_guid = {row.guid: int(row.id) for row in season_rows}
+        if len(season_ids_by_guid) != len(set(cleaned_season_guids)):
+            self.session.rollback()
+            raise SeasonNotFoundError()
+
+        team_match_stats = (
+            select(
+                TeamPlayer.id_team.label("team_id"),
+                func.coalesce(func.sum(TeamPlayer.goals), 0).label("score"),
+                func.min(TeamPlayer.rating).label("min_rating"),
+            )
+            .group_by(TeamPlayer.id_team)
+            .subquery()
+        )
+        home_team_stats = team_match_stats.alias("home_team_stats")
+        away_team_stats = team_match_stats.alias("away_team_stats")
+
+        rows = self.session.execute(
+            select(
+                Season.guid.label("season_guid"),
+                FootballMatch.guid.label("match_guid"),
+                FootballMatch.match_date.label("match_date"),
+                FootballMatch.id_home_team.label("home_team_id"),
+                FootballMatch.id_away_team.label("away_team_id"),
+                func.coalesce(home_team_stats.c.score, 0).label("home_score"),
+                func.coalesce(away_team_stats.c.score, 0).label("away_score"),
+                TeamPlayer.id_team.label("team_id"),
+                Player.guid.label("player_guid"),
+                Player.name.label("player_name"),
+                Player.surname1.label("player_surname1"),
+                Player.surname2.label("player_surname2"),
+                PenaPlayer.nickname.label("player_nickname"),
+                TeamPlayer.goals.label("goals"),
+                TeamPlayer.assists.label("assists"),
+                TeamPlayer.saves.label("saves"),
+            )
+            .select_from(FootballMatch)
+            .join(Season, Season.id == FootballMatch.id_season)
+            .join(home_team_stats, home_team_stats.c.team_id == FootballMatch.id_home_team)
+            .join(away_team_stats, away_team_stats.c.team_id == FootballMatch.id_away_team)
+            .join(
+                TeamPlayer,
+                or_(
+                    TeamPlayer.id_team == FootballMatch.id_home_team,
+                    TeamPlayer.id_team == FootballMatch.id_away_team,
+                ),
+            )
+            .join(Player, Player.id == TeamPlayer.id_player)
+            .outerjoin(
+                PenaPlayer,
+                and_(
+                    PenaPlayer.id_player == Player.id,
+                    PenaPlayer.id_pena == pena.id,
+                ),
+            )
+            .where(FootballMatch.id_season.in_(season_ids_by_guid.values()))
+            .where(
+                home_team_stats.c.min_rating.is_not(None),
+                away_team_stats.c.min_rating.is_not(None),
+                home_team_stats.c.min_rating >= 0.0,
+                away_team_stats.c.min_rating >= 0.0,
+            )
+            .order_by(
+                FootballMatch.match_date.asc(),
+                FootballMatch.id.asc(),
+                TeamPlayer.id_team.asc(),
+                Player.id.asc(),
+            )
+        ).all()
+
+        result: list[MatchInsightRowResult] = []
+        for row in rows:
+            team_side = "home" if int(row.team_id) == int(row.home_team_id) else "away"
+            result.append(
+                MatchInsightRowResult(
+                    season_guid=str(row.season_guid),
+                    match_guid=str(row.match_guid),
+                    match_date=row.match_date,
+                    home_score=int(row.home_score),
+                    away_score=int(row.away_score),
+                    team_side=team_side,
+                    player_guid=str(row.player_guid),
+                    player_name=str(row.player_name),
+                    player_surname1=str(row.player_surname1),
+                    player_surname2=row.player_surname2,
+                    player_nickname=row.player_nickname,
+                    goals=int(row.goals),
+                    assists=int(row.assists),
+                    saves=int(row.saves),
+                )
+            )
+
+        return result
 
     def delete_match_for_admin(
         self,
