@@ -12,7 +12,6 @@ from persistence.application.ports.season_competition_repository import (
 )
 from persistence.application.ports.season_competition_repository import (
     MatchDetailResult,
-    MatchInsightRowResult,
     MatchesPageResult,
     MatchPlayerStatsResult,
     MatchPlayerStatsUpdateData,
