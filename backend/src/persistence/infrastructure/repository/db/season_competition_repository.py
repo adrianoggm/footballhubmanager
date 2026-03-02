@@ -1026,9 +1026,11 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 Player.surname1.label("player_surname1"),
                 Player.surname2.label("player_surname2"),
                 PenaPlayer.nickname.label("player_nickname"),
+                PenaPlayer.position.label("player_position"),
                 TeamPlayer.goals.label("goals"),
                 TeamPlayer.assists.label("assists"),
                 TeamPlayer.saves.label("saves"),
+                TeamPlayer.rating.label("rating"),
             )
             .select_from(FootballMatch)
             .join(Season, Season.id == FootballMatch.id_season)
@@ -1083,6 +1085,8 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                     goals=int(row.goals),
                     assists=int(row.assists),
                     saves=int(row.saves),
+                    player_position=row.player_position,
+                    rating=float(row.rating or 0.0),
                 )
             )
 

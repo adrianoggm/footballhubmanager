@@ -1134,3 +1134,87 @@ def test_get_match_insights_computes_report_from_closed_matches():
         "pena_guid": "pena-guid",
         "season_guids": ["season-guid"],
     }
+
+
+def test_collect_match_insight_details_preserves_position_and_rating():
+    class _InsightsRepo(_FakeRepo):
+        def list_closed_match_insight_rows(
+            self, *, pena_guid: str, season_guids: list[str]
+        ) -> list[MatchInsightRowResult]:
+            self.last_payload = {
+                "pena_guid": pena_guid,
+                "season_guids": season_guids,
+            }
+            return [
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=3,
+                    away_score=1,
+                    team_side="home",
+                    player_guid="player-a",
+                    player_name="Ana",
+                    player_surname1="A",
+                    player_surname2=None,
+                    player_nickname="Anita",
+                    goals=2,
+                    assists=1,
+                    saves=0,
+                    player_position="CM",
+                    rating=8.0,
+                ),
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=3,
+                    away_score=1,
+                    team_side="home",
+                    player_guid="player-b",
+                    player_name="Beto",
+                    player_surname1="B",
+                    player_surname2=None,
+                    player_nickname=None,
+                    goals=1,
+                    assists=0,
+                    saves=1,
+                    player_position=None,
+                    rating=6.0,
+                ),
+                MatchInsightRowResult(
+                    season_guid="season-guid",
+                    match_guid="match-closed",
+                    match_date=date(2024, 3, 1),
+                    home_score=3,
+                    away_score=1,
+                    team_side="away",
+                    player_guid="player-c",
+                    player_name="Cora",
+                    player_surname1="C",
+                    player_surname2=None,
+                    player_nickname=None,
+                    goals=1,
+                    assists=0,
+                    saves=2,
+                    player_position="GK",
+                    rating=7.5,
+                ),
+            ]
+
+    repo = _InsightsRepo()
+    use_case = ManageSeasonCompetitionUseCase(repo)
+
+    details = use_case._collect_match_insight_details(
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+    )
+
+    assert len(details) == 1
+    assert details[0].home_team.players[0].position == "CM"
+    assert details[0].home_team.players[0].rating == 8.0
+    assert details[0].home_team.players[1].position is None
+    assert details[0].away_team.players[0].position == "GK"
+    assert details[0].away_team.players[0].rating == 7.5
+    assert details[0].home_team.average_rating == 7.0
+    assert details[0].away_team.average_rating == 7.5

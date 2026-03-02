@@ -147,6 +147,8 @@ class MatchInsightRowResult:
     goals: int
     assists: int
     saves: int
+    player_position: str | None = None
+    rating: float = 0.0
 
 
 class PenaNotFoundError(Exception):

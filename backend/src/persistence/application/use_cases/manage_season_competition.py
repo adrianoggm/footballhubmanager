@@ -906,17 +906,22 @@ class ManageSeasonCompetitionUseCase:
                     "away_players": [],
                 }
 
+            rating = 0.0
+            try:
+                rating = max(float(row.rating), 0.0)
+            except (TypeError, ValueError):
+                rating = 0.0
             player = MatchPlayerStatsResult(
                 player_guid=row.player_guid,
                 name=row.player_name,
                 surname1=row.player_surname1,
                 surname2=row.player_surname2,
                 nickname=row.player_nickname,
-                position=None,
+                position=row.player_position,
                 goals=row.goals,
                 assists=row.assists,
                 saves=row.saves,
-                rating=0.0,
+                rating=rating,
             )
             if row.team_side == "home":
                 matches_by_key[key]["home_players"].append(player)
@@ -936,6 +941,14 @@ class ManageSeasonCompetitionUseCase:
         for item in ordered_matches:
             if not item["home_players"] or not item["away_players"]:
                 continue
+            home_average_rating = self._rate(
+                sum(player.rating for player in item["home_players"]),
+                len(item["home_players"]),
+            )
+            away_average_rating = self._rate(
+                sum(player.rating for player in item["away_players"]),
+                len(item["away_players"]),
+            )
             details.append(
                 MatchDetailResult(
                     guid=item["match_guid"],
@@ -948,7 +961,7 @@ class ManageSeasonCompetitionUseCase:
                         score=item["home_score"],
                         total_assists=sum(player.assists for player in item["home_players"]),
                         total_saves=sum(player.saves for player in item["home_players"]),
-                        average_rating=0.0,
+                        average_rating=round(home_average_rating, 2),
                         players=item["home_players"],
                     ),
                     away_team=MatchTeamResult(
@@ -957,7 +970,7 @@ class ManageSeasonCompetitionUseCase:
                         score=item["away_score"],
                         total_assists=sum(player.assists for player in item["away_players"]),
                         total_saves=sum(player.saves for player in item["away_players"]),
-                        average_rating=0.0,
+                        average_rating=round(away_average_rating, 2),
                         players=item["away_players"],
                     ),
                 )
