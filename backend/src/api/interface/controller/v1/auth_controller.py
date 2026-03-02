@@ -1,5 +1,11 @@
 import logging
 
+from api.interface.controller.v1.model.request.auth_request import (
+    LoginRequest,
+    RegisterAdminRequest,
+    RegisterUserRequest,
+)
+from api.interface.controller.v1.model.response.auth_response import LoginResponse
 from auth.application.use_cases.login import (
     InvalidCredentialsError,
     LoginAdminUseCase,
@@ -27,46 +33,39 @@ from persistence.infrastructure.repository.db.registration_repository import (
     SqlAlchemyRegistrationRepository,
 )
 from persistence.module import get_db
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-class LoginRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
+def get_login_user_use_case(db: Session = Depends(get_db)) -> LoginUserUseCase:
+    repo = SqlAlchemyAuthAccountRepository(db)
+    return LoginUserUseCase(repo)
 
 
-class LoginResponse(BaseModel):
-    token: str
-    token_type: str
-    expires_at: int
-    user_guid: str
-    user_type: str
+def get_login_admin_use_case(db: Session = Depends(get_db)) -> LoginAdminUseCase:
+    repo = SqlAlchemyAuthAccountRepository(db)
+    return LoginAdminUseCase(repo)
 
 
-class RegisterUserRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-    name: str = Field(min_length=1)
-    surname1: str = Field(min_length=1)
-    surname2: str | None = None
-    nationality: str = Field(min_length=1)
+def get_register_user_use_case(db: Session = Depends(get_db)) -> RegisterUserUseCase:
+    repository = SqlAlchemyRegistrationRepository(db)
+    return RegisterUserUseCase(repository)
 
 
-class RegisterAdminRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-    name: str = Field(min_length=1)
+def get_register_admin_use_case(db: Session = Depends(get_db)) -> RegisterAdminUseCase:
+    repository = SqlAlchemyRegistrationRepository(db)
+    return RegisterAdminUseCase(repository)
 
 
 @router.post("/auth/login", response_model=LoginResponse)
-def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
+def login_user(
+    payload: LoginRequest,
+    use_case: LoginUserUseCase = Depends(get_login_user_use_case),
+    db: Session = Depends(get_db),
+):
     logger.info("User login attempt")
-    repo = SqlAlchemyAuthAccountRepository(db)
-    use_case = LoginUserUseCase(repo)
     try:
         user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
     except InvalidCredentialsError:
@@ -88,10 +87,12 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/admin/login", response_model=LoginResponse)
-def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
+def login_admin(
+    payload: LoginRequest,
+    use_case: LoginAdminUseCase = Depends(get_login_admin_use_case),
+    db: Session = Depends(get_db),
+):
     logger.info("Admin login attempt")
-    repo = SqlAlchemyAuthAccountRepository(db)
-    use_case = LoginAdminUseCase(repo)
     try:
         admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
     except InvalidCredentialsError:
@@ -113,10 +114,12 @@ def login_admin(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/register", response_model=LoginResponse)
-def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
+def register_user(
+    payload: RegisterUserRequest,
+    use_case: RegisterUserUseCase = Depends(get_register_user_use_case),
+    db: Session = Depends(get_db),
+):
     logger.info("User register attempt: %s", payload.username)
-    repository = SqlAlchemyRegistrationRepository(db)
-    use_case = RegisterUserUseCase(repository)
     try:
         registered = use_case.execute(
             UserRegistration(
@@ -155,10 +158,12 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/admin/register", response_model=LoginResponse)
-def register_admin(payload: RegisterAdminRequest, db: Session = Depends(get_db)):
+def register_admin(
+    payload: RegisterAdminRequest,
+    use_case: RegisterAdminUseCase = Depends(get_register_admin_use_case),
+    db: Session = Depends(get_db),
+):
     logger.info("Admin register attempt: %s", payload.username)
-    repository = SqlAlchemyRegistrationRepository(db)
-    use_case = RegisterAdminUseCase(repository)
     try:
         registered = use_case.execute(
             AdminRegistration(

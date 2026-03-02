@@ -2,7 +2,7 @@ import math
 from dataclasses import asdict
 from typing import Literal
 
-from api.interface.controller.v1.model.request.season_competition import (
+from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
     CreateSeasonMatchRequest,
     MatchInsightsRequest,
@@ -14,7 +14,7 @@ from api.interface.controller.v1.model.request.season_competition import (
     UpdateSeasonMatchStatsRequest,
     UpdateSeasonPlayerStatsRequest,
 )
-from api.interface.controller.v1.model.response.season_competition import (
+from api.interface.controller.v1.model.response.season_competition_response import (
     MatchInsightsResponse,
     SeasonMatchDetailResponse,
     SeasonMatchesPageResponse,

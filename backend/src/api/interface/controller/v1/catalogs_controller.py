@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session
 router = APIRouter()
 
 
-@router.get("/catalogs/nationalities", response_model=list[str])
-def list_nationalities(db: Session = Depends(get_db)):
+def get_nationalities_use_case(db: Session = Depends(get_db)) -> GetNationalitiesUseCase:
     repository = SqlAlchemyNationalityQueryRepository(db)
-    use_case = GetNationalitiesUseCase(repository)
+    return GetNationalitiesUseCase(repository)
+
+
+@router.get("/catalogs/nationalities", response_model=list[str])
+def list_nationalities(use_case: GetNationalitiesUseCase = Depends(get_nationalities_use_case)):
     return use_case.execute()

@@ -1,5 +1,9 @@
 from dataclasses import asdict
 
+from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
+from api.interface.controller.v1.model.response.players_response import (
+    PlayerProfileResponse,
+)
 from auth.dependencies import authorize_player_access, get_current_session
 from fastapi import APIRouter, Depends, HTTPException, status
 from persistence.application.use_cases import (
@@ -14,31 +18,19 @@ from persistence.infrastructure.repository.db.player_profile_repository import (
     SqlAlchemyPlayerProfileRepository,
 )
 from persistence.module import get_db
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 router = APIRouter()
 
 
-class PenaInfoResponse(BaseModel):
-    guid: str
-    name: str
+def get_player_profile_use_case(db: Session = Depends(get_db)) -> GetPlayerProfileUseCase:
+    repository = SqlAlchemyPlayerProfileRepository(db)
+    return GetPlayerProfileUseCase(repository)
 
 
-class PlayerProfileResponse(BaseModel):
-    guid: str
-    name: str
-    surname1: str
-    surname2: str | None
-    nationality: str
-    penas: list[PenaInfoResponse]
-
-
-class PlayerUpdateRequest(BaseModel):
-    name: str | None = Field(default=None)
-    surname1: str | None = Field(default=None)
-    surname2: str | None = Field(default=None)
-    nationality: str | None = Field(default=None)
+def get_update_player_profile_use_case(db: Session = Depends(get_db)) -> UpdatePlayerProfileUseCase:
+    repository = SqlAlchemyPlayerProfileRepository(db)
+    return UpdatePlayerProfileUseCase(repository)
 
 
 def _profile_or_404(profile: PlayerProfile | None) -> PlayerProfile:
@@ -50,12 +42,10 @@ def _profile_or_404(profile: PlayerProfile | None) -> PlayerProfile:
 @router.get("/players/me", response_model=PlayerProfileResponse)
 def get_me(
     session=Depends(get_current_session),
-    db: Session = Depends(get_db),
+    use_case: GetPlayerProfileUseCase = Depends(get_player_profile_use_case),
 ):
     if session.user_type != "user":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
-    repository = SqlAlchemyPlayerProfileRepository(db)
-    use_case = GetPlayerProfileUseCase(repository)
     profile = _profile_or_404(use_case.execute_by_account_id(session.user_id))
     return PlayerProfileResponse(**asdict(profile))
 
@@ -64,12 +54,10 @@ def get_me(
 def update_me(
     payload: PlayerUpdateRequest,
     session=Depends(get_current_session),
-    db: Session = Depends(get_db),
+    use_case: UpdatePlayerProfileUseCase = Depends(get_update_player_profile_use_case),
 ):
     if session.user_type != "user":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
-    repository = SqlAlchemyPlayerProfileRepository(db)
-    use_case = UpdatePlayerProfileUseCase(repository)
     update = PlayerUpdate(
         name=payload.name,
         surname1=payload.surname1,
@@ -91,9 +79,7 @@ def update_me(
 def get_player(
     player_guid: str,
     _session=Depends(authorize_player_access),
-    db: Session = Depends(get_db),
+    use_case: GetPlayerProfileUseCase = Depends(get_player_profile_use_case),
 ):
-    repository = SqlAlchemyPlayerProfileRepository(db)
-    use_case = GetPlayerProfileUseCase(repository)
     profile = _profile_or_404(use_case.execute_by_guid(player_guid))
     return PlayerProfileResponse(**asdict(profile))
