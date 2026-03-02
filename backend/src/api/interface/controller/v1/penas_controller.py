@@ -1,13 +1,13 @@
 import math
 from dataclasses import asdict
 
-from app.config import config as app_config
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
 from api.interface.controller.v1.model.response.penas_response import (
     LinkTokenResponse,
     PenaResponse,
     PenasPageResponse,
 )
+from app.config import config as app_config
 from auth.dependencies import authorize_pena_access, get_current_session, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.use_cases import (
