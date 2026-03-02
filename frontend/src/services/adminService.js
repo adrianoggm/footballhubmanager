@@ -51,20 +51,14 @@ export class AdminService {
   listSeasonPlayers(
     penaGuid,
     seasonGuid,
-    {
-      page = 1,
-      pageSize = 100,
-      search = '',
-      orderBy = 'quality_level',
-      orderDir = 'desc'
-    } = {}
+    { page = 1, pageSize = 100, search = '', orderBy = 'quality_level', orderDir = 'desc' } = {}
   ) {
     const query = toQueryString({
       page,
       page_size: pageSize,
       search,
       order_by: orderBy,
-      order_dir: orderDir
+      order_dir: orderDir,
     })
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players${query}`)
   }
@@ -105,7 +99,9 @@ export class AdminService {
   }
 
   deleteSeasonMatch(penaGuid, seasonGuid, matchGuid) {
-    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`)
+    return httpClient.delete(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`
+    )
   }
 
   createDetailedMatch(penaGuid, seasonGuid, payload) {
@@ -129,13 +125,13 @@ export class AdminService {
 
   registerSeasonPlayer(penaGuid, seasonGuid, playerGuid) {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players`, {
-      player_guid: playerGuid
+      player_guid: playerGuid,
     })
   }
 
   registerSeasonPlayersBulk(penaGuid, seasonGuid, playerGuids) {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/bulk`, {
-      player_guids: playerGuids
+      player_guids: playerGuids,
     })
   }
 
@@ -147,7 +143,9 @@ export class AdminService {
   }
 
   unregisterSeasonPlayer(penaGuid, seasonGuid, playerGuid) {
-    return httpClient.delete(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/${playerGuid}`)
+    return httpClient.delete(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/${playerGuid}`
+    )
   }
 
   updatePenaPlayerMembership(penaGuid, playerGuid, payload) {

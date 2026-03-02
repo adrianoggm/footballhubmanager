@@ -25,6 +25,23 @@ frontend port="5173" host="0.0.0.0":
 run-frontend port="5173" host="0.0.0.0":
     npm --prefix frontend run dev -- --host {{host}} --port {{port}}
 
+frontend-lint:
+    npm --prefix frontend run lint
+
+frontend-lint-fix:
+    npm --prefix frontend run lint:fix
+
+frontend-format:
+    npm --prefix frontend run format
+
+frontend-format-check:
+    npm --prefix frontend run format:check
+
+frontend-check:
+    @just frontend-format-check
+    @just frontend-lint
+    npm --prefix frontend run build
+
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q
 

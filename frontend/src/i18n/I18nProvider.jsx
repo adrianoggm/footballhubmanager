@@ -83,11 +83,7 @@ export function I18nProvider({ children }) {
       const localized = getFromPath(messages[language], key)
       const fallback = getFromPath(messages[FALLBACK_LANGUAGE], key)
       const finalValue =
-        typeof localized === 'string'
-          ? localized
-          : typeof fallback === 'string'
-            ? fallback
-            : key
+        typeof localized === 'string' ? localized : typeof fallback === 'string' ? fallback : key
       return interpolate(finalValue, params)
     },
     [language]
@@ -98,7 +94,7 @@ export function I18nProvider({ children }) {
       language,
       setLanguage,
       t,
-      supportedLanguages: SUPPORTED_LANGUAGES
+      supportedLanguages: SUPPORTED_LANGUAGES,
     }),
     [language, setLanguage, t]
   )

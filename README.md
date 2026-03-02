@@ -23,6 +23,6 @@ Project documentation is organized in the `docs/` directory.
    - `just bootstrap`
    - `just run-backend`
    - `just check` (format + lint + unit tests)
+   - `just frontend-check` (prettier check + eslint + build)
 4. Run backend using [Backend Guide](docs/backend.md).
 5. Run tests using [Testing Guide](docs/testing.md).
-

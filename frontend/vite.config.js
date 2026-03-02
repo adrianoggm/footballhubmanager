@@ -19,18 +19,18 @@ export default defineConfig({
           {
             src: 'icon.svg',
             sizes: 'any',
-            type: 'image/svg+xml'
-          }
-        ]
-      }
-    })
+            type: 'image/svg+xml',
+          },
+        ],
+      },
+    }),
   ],
   server: {
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
-        changeOrigin: true
-      }
-    }
-  }
+        changeOrigin: true,
+      },
+    },
+  },
 })

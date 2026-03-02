@@ -32,6 +32,31 @@ jobs:
         run: |
           python -m ruff format --check backend/src backend/tests
 
+  frontend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Run frontend format check
+        run: npm --prefix frontend run format:check
+
+      - name: Run frontend lint
+        run: npm --prefix frontend run lint
+
+      - name: Run frontend build
+        run: npm --prefix frontend run build
+
   unit-tests:
     runs-on: ${{ matrix.os }}
     strategy:
