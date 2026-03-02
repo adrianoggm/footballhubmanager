@@ -49,6 +49,10 @@ export class UserService {
     )
   }
 
+  getMatchInsights(penaGuid, payload) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/match-insights`, payload)
+  }
+
   updateMyMembership(penaGuid, payload) {
     return httpClient.patch(`${API_V1}/penas/${penaGuid}/players/me`, payload)
   }
