@@ -1,8 +1,31 @@
 import math
 from dataclasses import asdict
-from datetime import date
 from typing import Literal
 
+from api.interface.controller.v1.model.request.season_competition import (
+    CreateSeasonMatchDetailedRequest,
+    CreateSeasonMatchRequest,
+    MatchInsightsRequest,
+    RegisterSeasonPlayerRequest,
+    RegisterSeasonPlayersBulkRequest,
+    UpdateSeasonMatchLineupsRequest,
+    UpdateSeasonMatchRequest,
+    UpdateSeasonMatchResultRequest,
+    UpdateSeasonMatchStatsRequest,
+    UpdateSeasonPlayerStatsRequest,
+)
+from api.interface.controller.v1.model.response.season_competition import (
+    MatchInsightsResponse,
+    SeasonMatchDetailResponse,
+    SeasonMatchesPageResponse,
+    SeasonMatchPlayerStatsResponse,
+    SeasonMatchResponse,
+    SeasonMatchSummaryResponse,
+    SeasonMatchTeamResponse,
+    SeasonPlayerResponse,
+    SeasonPlayersBulkResponse,
+    SeasonPlayersPageResponse,
+)
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
@@ -44,10 +67,16 @@ from persistence.infrastructure.repository.db.season_competition_repository impo
     SqlAlchemySeasonCompetitionRepository,
 )
 from persistence.module import get_db
-from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 router = APIRouter()
+
+
+def get_season_competition_use_case(
+    db: Session = Depends(get_db),
+) -> ManageSeasonCompetitionUseCase:
+    repository = SqlAlchemySeasonCompetitionRepository(db)
+    return ManageSeasonCompetitionUseCase(repository)
 
 
 def _clean(value: str | None) -> str | None:
@@ -55,181 +84,6 @@ def _clean(value: str | None) -> str | None:
         return None
     value = value.strip()
     return value or None
-
-
-class SeasonPlayerResponse(BaseModel):
-    player_guid: str
-    name: str
-    surname1: str
-    surname2: str | None
-    nationality: str
-    nickname: str | None
-    position: str | None
-    played: int
-    goals: int
-    assists: int
-    wins: int
-    losses: int
-    draws: int
-    quality_level: float
-    points: int
-
-
-class SeasonPlayersPageResponse(BaseModel):
-    items: list[SeasonPlayerResponse]
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-
-
-class SeasonPlayersBulkResponse(BaseModel):
-    items: list[SeasonPlayerResponse]
-    total_registered: int
-
-
-class RegisterSeasonPlayerRequest(BaseModel):
-    player_guid: str = Field(min_length=1)
-
-
-class RegisterSeasonPlayersBulkRequest(BaseModel):
-    player_guids: list[str] = Field(min_length=1)
-
-
-class UpdateSeasonPlayerStatsRequest(BaseModel):
-    wins: int | None = Field(default=None, ge=0)
-    losses: int | None = Field(default=None, ge=0)
-    draws: int | None = Field(default=None, ge=0)
-    quality_level: float | None = Field(default=None, ge=0)
-
-
-class CreateSeasonMatchRequest(BaseModel):
-    home_player_guid: str = Field(min_length=1)
-    away_player_guid: str = Field(min_length=1)
-    match_date: date
-
-
-class UpdateSeasonMatchResultRequest(BaseModel):
-    home_score: int = Field(ge=0)
-    away_score: int = Field(ge=0)
-    update_standings: bool = True
-
-
-class UpdateSeasonMatchRequest(BaseModel):
-    match_date: date | None = None
-    home_team_name: str | None = None
-    away_team_name: str | None = None
-
-
-class SeasonMatchResponse(BaseModel):
-    guid: str
-    season_guid: str
-    match_date: date
-    home_player_guid: str
-    away_player_guid: str
-    home_player_name: str
-    away_player_name: str
-    status: str
-    home_score: int
-    away_score: int
-
-
-class MatchTeamCreateRequest(BaseModel):
-    team_name: str | None = None
-    player_guids: list[str] = Field(min_length=1)
-
-
-class CreateSeasonMatchDetailedRequest(BaseModel):
-    match_date: date
-    home_team: MatchTeamCreateRequest
-    away_team: MatchTeamCreateRequest
-
-
-class MatchPlayerStatsRequest(BaseModel):
-    player_guid: str = Field(min_length=1)
-    goals: int = Field(default=0, ge=0)
-    assists: int = Field(default=0, ge=0)
-    saves: int = Field(default=0, ge=0)
-    rating: float = Field(default=0.0, ge=0)
-
-
-class MatchTeamStatsRequest(BaseModel):
-    players: list[MatchPlayerStatsRequest] = Field(min_length=1)
-
-
-class UpdateSeasonMatchStatsRequest(BaseModel):
-    home_team: MatchTeamStatsRequest
-    away_team: MatchTeamStatsRequest
-
-
-class MatchTeamLineupsRequest(BaseModel):
-    player_guids: list[str] = Field(min_length=1)
-
-
-class UpdateSeasonMatchLineupsRequest(BaseModel):
-    home_team: MatchTeamLineupsRequest
-    away_team: MatchTeamLineupsRequest
-
-
-class MatchInsightsRequest(BaseModel):
-    season_guids: list[str] = Field(min_length=1)
-    scope: Literal["selected_season", "all_seasons"] | None = None
-    matrix_size: int = Field(default=8, ge=2, le=20)
-    top_pairs_size: int = Field(default=10, ge=1, le=50)
-    leaders_size: int = Field(default=5, ge=1, le=20)
-
-
-class SeasonMatchPlayerStatsResponse(BaseModel):
-    player_guid: str
-    name: str
-    surname1: str
-    surname2: str | None
-    nickname: str | None
-    position: str | None
-    goals: int
-    assists: int
-    saves: int
-    rating: float
-
-
-class SeasonMatchTeamResponse(BaseModel):
-    team_guid: str
-    team_name: str
-    score: int
-    total_assists: int
-    total_saves: int
-    average_rating: float
-    players: list[SeasonMatchPlayerStatsResponse]
-
-
-class SeasonMatchDetailResponse(BaseModel):
-    guid: str
-    season_guid: str
-    match_date: date
-    status: str
-    home_team: SeasonMatchTeamResponse
-    away_team: SeasonMatchTeamResponse
-
-
-class SeasonMatchSummaryResponse(BaseModel):
-    guid: str
-    season_guid: str
-    match_date: date
-    status: str
-    home_team_name: str
-    away_team_name: str
-    home_score: int
-    away_score: int
-    home_players: int
-    away_players: int
-
-
-class SeasonMatchesPageResponse(BaseModel):
-    items: list[SeasonMatchSummaryResponse]
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
 
 
 def _page_response(page: SeasonPlayersPage) -> SeasonPlayersPageResponse:
@@ -289,10 +143,8 @@ def register_player_in_season(
     season_guid: str,
     payload: RegisterSeasonPlayerRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         registered = use_case.register_player_for_admin(
             pena_guid=pena_guid,
@@ -332,10 +184,8 @@ def register_players_in_season_bulk(
     season_guid: str,
     payload: RegisterSeasonPlayersBulkRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         registered = use_case.register_players_bulk_for_admin(
             pena_guid=pena_guid,
@@ -383,10 +233,8 @@ def update_season_player_stats(
     player_guid: str,
     payload: UpdateSeasonPlayerStatsRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     update = SeasonPlayerStatsUpdate(
         wins=payload.wins,
         losses=payload.losses,
@@ -433,10 +281,8 @@ def unregister_player_from_season(
     season_guid: str,
     player_guid: str,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         use_case.unregister_player_for_admin(
             pena_guid=pena_guid,
@@ -489,7 +335,7 @@ def list_season_players(
         "points",
     ] = Query(default="quality_level"),
     order_dir: Literal["asc", "desc"] = Query(default="desc"),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
     filters = SeasonPlayerFilters(
@@ -501,8 +347,6 @@ def list_season_players(
         position=_clean(position),
         search=_clean(search),
     )
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         result = use_case.list_season_players(
             pena_guid=pena_guid,
@@ -530,10 +374,8 @@ def create_season_match(
     season_guid: str,
     payload: CreateSeasonMatchRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         created = use_case.create_match_for_admin(
             pena_guid=pena_guid,
@@ -577,10 +419,8 @@ def update_season_match_result(
     match_guid: str,
     payload: UpdateSeasonMatchResultRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         updated = use_case.update_match_result_for_admin(
             pena_guid=pena_guid,
@@ -625,10 +465,8 @@ def update_season_match(
     match_guid: str,
     payload: UpdateSeasonMatchRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     update = SeasonMatchUpdate(
         match_date=payload.match_date,
         home_team_name=payload.home_team_name,
@@ -672,10 +510,8 @@ def create_season_match_with_lineups(
     season_guid: str,
     payload: CreateSeasonMatchDetailedRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         created = use_case.create_match_with_lineups_for_admin(
             pena_guid=pena_guid,
@@ -728,10 +564,8 @@ def update_season_match_stats(
     match_guid: str,
     payload: UpdateSeasonMatchStatsRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         updated = use_case.update_match_stats_for_admin(
             pena_guid=pena_guid,
@@ -793,10 +627,8 @@ def update_season_match_lineups(
     match_guid: str,
     payload: UpdateSeasonMatchLineupsRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         updated = use_case.update_match_lineups_for_admin(
             pena_guid=pena_guid,
@@ -851,11 +683,9 @@ def list_season_matches(
     season_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         result = use_case.list_season_matches(
             pena_guid=pena_guid,
@@ -878,11 +708,9 @@ def get_season_match_detail(
     pena_guid: str,
     season_guid: str,
     match_guid: str,
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         result = use_case.get_match_detail(
             pena_guid=pena_guid,
@@ -898,15 +726,16 @@ def get_season_match_detail(
     return _match_detail_response(result)
 
 
-@router.post("/penas/{pena_guid}/match-insights")
+@router.post(
+    "/penas/{pena_guid}/match-insights",
+    response_model=MatchInsightsResponse,
+)
 def get_match_insights(
     pena_guid: str,
     payload: MatchInsightsRequest,
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         result = use_case.get_match_insights(
             pena_guid=pena_guid,
@@ -937,10 +766,8 @@ def delete_season_match(
     season_guid: str,
     match_guid: str,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         use_case.delete_match_for_admin(
             pena_guid=pena_guid,
@@ -972,11 +799,9 @@ def get_season_standings(
     season_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    use_case = ManageSeasonCompetitionUseCase(repository)
     try:
         result = use_case.get_standings(
             pena_guid=pena_guid,

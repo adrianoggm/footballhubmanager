@@ -1,0 +1,33 @@
+from api.interface.controller.v1.model.request.season_competition import (
+    CreateSeasonMatchDetailedRequest,
+    CreateSeasonMatchRequest,
+    MatchInsightsRequest,
+    MatchPlayerStatsRequest,
+    MatchTeamCreateRequest,
+    MatchTeamLineupsRequest,
+    MatchTeamStatsRequest,
+    RegisterSeasonPlayerRequest,
+    RegisterSeasonPlayersBulkRequest,
+    UpdateSeasonMatchLineupsRequest,
+    UpdateSeasonMatchRequest,
+    UpdateSeasonMatchResultRequest,
+    UpdateSeasonMatchStatsRequest,
+    UpdateSeasonPlayerStatsRequest,
+)
+
+__all__ = [
+    "CreateSeasonMatchDetailedRequest",
+    "CreateSeasonMatchRequest",
+    "MatchInsightsRequest",
+    "MatchPlayerStatsRequest",
+    "MatchTeamCreateRequest",
+    "MatchTeamLineupsRequest",
+    "MatchTeamStatsRequest",
+    "RegisterSeasonPlayerRequest",
+    "RegisterSeasonPlayersBulkRequest",
+    "UpdateSeasonMatchLineupsRequest",
+    "UpdateSeasonMatchRequest",
+    "UpdateSeasonMatchResultRequest",
+    "UpdateSeasonMatchStatsRequest",
+    "UpdateSeasonPlayerStatsRequest",
+]
