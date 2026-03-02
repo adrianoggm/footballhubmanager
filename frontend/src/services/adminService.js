@@ -115,6 +115,10 @@ export class AdminService {
     )
   }
 
+  getMatchInsights(penaGuid, payload) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/match-insights`, payload)
+  }
+
   createLinkToken(penaGuid) {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/link-tokens`, {})
   }

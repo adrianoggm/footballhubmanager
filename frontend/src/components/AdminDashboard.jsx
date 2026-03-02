@@ -31,7 +31,10 @@ import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import MatchDetailViewer from './MatchDetailViewer.jsx'
+import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
 import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
 import AdminSeasonsSection from './admin/AdminSeasonsSection.jsx'
@@ -109,6 +112,16 @@ const formatEpochSeconds = (value) => {
   }
   return new Date(value * 1000).toLocaleString()
 }
+
+const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
+
+const formatSignedDecimal = (value, digits = 2) => {
+  const numeric = Number(value || 0)
+  const prefix = numeric >= 0 ? '+' : ''
+  return `${prefix}${numeric.toFixed(digits)}`
+}
+
+const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`
 
 const addDaysIso = (isoDate, days) => {
   const [year, month, day] = isoDate.split('-').map(Number)
@@ -255,9 +268,18 @@ export default function AdminDashboard({ session, onLogout }) {
   const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
   const [matchStatsDraft, setMatchStatsDraft] = useState(null)
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
+  const [overviewMatchGuid, setOverviewMatchGuid] = useState('')
+  const [overviewMatchDetail, setOverviewMatchDetail] = useState(null)
+  const [overviewMatchLoading, setOverviewMatchLoading] = useState(false)
+  const [insightsScope, setInsightsScope] = useState('selected_season')
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsReport, setInsightsReport] = useState(null)
+  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
+  const overviewMatchRequestIdRef = useRef(0)
+  const insightsRequestIdRef = useRef(0)
 
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
@@ -370,6 +392,36 @@ export default function AdminDashboard({ session, onLogout }) {
     () =>
       seasonMatches.filter((match) => !hiddenDeletedMatchGuidSet.has(match.guid)),
     [seasonMatches, hiddenDeletedMatchGuidSet]
+  )
+
+  const overviewSeasonMatches = useMemo(
+    () =>
+      [...visibleSeasonMatches]
+        .sort((left, right) => {
+          if (left.match_date === right.match_date) {
+            return String(right.guid || '').localeCompare(String(left.guid || ''))
+          }
+          return String(right.match_date || '').localeCompare(String(left.match_date || ''))
+        })
+        .slice(0, 5),
+    [visibleSeasonMatches]
+  )
+
+  const overviewMatchesSummary = useMemo(() => {
+    const total = visibleSeasonMatches.length
+    const closed = visibleSeasonMatches.filter(
+      (match) => String(match.status || '').toLowerCase() === 'closed'
+    ).length
+    return {
+      total,
+      closed,
+      open: Math.max(0, total - closed)
+    }
+  }, [visibleSeasonMatches])
+
+  const insightsComparison = useMemo(
+    () => compareMatchInsightSummaries(insightsReport, insightsComparisonReport),
+    [insightsReport, insightsComparisonReport]
   )
 
   const {
@@ -684,6 +736,20 @@ export default function AdminDashboard({ session, onLogout }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+
+  useEffect(() => {
+    overviewMatchRequestIdRef.current += 1
+    setOverviewMatchGuid('')
+    setOverviewMatchDetail(null)
+    setOverviewMatchLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid])
+
+  useEffect(() => {
+    insightsRequestIdRef.current += 1
+    setInsightsReport(null)
+    setInsightsComparisonReport(null)
+    setInsightsLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
 
   useEffect(() => {
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
@@ -1193,6 +1259,96 @@ export default function AdminDashboard({ session, onLogout }) {
     }
   }
 
+  const handleOpenOverviewMatchDetail = async (matchGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
+      return
+    }
+    const requestId = overviewMatchRequestIdRef.current + 1
+    overviewMatchRequestIdRef.current = requestId
+    setOverviewMatchGuid(matchGuid)
+    setOverviewMatchLoading(true)
+    setError(null)
+    try {
+      const detail = await adminService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid)
+      if (requestId !== overviewMatchRequestIdRef.current) {
+        return
+      }
+      setOverviewMatchDetail(detail)
+    } catch (requestError) {
+      if (requestId !== overviewMatchRequestIdRef.current) {
+        return
+      }
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === overviewMatchRequestIdRef.current) {
+        setOverviewMatchLoading(false)
+      }
+    }
+  }
+
+  const handleCloseOverviewMatchDetail = () => {
+    overviewMatchRequestIdRef.current += 1
+    setOverviewMatchGuid('')
+    setOverviewMatchDetail(null)
+    setOverviewMatchLoading(false)
+  }
+
+  const loadScopeInsightReport = async (penaGuid, scope) => {
+    const seasonGuids =
+      scope === 'all_seasons'
+        ? seasonList.map((season) => season.guid).filter(Boolean)
+        : [selectedSeasonGuid].filter(Boolean)
+
+    if (!seasonGuids.length) {
+      return null
+    }
+    return adminService.getMatchInsights(penaGuid, {
+      scope,
+      season_guids: seasonGuids
+    })
+  }
+
+  const handleRefreshInsights = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid) {
+      return
+    }
+
+    const requestId = insightsRequestIdRef.current + 1
+    insightsRequestIdRef.current = requestId
+
+    setInsightsLoading(true)
+    setError(null)
+
+    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
+    try {
+      const [primaryReport, comparisonReport] = await Promise.all([
+        loadScopeInsightReport(selectedPenaGuid, insightsScope),
+        seasonList.length > 1 || comparisonScope === 'selected_season'
+          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
+          : Promise.resolve(null)
+      ])
+      if (requestId !== insightsRequestIdRef.current) {
+        return
+      }
+      setInsightsReport(primaryReport)
+      setInsightsComparisonReport(comparisonReport)
+    } catch (requestError) {
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === insightsRequestIdRef.current) {
+        setInsightsLoading(false)
+      }
+    }
+  }
+
   const handleRequestDeleteSeasonMatch = (match) => {
     if (!match?.guid) {
       return
@@ -1248,7 +1404,10 @@ export default function AdminDashboard({ session, onLogout }) {
         console.debug('[AdminDashboard] delete request success', { matchGuid: match.guid })
       }
       try {
-        await loadStandings(selectedPenaGuid, selectedSeasonGuid)
+        await Promise.all([
+          loadStandings(selectedPenaGuid, selectedSeasonGuid),
+          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster)
+        ])
       } catch (refreshError) {
         if (refreshError?.status === 401) {
           await onLogout()
@@ -1314,6 +1473,7 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchStatsDraft(buildMatchStatsDraft(updated))
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
       ])
     }, t('dashboard.admin.notices.lineupsUpdated'))
@@ -1382,6 +1542,7 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchStatsDraft(buildMatchStatsDraft(updated))
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
       ])
     }, t('dashboard.admin.notices.matchStatsUpdated'))
@@ -1776,6 +1937,127 @@ export default function AdminDashboard({ session, onLogout }) {
               </CardContent>
             </Card>
           </Grid>
+
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ sm: 'center' }}
+                    justifyContent="space-between"
+                    spacing={1}
+                  >
+                    <Box>
+                      <Typography variant="h6">
+                        {t('dashboard.admin.overview.seasonMatchesSnapshotTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="text"
+                      onClick={() => setActiveSection('matches')}
+                    >
+                      {t('dashboard.admin.overview.createMatch')}
+                    </Button>
+                  </Stack>
+
+                  {!selectedSeasonGuid && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.overview.selectSeasonToLoad')}
+                    </Typography>
+                  )}
+
+                  {selectedSeasonGuid && (
+                    <>
+                      <Stack direction="row" flexWrap="wrap" gap={1}>
+                        <Chip
+                          size="small"
+                          color="primary"
+                          label={t('dashboard.admin.overview.totalMatchesChip', {
+                            total: overviewMatchesSummary.total
+                          })}
+                        />
+                        <Chip
+                          size="small"
+                          color="warning"
+                          label={t('dashboard.admin.overview.openMatchesChip', {
+                            open: overviewMatchesSummary.open
+                          })}
+                        />
+                        <Chip
+                          size="small"
+                          color="success"
+                          label={t('dashboard.admin.overview.closedMatchesChip', {
+                            closed: overviewMatchesSummary.closed
+                          })}
+                        />
+                      </Stack>
+
+                      {!overviewSeasonMatches.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.overview.noMatchesForSeason')}
+                        </Typography>
+                      )}
+
+                      {overviewSeasonMatches.length > 0 && (
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {overviewSeasonMatches.map((match) => {
+                                const isClosed = String(match.status || '').toLowerCase() === 'closed'
+                                return (
+                                  <TableRow key={match.guid}>
+                                    <TableCell>{formatDate(match.match_date)}</TableCell>
+                                    <TableCell>{match.home_team_name}</TableCell>
+                                    <TableCell>{match.away_team_name}</TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        size="small"
+                                        color={isClosed ? 'success' : 'warning'}
+                                        label={
+                                          isClosed
+                                            ? t('dashboard.admin.matches.statusClosed')
+                                            : t('dashboard.admin.matches.statusOpen')
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell>{match.home_score} - {match.away_score}</TableCell>
+                                    <TableCell>
+                                      <Button
+                                        size="small"
+                                        variant="text"
+                                        onClick={() => handleOpenOverviewMatchDetail(match.guid)}
+                                        disabled={overviewMatchLoading}
+                                      >
+                                        {t('dashboard.common.matchDetail.viewAction')}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )}
+                    </>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
       )}
 
@@ -1901,10 +2183,63 @@ export default function AdminDashboard({ session, onLogout }) {
                   </Table>
                 </TableContainer>
               )}
+
+              <Divider />
+              <AdminInsightsSection
+                state={{
+                  selectedSeasonGuid,
+                  insightsScope,
+                  insightsLoading,
+                  insightsReport,
+                  insightsComparisonReport,
+                  insightsComparison
+                }}
+                actions={{
+                  onInsightsScopeChange: setInsightsScope,
+                  onRefreshInsights: handleRefreshInsights
+                }}
+                helpers={{
+                  t,
+                  formatDecimal,
+                  formatSignedDecimal,
+                  formatPercent
+                }}
+              />
             </Stack>
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={Boolean(overviewMatchGuid)}
+        onClose={handleCloseOverviewMatchDetail}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>{t('dashboard.common.matchDetail.dialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {overviewMatchLoading && <LinearProgress />}
+            {!overviewMatchLoading && overviewMatchDetail && (
+              <MatchDetailViewer
+                detail={overviewMatchDetail}
+                t={t}
+                formatDate={formatDate}
+              />
+            )}
+            {!overviewMatchLoading && !overviewMatchDetail && (
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.common.matchDetail.noData')}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOverviewMatchDetail}>
+            {t('dashboard.common.matchDetail.closeAction')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(pendingDeleteSeason)}

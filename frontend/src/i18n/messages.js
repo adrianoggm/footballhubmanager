@@ -82,6 +82,33 @@ export const messages = {
         refresh: 'Refresh',
         refreshData: 'Refresh data',
         logout: 'Logout',
+        matchDetail: {
+          title: 'Match detail',
+          subtitle: 'Review what happened: score, highlights and player-by-player breakdown.',
+          dialogTitle: 'Match detail',
+          viewAction: 'View detail',
+          closeAction: 'Close',
+          matchDate: 'Date: {date}',
+          finalScore: 'Score: {score}',
+          highlightsTitle: 'Highlights',
+          noHighlights: 'No standout stats yet for this match.',
+          highlightGoals: 'Top scorer: {player} ({value})',
+          highlightAssists: 'Top assists: {player} ({value})',
+          highlightSaves: 'Top saves: {player} ({value})',
+          teamScore: 'Score: {score}',
+          lineupCount: 'Called-up: {count}',
+          totalAssists: 'Assists: {value}',
+          totalSaves: 'Saves: {value}',
+          averageRating: 'Avg rating: {value}',
+          player: 'Player',
+          position: 'Pos',
+          goals: 'Goals',
+          assists: 'Assists',
+          saves: 'Saves',
+          rating: 'Rating',
+          noPlayers: 'No players registered in this lineup yet.',
+          noData: 'No detail available for the selected match.'
+        },
         errors: {
           network: 'Could not reach the server. Check your connection and try again.',
           forbidden: 'You do not have permission to perform this action.',
@@ -145,7 +172,14 @@ export const messages = {
           standingsSnapshotTitle: 'Standings Snapshot',
           refreshStandings: 'Refresh standings',
           selectSeasonToLoad: 'Select a season to load standings.',
-          noStandingsForSeason: 'No standings available for this season yet.'
+          noStandingsForSeason: 'No standings available for this season yet.',
+          seasonMatchesSnapshotTitle: 'Season Matches Snapshot',
+          seasonMatchesSnapshotDescription:
+            'Quick view of match activity for the selected season.',
+          totalMatchesChip: 'Total: {total}',
+          openMatchesChip: 'Open: {open}',
+          closedMatchesChip: 'Closed: {closed}',
+          noMatchesForSeason: 'No matches available for this season yet.'
         },
         seasons: {
           configTitle: 'Season Configuration',
@@ -298,7 +332,57 @@ export const messages = {
           title: 'Season Standings',
           showingDataFor: 'Showing data for: {season}',
           selectSeasonHeader: 'Select a season in the header to load standings.',
-          noSeasonPlayers: 'No season players registered yet.'
+          noSeasonPlayers: 'No season players registered yet.',
+          insightsTitle: 'Match Insights',
+          insightsDescription:
+            'Build advanced metrics from closed matches: correlations, teammate trends, and per-match averages.',
+          insightsScopeLabel: 'Analysis scope',
+          insightsScopeSelectedSeason: 'Selected season',
+          insightsScopeAllSeasons: 'All seasons',
+          refreshInsights: 'Refresh insights',
+          insightsEmpty: 'Run analysis to calculate insights from match data.',
+          insightsNoData: 'Not enough data to compute this insight yet.',
+          insightsMatchesAnalyzed: 'Matches analyzed: {count}',
+          insightsSeasonsAnalyzed: 'Seasons analyzed: {count}',
+          insightsGoalsPerMatch: 'Goals / match: {value}',
+          insightsAssistsPerMatch: 'Assists / match: {value}',
+          insightsSavesPerMatch: 'Saves / match: {value}',
+          insightsAvgPlayersPerTeam: 'Avg players / team: {value}',
+          insightsKpiMatches: 'Matches analyzed',
+          insightsKpiSeasons: 'Seasons analyzed',
+          insightsKpiGoalsPerMatch: 'Goals / match',
+          insightsKpiAssistsPerMatch: 'Assists / match',
+          insightsKpiSavesPerMatch: 'Saves / match',
+          insightsKpiPlayersPerTeam: 'Avg players / team',
+          chartTrendByMatchTitle: 'Per-Match Trend',
+          chartTrendByMatchDescription:
+            'Direct trend of goals, assists and saves for each closed match in scope.',
+          chartRunningAveragesTitle: 'Running Averages',
+          chartRunningAveragesDescription:
+            'How match averages evolve as more matches are played.',
+          chartSeasonComparisonTitle: 'Season Comparison',
+          chartSeasonComparisonDescription:
+            'Compare performance averages by season for all seasons included in the analysis.',
+          insightsComparisonSummary:
+            'Compared against {scope}: goals/match {goalsDelta}, assists/match {assistsDelta}, saves/match {savesDelta}.',
+          topPairsTitle: 'Top Winning Pairs',
+          topTeammatesTitle: 'Most Frequent Teammates',
+          pairColumn: 'Pair',
+          bestTeammateColumn: 'Best teammate',
+          winRateColumn: 'Win rate',
+          correlationMatrixTitle: 'Co-play Correlation Matrix',
+          correlationMatrixDescription:
+            'Top players by appearances. Each cell shows win rate and shared matches when both players were in the same lineup.',
+          correlationLegendLow: 'Low relation',
+          correlationLegendMid: 'Medium relation',
+          correlationLegendHigh: 'Strong relation',
+          correlationSamePlayer: 'Same player axis',
+          correlationNoMatches: 'No shared matches',
+          correlationCellTooltip:
+            '{matches} matches together | W:{wins} D:{draws} L:{losses} | Win rate {winRate}',
+          leadersScorers: 'Top scorers',
+          leadersAssisters: 'Top assisters',
+          leadersSavers: 'Top savers'
         },
         notices: {
           seasonCreated: 'Season created',
@@ -393,7 +477,8 @@ export const messages = {
           home: 'Home',
           away: 'Away',
           status: 'Status',
-          result: 'Result'
+          result: 'Result',
+          actions: 'Actions'
         },
         playerGuid: 'Player GUID: {guid}',
         confirmLeave:
@@ -501,6 +586,33 @@ export const messages = {
         refresh: 'Refrescar',
         refreshData: 'Refrescar datos',
         logout: 'Cerrar sesión',
+        matchDetail: {
+          title: 'Detalle del partido',
+          subtitle: 'Revisa qué pasó: marcador, destacados y desglose jugador a jugador.',
+          dialogTitle: 'Detalle del partido',
+          viewAction: 'Ver detalle',
+          closeAction: 'Cerrar',
+          matchDate: 'Fecha: {date}',
+          finalScore: 'Marcador: {score}',
+          highlightsTitle: 'Destacados',
+          noHighlights: 'Todavía no hay estadísticas destacadas para este partido.',
+          highlightGoals: 'Máximo goleador: {player} ({value})',
+          highlightAssists: 'Más asistencias: {player} ({value})',
+          highlightSaves: 'Más paradas: {player} ({value})',
+          teamScore: 'Marcador: {score}',
+          lineupCount: 'Convocados: {count}',
+          totalAssists: 'Asistencias: {value}',
+          totalSaves: 'Paradas: {value}',
+          averageRating: 'Valoración media: {value}',
+          player: 'Jugador',
+          position: 'Pos',
+          goals: 'Goles',
+          assists: 'Asistencias',
+          saves: 'Paradas',
+          rating: 'Valoración',
+          noPlayers: 'Aún no hay jugadores registrados en esta alineación.',
+          noData: 'No hay detalle disponible para el partido seleccionado.'
+        },
         errors: {
           network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
           forbidden: 'No tienes permisos para realizar esta acción.',
@@ -565,7 +677,14 @@ export const messages = {
           standingsSnapshotTitle: 'Resumen de clasificación',
           refreshStandings: 'Actualizar clasificación',
           selectSeasonToLoad: 'Selecciona una temporada para cargar la clasificación.',
-          noStandingsForSeason: 'Aún no hay clasificación disponible para esta temporada.'
+          noStandingsForSeason: 'Aún no hay clasificación disponible para esta temporada.',
+          seasonMatchesSnapshotTitle: 'Resumen de partidos de temporada',
+          seasonMatchesSnapshotDescription:
+            'Vista rápida de la actividad de partidos en la temporada seleccionada.',
+          totalMatchesChip: 'Totales: {total}',
+          openMatchesChip: 'Abiertos: {open}',
+          closedMatchesChip: 'Cerrados: {closed}',
+          noMatchesForSeason: 'Aún no hay partidos disponibles para esta temporada.'
         },
         seasons: {
           configTitle: 'Configuración de temporada',
@@ -719,7 +838,57 @@ export const messages = {
           title: 'Clasificación de temporada',
           showingDataFor: 'Mostrando datos para: {season}',
           selectSeasonHeader: 'Selecciona una temporada en la cabecera para cargar la clasificación.',
-          noSeasonPlayers: 'Aún no hay jugadores de temporada registrados.'
+          noSeasonPlayers: 'Aún no hay jugadores de temporada registrados.',
+          insightsTitle: 'Insights de partidos',
+          insightsDescription:
+            'Genera métricas avanzadas desde partidos cerrados: correlaciones, tendencias de compañeros y promedios por partido.',
+          insightsScopeLabel: 'Alcance del análisis',
+          insightsScopeSelectedSeason: 'Temporada seleccionada',
+          insightsScopeAllSeasons: 'Todas las temporadas',
+          refreshInsights: 'Actualizar insights',
+          insightsEmpty: 'Ejecuta el análisis para calcular insights a partir de los partidos.',
+          insightsNoData: 'Aún no hay datos suficientes para este insight.',
+          insightsMatchesAnalyzed: 'Partidos analizados: {count}',
+          insightsSeasonsAnalyzed: 'Temporadas analizadas: {count}',
+          insightsGoalsPerMatch: 'Goles / partido: {value}',
+          insightsAssistsPerMatch: 'Asistencias / partido: {value}',
+          insightsSavesPerMatch: 'Paradas / partido: {value}',
+          insightsAvgPlayersPerTeam: 'Media jugadores / equipo: {value}',
+          insightsKpiMatches: 'Partidos analizados',
+          insightsKpiSeasons: 'Temporadas analizadas',
+          insightsKpiGoalsPerMatch: 'Goles / partido',
+          insightsKpiAssistsPerMatch: 'Asistencias / partido',
+          insightsKpiSavesPerMatch: 'Paradas / partido',
+          insightsKpiPlayersPerTeam: 'Media jugadores / equipo',
+          chartTrendByMatchTitle: 'Tendencia por partido',
+          chartTrendByMatchDescription:
+            'Evolución directa de goles, asistencias y paradas para cada partido cerrado del alcance.',
+          chartRunningAveragesTitle: 'Promedios acumulados',
+          chartRunningAveragesDescription:
+            'Cómo evolucionan los promedios a medida que se disputan más partidos.',
+          chartSeasonComparisonTitle: 'Comparativa por temporada',
+          chartSeasonComparisonDescription:
+            'Compara promedios de rendimiento por temporada para todas las temporadas incluidas en el análisis.',
+          insightsComparisonSummary:
+            'Comparado contra {scope}: goles/partido {goalsDelta}, asistencias/partido {assistsDelta}, paradas/partido {savesDelta}.',
+          topPairsTitle: 'Parejas con mejor rendimiento',
+          topTeammatesTitle: 'Compañeros más frecuentes',
+          pairColumn: 'Pareja',
+          bestTeammateColumn: 'Mejor compañero',
+          winRateColumn: 'Ratio de victoria',
+          correlationMatrixTitle: 'Matriz de correlación de compañerismo',
+          correlationMatrixDescription:
+            'Top jugadores por apariciones. Cada celda muestra ratio de victoria y partidos compartidos cuando ambos jugaron en el mismo equipo.',
+          correlationLegendLow: 'Relación baja',
+          correlationLegendMid: 'Relación media',
+          correlationLegendHigh: 'Relación alta',
+          correlationSamePlayer: 'Eje del mismo jugador',
+          correlationNoMatches: 'Sin partidos compartidos',
+          correlationCellTooltip:
+            '{matches} partidos juntos | V:{wins} E:{draws} D:{losses} | Ratio {winRate}',
+          leadersScorers: 'Máximos goleadores',
+          leadersAssisters: 'Máximos asistentes',
+          leadersSavers: 'Más paradas'
         },
         notices: {
           seasonCreated: 'Temporada creada',
@@ -821,7 +990,8 @@ export const messages = {
           home: 'Local',
           away: 'Visitante',
           status: 'Estado',
-          result: 'Resultado'
+          result: 'Resultado',
+          actions: 'Acciones'
         },
         playerGuid: 'GUID del jugador: {guid}',
         confirmLeave:

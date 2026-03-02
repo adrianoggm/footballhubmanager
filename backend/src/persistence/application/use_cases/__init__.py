@@ -35,6 +35,7 @@ from .manage_pena_membership import (
 )
 from .manage_season_competition import (
     InvalidSeasonDataError,
+    InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,

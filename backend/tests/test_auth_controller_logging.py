@@ -33,10 +33,11 @@ def test_user_login_failure_logs_do_not_expose_username_or_password(monkeypatch,
     monkeypatch.setattr(auth_controller, "LoginUserUseCase", _AlwaysFailLoginUseCase)
 
     payload = auth_controller.LoginRequest(username="sensitive_user", password="sensitive_password")
+    use_case = _AlwaysFailLoginUseCase(_DummyRepo(object()))
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(HTTPException) as exc:
-            auth_controller.login_user(payload, db=object())
+            auth_controller.login_user(payload, use_case=use_case, db=object())
 
     assert exc.value.status_code == 401
     assert "invalid credentials" in caplog.text.lower()
@@ -49,10 +50,11 @@ def test_admin_login_failure_logs_do_not_expose_username_or_password(monkeypatch
     monkeypatch.setattr(auth_controller, "LoginAdminUseCase", _AlwaysFailLoginUseCase)
 
     payload = auth_controller.LoginRequest(username="admin_secret", password="admin_password")
+    use_case = _AlwaysFailLoginUseCase(_DummyRepo(object()))
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(HTTPException) as exc:
-            auth_controller.login_admin(payload, db=object())
+            auth_controller.login_admin(payload, use_case=use_case, db=object())
 
     assert exc.value.status_code == 401
     assert "invalid credentials" in caplog.text.lower()

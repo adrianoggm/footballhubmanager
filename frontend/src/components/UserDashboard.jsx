@@ -18,12 +18,15 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
+  TableRow, 
   TextField,
   Typography
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import MatchDetailViewer from './MatchDetailViewer.jsx'
+import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import { useI18n } from '../i18n/useI18n.js'
+import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { userService } from '../services/userService.js'
 
 const defaultProfileForm = () => ({
@@ -52,6 +55,16 @@ const formatDate = (value) => {
   }
   return new Date(`${value}T00:00:00`).toLocaleDateString()
 }
+
+const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
+
+const formatSignedDecimal = (value, digits = 2) => {
+  const numeric = Number(value || 0)
+  const prefix = numeric >= 0 ? '+' : ''
+  return `${prefix}${numeric.toFixed(digits)}`
+}
+
+const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`
 
 const mapDashboardErrorMessage = (error, t) => {
   const raw = String(error?.message || '').toLowerCase()
@@ -89,8 +102,17 @@ export default function UserDashboard({ session, onLogout }) {
   const [standings, setStandings] = useState([])
   const [seasonMatches, setSeasonMatches] = useState([])
   const [seasonDataLoading, setSeasonDataLoading] = useState(false)
+  const [insightsScope, setInsightsScope] = useState('selected_season')
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsReport, setInsightsReport] = useState(null)
+  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
+  const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
+  const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
+  const [matchDetailLoading, setMatchDetailLoading] = useState(false)
   const seasonListRequestIdRef = useRef(0)
   const seasonDataRequestIdRef = useRef(0)
+  const matchDetailRequestIdRef = useRef(0)
+  const insightsRequestIdRef = useRef(0)
 
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
@@ -117,6 +139,22 @@ export default function UserDashboard({ session, onLogout }) {
     }
     return { ...standings[index], rank: index + 1 }
   }, [standings, currentPlayerGuid])
+
+  const orderedSeasonMatches = useMemo(
+    () =>
+      [...seasonMatches].sort((left, right) => {
+        if (left.match_date === right.match_date) {
+          return String(right.guid || '').localeCompare(String(left.guid || ''))
+        }
+        return String(right.match_date || '').localeCompare(String(left.match_date || ''))
+      }),
+    [seasonMatches]
+  )
+
+  const insightsComparison = useMemo(
+    () => compareMatchInsightSummaries(insightsReport, insightsComparisonReport),
+    [insightsReport, insightsComparisonReport]
+  )
 
   const runAction = async (action, successMessage = '') => {
     setLoading(true)
@@ -210,6 +248,8 @@ export default function UserDashboard({ session, onLogout }) {
       }
       setStandings([])
       setSeasonMatches([])
+      setSelectedMatchGuid('')
+      setSelectedMatchDetail(null)
       return
     }
 
@@ -285,6 +325,8 @@ export default function UserDashboard({ session, onLogout }) {
         setSelectedSeasonGuid('')
         setStandings([])
         setSeasonMatches([])
+        setSelectedMatchGuid('')
+        setSelectedMatchDetail(null)
       }
       return
     }
@@ -333,6 +375,20 @@ export default function UserDashboard({ session, onLogout }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid, selectedSeasonGuid, initializing])
+
+  useEffect(() => {
+    matchDetailRequestIdRef.current += 1
+    setSelectedMatchGuid('')
+    setSelectedMatchDetail(null)
+    setMatchDetailLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid])
+
+  useEffect(() => {
+    insightsRequestIdRef.current += 1
+    setInsightsReport(null)
+    setInsightsComparisonReport(null)
+    setInsightsLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
 
   const onProfileField = (name) => (event) => {
     setProfileForm((prev) => ({ ...prev, [name]: event.target.value }))
@@ -424,6 +480,97 @@ export default function UserDashboard({ session, onLogout }) {
       await userService.leavePena(selectedPenaGuid)
       await loadDashboard()
     }, t('dashboard.user.noticeLeftPena'))
+  }
+
+  const loadScopeInsightReport = async (penaGuid, scope) => {
+    const seasonGuids =
+      scope === 'all_seasons'
+        ? seasonList.map((season) => season.guid).filter(Boolean)
+        : [selectedSeasonGuid].filter(Boolean)
+
+    if (!seasonGuids.length) {
+      return null
+    }
+
+    return userService.getMatchInsights(penaGuid, {
+      scope,
+      season_guids: seasonGuids
+    })
+  }
+
+  const handleRefreshInsights = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid) {
+      return
+    }
+
+    const requestId = insightsRequestIdRef.current + 1
+    insightsRequestIdRef.current = requestId
+
+    setInsightsLoading(true)
+    setError(null)
+
+    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
+    try {
+      const [primaryReport, comparisonReport] = await Promise.all([
+        loadScopeInsightReport(selectedPenaGuid, insightsScope),
+        seasonList.length > 1 || comparisonScope === 'selected_season'
+          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
+          : Promise.resolve(null)
+      ])
+      if (requestId !== insightsRequestIdRef.current) {
+        return
+      }
+      setInsightsReport(primaryReport)
+      setInsightsComparisonReport(comparisonReport)
+    } catch (requestError) {
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === insightsRequestIdRef.current) {
+        setInsightsLoading(false)
+      }
+    }
+  }
+
+  const handleOpenMatchDetail = async (matchGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
+      return
+    }
+    const requestId = matchDetailRequestIdRef.current + 1
+    matchDetailRequestIdRef.current = requestId
+    setSelectedMatchGuid(matchGuid)
+    setMatchDetailLoading(true)
+    setError(null)
+    try {
+      const detail = await userService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid)
+      if (requestId !== matchDetailRequestIdRef.current) {
+        return
+      }
+      setSelectedMatchDetail(detail)
+    } catch (requestError) {
+      if (requestId !== matchDetailRequestIdRef.current) {
+        return
+      }
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === matchDetailRequestIdRef.current) {
+        setMatchDetailLoading(false)
+      }
+    }
+  }
+
+  const handleCloseMatchDetail = () => {
+    matchDetailRequestIdRef.current += 1
+    setSelectedMatchGuid('')
+    setSelectedMatchDetail(null)
+    setMatchDetailLoading(false)
   }
 
   if (initializing) {
@@ -610,7 +757,7 @@ export default function UserDashboard({ session, onLogout }) {
 
                       {selectedSeasonGuid && !seasonDataLoading && (
                         <Grid container spacing={2}>
-                          <Grid item xs={12} md={6}>
+                          <Grid item xs={12} md={12}>
                             <Card variant="outlined">
                               <CardContent>
                                 <Stack spacing={1.5}>
@@ -729,19 +876,19 @@ export default function UserDashboard({ session, onLogout }) {
                             </Card>
                           </Grid>
 
-                          <Grid item xs={12} md={6}>
+                          <Grid item xs={12} md={12}>
                             <Card variant="outlined">
                               <CardContent>
                                 <Stack spacing={1.5}>
                                   <Typography variant="subtitle2">
                                     {t('dashboard.user.matchesTitle')}
                                   </Typography>
-                                  {!seasonMatches.length && (
+                                  {!orderedSeasonMatches.length && (
                                     <Typography variant="body2" color="text.secondary">
                                       {t('dashboard.user.noMatchesForSeason')}
                                     </Typography>
                                   )}
-                                  {seasonMatches.length > 0 && (
+                                  {orderedSeasonMatches.length > 0 && (
                                     <TableContainer>
                                       <Table size="small">
                                         <TableHead>
@@ -751,10 +898,11 @@ export default function UserDashboard({ session, onLogout }) {
                                             <TableCell>{t('dashboard.user.table.away')}</TableCell>
                                             <TableCell>{t('dashboard.user.table.status')}</TableCell>
                                             <TableCell>{t('dashboard.user.table.result')}</TableCell>
+                                            <TableCell>{t('dashboard.user.table.actions')}</TableCell>
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {seasonMatches.map((match) => (
+                                          {orderedSeasonMatches.map((match) => (
                                             <TableRow key={match.guid}>
                                               <TableCell>{formatDate(match.match_date)}</TableCell>
                                               <TableCell>{match.home_team_name}</TableCell>
@@ -765,6 +913,16 @@ export default function UserDashboard({ session, onLogout }) {
                                                   : t('dashboard.user.statusOpen')}
                                               </TableCell>
                                               <TableCell>{match.home_score} - {match.away_score}</TableCell>
+                                              <TableCell>
+                                                <Button
+                                                  size="small"
+                                                  variant="text"
+                                                  onClick={() => handleOpenMatchDetail(match.guid)}
+                                                  disabled={matchDetailLoading}
+                                                >
+                                                  {t('dashboard.common.matchDetail.viewAction')}
+                                                </Button>
+                                              </TableCell>
                                             </TableRow>
                                           ))}
                                         </TableBody>
@@ -777,6 +935,29 @@ export default function UserDashboard({ session, onLogout }) {
                           </Grid>
                         </Grid>
                       )}
+
+                      {selectedSeasonGuid && (
+                        <AdminInsightsSection
+                          state={{
+                            selectedSeasonGuid,
+                            insightsScope,
+                            insightsLoading,
+                            insightsReport,
+                            insightsComparisonReport,
+                            insightsComparison
+                          }}
+                          actions={{
+                            onInsightsScopeChange: setInsightsScope,
+                            onRefreshInsights: handleRefreshInsights
+                          }}
+                          helpers={{
+                            t,
+                            formatDecimal,
+                            formatSignedDecimal,
+                            formatPercent
+                          }}
+                        />
+                      )}
                     </Stack>
                   </CardContent>
                 </Card>
@@ -784,6 +965,37 @@ export default function UserDashboard({ session, onLogout }) {
           </Stack>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(selectedMatchGuid)}
+        onClose={handleCloseMatchDetail}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>{t('dashboard.common.matchDetail.dialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {matchDetailLoading && <LinearProgress />}
+            {!matchDetailLoading && selectedMatchDetail && (
+              <MatchDetailViewer
+                detail={selectedMatchDetail}
+                t={t}
+                formatDate={formatDate}
+              />
+            )}
+            {!matchDetailLoading && !selectedMatchDetail && (
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.common.matchDetail.noData')}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseMatchDetail}>
+            {t('dashboard.common.matchDetail.closeAction')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={profileSettingsOpen}
