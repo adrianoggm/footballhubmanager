@@ -1,3 +1,6 @@
+set shell := ["bash", "-cu"]
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+
 python_cmd := env_var_or_default("PYTHON_CMD", if os() == "windows" { "py -3" } else { "python3" })
 venv_python := env_var_or_default("VENV_PYTHON", if os() == "windows" { "backend/.venv/Scripts/python.exe" } else { "backend/.venv/bin/python" })
 
@@ -19,10 +22,10 @@ run-backend port="8000" host="127.0.0.1":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 
 frontend port="5173" host="127.0.0.1":
-    npm --prefix frontend run dev -- --host {{host}} --port {{port}}
+    cd frontend; npx vite --host {{host}} --port {{port}}
 
 run-frontend port="5173" host="127.0.0.1":
-    npm --prefix frontend run dev -- --host {{host}} --port {{port}}
+    cd frontend; npx vite --host {{host}} --port {{port}}
 
 frontend-lint:
     npm --prefix frontend run lint
