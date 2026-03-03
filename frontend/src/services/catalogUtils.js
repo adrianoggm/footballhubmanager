@@ -23,13 +23,11 @@ export const normalizeNationalities = (payload) => {
         : []
 
   const unique = new Set()
-  return source
-    .map(pickNationalityName)
-    .filter((name) => {
-      if (!name || unique.has(name)) {
-        return false
-      }
-      unique.add(name)
-      return true
-    })
+  return source.map(pickNationalityName).filter((name) => {
+    if (!name || unique.has(name)) {
+      return false
+    }
+    unique.add(name)
+    return true
+  })
 }

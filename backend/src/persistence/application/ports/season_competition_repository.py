@@ -131,6 +131,26 @@ class MatchesPageResult:
     total: int
 
 
+@dataclass(frozen=True)
+class MatchInsightRowResult:
+    season_guid: str
+    match_guid: str
+    match_date: date
+    home_score: int
+    away_score: int
+    team_side: str
+    player_guid: str
+    player_name: str
+    player_surname1: str
+    player_surname2: str | None
+    player_nickname: str | None
+    goals: int
+    assists: int
+    saves: int
+    player_position: str | None = None
+    rating: float = 0.0
+
+
 class PenaNotFoundError(Exception):
     pass
 
@@ -361,6 +381,13 @@ class SeasonCompetitionRepository(Protocol):
         season_guid: str,
         match_guid: str,
     ) -> MatchDetailResult: ...
+
+    def list_closed_match_insight_rows(
+        self,
+        *,
+        pena_guid: str,
+        season_guids: list[str],
+    ) -> list[MatchInsightRowResult]: ...
 
     def delete_match_for_admin(
         self,

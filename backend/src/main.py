@@ -78,6 +78,13 @@ def _resolve_cors_allow_credentials(origins: list[str]) -> bool:
 
 
 def _include_debug_error_detail() -> bool:
+    raw_value = os.getenv("EXPOSE_INTERNAL_ERRORS")
+    if raw_value is None:
+        return False
+    expose_internal_errors = raw_value.strip().lower() in {"1", "true", "yes", "on"}
+    if not expose_internal_errors:
+        return False
+
     app_env = _app_env()
     return app_env in {"dev", "development", "local", "test"}
 

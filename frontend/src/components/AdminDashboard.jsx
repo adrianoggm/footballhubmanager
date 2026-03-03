@@ -24,14 +24,17 @@ import {
   TableRow,
   TableContainer,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import MatchDetailViewer from './MatchDetailViewer.jsx'
+import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
 import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
 import AdminSeasonsSection from './admin/AdminSeasonsSection.jsx'
@@ -43,7 +46,7 @@ const defaultSeasonForm = () => ({
   end_date: todayIso(),
   points_win: 3,
   points_draw: 1,
-  points_loss: 0
+  points_loss: 0,
 })
 
 const defaultMatchForm = () => ({
@@ -51,7 +54,7 @@ const defaultMatchForm = () => ({
   home_team_name: '',
   away_team_name: '',
   home_player_guids: [],
-  away_player_guids: []
+  away_player_guids: [],
 })
 
 const defaultGuestForm = () => ({
@@ -60,19 +63,19 @@ const defaultGuestForm = () => ({
   surname2: '',
   nationality: 'Spain',
   nickname: '',
-  position: ''
+  position: '',
 })
 
 const defaultSeasonPlayerDraft = () => ({
   wins: '0',
   draws: '0',
   losses: '0',
-  quality_level: '0'
+  quality_level: '0',
 })
 
 const defaultMembershipDraft = () => ({
   nickname: '',
-  position: ''
+  position: '',
 })
 
 const splitGuids = (value) =>
@@ -83,9 +86,7 @@ const splitGuids = (value) =>
 
 const normalizePlayerGuids = (value) => {
   if (Array.isArray(value)) {
-    return Array.from(
-      new Set(value.map((item) => String(item || '').trim()).filter(Boolean))
-    )
+    return Array.from(new Set(value.map((item) => String(item || '').trim()).filter(Boolean)))
   }
   if (typeof value === 'string') {
     return Array.from(new Set(splitGuids(value)))
@@ -110,6 +111,16 @@ const formatEpochSeconds = (value) => {
   return new Date(value * 1000).toLocaleString()
 }
 
+const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
+
+const formatSignedDecimal = (value, digits = 2) => {
+  const numeric = Number(value || 0)
+  const prefix = numeric >= 0 ? '+' : ''
+  return `${prefix}${numeric.toFixed(digits)}`
+}
+
+const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`
+
 const addDaysIso = (isoDate, days) => {
   const [year, month, day] = isoDate.split('-').map(Number)
   const date = new Date(Date.UTC(year, month - 1, day))
@@ -133,12 +144,12 @@ const buildNextSeasonDateRange = (seasons) => {
     const startDate = todayIso()
     return {
       start_date: startDate,
-      end_date: addDaysIso(startDate, 90)
+      end_date: addDaysIso(startDate, 90),
     }
   }
   return {
     start_date: addDaysIso(latestSeasonEndDate, 1),
-    end_date: addDaysIso(latestSeasonEndDate, 90)
+    end_date: addDaysIso(latestSeasonEndDate, 90),
   }
 }
 
@@ -179,7 +190,7 @@ const buildLineupPlayerOptions = (...groups) => {
       }
       byGuid.set(guid, {
         guid,
-        label: formatPlayerDisplayName(player) || guid
+        label: formatPlayerDisplayName(player) || guid,
       })
     })
   return Array.from(byGuid.values())
@@ -191,18 +202,18 @@ const buildTeamStatsDraft = (team) => ({
     goals: String(player.goals ?? 0),
     assists: String(player.assists ?? 0),
     saves: String(player.saves ?? 0),
-    rating: String(player.rating ?? 0)
-  }))
+    rating: String(player.rating ?? 0),
+  })),
 })
 
 const buildMatchStatsDraft = (detail) => ({
   home_team: buildTeamStatsDraft(detail?.home_team),
-  away_team: buildTeamStatsDraft(detail?.away_team)
+  away_team: buildTeamStatsDraft(detail?.away_team),
 })
 
 const buildMatchLineupsDraft = (detail) => ({
   home_player_guids: (detail?.home_team?.players || []).map((player) => player.player_guid),
-  away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid)
+  away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
 })
 
 const collectPagedItems = async (fetchPage) => {
@@ -255,9 +266,18 @@ export default function AdminDashboard({ session, onLogout }) {
   const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
   const [matchStatsDraft, setMatchStatsDraft] = useState(null)
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
+  const [overviewMatchGuid, setOverviewMatchGuid] = useState('')
+  const [overviewMatchDetail, setOverviewMatchDetail] = useState(null)
+  const [overviewMatchLoading, setOverviewMatchLoading] = useState(false)
+  const [insightsScope, setInsightsScope] = useState('selected_season')
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsReport, setInsightsReport] = useState(null)
+  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
+  const overviewMatchRequestIdRef = useRef(0)
+  const insightsRequestIdRef = useRef(0)
 
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
@@ -280,10 +300,7 @@ export default function AdminDashboard({ session, onLogout }) {
     return seasonList.filter((item) => item.guid !== activeSeason.guid)
   }, [activeSeason, seasonList])
 
-  const latestSeasonEndDate = useMemo(
-    () => getLatestSeasonEndDate(seasonList),
-    [seasonList]
-  )
+  const latestSeasonEndDate = useMemo(() => getLatestSeasonEndDate(seasonList), [seasonList])
 
   const selectedSeason = useMemo(
     () => seasonList.find((item) => item.guid === selectedSeasonGuid) || null,
@@ -306,10 +323,7 @@ export default function AdminDashboard({ session, onLogout }) {
     [seasonList]
   )
 
-  const errorMessage = useMemo(
-    () => (error ? mapDashboardErrorMessage(error, t) : ''),
-    [error, t]
-  )
+  const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -367,19 +381,48 @@ export default function AdminDashboard({ session, onLogout }) {
   )
 
   const visibleSeasonMatches = useMemo(
-    () =>
-      seasonMatches.filter((match) => !hiddenDeletedMatchGuidSet.has(match.guid)),
+    () => seasonMatches.filter((match) => !hiddenDeletedMatchGuidSet.has(match.guid)),
     [seasonMatches, hiddenDeletedMatchGuidSet]
+  )
+
+  const overviewSeasonMatches = useMemo(
+    () =>
+      [...visibleSeasonMatches]
+        .sort((left, right) => {
+          if (left.match_date === right.match_date) {
+            return String(right.guid || '').localeCompare(String(left.guid || ''))
+          }
+          return String(right.match_date || '').localeCompare(String(left.match_date || ''))
+        })
+        .slice(0, 5),
+    [visibleSeasonMatches]
+  )
+
+  const overviewMatchesSummary = useMemo(() => {
+    const total = visibleSeasonMatches.length
+    const closed = visibleSeasonMatches.filter(
+      (match) => String(match.status || '').toLowerCase() === 'closed'
+    ).length
+    return {
+      total,
+      closed,
+      open: Math.max(0, total - closed),
+    }
+  }, [visibleSeasonMatches])
+
+  const insightsComparison = useMemo(
+    () => compareMatchInsightSummaries(insightsReport, insightsComparisonReport),
+    [insightsReport, insightsComparisonReport]
   )
 
   const {
     selectedSeasonDateErrors,
     onSelectedSeasonField,
     validateSelectedSeasonForm,
-    resetSelectedSeasonDateErrors
+    resetSelectedSeasonDateErrors,
   } = useAdminSeasons({
     setSelectedSeasonForm,
-    t
+    t,
   })
 
   const onSeasonField = (name) => (event) => {
@@ -395,7 +438,7 @@ export default function AdminDashboard({ session, onLogout }) {
     setMatchForm((prev) => ({
       ...prev,
       home_player_guids: homePlayerGuids,
-      away_player_guids: awayPlayerGuids
+      away_player_guids: awayPlayerGuids,
     }))
   }
 
@@ -407,7 +450,7 @@ export default function AdminDashboard({ session, onLogout }) {
       return {
         ...prev,
         home_player_guids: homePlayerGuids,
-        away_player_guids: awayPlayerGuids
+        away_player_guids: awayPlayerGuids,
       }
     })
   }
@@ -465,9 +508,7 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const loadHistoricalPlayers = async (penaGuid) =>
-    collectPagedItems((page) =>
-      adminService.listPenaPlayers(penaGuid, { page, pageSize: 100 })
-    )
+    collectPagedItems((page) => adminService.listPenaPlayers(penaGuid, { page, pageSize: 100 }))
 
   const loadSeasonRoster = async (penaGuid, seasonGuid) => {
     if (!seasonGuid) {
@@ -478,7 +519,7 @@ export default function AdminDashboard({ session, onLogout }) {
         page,
         pageSize: 100,
         orderBy: 'points',
-        orderDir: 'desc'
+        orderDir: 'desc',
       })
     )
   }
@@ -499,7 +540,9 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchStatsDraft(null)
       return
     }
-    const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, { pageSize: 100 })
+    const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, {
+      pageSize: 100,
+    })
     if (requestId !== seasonMatchesRequestIdRef.current) {
       return
     }
@@ -537,7 +580,7 @@ export default function AdminDashboard({ session, onLogout }) {
           throw requestError
         }),
         adminService.listSeasons(penaGuid, { pageSize: 100 }),
-        loadHistoricalPlayers(penaGuid)
+        loadHistoricalPlayers(penaGuid),
       ])
       if (isStale()) {
         return
@@ -554,7 +597,7 @@ export default function AdminDashboard({ session, onLogout }) {
         ...nextRange,
         points_win: pointsReference?.points_win ?? 3,
         points_draw: pointsReference?.points_draw ?? 1,
-        points_loss: pointsReference?.points_loss ?? 0
+        points_loss: pointsReference?.points_loss ?? 0,
       })
 
       const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
@@ -569,7 +612,9 @@ export default function AdminDashboard({ session, onLogout }) {
       setPendingRemoveMembershipPlayer(null)
 
       if (resolvedSeasonGuid) {
-        const standingsPage = await adminService.listStandings(penaGuid, resolvedSeasonGuid, { pageSize: 10 })
+        const standingsPage = await adminService.listStandings(penaGuid, resolvedSeasonGuid, {
+          pageSize: 10,
+        })
         if (isStale()) {
           return
         }
@@ -591,7 +636,7 @@ export default function AdminDashboard({ session, onLogout }) {
     try {
       const [penaPage, catalogNationalities] = await Promise.all([
         adminService.getPenas({ pageSize: 50 }),
-        adminService.getNationalities().catch(() => [])
+        adminService.getNationalities().catch(() => []),
       ])
       const penaItems = penaPage.items || []
       setPenas(penaItems)
@@ -635,10 +680,7 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!selectedPenaGuid || initializing) {
       return
     }
-    runAction(
-      () => loadPenaData(selectedPenaGuid),
-      ''
-    )
+    runAction(() => loadPenaData(selectedPenaGuid), '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid])
 
@@ -684,6 +726,20 @@ export default function AdminDashboard({ session, onLogout }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+
+  useEffect(() => {
+    overviewMatchRequestIdRef.current += 1
+    setOverviewMatchGuid('')
+    setOverviewMatchDetail(null)
+    setOverviewMatchLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid])
+
+  useEffect(() => {
+    insightsRequestIdRef.current += 1
+    setInsightsReport(null)
+    setInsightsComparisonReport(null)
+    setInsightsLoading(false)
+  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
 
   useEffect(() => {
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
@@ -761,7 +817,7 @@ export default function AdminDashboard({ session, onLogout }) {
       end_date: selectedSeason.end_date,
       points_win: selectedSeason.points_win,
       points_draw: selectedSeason.points_draw,
-      points_loss: selectedSeason.points_loss
+      points_loss: selectedSeason.points_loss,
     })
     resetSelectedSeasonDateErrors()
   }, [selectedSeason, resetSelectedSeasonDateErrors])
@@ -777,7 +833,7 @@ export default function AdminDashboard({ session, onLogout }) {
     setMatchForm((prev) => ({
       ...prev,
       home_player_guids: [],
-      away_player_guids: []
+      away_player_guids: [],
     }))
     setSelectedMatchGuid('')
     setSelectedMatchDetail(null)
@@ -794,10 +850,7 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!selectedPenaGuid || !nextSeasonGuid) {
       return
     }
-    runAction(
-      () => loadStandings(selectedPenaGuid, nextSeasonGuid),
-      ''
-    )
+    runAction(() => loadStandings(selectedPenaGuid, nextSeasonGuid), '')
   }
 
   const handleCreateSeason = async () => {
@@ -811,7 +864,7 @@ export default function AdminDashboard({ session, onLogout }) {
       if (importPreviousSeasonRoster && importSourceSeasonGuid) {
         const [sourcePlayers, existingSeasonPlayers] = await Promise.all([
           loadSeasonRoster(selectedPenaGuid, importSourceSeasonGuid),
-          loadSeasonRoster(selectedPenaGuid, createdSeason.guid)
+          loadSeasonRoster(selectedPenaGuid, createdSeason.guid),
         ])
         const existingSeasonGuidSet = new Set(
           existingSeasonPlayers.map((item) => item.player_guid).filter(Boolean)
@@ -853,7 +906,7 @@ export default function AdminDashboard({ session, onLogout }) {
     setSeasonForm((prev) => ({
       ...prev,
       start_date: startDate,
-      end_date: endDate
+      end_date: endDate,
     }))
   }
 
@@ -867,7 +920,7 @@ export default function AdminDashboard({ session, onLogout }) {
     const pointsValues = [
       selectedSeasonForm.points_win,
       selectedSeasonForm.points_draw,
-      selectedSeasonForm.points_loss
+      selectedSeasonForm.points_loss,
     ]
     const pointsValid = pointsValues.every((item) => Number.isInteger(item) && item >= 0)
     if (!pointsValid) {
@@ -927,17 +980,17 @@ export default function AdminDashboard({ session, onLogout }) {
         match_date: matchForm.match_date,
         home_team: {
           team_name: matchForm.home_team_name,
-          player_guids: homeLineup
+          player_guids: homeLineup,
         },
         away_team: {
           team_name: matchForm.away_team_name,
-          player_guids: awayLineup
-        }
+          player_guids: awayLineup,
+        },
       })
       setLastCreatedMatch(created)
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
-        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.detailedMatchCreated'))
   }
@@ -960,32 +1013,39 @@ export default function AdminDashboard({ session, onLogout }) {
       setError(new Error(t('dashboard.admin.errors.selectedSeasonRequired')))
       return
     }
-    await runAction(async () => {
-      const created = await adminService.createGuestPlayer(selectedPenaGuid, {
-        name: guestForm.name,
-        surname1: guestForm.surname1,
-        surname2: guestForm.surname2 || null,
-        nationality: guestForm.nationality,
-        nickname: guestForm.nickname || null,
-        position: guestForm.position || null
-      })
-      if (registerInSelectedSeason && selectedSeasonGuid) {
-        await adminService.registerSeasonPlayer(selectedPenaGuid, selectedSeasonGuid, created.player_guid)
-      }
-      setGuestForm((prev) => ({
-        ...defaultGuestForm(),
-        nationality: prev.nationality || 'Spain'
-      }))
-      await loadPenaData(selectedPenaGuid)
-      if (registerInSelectedSeason && selectedSeasonGuid) {
-        await Promise.all([
-          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-          loadStandings(selectedPenaGuid, selectedSeasonGuid)
-        ])
-      }
-    }, registerInSelectedSeason
-      ? t('dashboard.admin.notices.guestCreatedAdded')
-      : t('dashboard.admin.notices.guestCreated'))
+    await runAction(
+      async () => {
+        const created = await adminService.createGuestPlayer(selectedPenaGuid, {
+          name: guestForm.name,
+          surname1: guestForm.surname1,
+          surname2: guestForm.surname2 || null,
+          nationality: guestForm.nationality,
+          nickname: guestForm.nickname || null,
+          position: guestForm.position || null,
+        })
+        if (registerInSelectedSeason && selectedSeasonGuid) {
+          await adminService.registerSeasonPlayer(
+            selectedPenaGuid,
+            selectedSeasonGuid,
+            created.player_guid
+          )
+        }
+        setGuestForm((prev) => ({
+          ...defaultGuestForm(),
+          nationality: prev.nationality || 'Spain',
+        }))
+        await loadPenaData(selectedPenaGuid)
+        if (registerInSelectedSeason && selectedSeasonGuid) {
+          await Promise.all([
+            loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+            loadStandings(selectedPenaGuid, selectedSeasonGuid),
+          ])
+        }
+      },
+      registerInSelectedSeason
+        ? t('dashboard.admin.notices.guestCreatedAdded')
+        : t('dashboard.admin.notices.guestCreated')
+    )
   }
 
   const handleSeasonSelection = (event) => {
@@ -1006,18 +1066,21 @@ export default function AdminDashboard({ session, onLogout }) {
       return
     }
     const totalSelected = selectedHistoricalGuids.length
-    await runAction(async () => {
-      await adminService.registerSeasonPlayersBulk(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedHistoricalGuids
-      )
-      setSelectedHistoricalGuids([])
-      await loadPenaData(selectedPenaGuid)
-    }, t('dashboard.admin.notices.playersAdded', {
-      count: totalSelected,
-      suffix: totalSelected === 1 ? '' : language === 'es' ? 'es' : 's'
-    }))
+    await runAction(
+      async () => {
+        await adminService.registerSeasonPlayersBulk(
+          selectedPenaGuid,
+          selectedSeasonGuid,
+          selectedHistoricalGuids
+        )
+        setSelectedHistoricalGuids([])
+        await loadPenaData(selectedPenaGuid)
+      },
+      t('dashboard.admin.notices.playersAdded', {
+        count: totalSelected,
+        suffix: totalSelected === 1 ? '' : language === 'es' ? 'es' : 's',
+      })
+    )
   }
 
   const handleEditSeasonPlayer = (player) => {
@@ -1026,7 +1089,7 @@ export default function AdminDashboard({ session, onLogout }) {
       wins: String(player.wins ?? 0),
       draws: String(player.draws ?? 0),
       losses: String(player.losses ?? 0),
-      quality_level: String(player.quality_level ?? 0)
+      quality_level: String(player.quality_level ?? 0),
     })
   }
 
@@ -1068,12 +1131,12 @@ export default function AdminDashboard({ session, onLogout }) {
           wins,
           draws,
           losses,
-          quality_level: qualityLevel
+          quality_level: qualityLevel,
         }
       )
       await Promise.all([
         loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        loadStandings(selectedPenaGuid, selectedSeasonGuid)
+        loadStandings(selectedPenaGuid, selectedSeasonGuid),
       ])
       setEditingSeasonPlayer(null)
       setSeasonPlayerDraft(defaultSeasonPlayerDraft)
@@ -1105,7 +1168,7 @@ export default function AdminDashboard({ session, onLogout }) {
       )
       await Promise.all([
         loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        loadStandings(selectedPenaGuid, selectedSeasonGuid)
+        loadStandings(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.seasonPlayerRemoved'))
   }
@@ -1114,7 +1177,7 @@ export default function AdminDashboard({ session, onLogout }) {
     setEditingMembershipPlayer(player)
     setMembershipDraft({
       nickname: player.nickname || '',
-      position: player.position || ''
+      position: player.position || '',
     })
   }
 
@@ -1131,10 +1194,14 @@ export default function AdminDashboard({ session, onLogout }) {
       return
     }
     await runAction(async () => {
-      await adminService.updatePenaPlayerMembership(selectedPenaGuid, editingMembershipPlayer.guid, {
-        nickname: membershipDraft.nickname.trim() || null,
-        position: membershipDraft.position.trim() || null
-      })
+      await adminService.updatePenaPlayerMembership(
+        selectedPenaGuid,
+        editingMembershipPlayer.guid,
+        {
+          nickname: membershipDraft.nickname.trim() || null,
+          position: membershipDraft.position.trim() || null,
+        }
+      )
       await loadPenaData(selectedPenaGuid)
       setEditingMembershipPlayer(null)
       setMembershipDraft(defaultMembershipDraft)
@@ -1193,6 +1260,100 @@ export default function AdminDashboard({ session, onLogout }) {
     }
   }
 
+  const handleOpenOverviewMatchDetail = async (matchGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
+      return
+    }
+    const requestId = overviewMatchRequestIdRef.current + 1
+    overviewMatchRequestIdRef.current = requestId
+    setOverviewMatchGuid(matchGuid)
+    setOverviewMatchLoading(true)
+    setError(null)
+    try {
+      const detail = await adminService.getMatchDetail(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        matchGuid
+      )
+      if (requestId !== overviewMatchRequestIdRef.current) {
+        return
+      }
+      setOverviewMatchDetail(detail)
+    } catch (requestError) {
+      if (requestId !== overviewMatchRequestIdRef.current) {
+        return
+      }
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === overviewMatchRequestIdRef.current) {
+        setOverviewMatchLoading(false)
+      }
+    }
+  }
+
+  const handleCloseOverviewMatchDetail = () => {
+    overviewMatchRequestIdRef.current += 1
+    setOverviewMatchGuid('')
+    setOverviewMatchDetail(null)
+    setOverviewMatchLoading(false)
+  }
+
+  const loadScopeInsightReport = async (penaGuid, scope) => {
+    const seasonGuids =
+      scope === 'all_seasons'
+        ? seasonList.map((season) => season.guid).filter(Boolean)
+        : [selectedSeasonGuid].filter(Boolean)
+
+    if (!seasonGuids.length) {
+      return null
+    }
+    return adminService.getMatchInsights(penaGuid, {
+      scope,
+      season_guids: seasonGuids,
+    })
+  }
+
+  const handleRefreshInsights = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid) {
+      return
+    }
+
+    const requestId = insightsRequestIdRef.current + 1
+    insightsRequestIdRef.current = requestId
+
+    setInsightsLoading(true)
+    setError(null)
+
+    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
+    try {
+      const [primaryReport, comparisonReport] = await Promise.all([
+        loadScopeInsightReport(selectedPenaGuid, insightsScope),
+        seasonList.length > 1 || comparisonScope === 'selected_season'
+          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
+          : Promise.resolve(null),
+      ])
+      if (requestId !== insightsRequestIdRef.current) {
+        return
+      }
+      setInsightsReport(primaryReport)
+      setInsightsComparisonReport(comparisonReport)
+    } catch (requestError) {
+      if (requestError?.status === 401) {
+        await onLogout()
+        return
+      }
+      setError(requestError)
+    } finally {
+      if (requestId === insightsRequestIdRef.current) {
+        setInsightsLoading(false)
+      }
+    }
+  }
+
   const handleRequestDeleteSeasonMatch = (match) => {
     if (!match?.guid) {
       return
@@ -1248,7 +1409,10 @@ export default function AdminDashboard({ session, onLogout }) {
         console.debug('[AdminDashboard] delete request success', { matchGuid: match.guid })
       }
       try {
-        await loadStandings(selectedPenaGuid, selectedSeasonGuid)
+        await Promise.all([
+          loadStandings(selectedPenaGuid, selectedSeasonGuid),
+          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+        ])
       } catch (refreshError) {
         if (refreshError?.status === 401) {
           await onLogout()
@@ -1275,7 +1439,7 @@ export default function AdminDashboard({ session, onLogout }) {
         console.debug('[AdminDashboard] delete request error', {
           matchGuid: match.guid,
           status: deleteError?.status,
-          message: deleteError?.message
+          message: deleteError?.message,
         })
       }
       setError(deleteError)
@@ -1294,7 +1458,10 @@ export default function AdminDashboard({ session, onLogout }) {
       setError(new Error(t('dashboard.admin.errors.lineupsRequired')))
       return
     }
-    if (setUnionSize(homePlayerGuids, awayPlayerGuids) !== homePlayerGuids.length + awayPlayerGuids.length) {
+    if (
+      setUnionSize(homePlayerGuids, awayPlayerGuids) !==
+      homePlayerGuids.length + awayPlayerGuids.length
+    ) {
       setError(new Error(t('dashboard.admin.errors.lineupsOverlap')))
       return
     }
@@ -1306,7 +1473,7 @@ export default function AdminDashboard({ session, onLogout }) {
         selectedMatchGuid,
         {
           home_team: { player_guids: homePlayerGuids },
-          away_team: { player_guids: awayPlayerGuids }
+          away_team: { player_guids: awayPlayerGuids },
         }
       )
       setSelectedMatchDetail(updated)
@@ -1314,7 +1481,8 @@ export default function AdminDashboard({ session, onLogout }) {
       setMatchStatsDraft(buildMatchStatsDraft(updated))
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
-        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.lineupsUpdated'))
   }
@@ -1331,8 +1499,8 @@ export default function AdminDashboard({ session, onLogout }) {
           ...prev[teamKey],
           players: (prev[teamKey]?.players || []).map((player) =>
             player.player_guid === playerGuid ? { ...player, [field]: value } : player
-          )
-        }
+          ),
+        },
       }
     })
   }
@@ -1352,7 +1520,7 @@ export default function AdminDashboard({ session, onLogout }) {
       goals,
       assists,
       saves,
-      rating
+      rating,
     }
   }
 
@@ -1363,7 +1531,12 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const homePlayers = (matchStatsDraft.home_team?.players || []).map(parseStatsPayload)
     const awayPlayers = (matchStatsDraft.away_team?.players || []).map(parseStatsPayload)
-    if (!homePlayers.length || !awayPlayers.length || homePlayers.some((item) => !item) || awayPlayers.some((item) => !item)) {
+    if (
+      !homePlayers.length ||
+      !awayPlayers.length ||
+      homePlayers.some((item) => !item) ||
+      awayPlayers.some((item) => !item)
+    ) {
       setError(new Error(t('dashboard.admin.errors.invalidMatchStats')))
       return
     }
@@ -1375,14 +1548,15 @@ export default function AdminDashboard({ session, onLogout }) {
         selectedMatchGuid,
         {
           home_team: { players: homePlayers },
-          away_team: { players: awayPlayers }
+          away_team: { players: awayPlayers },
         }
       )
       setSelectedMatchDetail(updated)
       setMatchStatsDraft(buildMatchStatsDraft(updated))
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
-        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.matchStatsUpdated'))
   }
@@ -1408,7 +1582,7 @@ export default function AdminDashboard({ session, onLogout }) {
       seasonRoster,
       historicalPlayers,
       guestForm,
-      nationalities
+      nationalities,
     },
     actions: {
       handleSelectHistoricalPlayers,
@@ -1418,12 +1592,12 @@ export default function AdminDashboard({ session, onLogout }) {
       onGuestField,
       handleCreateGuestPlayer,
       handleEditMembershipPlayer,
-      handleRequestRemoveMembershipPlayer
+      handleRequestRemoveMembershipPlayer,
     },
     helpers: {
       t,
-      formatPlayerDisplayName
-    }
+      formatPlayerDisplayName,
+    },
   })
 
   const matchesSection = useAdminMatches({
@@ -1447,7 +1621,7 @@ export default function AdminDashboard({ session, onLogout }) {
       matchStatsDraft,
       matchEditorLineupPlayers,
       matchDraftHomeGuids,
-      matchDraftAwayGuids
+      matchDraftAwayGuids,
     },
     actions: {
       onMatchField,
@@ -1459,13 +1633,13 @@ export default function AdminDashboard({ session, onLogout }) {
       handleSaveMatchLineups,
       onMatchStatsDraftField,
       handleSaveMatchStats,
-      closeMatchEditor
+      closeMatchEditor,
     },
     helpers: {
       t,
       formatDate,
-      formatPlayerDisplayName
-    }
+      formatPlayerDisplayName,
+    },
   })
 
   if (initializing) {
@@ -1483,7 +1657,7 @@ export default function AdminDashboard({ session, onLogout }) {
         sx={{
           border: '1px solid rgba(15, 23, 42, 0.08)',
           background:
-            'linear-gradient(135deg, rgba(255,255,250,0.95) 0%, rgba(230,245,239,0.72) 70%, rgba(255,238,217,0.62) 100%)'
+            'linear-gradient(135deg, rgba(255,255,250,0.95) 0%, rgba(230,245,239,0.72) 70%, rgba(255,238,217,0.62) 100%)',
         }}
       >
         <CardContent>
@@ -1503,7 +1677,11 @@ export default function AdminDashboard({ session, onLogout }) {
                 </Typography>
               </Box>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                <Button variant="outlined" onClick={() => runAction(loadDashboard, '')} disabled={loading}>
+                <Button
+                  variant="outlined"
+                  onClick={() => runAction(loadDashboard, '')}
+                  disabled={loading}
+                >
                   {t('dashboard.common.refreshData')}
                 </Button>
                 <Button variant="text" onClick={onLogout} disabled={loading}>
@@ -1542,7 +1720,9 @@ export default function AdminDashboard({ session, onLogout }) {
                   {seasonList.map((season) => (
                     <MenuItem key={season.guid} value={season.guid}>
                       {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                      {activeSeason?.guid === season.guid ? t('dashboard.admin.seasonActiveSuffix') : ''}
+                      {activeSeason?.guid === season.guid
+                        ? t('dashboard.admin.seasonActiveSuffix')
+                        : ''}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -1587,9 +1767,7 @@ export default function AdminDashboard({ session, onLogout }) {
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
-      {!selectedPenaGuid && (
-        <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>
-      )}
+      {!selectedPenaGuid && <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>}
 
       {selectedPenaGuid && activeSection === 'overview' && (
         <Grid container spacing={2.5}>
@@ -1610,7 +1788,9 @@ export default function AdminDashboard({ session, onLogout }) {
                   {t('dashboard.admin.overview.activeSeason')}
                 </Typography>
                 <Typography variant="h6">
-                  {activeSeason ? t('dashboard.admin.status.configured') : t('dashboard.admin.status.missing')}
+                  {activeSeason
+                    ? t('dashboard.admin.status.configured')
+                    : t('dashboard.admin.status.missing')}
                 </Typography>
               </CardContent>
             </Card>
@@ -1655,7 +1835,8 @@ export default function AdminDashboard({ session, onLogout }) {
                   {tokenPayload && (
                     <Alert severity="info">
                       <Typography variant="body2">
-                        <strong>{t('dashboard.admin.overview.codeLabel')}:</strong> {tokenPayload.token}
+                        <strong>{t('dashboard.admin.overview.codeLabel')}:</strong>{' '}
+                        {tokenPayload.token}
                       </Typography>
                       <Typography variant="body2">
                         <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
@@ -1672,7 +1853,9 @@ export default function AdminDashboard({ session, onLogout }) {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Typography variant="h6">{t('dashboard.admin.overview.quickActionsTitle')}</Typography>
+                  <Typography variant="h6">
+                    {t('dashboard.admin.overview.quickActionsTitle')}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
@@ -1694,7 +1877,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     <Alert severity="success">
                       {t('dashboard.admin.overview.lastMatchCreated', {
                         guid: lastCreatedMatch.guid,
-                        date: formatDate(lastCreatedMatch.match_date)
+                        date: formatDate(lastCreatedMatch.match_date),
                       })}
                     </Alert>
                   ) : (
@@ -1717,7 +1900,9 @@ export default function AdminDashboard({ session, onLogout }) {
                     justifyContent="space-between"
                     spacing={1}
                   >
-                    <Typography variant="h6">{t('dashboard.admin.overview.standingsSnapshotTitle')}</Typography>
+                    <Typography variant="h6">
+                      {t('dashboard.admin.overview.standingsSnapshotTitle')}
+                    </Typography>
                     <Button
                       variant="text"
                       onClick={handleRefreshStandings}
@@ -1742,14 +1927,18 @@ export default function AdminDashboard({ session, onLogout }) {
                             <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
+                            <TableCell align="right">
+                              {t('dashboard.admin.table.assists')}
+                            </TableCell>
                             <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {standings.slice(0, 5).map((player) => (
                             <TableRow key={player.player_guid}>
-                              <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                              <TableCell>
+                                {player.nickname || `${player.name} ${player.surname1}`}
+                              </TableCell>
                               <TableCell align="right">
                                 {player.played ?? player.wins + player.draws + player.losses}
                               </TableCell>
@@ -1776,6 +1965,127 @@ export default function AdminDashboard({ session, onLogout }) {
               </CardContent>
             </Card>
           </Grid>
+
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ sm: 'center' }}
+                    justifyContent="space-between"
+                    spacing={1}
+                  >
+                    <Box>
+                      <Typography variant="h6">
+                        {t('dashboard.admin.overview.seasonMatchesSnapshotTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
+                      </Typography>
+                    </Box>
+                    <Button variant="text" onClick={() => setActiveSection('matches')}>
+                      {t('dashboard.admin.overview.createMatch')}
+                    </Button>
+                  </Stack>
+
+                  {!selectedSeasonGuid && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.overview.selectSeasonToLoad')}
+                    </Typography>
+                  )}
+
+                  {selectedSeasonGuid && (
+                    <>
+                      <Stack direction="row" flexWrap="wrap" gap={1}>
+                        <Chip
+                          size="small"
+                          color="primary"
+                          label={t('dashboard.admin.overview.totalMatchesChip', {
+                            total: overviewMatchesSummary.total,
+                          })}
+                        />
+                        <Chip
+                          size="small"
+                          color="warning"
+                          label={t('dashboard.admin.overview.openMatchesChip', {
+                            open: overviewMatchesSummary.open,
+                          })}
+                        />
+                        <Chip
+                          size="small"
+                          color="success"
+                          label={t('dashboard.admin.overview.closedMatchesChip', {
+                            closed: overviewMatchesSummary.closed,
+                          })}
+                        />
+                      </Stack>
+
+                      {!overviewSeasonMatches.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.overview.noMatchesForSeason')}
+                        </Typography>
+                      )}
+
+                      {overviewSeasonMatches.length > 0 && (
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
+                                <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {overviewSeasonMatches.map((match) => {
+                                const isClosed =
+                                  String(match.status || '').toLowerCase() === 'closed'
+                                return (
+                                  <TableRow key={match.guid}>
+                                    <TableCell>{formatDate(match.match_date)}</TableCell>
+                                    <TableCell>{match.home_team_name}</TableCell>
+                                    <TableCell>{match.away_team_name}</TableCell>
+                                    <TableCell>
+                                      <Chip
+                                        size="small"
+                                        color={isClosed ? 'success' : 'warning'}
+                                        label={
+                                          isClosed
+                                            ? t('dashboard.admin.matches.statusClosed')
+                                            : t('dashboard.admin.matches.statusOpen')
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      {match.home_score} - {match.away_score}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Button
+                                        size="small"
+                                        variant="text"
+                                        onClick={() => handleOpenOverviewMatchDetail(match.guid)}
+                                        disabled={overviewMatchLoading}
+                                      >
+                                        {t('dashboard.common.matchDetail.viewAction')}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )}
+                    </>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
       )}
 
@@ -1795,7 +2105,7 @@ export default function AdminDashboard({ session, onLogout }) {
             historySeasons,
             selectedSeasonGuid,
             selectedSeasonForm,
-            selectedSeasonDateErrors
+            selectedSeasonDateErrors,
           }}
           actions={{
             onSeasonField,
@@ -1806,11 +2116,11 @@ export default function AdminDashboard({ session, onLogout }) {
             onSelectedSeasonField,
             handleUpdateSelectedSeason,
             handleRequestDeleteSelectedSeason,
-            handleSelectSeasonFromHistory
+            handleSelectSeasonFromHistory,
           }}
           helpers={{
             t,
-            formatDate
+            formatDate,
           }}
         />
       )}
@@ -1880,7 +2190,9 @@ export default function AdminDashboard({ session, onLogout }) {
                     <TableBody>
                       {standings.map((player) => (
                         <TableRow key={player.player_guid}>
-                          <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                          <TableCell>
+                            {player.nickname || `${player.name} ${player.surname1}`}
+                          </TableCell>
                           <TableCell align="right">
                             {player.played ?? player.wins + player.draws + player.losses}
                           </TableCell>
@@ -1894,17 +2206,68 @@ export default function AdminDashboard({ session, onLogout }) {
                       ))}
                       {!standings.length && (
                         <TableRow>
-                          <TableCell colSpan={8}>{t('dashboard.admin.standings.noSeasonPlayers')}</TableCell>
+                          <TableCell colSpan={8}>
+                            {t('dashboard.admin.standings.noSeasonPlayers')}
+                          </TableCell>
                         </TableRow>
                       )}
                     </TableBody>
                   </Table>
                 </TableContainer>
               )}
+
+              <Divider />
+              <AdminInsightsSection
+                state={{
+                  selectedSeasonGuid,
+                  insightsScope,
+                  insightsLoading,
+                  insightsReport,
+                  insightsComparisonReport,
+                  insightsComparison,
+                }}
+                actions={{
+                  onInsightsScopeChange: setInsightsScope,
+                  onRefreshInsights: handleRefreshInsights,
+                }}
+                helpers={{
+                  t,
+                  formatDecimal,
+                  formatSignedDecimal,
+                  formatPercent,
+                }}
+              />
             </Stack>
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={Boolean(overviewMatchGuid)}
+        onClose={handleCloseOverviewMatchDetail}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>{t('dashboard.common.matchDetail.dialogTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {overviewMatchLoading && <LinearProgress />}
+            {!overviewMatchLoading && overviewMatchDetail && (
+              <MatchDetailViewer detail={overviewMatchDetail} t={t} formatDate={formatDate} />
+            )}
+            {!overviewMatchLoading && !overviewMatchDetail && (
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.common.matchDetail.noData')}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOverviewMatchDetail}>
+            {t('dashboard.common.matchDetail.closeAction')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(pendingDeleteSeason)}
@@ -1917,8 +2280,8 @@ export default function AdminDashboard({ session, onLogout }) {
           <DialogContentText>
             {pendingDeleteSeason
               ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
-                season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`
-              })
+                  season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
+                })
               : ''}
           </DialogContentText>
         </DialogContent>
@@ -1926,12 +2289,7 @@ export default function AdminDashboard({ session, onLogout }) {
           <Button onClick={handleCancelDeleteSeason} disabled={loading}>
             {t('dashboard.admin.seasons.cancelDeleteSeason')}
           </Button>
-          <Button
-            onClick={handleDeleteSeason}
-            color="error"
-            variant="contained"
-            disabled={loading}
-          >
+          <Button onClick={handleDeleteSeason} color="error" variant="contained" disabled={loading}>
             {t('dashboard.admin.seasons.deleteSelectedSeason')}
           </Button>
         </DialogActions>
@@ -1948,8 +2306,8 @@ export default function AdminDashboard({ session, onLogout }) {
           <DialogContentText sx={{ mb: 2 }}>
             {editingSeasonPlayer
               ? t('dashboard.admin.players.editSeasonPlayerDescription', {
-                player: formatPlayerDisplayName(editingSeasonPlayer)
-              })
+                  player: formatPlayerDisplayName(editingSeasonPlayer),
+                })
               : ''}
           </DialogContentText>
           <Stack spacing={1.5}>
@@ -2010,8 +2368,8 @@ export default function AdminDashboard({ session, onLogout }) {
           <DialogContentText>
             {pendingRemoveSeasonPlayer
               ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
-                player: formatPlayerDisplayName(pendingRemoveSeasonPlayer)
-              })
+                  player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
+                })
               : ''}
           </DialogContentText>
         </DialogContent>
@@ -2041,10 +2399,14 @@ export default function AdminDashboard({ session, onLogout }) {
           <DialogContentText sx={{ mb: 2 }}>
             {editingMembershipPlayer
               ? t('dashboard.admin.members.editDescription', {
-                player: [editingMembershipPlayer.name, editingMembershipPlayer.surname1, editingMembershipPlayer.surname2]
-                  .filter(Boolean)
-                  .join(' ')
-              })
+                  player: [
+                    editingMembershipPlayer.name,
+                    editingMembershipPlayer.surname1,
+                    editingMembershipPlayer.surname2,
+                  ]
+                    .filter(Boolean)
+                    .join(' '),
+                })
               : ''}
           </DialogContentText>
           <Stack spacing={1.5}>
@@ -2083,14 +2445,14 @@ export default function AdminDashboard({ session, onLogout }) {
           <DialogContentText>
             {pendingRemoveMembershipPlayer
               ? t('dashboard.admin.members.removeConfirm', {
-                player: [
-                  pendingRemoveMembershipPlayer.name,
-                  pendingRemoveMembershipPlayer.surname1,
-                  pendingRemoveMembershipPlayer.surname2
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-              })
+                  player: [
+                    pendingRemoveMembershipPlayer.name,
+                    pendingRemoveMembershipPlayer.surname1,
+                    pendingRemoveMembershipPlayer.surname2,
+                  ]
+                    .filter(Boolean)
+                    .join(' '),
+                })
               : ''}
           </DialogContentText>
         </DialogContent>
@@ -2120,10 +2482,10 @@ export default function AdminDashboard({ session, onLogout }) {
           <DialogContentText>
             {pendingDeleteMatch
               ? t('dashboard.admin.matches.deleteMatchConfirm', {
-                home: pendingDeleteMatch.home_team_name,
-                away: pendingDeleteMatch.away_team_name,
-                date: formatDate(pendingDeleteMatch.match_date)
-              })
+                  home: pendingDeleteMatch.home_team_name,
+                  away: pendingDeleteMatch.away_team_name,
+                  date: formatDate(pendingDeleteMatch.match_date),
+                })
               : ''}
           </DialogContentText>
         </DialogContent>

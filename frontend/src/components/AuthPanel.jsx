@@ -10,7 +10,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Typography
+  Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
@@ -23,13 +23,13 @@ const initialUser = {
   name: '',
   surname1: '',
   surname2: '',
-  nationality: ''
+  nationality: '',
 }
 
 const initialAdmin = {
   username: '',
   password: '',
-  name: ''
+  name: '',
 }
 
 const mapAuthErrorMessage = (error, t) => {
@@ -175,7 +175,7 @@ export default function AuthPanel({ auth }) {
         borderRadius: 4,
         bgcolor: 'rgba(255,253,248,0.93)',
         border: '1px solid rgba(31,41,55,0.1)',
-        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 118, 110, 0.16)'
+        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 118, 110, 0.16)',
       }}
     >
       <CardContent sx={{ p: 4 }}>
@@ -320,9 +320,7 @@ export default function AuthPanel({ auth }) {
           </Button>
 
           <Typography variant="caption" color="text.secondary">
-            {accountType === 'admin'
-              ? t('auth.adminFooter')
-              : t('auth.playerFooter')}
+            {accountType === 'admin' ? t('auth.adminFooter') : t('auth.playerFooter')}
           </Typography>
         </Stack>
       </CardContent>

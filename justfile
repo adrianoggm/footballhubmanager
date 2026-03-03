@@ -1,10 +1,10 @@
-set shell := ["bash", "-cu"]
-set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+set shell := ["sh", "-cu"]
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 
+python_cmd := if os_family() == "windows" { "py -3" } else { "python3" }
 venv_python := if os_family() == "windows" { "backend/.venv/Scripts/python.exe" } else { "backend/.venv/bin/python" }
-python_cmd := if os_family() == "windows" { "python" } else { "python3" }
-host := "0.0.0.0"
-port := "5173"
+export TEST_API_ROOT := "http://127.0.0.1:8000/api"
+export TEST_API_V1 := "http://127.0.0.1:8000/api/v1"
 
 default:
     @just --list
@@ -29,11 +29,28 @@ frontend *args:
 run-frontend *args:
     npx --prefix frontend vite --host {{host}} --port {{port}}
 
+frontend-lint:
+    npm --prefix frontend run lint
+
+frontend-lint-fix:
+    npm --prefix frontend run lint:fix
+
+frontend-format:
+    npm --prefix frontend run format
+
+frontend-format-check:
+    npm --prefix frontend run format:check
+
+frontend-check:
+    @just frontend-format-check
+    @just frontend-lint
+    npm --prefix frontend run build
+
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q
 
 test-integration:
-    {{ if os_family() == "windows" { "$env:TEST_API_ROOT='http://127.0.0.1:8000/api'; $env:TEST_API_V1='http://127.0.0.1:8000/api/v1'; " } else { "TEST_API_ROOT=http://127.0.0.1:8000/api TEST_API_V1=http://127.0.0.1:8000/api/v1 " } }}{{venv_python}} -m pytest backend/tests/integration -q
+    {{venv_python}} -m pytest backend/tests/integration -q
 
 lint:
     {{venv_python}} -m ruff check backend/src backend/tests

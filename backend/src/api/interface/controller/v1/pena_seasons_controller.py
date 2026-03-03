@@ -2,6 +2,14 @@ import math
 from dataclasses import asdict
 from datetime import date
 
+from api.interface.controller.v1.model.request.pena_seasons_request import (
+    CreatePenaSeasonRequest,
+    UpdatePenaSeasonRequest,
+)
+from api.interface.controller.v1.model.response.pena_seasons_response import (
+    PenaSeasonResponse,
+    PenaSeasonsPageResponse,
+)
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from persistence.application.use_cases.manage_pena_seasons import (
@@ -18,43 +26,16 @@ from persistence.infrastructure.repository.db.pena_season_repository import (
     SqlAlchemyPenaSeasonRepository,
 )
 from persistence.module import get_db
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter()
 
 
-class PenaSeasonResponse(BaseModel):
-    guid: str
-    start_date: date
-    end_date: date
-    points_win: int
-    points_draw: int
-    points_loss: int
-
-
-class PenaSeasonsPageResponse(BaseModel):
-    items: list[PenaSeasonResponse]
-    page: int
-    page_size: int
-    total: int
-    total_pages: int
-
-
-class CreatePenaSeasonRequest(BaseModel):
-    start_date: date
-    end_date: date
-    points_win: int = 3
-    points_draw: int = 1
-    points_loss: int = 0
-
-
-class UpdatePenaSeasonRequest(BaseModel):
-    start_date: date | None = None
-    end_date: date | None = None
-    points_win: int | None = None
-    points_draw: int | None = None
-    points_loss: int | None = None
+def get_manage_pena_seasons_use_case(
+    db: Session = Depends(get_db),
+) -> ManagePenaSeasonsUseCase:
+    repository = SqlAlchemyPenaSeasonRepository(db)
+    return ManagePenaSeasonsUseCase(repository)
 
 
 @router.get("/penas/{pena_guid}/seasons", response_model=PenaSeasonsPageResponse)
@@ -62,11 +43,9 @@ def list_pena_seasons(
     pena_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    use_case = ManagePenaSeasonsUseCase(repository)
     try:
         result = use_case.list_for_pena(pena_guid=pena_guid, page=page, page_size=page_size)
     except PenaSeasonPenaNotFoundError:
@@ -86,11 +65,9 @@ def list_pena_seasons(
 def get_active_pena_season(
     pena_guid: str,
     at_date: date | None = Query(default=None),
-    db: Session = Depends(get_db),
+    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    use_case = ManagePenaSeasonsUseCase(repository)
     try:
         season = use_case.get_active_for_pena(pena_guid=pena_guid, reference_date=at_date)
     except PenaSeasonPenaNotFoundError:
@@ -104,11 +81,9 @@ def get_active_pena_season(
 def get_pena_season(
     pena_guid: str,
     season_guid: str,
-    db: Session = Depends(get_db),
+    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    use_case = ManagePenaSeasonsUseCase(repository)
     try:
         season = use_case.get_by_guid(pena_guid=pena_guid, season_guid=season_guid)
     except PenaSeasonPenaNotFoundError:
@@ -127,10 +102,8 @@ def create_pena_season(
     pena_guid: str,
     payload: CreatePenaSeasonRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
 ):
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    use_case = ManagePenaSeasonsUseCase(repository)
     try:
         created = use_case.create_for_admin(
             pena_guid=pena_guid,
@@ -169,10 +142,8 @@ def update_pena_season(
     season_guid: str,
     payload: UpdatePenaSeasonRequest,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
 ):
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    use_case = ManagePenaSeasonsUseCase(repository)
     try:
         updated = use_case.update_for_admin(
             pena_guid=pena_guid,
@@ -218,10 +189,8 @@ def delete_pena_season(
     pena_guid: str,
     season_guid: str,
     admin_session=Depends(require_admin),
-    db: Session = Depends(get_db),
+    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
 ):
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    use_case = ManagePenaSeasonsUseCase(repository)
     try:
         use_case.delete_for_admin(
             pena_guid=pena_guid,

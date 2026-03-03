@@ -14,7 +14,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 
 export default function AdminPlayersSection({ state, actions, helpers }) {
@@ -31,7 +31,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     seasonRoster,
     historicalPlayers,
     guestForm,
-    nationalities
+    nationalities,
   } = state
   const {
     handleSelectHistoricalPlayers,
@@ -41,7 +41,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     onGuestField,
     handleCreateGuestPlayer,
     handleEditMembershipPlayer,
-    handleRequestRemoveMembershipPlayer
+    handleRequestRemoveMembershipPlayer,
   } = actions
 
   return (
@@ -57,7 +57,9 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                 spacing={1.5}
               >
                 <Typography variant="h6">{t('dashboard.admin.players.squadTitle')}</Typography>
-                {selectedSeason && <Chip size="small" color="primary" label={selectedSeasonLabel} />}
+                {selectedSeason && (
+                  <Chip size="small" color="primary" label={selectedSeasonLabel} />
+                )}
               </Stack>
 
               {!seasonList.length && (
@@ -75,8 +77,8 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                   multiple: true,
                   renderValue: (selected) =>
                     t('dashboard.admin.players.selectedCount', {
-                      count: selected.length
-                    })
+                      count: selected.length,
+                    }),
                 }}
                 disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
                 helperText={
@@ -106,7 +108,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                 <Typography variant="body2" color="text.secondary">
                   {t('dashboard.admin.players.registeredAvailable', {
                     registered: seasonRoster.length,
-                    available: availableHistoricalPlayers.length
+                    available: availableHistoricalPlayers.length,
                   })}
                 </Typography>
               </Stack>
@@ -291,7 +293,9 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         {historicalPlayers.map((player) => (
                           <TableRow key={player.guid}>
                             <TableCell>
-                              {[player.name, player.surname1, player.surname2].filter(Boolean).join(' ')}
+                              {[player.name, player.surname1, player.surname2]
+                                .filter(Boolean)
+                                .join(' ')}
                             </TableCell>
                             <TableCell>{player.nickname || '-'}</TableCell>
                             <TableCell>{player.position || '-'}</TableCell>
