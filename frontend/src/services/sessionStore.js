@@ -54,5 +54,5 @@ export const sessionStore = {
     if (token) {
       this.setToken(token)
     }
-  }
+  },
 }

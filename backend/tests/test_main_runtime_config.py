@@ -64,7 +64,11 @@ def test_resolve_cors_allow_credentials_disables_with_wildcard(monkeypatch):
 
 
 def test_include_debug_error_detail_depends_on_env(monkeypatch):
+    monkeypatch.delenv("EXPOSE_INTERNAL_ERRORS", raising=False)
     monkeypatch.setenv("APP_ENV", "test")
+    assert _include_debug_error_detail() is False
+
+    monkeypatch.setenv("EXPOSE_INTERNAL_ERRORS", "true")
     assert _include_debug_error_detail() is True
 
     monkeypatch.setenv("APP_ENV", "production")
@@ -73,6 +77,7 @@ def test_include_debug_error_detail_depends_on_env(monkeypatch):
 
 def test_global_exception_handler_returns_detailed_error_in_test(monkeypatch):
     monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.setenv("EXPOSE_INTERNAL_ERRORS", "true")
 
     response = asyncio.run(global_exception_handler(_request_for_tests(), ValueError("boom")))
 
@@ -82,6 +87,17 @@ def test_global_exception_handler_returns_detailed_error_in_test(monkeypatch):
 
 def test_global_exception_handler_returns_generic_error_in_production(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("EXPOSE_INTERNAL_ERRORS", "true")
+
+    response = asyncio.run(global_exception_handler(_request_for_tests(), ValueError("boom")))
+
+    assert response.status_code == 500
+    assert response.body == b'{"detail":"Internal server error"}'
+
+
+def test_global_exception_handler_returns_generic_error_without_opt_in(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.delenv("EXPOSE_INTERNAL_ERRORS", raising=False)
 
     response = asyncio.run(global_exception_handler(_request_for_tests(), ValueError("boom")))
 

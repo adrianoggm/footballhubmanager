@@ -10,7 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Typography
+  Typography,
 } from '@mui/material'
 
 const defaultFormatDate = (value) => {
@@ -39,8 +39,14 @@ const formatRating = (value) => {
 }
 
 const toAllPlayers = (detail) => [
-  ...((detail?.home_team?.players || []).map((player) => ({ ...player, team: detail?.home_team?.team_name }))),
-  ...((detail?.away_team?.players || []).map((player) => ({ ...player, team: detail?.away_team?.team_name })))
+  ...(detail?.home_team?.players || []).map((player) => ({
+    ...player,
+    team: detail?.home_team?.team_name,
+  })),
+  ...(detail?.away_team?.players || []).map((player) => ({
+    ...player,
+    team: detail?.away_team?.team_name,
+  })),
 ]
 
 const buildHighlights = (detail, t) => {
@@ -67,7 +73,7 @@ const buildHighlights = (detail, t) => {
     highlights.push(
       t('dashboard.common.matchDetail.highlightGoals', {
         player: formatPlayerName(goalsTop.player),
-        value: goalsTop.value
+        value: goalsTop.value,
       })
     )
   }
@@ -75,7 +81,7 @@ const buildHighlights = (detail, t) => {
     highlights.push(
       t('dashboard.common.matchDetail.highlightAssists', {
         player: formatPlayerName(assistsTop.player),
-        value: assistsTop.value
+        value: assistsTop.value,
       })
     )
   }
@@ -83,7 +89,7 @@ const buildHighlights = (detail, t) => {
     highlights.push(
       t('dashboard.common.matchDetail.highlightSaves', {
         player: formatPlayerName(savesTop.player),
-        value: savesTop.value
+        value: savesTop.value,
       })
     )
   }
@@ -94,7 +100,13 @@ function TeamBreakdown({ team, t }) {
   const players = team?.players || []
   return (
     <Stack spacing={1.5}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        gap={1}
+      >
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
           {team?.team_name || '-'}
         </Typography>
@@ -114,7 +126,9 @@ function TeamBreakdown({ team, t }) {
         <Chip
           size="small"
           variant="outlined"
-          label={t('dashboard.common.matchDetail.totalAssists', { value: team?.total_assists ?? 0 })}
+          label={t('dashboard.common.matchDetail.totalAssists', {
+            value: team?.total_assists ?? 0,
+          })}
         />
         <Chip
           size="small"
@@ -125,7 +139,7 @@ function TeamBreakdown({ team, t }) {
           size="small"
           variant="outlined"
           label={t('dashboard.common.matchDetail.averageRating', {
-            value: formatRating(team?.average_rating)
+            value: formatRating(team?.average_rating),
           })}
         />
       </Stack>
@@ -168,7 +182,12 @@ function TeamBreakdown({ team, t }) {
   )
 }
 
-export default function MatchDetailViewer({ detail, t, formatDate = defaultFormatDate, showSubtitle = true }) {
+export default function MatchDetailViewer({
+  detail,
+  t,
+  formatDate = defaultFormatDate,
+  showSubtitle = true,
+}) {
   if (!detail) {
     return null
   }
@@ -193,7 +212,9 @@ export default function MatchDetailViewer({ detail, t, formatDate = defaultForma
         <Chip
           size="small"
           variant="outlined"
-          label={t('dashboard.common.matchDetail.matchDate', { date: formatDate(detail.match_date) })}
+          label={t('dashboard.common.matchDetail.matchDate', {
+            date: formatDate(detail.match_date),
+          })}
         />
         <Chip
           size="small"
@@ -208,13 +229,15 @@ export default function MatchDetailViewer({ detail, t, formatDate = defaultForma
           size="small"
           color="primary"
           label={t('dashboard.common.matchDetail.finalScore', {
-            score: `${detail.home_team?.score ?? 0} - ${detail.away_team?.score ?? 0}`
+            score: `${detail.home_team?.score ?? 0} - ${detail.away_team?.score ?? 0}`,
           })}
         />
       </Stack>
 
       <Stack spacing={1}>
-        <Typography variant="subtitle2">{t('dashboard.common.matchDetail.highlightsTitle')}</Typography>
+        <Typography variant="subtitle2">
+          {t('dashboard.common.matchDetail.highlightsTitle')}
+        </Typography>
         {highlights.length > 0 ? (
           <Stack spacing={0.75}>
             {highlights.map((highlight) => (

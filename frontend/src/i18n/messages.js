@@ -7,7 +7,7 @@ export const messages = {
         sectionHint: 'Use this panel to sign in or create your account.',
         welcome: 'Welcome to footballhubmanager',
         accessHint:
-          'Login or register on the left panel to access your role-specific experience as admin or player.'
+          'Login or register on the left panel to access your role-specific experience as admin or player.',
       },
       overview: {
         sectionTitle: 'Product overview',
@@ -32,17 +32,16 @@ export const messages = {
           'Current scope delivers auth, seasons, invitations, standings, memberships, and read-only match flow, with expansion space for roster and match detail.',
         onboardingChip: 'Fast onboarding',
         onboardingBody:
-          'Register as admin to create your competition, or as player to join a pena in seconds with an invite token.'
+          'Register as admin to create your competition, or as player to join a pena in seconds with an invite token.',
       },
-      sessionIncomplete: 'Session metadata is incomplete. Please logout and login again.'
+      sessionIncomplete: 'Session metadata is incomplete. Please logout and login again.',
     },
     auth: {
       titleLogin: 'Sign in to footballhubmanager',
       titleRegister: 'Create your footballhubmanager account',
       panelDescriptionDefault:
         'Manage your pena seasons, call-ups, matches and standings from one panel.',
-      panelDescriptionAdminRegister:
-        'Create your admin login and your first pena in one step.',
+      panelDescriptionAdminRegister: 'Create your admin login and your first pena in one step.',
       tabLogin: 'Login',
       tabRegister: 'Register',
       roleAdmin: 'Admin',
@@ -73,8 +72,8 @@ export const messages = {
         invalidNationality: 'Invalid nationality.',
         validation: 'Please review the required fields and try again.',
         network: 'Could not reach the server. Check your connection and try again.',
-        generic: 'Authentication request failed. Please try again.'
-      }
+        generic: 'Authentication request failed. Please try again.',
+      },
     },
     dashboard: {
       common: {
@@ -107,13 +106,13 @@ export const messages = {
           saves: 'Saves',
           rating: 'Rating',
           noPlayers: 'No players registered in this lineup yet.',
-          noData: 'No detail available for the selected match.'
+          noData: 'No detail available for the selected match.',
         },
         errors: {
           network: 'Could not reach the server. Check your connection and try again.',
           forbidden: 'You do not have permission to perform this action.',
-          generic: 'Request failed. Please try again.'
-        }
+          generic: 'Request failed. Please try again.',
+        },
       },
       admin: {
         panelTitle: 'Admin Workspace',
@@ -127,18 +126,18 @@ export const messages = {
           seasons: 'Seasons',
           players: 'Players',
           matches: 'Matches',
-          standings: 'Standings'
+          standings: 'Standings',
         },
         chips: {
           pena: 'Pena: {name}',
           activeSeason: 'Active season: {season}',
-          selectedSeason: 'Selected season: {season}'
+          selectedSeason: 'Selected season: {season}',
         },
         status: {
           noActiveSeason: 'No active season',
           noSeasonSelected: 'No season selected',
           configured: 'Configured',
-          missing: 'Missing'
+          missing: 'Missing',
         },
         table: {
           player: 'Player',
@@ -149,7 +148,7 @@ export const messages = {
           w: 'W',
           d: 'D',
           l: 'L',
-          pts: 'Pts'
+          pts: 'Pts',
         },
         overview: {
           currentPena: 'Current Pena',
@@ -174,12 +173,11 @@ export const messages = {
           selectSeasonToLoad: 'Select a season to load standings.',
           noStandingsForSeason: 'No standings available for this season yet.',
           seasonMatchesSnapshotTitle: 'Season Matches Snapshot',
-          seasonMatchesSnapshotDescription:
-            'Quick view of match activity for the selected season.',
+          seasonMatchesSnapshotDescription: 'Quick view of match activity for the selected season.',
           totalMatchesChip: 'Total: {total}',
           openMatchesChip: 'Open: {open}',
           closedMatchesChip: 'Closed: {closed}',
-          noMatchesForSeason: 'No matches available for this season yet.'
+          noMatchesForSeason: 'No matches available for this season yet.',
         },
         seasons: {
           configTitle: 'Season Configuration',
@@ -209,7 +207,7 @@ export const messages = {
           noHistory: 'No previous seasons found.',
           historyPoints: 'W:{win} / D:{draw} / L:{loss}',
           selectSeasonAction: 'Use season',
-          selectedSeasonAction: 'Selected'
+          selectedSeasonAction: 'Selected',
         },
         players: {
           squadTitle: 'Season Squad Management',
@@ -233,7 +231,7 @@ export const messages = {
           removeSeasonPlayerTitle: 'Remove player from season',
           removeSeasonPlayerConfirm:
             'Remove {player} from selected season? This action can be blocked if the player already has matches.',
-          cancelRemoveSeasonPlayer: 'Cancel'
+          cancelRemoveSeasonPlayer: 'Cancel',
         },
         guest: {
           title: 'Guest Players',
@@ -245,7 +243,7 @@ export const messages = {
           nickname: 'Nickname',
           position: 'Position',
           createGuest: 'Create Guest',
-          createAndAdd: 'Create + Add To Season'
+          createAndAdd: 'Create + Add To Season',
         },
         members: {
           title: 'Pena Members',
@@ -262,7 +260,7 @@ export const messages = {
           saveEdit: 'Save',
           removeTitle: 'Remove membership',
           removeConfirm: 'Remove {player} from this pena?',
-          cancelRemove: 'Cancel'
+          cancelRemove: 'Cancel',
         },
         matches: {
           title: 'Create Match + Lineups',
@@ -326,7 +324,7 @@ export const messages = {
           lineupHelperDescription:
             'Select players from the selected season roster to compose lineups.',
           lineupHelperSelectSeason: 'Select a season to display roster players.',
-          noPlayersAvailable: 'No players available in the selected season.'
+          noPlayersAvailable: 'No players available in the selected season.',
         },
         standings: {
           title: 'Season Standings',
@@ -358,8 +356,7 @@ export const messages = {
           chartTrendByMatchDescription:
             'Direct trend of goals, assists and saves for each closed match in scope.',
           chartRunningAveragesTitle: 'Running Averages',
-          chartRunningAveragesDescription:
-            'How match averages evolve as more matches are played.',
+          chartRunningAveragesDescription: 'How match averages evolve as more matches are played.',
           chartSeasonComparisonTitle: 'Season Comparison',
           chartSeasonComparisonDescription:
             'Compare performance averages by season for all seasons included in the analysis.',
@@ -382,7 +379,7 @@ export const messages = {
             '{matches} matches together | W:{wins} D:{draws} L:{losses} | Win rate {winRate}',
           leadersScorers: 'Top scorers',
           leadersAssisters: 'Top assisters',
-          leadersSavers: 'Top savers'
+          leadersSavers: 'Top savers',
         },
         notices: {
           seasonCreated: 'Season created',
@@ -402,7 +399,7 @@ export const messages = {
           seasonPlayerRemoved: 'Player removed from season',
           membershipUpdatedByAdmin: 'Membership updated',
           membershipRemovedByAdmin: 'Membership removed',
-          standingsUpdated: 'Standings updated'
+          standingsUpdated: 'Standings updated',
         },
         errors: {
           lineupsRequired: 'Home and away lineups must include at least one player',
@@ -416,9 +413,8 @@ export const messages = {
           invalidSeasonPoints: 'Season points must be integers greater than or equal to zero',
           invalidSeasonPlayerStats:
             'Wins/draws/losses must be integers >= 0 and quality level must be >= 0',
-          selectedSeasonRequired:
-            'Select a season to complete this action'
-        }
+          selectedSeasonRequired: 'Select a season to complete this action',
+        },
       },
       user: {
         panelTitle: 'Player Panel',
@@ -461,8 +457,7 @@ export const messages = {
         yourPositionLabel: 'Your position: {position}',
         yourPointsLabel: 'Your points: {points}',
         yourGoalContributionLabel: 'Your G/A: {goals}/{assists}',
-        statsReadOnlyHint:
-          'Showing season data in read-only mode ({season}).',
+        statsReadOnlyHint: 'Showing season data in read-only mode ({season}).',
         table: {
           rank: '#',
           player: 'Player',
@@ -478,7 +473,7 @@ export const messages = {
           away: 'Away',
           status: 'Status',
           result: 'Result',
-          actions: 'Actions'
+          actions: 'Actions',
         },
         playerGuid: 'Player GUID: {guid}',
         confirmLeave:
@@ -492,15 +487,15 @@ export const messages = {
           name: 'Name',
           surname1: 'Surname 1',
           surname2: 'Surname 2',
-          nationality: 'Nationality'
-        }
-      }
+          nationality: 'Nationality',
+        },
+      },
     },
     language: {
       label: 'Language',
       en: 'EN',
-      es: 'ES'
-    }
+      es: 'ES',
+    },
   },
   es: {
     app: {
@@ -510,7 +505,7 @@ export const messages = {
         sectionHint: 'Usa este panel para iniciar sesión o crear tu cuenta.',
         welcome: 'Bienvenido a footballhubmanager',
         accessHint:
-          'Inicia sesión o regístrate en el panel izquierdo para entrar según tu rol de admin o jugador.'
+          'Inicia sesión o regístrate en el panel izquierdo para entrar según tu rol de admin o jugador.',
       },
       overview: {
         sectionTitle: 'Resumen del producto',
@@ -535,18 +530,17 @@ export const messages = {
           'El alcance actual cubre auth, temporadas, invitaciones, clasificaciones, membresías y flujo de partidos en lectura, con espacio para ampliar.',
         onboardingChip: 'Onboarding rápido',
         onboardingBody:
-          'Regístrate como admin para crear tu competición o como jugador para unirte en segundos con un token.'
+          'Regístrate como admin para crear tu competición o como jugador para unirte en segundos con un token.',
       },
       sessionIncomplete:
-        'Los metadatos de sesión están incompletos. Cierra sesión y vuelve a iniciar.'
+        'Los metadatos de sesión están incompletos. Cierra sesión y vuelve a iniciar.',
     },
     auth: {
       titleLogin: 'Inicia sesión en footballhubmanager',
       titleRegister: 'Crea tu cuenta de footballhubmanager',
       panelDescriptionDefault:
         'Gestiona temporadas, convocatorias, partidos y clasificaciones de tu peña desde un único panel.',
-      panelDescriptionAdminRegister:
-        'Crea tu acceso de admin y tu primera peña en un solo paso.',
+      panelDescriptionAdminRegister: 'Crea tu acceso de admin y tu primera peña en un solo paso.',
       tabLogin: 'Entrar',
       tabRegister: 'Registro',
       roleAdmin: 'Admin',
@@ -567,8 +561,10 @@ export const messages = {
         'El usuario de admin es para iniciar sesión. El nombre de la peña es el club que se crea al registrarte.',
       adminUsernameHint: 'Este usuario se usa para iniciar sesión como admin.',
       adminPenaNameHint: 'Este será el nombre de la peña creada para tu cuenta de admin.',
-      adminFooter: 'Los admins gestionan temporadas, alineaciones, reglas de puntuación y enlaces de invitación.',
-      playerFooter: 'Los jugadores se unen con códigos de invitación y participan en las temporadas.',
+      adminFooter:
+        'Los admins gestionan temporadas, alineaciones, reglas de puntuación y enlaces de invitación.',
+      playerFooter:
+        'Los jugadores se unen con códigos de invitación y participan en las temporadas.',
       errors: {
         invalidCredentials: 'Credenciales inválidas.',
         usernameExists: 'Ese usuario ya existe.',
@@ -577,8 +573,8 @@ export const messages = {
         invalidNationality: 'Nacionalidad inválida.',
         validation: 'Revisa los campos obligatorios e inténtalo de nuevo.',
         network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-        generic: 'La solicitud de autenticación falló. Inténtalo de nuevo.'
-      }
+        generic: 'La solicitud de autenticación falló. Inténtalo de nuevo.',
+      },
     },
     dashboard: {
       common: {
@@ -611,13 +607,13 @@ export const messages = {
           saves: 'Paradas',
           rating: 'Valoración',
           noPlayers: 'Aún no hay jugadores registrados en esta alineación.',
-          noData: 'No hay detalle disponible para el partido seleccionado.'
+          noData: 'No hay detalle disponible para el partido seleccionado.',
         },
         errors: {
           network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
           forbidden: 'No tienes permisos para realizar esta acción.',
-          generic: 'La solicitud falló. Inténtalo de nuevo.'
-        }
+          generic: 'La solicitud falló. Inténtalo de nuevo.',
+        },
       },
       admin: {
         panelTitle: 'Espacio de administración',
@@ -631,18 +627,18 @@ export const messages = {
           seasons: 'Temporadas',
           players: 'Jugadores',
           matches: 'Partidos',
-          standings: 'Clasificación'
+          standings: 'Clasificación',
         },
         chips: {
           pena: 'Peña: {name}',
           activeSeason: 'Temporada activa: {season}',
-          selectedSeason: 'Temporada seleccionada: {season}'
+          selectedSeason: 'Temporada seleccionada: {season}',
         },
         status: {
           noActiveSeason: 'Sin temporada activa',
           noSeasonSelected: 'Sin temporada seleccionada',
           configured: 'Configurada',
-          missing: 'Sin configurar'
+          missing: 'Sin configurar',
         },
         table: {
           player: 'Jugador',
@@ -653,7 +649,7 @@ export const messages = {
           w: 'V',
           d: 'E',
           l: 'D',
-          pts: 'Pts'
+          pts: 'Pts',
         },
         overview: {
           currentPena: 'Peña actual',
@@ -666,8 +662,7 @@ export const messages = {
           codeLabel: 'Código',
           expiresLabel: 'Caduca',
           quickActionsTitle: 'Acciones rápidas',
-          quickActionsDescription:
-            'Salta directamente a un flujo y mantén el panel enfocado.',
+          quickActionsDescription: 'Salta directamente a un flujo y mantén el panel enfocado.',
           manageSeasons: 'Gestionar temporadas',
           managePlayers: 'Gestionar jugadores',
           createMatch: 'Crear partido',
@@ -684,7 +679,7 @@ export const messages = {
           totalMatchesChip: 'Totales: {total}',
           openMatchesChip: 'Abiertos: {open}',
           closedMatchesChip: 'Cerrados: {closed}',
-          noMatchesForSeason: 'Aún no hay partidos disponibles para esta temporada.'
+          noMatchesForSeason: 'Aún no hay partidos disponibles para esta temporada.',
         },
         seasons: {
           configTitle: 'Configuración de temporada',
@@ -714,7 +709,7 @@ export const messages = {
           noHistory: 'No se encontraron temporadas anteriores.',
           historyPoints: 'V:{win} / E:{draw} / D:{loss}',
           selectSeasonAction: 'Usar temporada',
-          selectedSeasonAction: 'Seleccionada'
+          selectedSeasonAction: 'Seleccionada',
         },
         players: {
           squadTitle: 'Gestión de plantilla por temporada',
@@ -739,7 +734,7 @@ export const messages = {
           removeSeasonPlayerTitle: 'Quitar jugador de temporada',
           removeSeasonPlayerConfirm:
             '¿Quitar a {player} de la temporada seleccionada? Esta acción puede bloquearse si ya tiene partidos.',
-          cancelRemoveSeasonPlayer: 'Cancelar'
+          cancelRemoveSeasonPlayer: 'Cancelar',
         },
         guest: {
           title: 'Jugadores invitados',
@@ -751,7 +746,7 @@ export const messages = {
           nickname: 'Apodo',
           position: 'Posición',
           createGuest: 'Crear invitado',
-          createAndAdd: 'Crear + añadir a temporada'
+          createAndAdd: 'Crear + añadir a temporada',
         },
         members: {
           title: 'Miembros de la peña',
@@ -768,7 +763,7 @@ export const messages = {
           saveEdit: 'Guardar',
           removeTitle: 'Eliminar membresía',
           removeConfirm: '¿Eliminar a {player} de esta peña?',
-          cancelRemove: 'Cancelar'
+          cancelRemove: 'Cancelar',
         },
         matches: {
           title: 'Crear partido + alineaciones',
@@ -832,12 +827,13 @@ export const messages = {
           lineupHelperDescription:
             'Selecciona jugadores de la plantilla de la temporada seleccionada para componer alineaciones.',
           lineupHelperSelectSeason: 'Selecciona una temporada para mostrar jugadores de plantilla.',
-          noPlayersAvailable: 'No hay jugadores disponibles en la temporada seleccionada.'
+          noPlayersAvailable: 'No hay jugadores disponibles en la temporada seleccionada.',
         },
         standings: {
           title: 'Clasificación de temporada',
           showingDataFor: 'Mostrando datos para: {season}',
-          selectSeasonHeader: 'Selecciona una temporada en la cabecera para cargar la clasificación.',
+          selectSeasonHeader:
+            'Selecciona una temporada en la cabecera para cargar la clasificación.',
           noSeasonPlayers: 'Aún no hay jugadores de temporada registrados.',
           insightsTitle: 'Insights de partidos',
           insightsDescription:
@@ -888,7 +884,7 @@ export const messages = {
             '{matches} partidos juntos | V:{wins} E:{draws} D:{losses} | Ratio {winRate}',
           leadersScorers: 'Máximos goleadores',
           leadersAssisters: 'Máximos asistentes',
-          leadersSavers: 'Más paradas'
+          leadersSavers: 'Más paradas',
         },
         notices: {
           seasonCreated: 'Temporada creada',
@@ -908,30 +904,24 @@ export const messages = {
           seasonPlayerRemoved: 'Jugador quitado de la temporada',
           membershipUpdatedByAdmin: 'Membresía actualizada',
           membershipRemovedByAdmin: 'Membresía eliminada',
-          standingsUpdated: 'Clasificación actualizada'
+          standingsUpdated: 'Clasificación actualizada',
         },
         errors: {
-          lineupsRequired:
-            'La alineación local y visitante debe incluir al menos un jugador',
-          lineupsOverlap:
-            'Un mismo jugador no puede estar en las dos convocatorias',
+          lineupsRequired: 'La alineación local y visitante debe incluir al menos un jugador',
+          lineupsOverlap: 'Un mismo jugador no puede estar en las dos convocatorias',
           invalidMatchResult:
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
             'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
-          selectedSeasonStartDateRequired:
-            'La fecha de inicio de la temporada es obligatoria',
-          selectedSeasonEndDateRequired:
-            'La fecha de fin de la temporada es obligatoria',
+          selectedSeasonStartDateRequired: 'La fecha de inicio de la temporada es obligatoria',
+          selectedSeasonEndDateRequired: 'La fecha de fin de la temporada es obligatoria',
           invalidSeasonRange:
             'La fecha de inicio de temporada debe ser anterior o igual a la fecha de fin',
-          invalidSeasonPoints:
-            'Los puntos de temporada deben ser enteros mayores o iguales a cero',
+          invalidSeasonPoints: 'Los puntos de temporada deben ser enteros mayores o iguales a cero',
           invalidSeasonPlayerStats:
             'Victorias/empates/derrotas deben ser enteros >= 0 y el nivel de calidad debe ser >= 0',
-          selectedSeasonRequired:
-            'Selecciona una temporada para completar esta acción'
-        }
+          selectedSeasonRequired: 'Selecciona una temporada para completar esta acción',
+        },
       },
       user: {
         panelTitle: 'Panel de jugador',
@@ -961,7 +951,8 @@ export const messages = {
         role: 'Rol: {role}',
         saveMembership: 'Guardar membresía',
         leavePena: 'Salir de la peña',
-        leaveHint: 'Salir elimina tu vínculo de membresía, pero las estadísticas históricas se conservan.',
+        leaveHint:
+          'Salir elimina tu vínculo de membresía, pero las estadísticas históricas se conservan.',
         standingsTitle: 'Clasificación',
         matchesTitle: 'Partidos',
         noStandingsForSeason: 'No hay clasificación disponible para esta temporada.',
@@ -974,8 +965,7 @@ export const messages = {
         yourPositionLabel: 'Tu posición: {position}',
         yourPointsLabel: 'Tus puntos: {points}',
         yourGoalContributionLabel: 'Tus G/A: {goals}/{assists}',
-        statsReadOnlyHint:
-          'Mostrando datos de temporada en modo solo lectura ({season}).',
+        statsReadOnlyHint: 'Mostrando datos de temporada en modo solo lectura ({season}).',
         table: {
           rank: 'Pos.',
           player: 'Jugador',
@@ -991,7 +981,7 @@ export const messages = {
           away: 'Visitante',
           status: 'Estado',
           result: 'Resultado',
-          actions: 'Acciones'
+          actions: 'Acciones',
         },
         playerGuid: 'GUID del jugador: {guid}',
         confirmLeave:
@@ -1005,16 +995,16 @@ export const messages = {
           name: 'Nombre',
           surname1: 'Primer apellido',
           surname2: 'Segundo apellido',
-          nationality: 'Nacionalidad'
-        }
-      }
+          nationality: 'Nacionalidad',
+        },
+      },
     },
     language: {
       label: 'Idioma',
       en: 'EN',
-      es: 'ES'
-    }
-  }
+      es: 'ES',
+    },
+  },
 }
 
 export const SUPPORTED_LANGUAGES = ['en', 'es']

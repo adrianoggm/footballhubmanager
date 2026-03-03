@@ -23,7 +23,9 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', py: { xs: 3, md: 5 } }}>
+      <Box
+        sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', py: { xs: 3, md: 5 } }}
+      >
         <Box
           sx={{
             position: 'absolute',
@@ -33,7 +35,7 @@ export default function App() {
             right: -180,
             top: -200,
             background: 'radial-gradient(circle, rgba(15,118,110,0.3) 0%, rgba(15,118,110,0) 72%)',
-            animation: 'floatOrb 16s ease-in-out infinite'
+            animation: 'floatOrb 16s ease-in-out infinite',
           }}
         />
         <Box
@@ -45,7 +47,7 @@ export default function App() {
             left: -210,
             bottom: -180,
             background: 'radial-gradient(circle, rgba(180,83,9,0.24) 0%, rgba(180,83,9,0) 72%)',
-            animation: 'floatOrb 20s ease-in-out infinite reverse'
+            animation: 'floatOrb 20s ease-in-out infinite reverse',
           }}
         />
 
@@ -98,7 +100,11 @@ export default function App() {
                 >
                   {t('app.overview.hero')}
                 </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 760, fontWeight: 400 }}>
+                <Typography
+                  variant="h6"
+                  color="text.secondary"
+                  sx={{ maxWidth: 760, fontWeight: 400 }}
+                >
                   {t('app.overview.description')}
                 </Typography>
 
@@ -109,7 +115,7 @@ export default function App() {
                     p: { xs: 2.5, md: 3.5 },
                     border: '1px solid rgba(31,41,55,0.1)',
                     background:
-                      'linear-gradient(145deg, rgba(255,255,252,0.95) 0%, rgba(227,245,240,0.8) 56%, rgba(255,241,225,0.74) 100%)'
+                      'linear-gradient(145deg, rgba(255,255,252,0.95) 0%, rgba(227,245,240,0.8) 56%, rgba(255,241,225,0.74) 100%)',
                   }}
                 >
                   <Stack spacing={1.5}>
@@ -131,7 +137,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)'
+                        bgcolor: 'rgba(255,253,247,0.86)',
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -150,7 +156,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)'
+                        bgcolor: 'rgba(255,253,247,0.86)',
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -169,7 +175,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)'
+                        bgcolor: 'rgba(255,253,247,0.86)',
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -188,7 +194,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)'
+                        bgcolor: 'rgba(255,253,247,0.86)',
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -207,7 +213,7 @@ export default function App() {
                     borderRadius: 4,
                     p: { xs: 2.5, md: 3 },
                     border: '1px dashed rgba(180,83,9,0.3)',
-                    bgcolor: 'rgba(255,246,230,0.72)'
+                    bgcolor: 'rgba(255,246,230,0.72)',
                   }}
                 >
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">
@@ -244,9 +250,7 @@ export default function App() {
         )}
 
         {isAuthenticated && !isAdmin && !isUser && (
-          <Alert severity="warning">
-            {t('app.sessionIncomplete')}
-          </Alert>
+          <Alert severity="warning">{t('app.sessionIncomplete')}</Alert>
         )}
       </Stack>
     </Container>

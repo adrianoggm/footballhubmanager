@@ -1,6 +1,6 @@
 # Documentation Index
 
-This folder contains all project documentation, split by module.
+This folder contains the technical documentation for `footballhubmanager`.
 
 ## Core
 

@@ -3,147 +3,152 @@
 ## Stack
 
 - React 18
-- Vite 5
+- Vite 7
 - Material UI 5
+- Recharts 2
+- ESLint 9 + Prettier 3
 
-## Purpose
+## Product Surface
 
-The current frontend is an authentication playground used to exercise backend endpoints for:
+The frontend is a role-based application, not only an auth playground.
 
-- User login/register
-- Admin login/register
-- Session token persistence and logout
-- Nationality catalog loading for user registration
+- Shared auth and onboarding flow for `admin` and `user`
+- Admin dashboard for competition operations and analytics
+- User dashboard for profile, membership, standings, match history, and insights
+- Shared match detail viewer and insights visual components
+- i18n support (`en` / `es`)
 
-## Architecture Overview
+## Main Architecture
 
-The frontend follows a lightweight layered design:
+- App shell: `frontend/src/App.jsx`
+- Auth and session state: `frontend/src/hooks/useAuth.js`
+- Dashboards:
+  - `frontend/src/components/AdminDashboard.jsx`
+  - `frontend/src/components/UserDashboard.jsx`
+- Admin feature sections:
+  - `frontend/src/components/admin/AdminSeasonsSection.jsx`
+  - `frontend/src/components/admin/AdminPlayersSection.jsx`
+  - `frontend/src/components/admin/AdminMatchesSection.jsx`
+  - `frontend/src/components/admin/AdminInsightsSection.jsx`
+- Shared match viewer:
+  - `frontend/src/components/MatchDetailViewer.jsx`
 
-- UI layer: React components (`App`, `AuthPanel`)
-- State/behavior layer: custom hook (`useAuth`)
-- Orchestration layer: controller (`authController`)
-- API layer: service classes (`authService`, `httpClient`)
-- Persistence layer (client-side): `sessionStore` (localStorage token)
+## Frontend Layers
 
-## Architecture Schema
+- UI Components:
+  - Dashboards, section components, dialogs, and tables.
+- Hooks and state orchestration:
+  - `useAuth`, `useAdminPlayers`, `useAdminSeasons`, `useAdminMatches`.
+- API services:
+  - `authService`, `adminService`, `userService`, `httpClient`.
+- Client session persistence:
+  - `sessionStore` (session payload + token in localStorage).
+- Analytics helpers:
+  - `matchInsights.js` (comparison helpers and view-level transformations).
 
-```mermaid
-flowchart LR
-    U["User"]
-    C["AuthPanel (UI Component)"]
-    H["useAuth (Hook State/Actions)"]
-    CTRL["authController"]
-    SVC["authService"]
-    HTTP["httpClient"]
-    STORE["sessionStore (localStorage)"]
-    API["Backend API (/api/v1/*)"]
+## Functional Coverage
 
-    U --> C
-    C --> H
-    H --> CTRL
-    CTRL --> SVC
-    SVC --> HTTP
-    HTTP --> API
-    CTRL --> STORE
-    STORE --> HTTP
-```
+### Authentication
 
-## Module Responsibilities
+- Login/register for admin and user.
+- Session persistence and logout.
+- Nationality catalog loading in registration forms.
 
-### Entry and App Shell
+### Admin Dashboard
 
-- `frontend/src/main.jsx`
-  - Boots React, registers MUI `ThemeProvider`, applies `CssBaseline`.
-- `frontend/src/App.jsx`
-  - Defines the page shell and mounts `AuthPanel`.
+- Peña context selection.
+- Season CRUD and active season management.
+- Membership operations (guest creation, season registrations, stat updates).
+- Match lifecycle:
+  - Create detailed matches.
+  - Update lineups.
+  - Update match stats.
+  - Read match detail.
+  - Delete matches.
+- Standings snapshot and season summary.
+- Insights section:
+  - KPI cards.
+  - Season comparison deltas.
+  - Top pairs and teammate rankings.
+  - Correlation heatmap matrix.
+  - Leaders (goals, assists, saves).
+  - Timeline charts by match and by season.
 
-### Presentation Layer
+### User Dashboard
 
-- `frontend/src/components/AuthPanel.jsx`
-  - Renders login/register forms.
-  - Handles form field state and submit actions.
-  - Loads nationalities using `httpClient.get('/api/v1/catalogs/nationalities')`.
-  - Displays auth errors and current token state.
+- Profile read/update.
+- Join peña by token.
+- Membership update and leave flow.
+- Season selector with standings and full match history.
+- Match detail viewer (read-only).
+- Insights visualization parity with admin consumption.
 
-### State/Behavior Layer
+## API Integration
 
-- `frontend/src/hooks/useAuth.js`
-  - Owns auth UI state (`idle`, `loading`, `authenticated`, `error`).
-  - Exposes high-level actions (`loginUser`, `loginAdmin`, `registerUser`, `registerAdmin`, `logout`).
-  - Initializes token from `sessionStore` on mount.
+All services consume backend v1 endpoints under `/api/v1`.
 
-### Orchestration Layer
+- Admin API: `frontend/src/services/adminService.js`
+- User API: `frontend/src/services/userService.js`
+- Auth API: `frontend/src/services/authService.js`
+- HTTP transport and error normalization: `frontend/src/services/httpClient.js`
 
-- `frontend/src/services/authController.js`
-  - Coordinates auth service calls and token persistence.
-  - Writes/clears token via `sessionStore`.
+## Internationalization
 
-### API/Transport Layer
+- Provider: `frontend/src/i18n/I18nProvider.jsx`
+- Message catalog: `frontend/src/i18n/messages.js`
+- Hook: `frontend/src/i18n/useI18n.js`
 
-- `frontend/src/services/authService.js`
-  - Maps auth operations to backend routes:
-  - `/api/v1/auth/login`
-  - `/api/v1/auth/admin/login`
-  - `/api/v1/auth/register`
-  - `/api/v1/auth/admin/register`
-  - `/api/v1/auth/logout`
-- `frontend/src/services/httpClient.js`
-  - Central HTTP wrapper around `fetch`.
-  - Handles JSON parsing, error normalization, and `Authorization: Bearer <token>` injection.
-  - Uses `VITE_API_BASE_URL` when defined.
+## Build and Run
 
-### Client Persistence
-
-- `frontend/src/services/sessionStore.js`
-  - Stores token in `localStorage` (`penahub.session.token`).
-  - Syncs token into `httpClient` so all requests can include auth automatically.
-
-## Styling and Theme
-
-- Theme: `frontend/src/theme.js`
-  - Custom palette, typography, and shape via MUI theme.
-- Global styles: `frontend/src/index.css`
-  - Root typography and background gradient.
-
-## Build/Runtime Configuration
-
-- Vite config: `frontend/vite.config.js`
-  - React plugin
-  - PWA plugin (`vite-plugin-pwa`) with app manifest
-  - Dev proxy:
-    - `/api` -> `http://localhost:8000`
-  - This avoids CORS issues in local development when backend runs on port `8000`.
-
-## Key Files
-
-- Package file: `frontend/package.json`
-- Source code: `frontend/src`
-- Public assets: `frontend/public`
-
-## Run Frontend
+Install dependencies:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+npm --prefix frontend install
 ```
 
-## Other Commands
+Run dev server:
+
+```bash
+just run-frontend
+```
 
 Build production bundle:
 
 ```bash
-npm run build
+npm --prefix frontend run build
 ```
 
-Preview build locally:
+Preview production build:
 
 ```bash
-npm run preview
+npm --prefix frontend run preview
+```
+
+## Lint and Format
+
+Run frontend quality gate:
+
+```bash
+just frontend-check
+```
+
+Run commands individually:
+
+```bash
+just frontend-format-check
+just frontend-lint
+npm --prefix frontend run build
+```
+
+Auto-fix formatting/linting:
+
+```bash
+just frontend-format
+just frontend-lint-fix
 ```
 
 ## Environment Variables
 
-- `VITE_API_BASE_URL` (optional):
-  - If set, `httpClient` prefixes all requests with this value.
-  - If empty, requests are relative and usually resolved through Vite proxy in dev.
+- `VITE_API_BASE_URL` (optional)
+  - If set, API calls are prefixed with this base URL.
+  - If unset, calls are relative (typically proxied by Vite in local dev).

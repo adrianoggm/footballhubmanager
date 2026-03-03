@@ -12,7 +12,7 @@ import {
   Stack,
   Switch,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 
 export default function AdminSeasonsSection({ state, actions, helpers }) {
@@ -31,7 +31,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
     historySeasons,
     selectedSeasonGuid,
     selectedSeasonForm,
-    selectedSeasonDateErrors
+    selectedSeasonDateErrors,
   } = state
   const {
     onSeasonField,
@@ -42,7 +42,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
     onSelectedSeasonField,
     handleUpdateSelectedSeason,
     handleRequestDeleteSelectedSeason,
-    handleSelectSeasonFromHistory
+    handleSelectSeasonFromHistory,
   } = actions
 
   return (
@@ -51,16 +51,20 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
         <Card>
           <CardContent>
             <Stack spacing={2.5}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={1.25}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ sm: 'center' }}
+                spacing={1.25}
+              >
                 <Typography variant="h6">{t('dashboard.admin.seasons.configTitle')}</Typography>
                 {activeSeason && <Chip size="small" color="secondary" label={activeSeasonLabel} />}
-                {selectedSeason && <Chip size="small" color="primary" label={selectedSeasonLabel} />}
+                {selectedSeason && (
+                  <Chip size="small" color="primary" label={selectedSeasonLabel} />
+                )}
               </Stack>
 
               {!activeSeason && (
-                <Alert severity="warning">
-                  {t('dashboard.admin.seasons.noActiveWarning')}
-                </Alert>
+                <Alert severity="warning">{t('dashboard.admin.seasons.noActiveWarning')}</Alert>
               )}
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
@@ -153,7 +157,9 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
 
               <Divider />
 
-              <Typography variant="subtitle1">{t('dashboard.admin.seasons.selectedSeasonConfigTitle')}</Typography>
+              <Typography variant="subtitle1">
+                {t('dashboard.admin.seasons.selectedSeasonConfigTitle')}
+              </Typography>
               {!selectedSeasonGuid && (
                 <Typography variant="body2" color="text.secondary">
                   {t('dashboard.admin.seasons.selectSeasonHint')}
@@ -250,7 +256,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                       selectedSeasonGuid === season.guid
                         ? '1px solid rgba(25,118,210,0.35)'
                         : '1px solid rgba(15,23,42,0.08)',
-                    backgroundColor: 'rgba(255,255,255,0.6)'
+                    backgroundColor: 'rgba(255,255,255,0.6)',
                   }}
                 >
                   <Stack
@@ -267,7 +273,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                         {t('dashboard.admin.seasons.historyPoints', {
                           win: season.points_win,
                           draw: season.points_draw,
-                          loss: season.points_loss
+                          loss: season.points_loss,
                         })}
                       </Typography>
                     </Box>

@@ -1,49 +1,68 @@
 # Testing Guide
 
-## Unit Tests
+## Backend Unit Tests
 
-Run without integration suite:
-
-```bash
-cd backend
-.venv/bin/python -m pytest tests --ignore=tests/integration -q
-```
-
-From repository root (with `just`):
+From repository root:
 
 ```bash
 just test-unit
 ```
 
-Full local quality gate:
+Direct command:
 
 ```bash
-just check
+backend/.venv/bin/python -m pytest backend/tests --ignore=backend/tests/integration -q
 ```
 
-## Integration Tests
+## Backend Integration Tests
 
-Requires backend listening on `127.0.0.1:8000` and a reachable MySQL database.
+Requires backend + database available (local or CI-like stack).
 
-```bash
-cd backend
-.venv/bin/python -m pytest tests/integration -q
-```
-
-From repository root (with `just`):
+From repository root:
 
 ```bash
 just test-integration
 ```
 
-## CI-like Local Run
+Direct command:
+
+```bash
+TEST_API_ROOT=http://127.0.0.1:8000/api TEST_API_V1=http://127.0.0.1:8000/api/v1 backend/.venv/bin/python -m pytest backend/tests/integration -q
+```
+
+## Frontend Quality Checks
+
+Run full frontend gate:
+
+```bash
+just frontend-check
+```
+
+Equivalent npm commands:
+
+```bash
+npm --prefix frontend run format:check
+npm --prefix frontend run lint
+npm --prefix frontend run build
+```
+
+## Full Local Quality Gate
+
+Run backend + frontend checks:
+
+```bash
+just check
+just frontend-check
+```
+
+## CI-like Local Integration Run
 
 ```bash
 cd docker
 docker compose -f docker-compose.ci.yml up -d --build
-cd ../backend
-TEST_API_ROOT=http://127.0.0.1:8000/api TEST_API_V1=http://127.0.0.1:8000/api/v1 .venv/bin/python -m pytest tests/integration -q
-cd ../docker
+cd ..
+TEST_API_ROOT=http://127.0.0.1:8000/api TEST_API_V1=http://127.0.0.1:8000/api/v1 backend/.venv/bin/python -m pytest backend/tests/integration -q
+cd docker
 docker compose -f docker-compose.ci.yml down -v
 ```
 
@@ -51,7 +70,7 @@ docker compose -f docker-compose.ci.yml down -v
 
 ### `ConnectionRefusedError: [Errno 111]`
 
-The backend is not running on `127.0.0.1:8000`.
+Backend is not reachable at `127.0.0.1:8000`.
 
 Check:
 
@@ -59,6 +78,7 @@ Check:
 curl -i http://127.0.0.1:8000/api/
 ```
 
-### Authentication/seed related failures in integration tests
+### Seed/auth related integration failures
 
-If tests expect seeded users or penas, use the CI compose file with `ci_seed.sql` mounted.
+If tests expect seeded users or peñas, run against `docker/docker-compose.ci.yml`
+(which mounts `versioning/sql/ci_seed.sql`).

@@ -2,9 +2,7 @@ import { Box, Button, Card, CardContent, Grid, Stack, Typography } from '@mui/ma
 import { useMemo, useState } from 'react'
 
 const normalizeGuids = (guids) =>
-  Array.from(
-    new Set((guids || []).map((guid) => String(guid || '').trim()).filter(Boolean))
-  )
+  Array.from(new Set((guids || []).map((guid) => String(guid || '').trim()).filter(Boolean)))
 
 const toPlayerMap = (players, homeGuids, awayGuids) => {
   const map = new Map()
@@ -15,7 +13,7 @@ const toPlayerMap = (players, homeGuids, awayGuids) => {
     }
     map.set(guid, {
       guid,
-      label: player.label || guid
+      label: player.label || guid,
     })
   })
   ;[...homeGuids, ...awayGuids].forEach((guid) => {
@@ -54,7 +52,7 @@ export default function LineupDragBuilder({
   moveHomeText,
   moveAwayText,
   removeText,
-  disabled = false
+  disabled = false,
 }) {
   const [draggedGuid, setDraggedGuid] = useState('')
   const [dropTarget, setDropTarget] = useState('')
@@ -96,20 +94,20 @@ export default function LineupDragBuilder({
     if (target === 'home') {
       onChange({
         homePlayerGuids: [...nextHome, guid],
-        awayPlayerGuids: nextAway
+        awayPlayerGuids: nextAway,
       })
       return
     }
     if (target === 'away') {
       onChange({
         homePlayerGuids: nextHome,
-        awayPlayerGuids: [...nextAway, guid]
+        awayPlayerGuids: [...nextAway, guid],
       })
       return
     }
     onChange({
       homePlayerGuids: nextHome,
-      awayPlayerGuids: nextAway
+      awayPlayerGuids: nextAway,
     })
   }
 
@@ -156,7 +154,7 @@ export default function LineupDragBuilder({
       onDragEnd={onDragEnd}
       sx={{
         cursor: disabled ? 'default' : 'grab',
-        opacity: draggedGuid === player.guid ? 0.55 : 1
+        opacity: draggedGuid === player.guid ? 0.55 : 1,
       }}
     >
       <CardContent sx={{ p: 1.2, '&:last-child': { pb: 1.2 } }}>
@@ -235,7 +233,7 @@ export default function LineupDragBuilder({
   const zones = [
     { key: 'available', title: availableTitle, players: availablePlayers },
     { key: 'home', title: homeTitle, players: homePlayers },
-    { key: 'away', title: awayTitle, players: awayPlayers }
+    { key: 'away', title: awayTitle, players: awayPlayers },
   ]
 
   return (
@@ -253,7 +251,9 @@ export default function LineupDragBuilder({
               <Box
                 onDragOver={(event) => onDragOverZone(event, zone.key)}
                 onDrop={(event) => onDropZone(event, zone.key)}
-                onDragLeave={() => setDropTarget((current) => (current === zone.key ? '' : current))}
+                onDragLeave={() =>
+                  setDropTarget((current) => (current === zone.key ? '' : current))
+                }
                 sx={{
                   border: '1px dashed',
                   borderColor: isActive ? 'primary.main' : 'divider',
@@ -261,7 +261,7 @@ export default function LineupDragBuilder({
                   p: 1.25,
                   minHeight: 220,
                   backgroundColor: buildZoneBackground(zone.key, isActive),
-                  transition: 'border-color 160ms ease, background-color 160ms ease'
+                  transition: 'border-color 160ms ease, background-color 160ms ease',
                 }}
               >
                 <Stack spacing={1}>

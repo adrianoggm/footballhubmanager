@@ -13,7 +13,7 @@ export class HttpClient {
   async request(path, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...(options.headers || {})
+      ...(options.headers || {}),
     }
 
     if (this.sessionToken) {
@@ -22,7 +22,7 @@ export class HttpClient {
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...options,
-      headers
+      headers,
     })
 
     const contentType = response.headers.get('content-type') || ''
@@ -88,7 +88,7 @@ export class HttpClient {
     }
     return {
       ...options,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     }
   }
 }

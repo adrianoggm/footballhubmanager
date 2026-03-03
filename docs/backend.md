@@ -17,7 +17,15 @@ The backend follows a hexagonal structure:
 - Infrastructure adapters: `backend/src/persistence/infrastructure`
 - HTTP controllers: `backend/src/api/interface/controller/v1`
 
+Controller contract models are organized under:
+
+- Requests: `backend/src/api/interface/controller/v1/model/request`
+- Responses: `backend/src/api/interface/controller/v1/model/response`
+
 Controllers should stay thin: validate input, invoke a use case, map errors to HTTP responses.
+
+Dependency wiring is centralized through FastAPI dependencies (for example,
+`get_season_competition_use_case`) so endpoints avoid manual repository/use-case instantiation.
 
 ## Architecture Schema
 
@@ -119,6 +127,7 @@ Source files:
 Most relevant variables:
 
 - `APP_HOST`, `APP_PORT`, `APP_RELOAD`, `APP_ENV`
+- `EXPOSE_INTERNAL_ERRORS` (default `false`; enables detailed 500 responses only for local/dev/test)
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PROVIDER`
 - `LINK_TOKEN_TTL_SECONDS`, `SESSION_TTL_SECONDS`
 - `SQL_ECHO`

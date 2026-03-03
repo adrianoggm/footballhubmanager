@@ -6,7 +6,7 @@ const initialState = {
   status: 'idle',
   token: null,
   error: null,
-  session: null
+  session: null,
 }
 
 export function useAuth() {
@@ -101,6 +101,6 @@ export function useAuth() {
     loginAdmin,
     registerUser,
     registerAdmin,
-    logout
+    logout,
   }
 }

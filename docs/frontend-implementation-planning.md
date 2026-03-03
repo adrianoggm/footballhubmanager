@@ -1,6 +1,13 @@
 # Frontend Implementation Planning
 
-This document captures the functional planning for the next frontend implementation phase, including information architecture, end-to-end flows, screen-level specs, reusable components, design tokens, responsive behavior, and UX handoff requirements.
+This document captures the frontend planning baseline and roadmap.
+Several items described here are already implemented in the current admin/user dashboards,
+while others remain as evolution targets.
+
+Current status snapshot (March 2026):
+
+- Implemented: auth flows, role-based dashboards, season/players/matches management, standings, match detail viewer, and match insights views.
+- In progress/evolution: deeper analytics storytelling, richer trend exploration, and additional UX polish across advanced scenarios.
 
 ## 1) Information Architecture (Role-Based Sitemap)
 

@@ -1,12 +1,16 @@
-set shell := ["bash", "-cu"]
+set shell := ["sh", "-cu"]
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 
-venv_python := "backend/.venv/bin/python"
+python_cmd := if os_family() == "windows" { "py -3" } else { "python3" }
+venv_python := if os_family() == "windows" { "backend/.venv/Scripts/python.exe" } else { "backend/.venv/bin/python" }
+export TEST_API_ROOT := "http://127.0.0.1:8000/api"
+export TEST_API_V1 := "http://127.0.0.1:8000/api/v1"
 
 default:
     @just --list
 
 bootstrap:
-    python3 -m venv backend/.venv
+    {{python_cmd}} -m venv backend/.venv
     {{venv_python}} -m pip install --upgrade pip
     {{venv_python}} -m pip install -r backend/requirements.txt
 
@@ -25,11 +29,28 @@ frontend port="5173" host="0.0.0.0":
 run-frontend port="5173" host="0.0.0.0":
     npm --prefix frontend run dev -- --host {{host}} --port {{port}}
 
+frontend-lint:
+    npm --prefix frontend run lint
+
+frontend-lint-fix:
+    npm --prefix frontend run lint:fix
+
+frontend-format:
+    npm --prefix frontend run format
+
+frontend-format-check:
+    npm --prefix frontend run format:check
+
+frontend-check:
+    @just frontend-format-check
+    @just frontend-lint
+    npm --prefix frontend run build
+
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q
 
 test-integration:
-    TEST_API_ROOT=http://127.0.0.1:8000/api TEST_API_V1=http://127.0.0.1:8000/api/v1 {{venv_python}} -m pytest backend/tests/integration -q
+    {{venv_python}} -m pytest backend/tests/integration -q
 
 lint:
     {{venv_python}} -m ruff check backend/src backend/tests

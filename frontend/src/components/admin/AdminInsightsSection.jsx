@@ -17,7 +17,7 @@ import {
   TableRow,
   TextField,
   Tooltip,
-  Typography
+  Typography,
 } from '@mui/material'
 import {
   Bar,
@@ -29,40 +29,40 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts'
 
 const INSIGHT_ACCENTS = {
   matches: {
     main: '#0ea5e9',
     soft: 'rgba(14, 165, 233, 0.12)',
-    border: 'rgba(14, 165, 233, 0.34)'
+    border: 'rgba(14, 165, 233, 0.34)',
   },
   seasons: {
     main: '#8b5cf6',
     soft: 'rgba(139, 92, 246, 0.12)',
-    border: 'rgba(139, 92, 246, 0.34)'
+    border: 'rgba(139, 92, 246, 0.34)',
   },
   players: {
     main: '#14b8a6',
     soft: 'rgba(20, 184, 166, 0.12)',
-    border: 'rgba(20, 184, 166, 0.34)'
+    border: 'rgba(20, 184, 166, 0.34)',
   },
   goals: {
     main: '#ef4444',
     soft: 'rgba(239, 68, 68, 0.12)',
-    border: 'rgba(239, 68, 68, 0.35)'
+    border: 'rgba(239, 68, 68, 0.35)',
   },
   assists: {
     main: '#2563eb',
     soft: 'rgba(37, 99, 235, 0.12)',
-    border: 'rgba(37, 99, 235, 0.35)'
+    border: 'rgba(37, 99, 235, 0.35)',
   },
   saves: {
     main: '#f59e0b',
     soft: 'rgba(245, 158, 11, 0.14)',
-    border: 'rgba(245, 158, 11, 0.4)'
-  }
+    border: 'rgba(245, 158, 11, 0.4)',
+  },
 }
 
 const getRateColor = (rate) => {
@@ -78,7 +78,7 @@ const getRateColor = (rate) => {
 const metricCardStyles = (accent) => ({
   borderRadius: 3,
   borderColor: accent.border,
-  background: `linear-gradient(140deg, ${accent.soft} 0%, rgba(255,255,255,0.95) 100%)`
+  background: `linear-gradient(140deg, ${accent.soft} 0%, rgba(255,255,255,0.95) 100%)`,
 })
 
 const buildMatrixCellSx = (cell, maxSharedMatches) => {
@@ -86,14 +86,14 @@ const buildMatrixCellSx = (cell, maxSharedMatches) => {
     return {
       backgroundColor: 'rgba(148, 163, 184, 0.16)',
       color: 'text.secondary',
-      fontWeight: 700
+      fontWeight: 700,
     }
   }
 
   if (!cell.matches) {
     return {
       backgroundColor: 'rgba(148, 163, 184, 0.08)',
-      color: 'text.secondary'
+      color: 'text.secondary',
     }
   }
 
@@ -104,14 +104,14 @@ const buildMatrixCellSx = (cell, maxSharedMatches) => {
 
   return {
     backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)`,
-    border: '1px solid rgba(15, 23, 42, 0.08)'
+    border: '1px solid rgba(15, 23, 42, 0.08)',
   }
 }
 
 const matrixLegend = [
   { key: 'low', rate: 0.3, matches: 0.25 },
   { key: 'mid', rate: 0.5, matches: 0.5 },
-  { key: 'high', rate: 0.7, matches: 0.75 }
+  { key: 'high', rate: 0.7, matches: 0.75 },
 ]
 
 const shortSeasonLabel = (guid) => {
@@ -126,7 +126,7 @@ const buildMetricDeltaChipSx = (accent) => ({
   borderColor: accent.border,
   backgroundColor: accent.soft,
   color: accent.main,
-  fontWeight: 700
+  fontWeight: 700,
 })
 
 function InsightMetricCard({ label, value, accent = INSIGHT_ACCENTS.matches }) {
@@ -144,8 +144,8 @@ function InsightMetricCard({ label, value, accent = INSIGHT_ACCENTS.matches }) {
           top: 0,
           bottom: 0,
           width: 4,
-          backgroundColor: accent.main
-        }
+          backgroundColor: accent.main,
+        },
       }}
     >
       <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
@@ -162,13 +162,20 @@ function InsightMetricCard({ label, value, accent = INSIGHT_ACCENTS.matches }) {
   )
 }
 
-function InsightRankingPanel({ title, emptyText, rows, t, matchLabelKey = 'dashboard.admin.table.played' }) {
+function InsightRankingPanel({
+  title,
+  emptyText,
+  rows,
+  t,
+  matchLabelKey = 'dashboard.admin.table.played',
+}) {
   return (
     <Card
       variant="outlined"
       sx={{
         borderRadius: 3,
-        background: 'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(243,248,255,0.92) 100%)'
+        background:
+          'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(243,248,255,0.92) 100%)',
       }}
     >
       <CardContent>
@@ -189,7 +196,7 @@ function InsightRankingPanel({ title, emptyText, rows, t, matchLabelKey = 'dashb
                 p: 1.1,
                 borderRadius: 2,
                 border: '1px solid rgba(15, 23, 42, 0.08)',
-                backgroundColor: 'rgba(255, 255, 255, 0.88)'
+                backgroundColor: 'rgba(255, 255, 255, 0.88)',
               }}
             >
               <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
@@ -200,7 +207,7 @@ function InsightRankingPanel({ title, emptyText, rows, t, matchLabelKey = 'dashb
                       fontWeight: 700,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
                     }}
                     title={row.title}
                   >
@@ -213,7 +220,11 @@ function InsightRankingPanel({ title, emptyText, rows, t, matchLabelKey = 'dashb
                   )}
                 </Stack>
                 <Stack direction="row" spacing={0.6}>
-                  <Chip size="small" variant="outlined" label={`${t(matchLabelKey)}: ${row.matches}`} />
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`${t(matchLabelKey)}: ${row.matches}`}
+                  />
                   <Chip size="small" color={getRateColor(row.rate)} label={row.rateLabel} />
                 </Stack>
               </Stack>
@@ -237,7 +248,8 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
       variant="outlined"
       sx={{
         borderRadius: 3,
-        background: 'linear-gradient(160deg, rgba(255,255,255,0.98) 0%, rgba(244,250,246,0.92) 100%)'
+        background:
+          'linear-gradient(160deg, rgba(255,255,255,0.98) 0%, rgba(244,250,246,0.92) 100%)',
       }}
     >
       <CardContent>
@@ -259,7 +271,8 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
               spacing={1}
               sx={{
                 py: 0.45,
-                borderBottom: index === items.length - 1 ? 'none' : '1px solid rgba(15, 23, 42, 0.08)'
+                borderBottom:
+                  index === items.length - 1 ? 'none' : '1px solid rgba(15, 23, 42, 0.08)',
               }}
             >
               <Typography
@@ -267,7 +280,7 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
                 sx={{
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
                 }}
                 title={item.label}
               >
@@ -280,7 +293,7 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
                   borderColor: metricAccent.border,
                   backgroundColor: metricAccent.soft,
                   color: metricAccent.main,
-                  fontWeight: 700
+                  fontWeight: 700,
                 }}
                 label={`${metricLabel}: ${item[metricKey]}`}
               />
@@ -299,18 +312,19 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
     insightsLoading,
     insightsReport,
     insightsComparisonReport,
-    insightsComparison
+    insightsComparison,
   } = state
   const { onInsightsScopeChange, onRefreshInsights } = actions
   const { t, formatDecimal, formatSignedDecimal, formatPercent } = helpers
 
-  const maxSharedMatches = insightsReport?.matrix_rows?.reduce((maxValue, row) => {
-    const rowMax = (row.cells || []).reduce(
-      (cellMax, cell) => Math.max(cellMax, cell.matches || 0),
-      0
-    )
-    return Math.max(maxValue, rowMax)
-  }, 0) || 0
+  const maxSharedMatches =
+    insightsReport?.matrix_rows?.reduce((maxValue, row) => {
+      const rowMax = (row.cells || []).reduce(
+        (cellMax, cell) => Math.max(cellMax, cell.matches || 0),
+        0
+      )
+      return Math.max(maxValue, rowMax)
+    }, 0) || 0
 
   const pairRows = (insightsReport?.top_pairs || []).slice(0, 10).map((pair) => ({
     key: `${pair.leftGuid}-${pair.rightGuid}`,
@@ -318,7 +332,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
     subtitle: `${pair.wins}-${pair.draws}-${pair.losses}`,
     matches: pair.matches,
     rate: pair.win_rate,
-    rateLabel: formatPercent(pair.win_rate)
+    rateLabel: formatPercent(pair.win_rate),
   }))
 
   const teammateRows = (insightsReport?.top_teammates_by_player || []).slice(0, 10).map((item) => ({
@@ -327,18 +341,18 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
     subtitle: `${t('dashboard.admin.standings.bestTeammateColumn')}: ${item.partner_label}`,
     matches: item.matches,
     rate: item.win_rate,
-    rateLabel: formatPercent(item.win_rate)
+    rateLabel: formatPercent(item.win_rate),
   }))
 
   const timelineMatchData = (insightsReport?.timeline_by_match || []).map((item) => ({
     ...item,
-    x_label: item.match_date ? item.match_date.slice(5) : item.label
+    x_label: item.match_date ? item.match_date.slice(5) : item.label,
   }))
 
   const timelineSeasonData = (insightsReport?.timeline_by_season || []).map((item, index) => ({
     ...item,
     x_label: `S${index + 1}`,
-    season_label: shortSeasonLabel(item.season_guid)
+    season_label: shortSeasonLabel(item.season_guid),
   }))
 
   return (
@@ -389,7 +403,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
           sx={{
             borderStyle: 'dashed',
             borderRadius: 3,
-            background: 'linear-gradient(140deg, rgba(247,252,255,0.95) 0%, rgba(255,255,255,0.92) 100%)'
+            background:
+              'linear-gradient(140deg, rgba(247,252,255,0.95) 0%, rgba(255,255,255,0.92) 100%)',
           }}
         >
           <CardContent>
@@ -462,7 +477,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               sx={{
                 borderRadius: 3,
                 background:
-                  'linear-gradient(140deg, rgba(245,251,255,0.98) 0%, rgba(255,255,255,0.95) 100%)'
+                  'linear-gradient(140deg, rgba(245,251,255,0.98) 0%, rgba(255,255,255,0.95) 100%)',
               }}
             >
               <CardContent>
@@ -475,7 +490,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                           : t('dashboard.admin.standings.insightsScopeSelectedSeason'),
                       goalsDelta: formatSignedDecimal(insightsComparison.goals_per_match_delta),
                       assistsDelta: formatSignedDecimal(insightsComparison.assists_per_match_delta),
-                      savesDelta: formatSignedDecimal(insightsComparison.saves_per_match_delta)
+                      savesDelta: formatSignedDecimal(insightsComparison.saves_per_match_delta),
                     })}
                   </Alert>
                   <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -509,7 +524,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 variant="outlined"
                 sx={{
                   borderRadius: 3,
-                  background: 'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(247,253,255,0.94) 100%)'
+                  background:
+                    'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(247,253,255,0.94) 100%)',
                 }}
               >
                 <CardContent>
@@ -578,7 +594,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 variant="outlined"
                 sx={{
                   borderRadius: 3,
-                  background: 'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(250,255,250,0.93) 100%)'
+                  background:
+                    'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(250,255,250,0.93) 100%)',
                 }}
               >
                 <CardContent>
@@ -650,7 +667,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             variant="outlined"
             sx={{
               borderRadius: 3,
-              background: 'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(255,252,246,0.93) 100%)'
+              background:
+                'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(255,252,246,0.93) 100%)',
             }}
           >
             <CardContent>
@@ -730,7 +748,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             variant="outlined"
             sx={{
               borderRadius: 3,
-              background: 'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(250,253,255,0.93) 100%)'
+              background:
+                'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(250,253,255,0.93) 100%)',
             }}
           >
             <CardContent>
@@ -748,10 +767,16 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                       size="small"
                       variant="outlined"
                       sx={buildMatrixCellSx(
-                        { same_player: false, matches: Math.max(1, Math.round(maxSharedMatches * item.matches)), win_rate: item.rate },
+                        {
+                          same_player: false,
+                          matches: Math.max(1, Math.round(maxSharedMatches * item.matches)),
+                          win_rate: item.rate,
+                        },
                         maxSharedMatches || 1
                       )}
-                      label={t(`dashboard.admin.standings.correlationLegend${item.key[0].toUpperCase()}${item.key.slice(1)}`)}
+                      label={t(
+                        `dashboard.admin.standings.correlationLegend${item.key[0].toUpperCase()}${item.key.slice(1)}`
+                      )}
                     />
                   ))}
                 </Stack>
@@ -767,7 +792,9 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ minWidth: 220 }}>{t('dashboard.admin.table.player')}</TableCell>
+                          <TableCell sx={{ minWidth: 220 }}>
+                            {t('dashboard.admin.table.player')}
+                          </TableCell>
                           {insightsReport.matrix_players.map((player) => (
                             <TableCell key={player.guid} align="center" sx={{ minWidth: 110 }}>
                               <Typography
@@ -777,7 +804,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                                   fontWeight: 700,
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
                                 }}
                                 title={player.label}
                               >
@@ -798,7 +825,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap',
-                                  maxWidth: 250
+                                  maxWidth: 250,
                                 }}
                                 title={row.player.label}
                               >
@@ -813,12 +840,12 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                                     ? t('dashboard.admin.standings.correlationSamePlayer')
                                     : cell.matches
                                       ? t('dashboard.admin.standings.correlationCellTooltip', {
-                                        matches: cell.matches,
-                                        wins: cell.wins,
-                                        draws: cell.draws,
-                                        losses: cell.losses,
-                                        winRate: formatPercent(cell.win_rate)
-                                      })
+                                          matches: cell.matches,
+                                          wins: cell.wins,
+                                          draws: cell.draws,
+                                          losses: cell.losses,
+                                          winRate: formatPercent(cell.win_rate),
+                                        })
                                       : t('dashboard.admin.standings.correlationNoMatches')
                                 }
                                 arrow

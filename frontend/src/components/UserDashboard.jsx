@@ -18,9 +18,9 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow, 
+  TableRow,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
@@ -33,18 +33,18 @@ const defaultProfileForm = () => ({
   name: '',
   surname1: '',
   surname2: '',
-  nationality: ''
+  nationality: '',
 })
 
 const defaultJoinForm = () => ({
   token: '',
   nickname: '',
-  position: ''
+  position: '',
 })
 
 const defaultMembershipForm = () => ({
   nickname: '',
-  position: ''
+  position: '',
 })
 
 const asText = (value) => value ?? ''
@@ -124,10 +124,7 @@ export default function UserDashboard({ session, onLogout }) {
     [seasonList, selectedSeasonGuid]
   )
 
-  const errorMessage = useMemo(
-    () => (error ? mapDashboardErrorMessage(error, t) : ''),
-    [error, t]
-  )
+  const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
   const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
   const currentStanding = useMemo(() => {
     if (!currentPlayerGuid || standings.length === 0) {
@@ -189,7 +186,7 @@ export default function UserDashboard({ session, onLogout }) {
       setMembership(currentMembership)
       setMembershipForm({
         nickname: asText(currentMembership.nickname),
-        position: asText(currentMembership.position)
+        position: asText(currentMembership.position),
       })
     } catch (requestError) {
       if (requestError.status === 403 || requestError.status === 404) {
@@ -222,7 +219,7 @@ export default function UserDashboard({ session, onLogout }) {
         }
         throw requestError
       }),
-      userService.listSeasons(penaGuid, { pageSize: 100 })
+      userService.listSeasons(penaGuid, { pageSize: 100 }),
     ])
     if (isStale()) {
       return
@@ -230,10 +227,9 @@ export default function UserDashboard({ session, onLogout }) {
 
     const seasonItems = seasonsPage.items || []
     setSeasonList(seasonItems)
-    const resolvedSeasonGuid =
-      seasonItems.some((item) => item.guid === selectedSeasonGuid)
-        ? selectedSeasonGuid
-        : activeSeason?.guid || seasonItems[0]?.guid || ''
+    const resolvedSeasonGuid = seasonItems.some((item) => item.guid === selectedSeasonGuid)
+      ? selectedSeasonGuid
+      : activeSeason?.guid || seasonItems[0]?.guid || ''
     setSelectedSeasonGuid(resolvedSeasonGuid)
   }
 
@@ -255,7 +251,7 @@ export default function UserDashboard({ session, onLogout }) {
 
     const [standingsPage, matchesPage] = await Promise.all([
       userService.listStandings(penaGuid, seasonGuid, { pageSize: 20 }),
-      userService.listSeasonMatches(penaGuid, seasonGuid, { pageSize: 100 })
+      userService.listSeasonMatches(penaGuid, seasonGuid, { pageSize: 100 }),
     ])
     if (isStale()) {
       return
@@ -271,7 +267,7 @@ export default function UserDashboard({ session, onLogout }) {
       const [nextProfile, penasPage, nextNationalities] = await Promise.all([
         userService.getMyProfile(),
         userService.listMyPenas(),
-        userService.getNationalities().catch(() => [])
+        userService.getNationalities().catch(() => []),
       ])
       const nextPenas = penasPage.items || []
       setProfile(nextProfile)
@@ -279,7 +275,7 @@ export default function UserDashboard({ session, onLogout }) {
         name: asText(nextProfile.name),
         surname1: asText(nextProfile.surname1),
         surname2: asText(nextProfile.surname2),
-        nationality: asText(nextProfile.nationality)
+        nationality: asText(nextProfile.nationality),
       })
       setPenas(nextPenas)
       setNationalities(nextNationalities)
@@ -288,10 +284,7 @@ export default function UserDashboard({ session, onLogout }) {
         nextPenas.find((item) => item.guid === selectedPenaGuid)?.guid || nextPenas[0]?.guid || ''
       setSelectedPenaGuid(preferredPena)
       if (preferredPena) {
-        await Promise.all([
-          loadMembership(preferredPena),
-          loadSeasonList(preferredPena)
-        ])
+        await Promise.all([loadMembership(preferredPena), loadSeasonList(preferredPena)])
       } else {
         setMembership(null)
         setMembershipForm(defaultMembershipForm())
@@ -331,10 +324,7 @@ export default function UserDashboard({ session, onLogout }) {
       return
     }
     runAction(async () => {
-      await Promise.all([
-        loadMembership(selectedPenaGuid),
-        loadSeasonList(selectedPenaGuid)
-      ])
+      await Promise.all([loadMembership(selectedPenaGuid), loadSeasonList(selectedPenaGuid)])
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid])
@@ -400,7 +390,7 @@ export default function UserDashboard({ session, onLogout }) {
         name: asText(profile.name),
         surname1: asText(profile.surname1),
         surname2: asText(profile.surname2),
-        nationality: asText(profile.nationality)
+        nationality: asText(profile.nationality),
       })
     }
     setProfileSettingsOpen(true)
@@ -422,7 +412,7 @@ export default function UserDashboard({ session, onLogout }) {
         name: asText(updatedProfile.name),
         surname1: asText(updatedProfile.surname1),
         surname2: asText(updatedProfile.surname2),
-        nationality: asText(updatedProfile.nationality)
+        nationality: asText(updatedProfile.nationality),
       })
     }, t('dashboard.user.noticeProfileUpdated'))
   }
@@ -444,7 +434,7 @@ export default function UserDashboard({ session, onLogout }) {
       await userService.consumeJoinToken({
         token,
         nickname: joinForm.nickname.trim() || null,
-        position: joinForm.position.trim() || null
+        position: joinForm.position.trim() || null,
       })
       setJoinForm(defaultJoinForm())
       await loadDashboard()
@@ -458,12 +448,12 @@ export default function UserDashboard({ session, onLogout }) {
     await runAction(async () => {
       const updatedMembership = await userService.updateMyMembership(selectedPenaGuid, {
         nickname: membershipForm.nickname.trim() || null,
-        position: membershipForm.position.trim() || null
+        position: membershipForm.position.trim() || null,
       })
       setMembership(updatedMembership)
       setMembershipForm({
         nickname: asText(updatedMembership.nickname),
-        position: asText(updatedMembership.position)
+        position: asText(updatedMembership.position),
       })
     }, t('dashboard.user.noticeMembershipUpdated'))
   }
@@ -494,7 +484,7 @@ export default function UserDashboard({ session, onLogout }) {
 
     return userService.getMatchInsights(penaGuid, {
       scope,
-      season_guids: seasonGuids
+      season_guids: seasonGuids,
     })
   }
 
@@ -515,7 +505,7 @@ export default function UserDashboard({ session, onLogout }) {
         loadScopeInsightReport(selectedPenaGuid, insightsScope),
         seasonList.length > 1 || comparisonScope === 'selected_season'
           ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
-          : Promise.resolve(null)
+          : Promise.resolve(null),
       ])
       if (requestId !== insightsRequestIdRef.current) {
         return
@@ -545,7 +535,11 @@ export default function UserDashboard({ session, onLogout }) {
     setMatchDetailLoading(true)
     setError(null)
     try {
-      const detail = await userService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid)
+      const detail = await userService.getMatchDetail(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        matchGuid
+      )
       if (requestId !== matchDetailRequestIdRef.current) {
         return
       }
@@ -597,7 +591,11 @@ export default function UserDashboard({ session, onLogout }) {
               <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
                 {t('dashboard.user.openSettings')}
               </Button>
-              <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
+              <Button
+                variant="outlined"
+                onClick={() => runAction(loadDashboard)}
+                disabled={loading}
+              >
                 {t('dashboard.common.refresh')}
               </Button>
               <Button variant="text" onClick={onLogout} disabled={loading}>
@@ -642,13 +640,17 @@ export default function UserDashboard({ session, onLogout }) {
       <Card>
         <CardContent>
           <Stack spacing={2.5}>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={1.5}
+              alignItems={{ md: 'center' }}
+            >
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6">{t('dashboard.user.myPenasTitle')}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {t('dashboard.user.linkedCount', {
                     count: penas.length,
-                    suffix: penas.length === 1 ? '' : 's'
+                    suffix: penas.length === 1 ? '' : 's',
                   })}
                 </Typography>
               </Box>
@@ -681,12 +683,12 @@ export default function UserDashboard({ session, onLogout }) {
             </Stack>
 
             {selectedPena && (
-                <Card variant="outlined">
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                        {t('dashboard.user.membershipIn', { name: selectedPena.name })}
-                      </Typography>
+              <Card variant="outlined">
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {t('dashboard.user.membershipIn', { name: selectedPena.name })}
+                    </Typography>
                     <TextField
                       label={t('dashboard.user.nickname')}
                       value={membershipForm.nickname}
@@ -719,248 +721,286 @@ export default function UserDashboard({ session, onLogout }) {
                         {t('dashboard.user.leavePena')}
                       </Button>
                     </Stack>
-                      <Typography variant="caption" color="text.secondary">
-                        {t('dashboard.user.leaveHint')}
+                    <Typography variant="caption" color="text.secondary">
+                      {t('dashboard.user.leaveHint')}
+                    </Typography>
+
+                    <TextField
+                      select
+                      size="small"
+                      label={t('dashboard.user.selectedSeason')}
+                      value={selectedSeasonGuid}
+                      onChange={(event) => setSelectedSeasonGuid(event.target.value)}
+                      disabled={!seasonList.length || loading}
+                      fullWidth
+                    >
+                      {seasonList.map((season) => (
+                        <MenuItem key={season.guid} value={season.guid}>
+                          {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+
+                    {!seasonList.length && (
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.user.noSeasonsAvailable')}
                       </Typography>
+                    )}
 
-                      <TextField
-                        select
-                        size="small"
-                        label={t('dashboard.user.selectedSeason')}
-                        value={selectedSeasonGuid}
-                        onChange={(event) => setSelectedSeasonGuid(event.target.value)}
-                        disabled={!seasonList.length || loading}
-                        fullWidth
-                      >
-                        {seasonList.map((season) => (
-                          <MenuItem key={season.guid} value={season.guid}>
-                            {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                    {selectedSeason && (
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.user.statsReadOnlyHint', {
+                          season: `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`,
+                        })}
+                      </Typography>
+                    )}
 
-                      {!seasonList.length && (
-                        <Typography variant="body2" color="text.secondary">
-                          {t('dashboard.user.noSeasonsAvailable')}
-                        </Typography>
-                      )}
+                    {seasonDataLoading && <LinearProgress />}
 
-                      {selectedSeason && (
-                        <Typography variant="body2" color="text.secondary">
-                          {t('dashboard.user.statsReadOnlyHint', {
-                            season: `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
-                          })}
-                        </Typography>
-                      )}
-
-                      {seasonDataLoading && <LinearProgress />}
-
-                      {selectedSeasonGuid && !seasonDataLoading && (
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} md={12}>
-                            <Card variant="outlined">
-                              <CardContent>
-                                <Stack spacing={1.5}>
-                                  <Typography variant="subtitle2">
-                                    {t('dashboard.user.standingsTitle')}
+                    {selectedSeasonGuid && !seasonDataLoading && (
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={12}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <Stack spacing={1.5}>
+                                <Typography variant="subtitle2">
+                                  {t('dashboard.user.standingsTitle')}
+                                </Typography>
+                                {!standings.length && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {t('dashboard.user.noStandingsForSeason')}
                                   </Typography>
-                                  {!standings.length && (
-                                    <Typography variant="body2" color="text.secondary">
-                                      {t('dashboard.user.noStandingsForSeason')}
-                                    </Typography>
-                                  )}
-                                  {standings.length > 0 && (
-                                    <Stack spacing={1.5}>
-                                      {currentStanding && (
-                                        <Stack direction="row" flexWrap="wrap" gap={1}>
-                                          <Chip size="small" color="info" label={t('dashboard.user.youTag')} />
-                                          <Chip
-                                            size="small"
-                                            color="secondary"
-                                            label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
-                                          />
-                                          <Chip
-                                            size="small"
-                                            variant="outlined"
-                                            label={t('dashboard.user.yourPositionLabel', {
-                                              position: currentStanding.position || '-'
-                                            })}
-                                          />
-                                          <Chip
-                                            size="small"
-                                            variant="outlined"
-                                            label={t('dashboard.user.yourPointsLabel', {
-                                              points: currentStanding.points
-                                            })}
-                                          />
-                                          <Chip
-                                            size="small"
-                                            variant="outlined"
-                                            label={t('dashboard.user.yourGoalContributionLabel', {
-                                              goals: currentStanding.goals ?? 0,
-                                              assists: currentStanding.assists ?? 0
-                                            })}
-                                          />
-                                        </Stack>
-                                      )}
-                                      {!currentStanding && currentPlayerGuid && (
-                                        <Typography variant="caption" color="text.secondary">
-                                          {t('dashboard.user.notInStandingsYet')}
-                                        </Typography>
-                                      )}
-                                      <TableContainer>
-                                        <Table size="small">
-                                          <TableHead>
-                                            <TableRow>
-                                              <TableCell>{t('dashboard.user.table.rank')}</TableCell>
-                                              <TableCell>{t('dashboard.user.table.player')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.played')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.w')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.d')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.l')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.goals')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.assists')}</TableCell>
-                                              <TableCell align="right">{t('dashboard.user.table.pts')}</TableCell>
-                                            </TableRow>
-                                          </TableHead>
-                                          <TableBody>
-                                            {standings.map((player, index) => {
-                                              const isCurrentPlayer = player.player_guid === currentPlayerGuid
-                                              return (
-                                                <TableRow
-                                                  key={player.player_guid}
-                                                  sx={
-                                                    isCurrentPlayer
-                                                      ? {
-                                                          '& td': {
-                                                            backgroundColor: 'rgba(2, 136, 209, 0.09)',
-                                                            fontWeight: 700
-                                                          }
-                                                        }
-                                                      : undefined
-                                                  }
-                                                >
-                                                  <TableCell>{index + 1}</TableCell>
-                                                  <TableCell>
-                                                    <Stack direction="row" spacing={1} alignItems="center">
-                                                      <span>{player.nickname || `${player.name} ${player.surname1}`}</span>
-                                                      {isCurrentPlayer && (
-                                                        <Chip
-                                                          size="small"
-                                                          color="info"
-                                                          variant="filled"
-                                                          label={t('dashboard.user.youTag')}
-                                                        />
-                                                      )}
-                                                    </Stack>
-                                                  </TableCell>
-                                                  <TableCell align="right">
-                                                    {player.played ?? player.wins + player.draws + player.losses}
-                                                  </TableCell>
-                                                  <TableCell align="right">{player.wins}</TableCell>
-                                                  <TableCell align="right">{player.draws}</TableCell>
-                                                  <TableCell align="right">{player.losses}</TableCell>
-                                                  <TableCell align="right">{player.goals ?? 0}</TableCell>
-                                                  <TableCell align="right">{player.assists ?? 0}</TableCell>
-                                                  <TableCell align="right">{player.points}</TableCell>
-                                                </TableRow>
-                                              )
-                                            })}
-                                          </TableBody>
-                                        </Table>
-                                      </TableContainer>
-                                    </Stack>
-                                  )}
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          </Grid>
-
-                          <Grid item xs={12} md={12}>
-                            <Card variant="outlined">
-                              <CardContent>
-                                <Stack spacing={1.5}>
-                                  <Typography variant="subtitle2">
-                                    {t('dashboard.user.matchesTitle')}
-                                  </Typography>
-                                  {!orderedSeasonMatches.length && (
-                                    <Typography variant="body2" color="text.secondary">
-                                      {t('dashboard.user.noMatchesForSeason')}
-                                    </Typography>
-                                  )}
-                                  {orderedSeasonMatches.length > 0 && (
+                                )}
+                                {standings.length > 0 && (
+                                  <Stack spacing={1.5}>
+                                    {currentStanding && (
+                                      <Stack direction="row" flexWrap="wrap" gap={1}>
+                                        <Chip
+                                          size="small"
+                                          color="info"
+                                          label={t('dashboard.user.youTag')}
+                                        />
+                                        <Chip
+                                          size="small"
+                                          color="secondary"
+                                          label={t('dashboard.user.yourRank', {
+                                            rank: currentStanding.rank,
+                                          })}
+                                        />
+                                        <Chip
+                                          size="small"
+                                          variant="outlined"
+                                          label={t('dashboard.user.yourPositionLabel', {
+                                            position: currentStanding.position || '-',
+                                          })}
+                                        />
+                                        <Chip
+                                          size="small"
+                                          variant="outlined"
+                                          label={t('dashboard.user.yourPointsLabel', {
+                                            points: currentStanding.points,
+                                          })}
+                                        />
+                                        <Chip
+                                          size="small"
+                                          variant="outlined"
+                                          label={t('dashboard.user.yourGoalContributionLabel', {
+                                            goals: currentStanding.goals ?? 0,
+                                            assists: currentStanding.assists ?? 0,
+                                          })}
+                                        />
+                                      </Stack>
+                                    )}
+                                    {!currentStanding && currentPlayerGuid && (
+                                      <Typography variant="caption" color="text.secondary">
+                                        {t('dashboard.user.notInStandingsYet')}
+                                      </Typography>
+                                    )}
                                     <TableContainer>
                                       <Table size="small">
                                         <TableHead>
                                           <TableRow>
-                                            <TableCell>{t('dashboard.user.table.date')}</TableCell>
-                                            <TableCell>{t('dashboard.user.table.home')}</TableCell>
-                                            <TableCell>{t('dashboard.user.table.away')}</TableCell>
-                                            <TableCell>{t('dashboard.user.table.status')}</TableCell>
-                                            <TableCell>{t('dashboard.user.table.result')}</TableCell>
-                                            <TableCell>{t('dashboard.user.table.actions')}</TableCell>
+                                            <TableCell>{t('dashboard.user.table.rank')}</TableCell>
+                                            <TableCell>
+                                              {t('dashboard.user.table.player')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.played')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.w')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.d')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.l')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.goals')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.assists')}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                              {t('dashboard.user.table.pts')}
+                                            </TableCell>
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {orderedSeasonMatches.map((match) => (
-                                            <TableRow key={match.guid}>
-                                              <TableCell>{formatDate(match.match_date)}</TableCell>
-                                              <TableCell>{match.home_team_name}</TableCell>
-                                              <TableCell>{match.away_team_name}</TableCell>
-                                              <TableCell>
-                                                {String(match.status || '').toLowerCase() === 'closed'
-                                                  ? t('dashboard.user.statusClosed')
-                                                  : t('dashboard.user.statusOpen')}
-                                              </TableCell>
-                                              <TableCell>{match.home_score} - {match.away_score}</TableCell>
-                                              <TableCell>
-                                                <Button
-                                                  size="small"
-                                                  variant="text"
-                                                  onClick={() => handleOpenMatchDetail(match.guid)}
-                                                  disabled={matchDetailLoading}
-                                                >
-                                                  {t('dashboard.common.matchDetail.viewAction')}
-                                                </Button>
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
+                                          {standings.map((player, index) => {
+                                            const isCurrentPlayer =
+                                              player.player_guid === currentPlayerGuid
+                                            return (
+                                              <TableRow
+                                                key={player.player_guid}
+                                                sx={
+                                                  isCurrentPlayer
+                                                    ? {
+                                                        '& td': {
+                                                          backgroundColor:
+                                                            'rgba(2, 136, 209, 0.09)',
+                                                          fontWeight: 700,
+                                                        },
+                                                      }
+                                                    : undefined
+                                                }
+                                              >
+                                                <TableCell>{index + 1}</TableCell>
+                                                <TableCell>
+                                                  <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    alignItems="center"
+                                                  >
+                                                    <span>
+                                                      {player.nickname ||
+                                                        `${player.name} ${player.surname1}`}
+                                                    </span>
+                                                    {isCurrentPlayer && (
+                                                      <Chip
+                                                        size="small"
+                                                        color="info"
+                                                        variant="filled"
+                                                        label={t('dashboard.user.youTag')}
+                                                      />
+                                                    )}
+                                                  </Stack>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                  {player.played ??
+                                                    player.wins + player.draws + player.losses}
+                                                </TableCell>
+                                                <TableCell align="right">{player.wins}</TableCell>
+                                                <TableCell align="right">{player.draws}</TableCell>
+                                                <TableCell align="right">{player.losses}</TableCell>
+                                                <TableCell align="right">
+                                                  {player.goals ?? 0}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                  {player.assists ?? 0}
+                                                </TableCell>
+                                                <TableCell align="right">{player.points}</TableCell>
+                                              </TableRow>
+                                            )
+                                          })}
                                         </TableBody>
                                       </Table>
                                     </TableContainer>
-                                  )}
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          </Grid>
+                                  </Stack>
+                                )}
+                              </Stack>
+                            </CardContent>
+                          </Card>
                         </Grid>
-                      )}
 
-                      {selectedSeasonGuid && (
-                        <AdminInsightsSection
-                          state={{
-                            selectedSeasonGuid,
-                            insightsScope,
-                            insightsLoading,
-                            insightsReport,
-                            insightsComparisonReport,
-                            insightsComparison
-                          }}
-                          actions={{
-                            onInsightsScopeChange: setInsightsScope,
-                            onRefreshInsights: handleRefreshInsights
-                          }}
-                          helpers={{
-                            t,
-                            formatDecimal,
-                            formatSignedDecimal,
-                            formatPercent
-                          }}
-                        />
-                      )}
-                    </Stack>
-                  </CardContent>
-                </Card>
+                        <Grid item xs={12} md={12}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <Stack spacing={1.5}>
+                                <Typography variant="subtitle2">
+                                  {t('dashboard.user.matchesTitle')}
+                                </Typography>
+                                {!orderedSeasonMatches.length && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {t('dashboard.user.noMatchesForSeason')}
+                                  </Typography>
+                                )}
+                                {orderedSeasonMatches.length > 0 && (
+                                  <TableContainer>
+                                    <Table size="small">
+                                      <TableHead>
+                                        <TableRow>
+                                          <TableCell>{t('dashboard.user.table.date')}</TableCell>
+                                          <TableCell>{t('dashboard.user.table.home')}</TableCell>
+                                          <TableCell>{t('dashboard.user.table.away')}</TableCell>
+                                          <TableCell>{t('dashboard.user.table.status')}</TableCell>
+                                          <TableCell>{t('dashboard.user.table.result')}</TableCell>
+                                          <TableCell>{t('dashboard.user.table.actions')}</TableCell>
+                                        </TableRow>
+                                      </TableHead>
+                                      <TableBody>
+                                        {orderedSeasonMatches.map((match) => (
+                                          <TableRow key={match.guid}>
+                                            <TableCell>{formatDate(match.match_date)}</TableCell>
+                                            <TableCell>{match.home_team_name}</TableCell>
+                                            <TableCell>{match.away_team_name}</TableCell>
+                                            <TableCell>
+                                              {String(match.status || '').toLowerCase() === 'closed'
+                                                ? t('dashboard.user.statusClosed')
+                                                : t('dashboard.user.statusOpen')}
+                                            </TableCell>
+                                            <TableCell>
+                                              {match.home_score} - {match.away_score}
+                                            </TableCell>
+                                            <TableCell>
+                                              <Button
+                                                size="small"
+                                                variant="text"
+                                                onClick={() => handleOpenMatchDetail(match.guid)}
+                                                disabled={matchDetailLoading}
+                                              >
+                                                {t('dashboard.common.matchDetail.viewAction')}
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                )}
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </Grid>
+                    )}
+
+                    {selectedSeasonGuid && (
+                      <AdminInsightsSection
+                        state={{
+                          selectedSeasonGuid,
+                          insightsScope,
+                          insightsLoading,
+                          insightsReport,
+                          insightsComparisonReport,
+                          insightsComparison,
+                        }}
+                        actions={{
+                          onInsightsScopeChange: setInsightsScope,
+                          onRefreshInsights: handleRefreshInsights,
+                        }}
+                        helpers={{
+                          t,
+                          formatDecimal,
+                          formatSignedDecimal,
+                          formatPercent,
+                        }}
+                      />
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
             )}
           </Stack>
         </CardContent>
@@ -977,11 +1017,7 @@ export default function UserDashboard({ session, onLogout }) {
           <Stack spacing={2} sx={{ pt: 1 }}>
             {matchDetailLoading && <LinearProgress />}
             {!matchDetailLoading && selectedMatchDetail && (
-              <MatchDetailViewer
-                detail={selectedMatchDetail}
-                t={t}
-                formatDate={formatDate}
-              />
+              <MatchDetailViewer detail={selectedMatchDetail} t={t} formatDate={formatDate} />
             )}
             {!matchDetailLoading && !selectedMatchDetail && (
               <Typography variant="body2" color="text.secondary">

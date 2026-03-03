@@ -16,7 +16,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 import LineupDragBuilder from '../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../MatchDetailViewer.jsx'
@@ -43,7 +43,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
     matchStatsDraft,
     matchEditorLineupPlayers,
     matchDraftHomeGuids,
-    matchDraftAwayGuids
+    matchDraftAwayGuids,
   } = state
   const {
     onMatchField,
@@ -55,7 +55,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
     handleSaveMatchLineups,
     onMatchStatsDraftField,
     handleSaveMatchStats,
-    closeMatchEditor
+    closeMatchEditor,
   } = actions
 
   return (
@@ -141,7 +141,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                 <Alert severity="success">
                   {t('dashboard.admin.matches.matchCreated', {
                     guid: lastCreatedMatch.guid,
-                    date: formatDate(lastCreatedMatch.match_date)
+                    date: formatDate(lastCreatedMatch.match_date),
                   })}
                 </Alert>
               )}
@@ -154,7 +154,9 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
         <Card>
           <CardContent>
             <Stack spacing={2}>
-              <Typography variant="h6">{t('dashboard.admin.matches.seasonMatchesTitle')}</Typography>
+              <Typography variant="h6">
+                {t('dashboard.admin.matches.seasonMatchesTitle')}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('dashboard.admin.matches.seasonMatchesDescription')}
               </Typography>
@@ -204,7 +206,9 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                                 }
                               />
                             </TableCell>
-                            <TableCell>{match.home_score} - {match.away_score}</TableCell>
+                            <TableCell>
+                              {match.home_score} - {match.away_score}
+                            </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
                                 {t('dashboard.admin.matches.scoreFromStats')}
@@ -251,182 +255,204 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                 selectedMatchDetail &&
                 matchLineupsDraft &&
                 matchStatsDraft && (
-                <Card variant="outlined" sx={{ mt: 1 }}>
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <MatchDetailViewer
-                        detail={selectedMatchDetail}
-                        t={t}
-                        formatDate={formatDate}
-                        showSubtitle={false}
-                      />
-
-                      <Divider />
-
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {t('dashboard.admin.matches.statsEditorTitle', {
-                            home: selectedMatchDetail.home_team.team_name,
-                            away: selectedMatchDetail.away_team.team_name
-                          })}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {t('dashboard.admin.matches.statsEditorDescription')}
-                        </Typography>
-                      </Box>
-
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="body2" color="text.secondary">
-                          {t('dashboard.admin.matches.status')}:
-                        </Typography>
-                        <Chip
-                          size="small"
-                          color={selectedMatchDetail.status === 'closed' ? 'success' : 'warning'}
-                          label={
-                            selectedMatchDetail.status === 'closed'
-                              ? t('dashboard.admin.matches.statusClosed')
-                              : t('dashboard.admin.matches.statusOpen')
-                          }
+                  <Card variant="outlined" sx={{ mt: 1 }}>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <MatchDetailViewer
+                          detail={selectedMatchDetail}
+                          t={t}
+                          formatDate={formatDate}
+                          showSubtitle={false}
                         />
-                      </Stack>
 
-                      {selectedMatchDetail.status === 'closed' && (
-                        <Alert severity="warning">
-                          {t('dashboard.admin.matches.lineupsReopenHint')}
-                        </Alert>
-                      )}
+                        <Divider />
 
-                      <LineupDragBuilder
-                        players={matchEditorLineupPlayers}
-                        homeGuids={matchDraftHomeGuids}
-                        awayGuids={matchDraftAwayGuids}
-                        onChange={onMatchLineupsDraftChange}
-                        availableTitle={t('dashboard.admin.matches.availablePlayers')}
-                        homeTitle={selectedMatchDetail.home_team.team_name || t('dashboard.admin.matches.homeLineup')}
-                        awayTitle={selectedMatchDetail.away_team.team_name || t('dashboard.admin.matches.awayLineup')}
-                        helperText={t('dashboard.admin.matches.lineupBoardHint')}
-                        emptyText={t('dashboard.admin.matches.lineupEmpty')}
-                        addHomeText={t('dashboard.admin.matches.addToHome')}
-                        addAwayText={t('dashboard.admin.matches.addToAway')}
-                        moveHomeText={t('dashboard.admin.matches.moveToHome')}
-                        moveAwayText={t('dashboard.admin.matches.moveToAway')}
-                        removeText={t('dashboard.admin.matches.removeFromLineup')}
-                        disabled={loading || matchStatsLoading}
-                      />
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {t('dashboard.admin.matches.statsEditorTitle', {
+                              home: selectedMatchDetail.home_team.team_name,
+                              away: selectedMatchDetail.away_team.team_name,
+                            })}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {t('dashboard.admin.matches.statsEditorDescription')}
+                          </Typography>
+                        </Box>
 
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                        <Button
-                          variant="outlined"
-                          onClick={handleSaveMatchLineups}
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Typography variant="body2" color="text.secondary">
+                            {t('dashboard.admin.matches.status')}:
+                          </Typography>
+                          <Chip
+                            size="small"
+                            color={selectedMatchDetail.status === 'closed' ? 'success' : 'warning'}
+                            label={
+                              selectedMatchDetail.status === 'closed'
+                                ? t('dashboard.admin.matches.statusClosed')
+                                : t('dashboard.admin.matches.statusOpen')
+                            }
+                          />
+                        </Stack>
+
+                        {selectedMatchDetail.status === 'closed' && (
+                          <Alert severity="warning">
+                            {t('dashboard.admin.matches.lineupsReopenHint')}
+                          </Alert>
+                        )}
+
+                        <LineupDragBuilder
+                          players={matchEditorLineupPlayers}
+                          homeGuids={matchDraftHomeGuids}
+                          awayGuids={matchDraftAwayGuids}
+                          onChange={onMatchLineupsDraftChange}
+                          availableTitle={t('dashboard.admin.matches.availablePlayers')}
+                          homeTitle={
+                            selectedMatchDetail.home_team.team_name ||
+                            t('dashboard.admin.matches.homeLineup')
+                          }
+                          awayTitle={
+                            selectedMatchDetail.away_team.team_name ||
+                            t('dashboard.admin.matches.awayLineup')
+                          }
+                          helperText={t('dashboard.admin.matches.lineupBoardHint')}
+                          emptyText={t('dashboard.admin.matches.lineupEmpty')}
+                          addHomeText={t('dashboard.admin.matches.addToHome')}
+                          addAwayText={t('dashboard.admin.matches.addToAway')}
+                          moveHomeText={t('dashboard.admin.matches.moveToHome')}
+                          moveAwayText={t('dashboard.admin.matches.moveToAway')}
+                          removeText={t('dashboard.admin.matches.removeFromLineup')}
                           disabled={loading || matchStatsLoading}
-                        >
-                          {t('dashboard.admin.matches.saveLineups')}
-                        </Button>
-                      </Stack>
+                        />
 
-                      <Grid container spacing={2}>
-                        {[
-                          { key: 'home_team', team: selectedMatchDetail.home_team },
-                          { key: 'away_team', team: selectedMatchDetail.away_team }
-                        ].map(({ key, team }) => (
-                          <Grid key={key} item xs={12} md={6}>
-                            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                              {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
-                            </Typography>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                                  <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
-                                  <TableCell>{t('dashboard.admin.matches.assists')}</TableCell>
-                                  <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
-                                  <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {team.players.map((player) => (
-                                  <TableRow key={player.player_guid}>
-                                    <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                                    <TableCell>
-                                      <TextField
-                                        type="number"
-                                        size="small"
-                                        value={
-                                          matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.goals ??
-                                          '0'
-                                        }
-                                        onChange={onMatchStatsDraftField(key, player.player_guid, 'goals')}
-                                        inputProps={{ min: 0 }}
-                                        sx={{ maxWidth: 90 }}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <TextField
-                                        type="number"
-                                        size="small"
-                                        value={
-                                          matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.assists ??
-                                          '0'
-                                        }
-                                        onChange={onMatchStatsDraftField(key, player.player_guid, 'assists')}
-                                        inputProps={{ min: 0 }}
-                                        sx={{ maxWidth: 90 }}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <TextField
-                                        type="number"
-                                        size="small"
-                                        value={
-                                          matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.saves ??
-                                          '0'
-                                        }
-                                        onChange={onMatchStatsDraftField(key, player.player_guid, 'saves')}
-                                        inputProps={{ min: 0 }}
-                                        sx={{ maxWidth: 90 }}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <TextField
-                                        type="number"
-                                        size="small"
-                                        value={
-                                          matchStatsDraft[key]?.players.find((item) => item.player_guid === player.player_guid)?.rating ??
-                                          '0'
-                                        }
-                                        onChange={onMatchStatsDraftField(key, player.player_guid, 'rating')}
-                                        inputProps={{ min: 0, step: 0.1 }}
-                                        sx={{ maxWidth: 90 }}
-                                      />
-                                    </TableCell>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                          <Button
+                            variant="outlined"
+                            onClick={handleSaveMatchLineups}
+                            disabled={loading || matchStatsLoading}
+                          >
+                            {t('dashboard.admin.matches.saveLineups')}
+                          </Button>
+                        </Stack>
+
+                        <Grid container spacing={2}>
+                          {[
+                            { key: 'home_team', team: selectedMatchDetail.home_team },
+                            { key: 'away_team', team: selectedMatchDetail.away_team },
+                          ].map(({ key, team }) => (
+                            <Grid key={key} item xs={12} md={6}>
+                              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
+                              </Typography>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                                    <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
+                                    <TableCell>{t('dashboard.admin.matches.assists')}</TableCell>
+                                    <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
+                                    <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </Grid>
-                        ))}
-                      </Grid>
+                                </TableHead>
+                                <TableBody>
+                                  {team.players.map((player) => (
+                                    <TableRow key={player.player_guid}>
+                                      <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                                      <TableCell>
+                                        <TextField
+                                          type="number"
+                                          size="small"
+                                          value={
+                                            matchStatsDraft[key]?.players.find(
+                                              (item) => item.player_guid === player.player_guid
+                                            )?.goals ?? '0'
+                                          }
+                                          onChange={onMatchStatsDraftField(
+                                            key,
+                                            player.player_guid,
+                                            'goals'
+                                          )}
+                                          inputProps={{ min: 0 }}
+                                          sx={{ maxWidth: 90 }}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <TextField
+                                          type="number"
+                                          size="small"
+                                          value={
+                                            matchStatsDraft[key]?.players.find(
+                                              (item) => item.player_guid === player.player_guid
+                                            )?.assists ?? '0'
+                                          }
+                                          onChange={onMatchStatsDraftField(
+                                            key,
+                                            player.player_guid,
+                                            'assists'
+                                          )}
+                                          inputProps={{ min: 0 }}
+                                          sx={{ maxWidth: 90 }}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <TextField
+                                          type="number"
+                                          size="small"
+                                          value={
+                                            matchStatsDraft[key]?.players.find(
+                                              (item) => item.player_guid === player.player_guid
+                                            )?.saves ?? '0'
+                                          }
+                                          onChange={onMatchStatsDraftField(
+                                            key,
+                                            player.player_guid,
+                                            'saves'
+                                          )}
+                                          inputProps={{ min: 0 }}
+                                          sx={{ maxWidth: 90 }}
+                                        />
+                                      </TableCell>
+                                      <TableCell>
+                                        <TextField
+                                          type="number"
+                                          size="small"
+                                          value={
+                                            matchStatsDraft[key]?.players.find(
+                                              (item) => item.player_guid === player.player_guid
+                                            )?.rating ?? '0'
+                                          }
+                                          onChange={onMatchStatsDraftField(
+                                            key,
+                                            player.player_guid,
+                                            'rating'
+                                          )}
+                                          inputProps={{ min: 0, step: 0.1 }}
+                                          sx={{ maxWidth: 90 }}
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </Grid>
+                          ))}
+                        </Grid>
 
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                        <Button
-                          variant="contained"
-                          onClick={handleSaveMatchStats}
-                          disabled={loading || matchStatsLoading}
-                        >
-                          {t('dashboard.admin.matches.saveStats')}
-                        </Button>
-                        <Button
-                          variant="text"
-                          onClick={closeMatchEditor}
-                          disabled={loading}
-                        >
-                          {t('dashboard.admin.matches.closeEditor')}
-                        </Button>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                          <Button
+                            variant="contained"
+                            onClick={handleSaveMatchStats}
+                            disabled={loading || matchStatsLoading}
+                          >
+                            {t('dashboard.admin.matches.saveStats')}
+                          </Button>
+                          <Button variant="text" onClick={closeMatchEditor} disabled={loading}>
+                            {t('dashboard.admin.matches.closeEditor')}
+                          </Button>
+                        </Stack>
                       </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                )}
             </Stack>
           </CardContent>
         </Card>
