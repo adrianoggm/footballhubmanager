@@ -1,10 +1,5 @@
-set shell := ["sh", "-cu"]
-set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
-
-python_cmd := if os_family() == "windows" { "py -3" } else { "python3" }
-venv_python := if os_family() == "windows" { "backend/.venv/Scripts/python.exe" } else { "backend/.venv/bin/python" }
-export TEST_API_ROOT := "http://127.0.0.1:8000/api"
-export TEST_API_V1 := "http://127.0.0.1:8000/api/v1"
+python_cmd := env_var_or_default("PYTHON_CMD", if os() == "windows" { "py -3" } else { "python3" })
+venv_python := env_var_or_default("VENV_PYTHON", if os() == "windows" { "backend/.venv/Scripts/python.exe" } else { "backend/.venv/bin/python" })
 
 default:
     @just --list
@@ -17,17 +12,17 @@ bootstrap:
 install:
     {{venv_python}} -m pip install -r backend/requirements.txt
 
-backend port="8000" host="0.0.0.0":
+backend port="8000" host="127.0.0.1":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 
-run-backend port="8000" host="0.0.0.0":
+run-backend port="8000" host="127.0.0.1":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 
-frontend *args:
-    npx --prefix frontend vite --host {{host}} --port {{port}}
+frontend port="5173" host="127.0.0.1":
+    npm --prefix frontend run dev -- --host {{host}} --port {{port}}
 
-run-frontend *args:
-    npx --prefix frontend vite --host {{host}} --port {{port}}
+run-frontend port="5173" host="127.0.0.1":
+    npm --prefix frontend run dev -- --host {{host}} --port {{port}}
 
 frontend-lint:
     npm --prefix frontend run lint
