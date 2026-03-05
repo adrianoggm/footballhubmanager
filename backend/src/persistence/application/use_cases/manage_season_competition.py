@@ -1176,16 +1176,18 @@ class ManageSeasonCompetitionUseCase:
                 }
             )
         players.sort(key=lambda item: (-item["appearances"], -item["wins"]))
+        player_labels = {
+            guid: str(player.get("label") or guid) for guid, player in player_stats.items()
+        }
 
         pair_rows = []
         for pair in pair_stats.values():
-            left_player = player_stats.get(pair["leftGuid"])
-            right_player = player_stats.get(pair["rightGuid"])
+            left_label = player_labels.get(pair["leftGuid"], pair["leftGuid"])
+            right_label = player_labels.get(pair["rightGuid"], pair["rightGuid"])
             pair_rows.append(
                 {
                     **pair,
-                    "label": f"{left_player['label'] if left_player else pair['leftGuid']} + "
-                    f"{right_player['label'] if right_player else pair['rightGuid']}",
+                    "label": f"{left_label} + {right_label}",
                     "win_rate": cls._rate(pair["wins"], pair["matches"]),
                 }
             )
@@ -1212,13 +1214,12 @@ class ManageSeasonCompetitionUseCase:
                     best_partner_stats = partner_stats
             if not best_partner_guid or not best_partner_stats:
                 continue
-            partner = player_stats.get(best_partner_guid)
             top_teammates_by_player.append(
                 {
                     "player_guid": player["guid"],
-                    "player_label": player["label"],
+                    "player_label": player_labels.get(player["guid"], player["guid"]),
                     "partner_guid": best_partner_guid,
-                    "partner_label": partner["label"] if partner else best_partner_guid,
+                    "partner_label": player_labels.get(best_partner_guid, best_partner_guid),
                     "matches": best_partner_stats["matches"],
                     "wins": best_partner_stats["wins"],
                     "draws": best_partner_stats["draws"],
