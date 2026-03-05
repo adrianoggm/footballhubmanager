@@ -33,6 +33,7 @@ import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import { formatDateEU, formatDateTimeEUFromEpochSeconds } from '../utils/dateFormat.js'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
@@ -96,20 +97,9 @@ const normalizePlayerGuids = (value) => {
 
 const setUnionSize = (left, right) => new Set([...left, ...right]).size
 
-const formatDate = (value) => {
-  if (!value) {
-    return '-'
-  }
-  const asDate = new Date(`${value}T00:00:00`)
-  return asDate.toLocaleDateString()
-}
+const formatDate = formatDateEU
 
-const formatEpochSeconds = (value) => {
-  if (!value) {
-    return '-'
-  }
-  return new Date(value * 1000).toLocaleString()
-}
+const formatEpochSeconds = formatDateTimeEUFromEpochSeconds
 
 const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
 

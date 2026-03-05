@@ -31,6 +31,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { formatDateEU } from '../../utils/dateFormat.js'
 
 const INSIGHT_ACCENTS = {
   matches: {
@@ -346,7 +347,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
 
   const timelineMatchData = (insightsReport?.timeline_by_match || []).map((item) => ({
     ...item,
-    x_label: item.match_date ? item.match_date.slice(5) : item.label,
+    x_label: item.match_date ? formatDateEU(item.match_date) : item.label,
   }))
 
   const timelineSeasonData = (insightsReport?.timeline_by_season || []).map((item, index) => ({
@@ -552,7 +553,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               formatter={(value, name) => [`${value}`, name]}
                               labelFormatter={(label, payload) => {
                                 const point = payload?.[0]?.payload
-                                return point?.match_date || label
+                                return point?.match_date ? formatDateEU(point.match_date) : label
                               }}
                             />
                             <Legend />
@@ -622,7 +623,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               formatter={(value, name) => [formatDecimal(value), name]}
                               labelFormatter={(label, payload) => {
                                 const point = payload?.[0]?.payload
-                                return point?.match_date || label
+                                return point?.match_date ? formatDateEU(point.match_date) : label
                               }}
                             />
                             <Legend />

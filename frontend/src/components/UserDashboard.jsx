@@ -28,6 +28,7 @@ import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import { useI18n } from '../i18n/useI18n.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { userService } from '../services/userService.js'
+import { formatDateEU } from '../utils/dateFormat.js'
 
 const defaultProfileForm = () => ({
   name: '',
@@ -49,12 +50,7 @@ const defaultMembershipForm = () => ({
 
 const asText = (value) => value ?? ''
 
-const formatDate = (value) => {
-  if (!value) {
-    return '-'
-  }
-  return new Date(`${value}T00:00:00`).toLocaleDateString()
-}
+const formatDate = formatDateEU
 
 const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
 

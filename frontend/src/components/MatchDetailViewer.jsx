@@ -12,13 +12,9 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { formatDateEU } from '../utils/dateFormat.js'
 
-const defaultFormatDate = (value) => {
-  if (!value) {
-    return '-'
-  }
-  return new Date(`${value}T00:00:00`).toLocaleDateString()
-}
+const defaultFormatDate = formatDateEU
 
 const formatPlayerName = (player) => {
   const fullName = [player?.name, player?.surname1, player?.surname2].filter(Boolean).join(' ')
