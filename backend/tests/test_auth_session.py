@@ -1,9 +1,9 @@
 import time
 
-from auth.session import get_session
+from auth.session import create_session, get_session
 from persistence.domain.entity.base import Base
 from persistence.domain.entity.user_session import UserSession
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 
@@ -66,5 +66,55 @@ def test_get_session_returns_none_and_deletes_expired_session():
 
         assert result is None
         assert db.get(UserSession, "tok-expired") is None
+    finally:
+        db.close()
+
+
+def test_create_session_cleans_expired_sessions_and_creates_new_session():
+    now_ts = int(time.time())
+    db = _db_session()
+    try:
+        db.add_all(
+            [
+                UserSession(
+                    token="tok-expired",
+                    user_id=1,
+                    user_guid="expired-guid",
+                    user_type="user",
+                    expires_at=now_ts - 10,
+                ),
+                UserSession(
+                    token="tok-valid",
+                    user_id=2,
+                    user_guid="valid-guid",
+                    user_type="admin",
+                    expires_at=now_ts + 3600,
+                ),
+            ]
+        )
+        db.commit()
+
+        created = create_session(db, user_id=9, user_guid="new-guid", user_type="user")
+
+        assert db.get(UserSession, "tok-expired") is None
+        assert db.get(UserSession, "tok-valid") is not None
+        persisted = db.get(UserSession, created.token)
+        assert persisted is not None
+        assert persisted.user_id == 9
+    finally:
+        db.close()
+
+
+def test_create_session_handles_already_open_transaction():
+    db = _db_session()
+    try:
+        db.execute(select(UserSession).where(UserSession.token == "missing")).all()
+        assert db.in_transaction()
+
+        created = create_session(db, user_id=5, user_guid="guid-5", user_type="admin")
+
+        persisted = db.get(UserSession, created.token)
+        assert persisted is not None
+        assert persisted.user_guid == "guid-5"
     finally:
         db.close()

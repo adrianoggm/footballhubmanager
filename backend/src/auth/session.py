@@ -1,7 +1,9 @@
 import os
 import time
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Iterator
 
 from persistence.domain.entity import UserSession
 from sqlalchemy import delete, select
@@ -32,8 +34,21 @@ def _get_ttl_seconds() -> int:
 
 
 def _cleanup_expired(db: Session, now_ts: int | None = None) -> None:
-    now_ts = now_ts or _now_ts()
+    now_ts = _now_ts() if now_ts is None else now_ts
     db.execute(delete(UserSession).where(UserSession.expires_at <= now_ts))
+
+
+@contextmanager
+def _transaction_scope(db: Session) -> Iterator[None]:
+    """Use a transaction block without failing when the session already has one open."""
+    if db.in_transaction():
+        with db.begin_nested():
+            yield
+        db.commit()
+        return
+
+    with db.begin():
+        yield
 
 
 def create_session(db: Session, *, user_id: int, user_guid: str, user_type: str) -> SessionData:
@@ -48,9 +63,9 @@ def create_session(db: Session, *, user_id: int, user_guid: str, user_type: str)
         user_type=user_type,
         expires_at=expires_at,
     )
-    _cleanup_expired(db, now_ts)
-    db.add(row)
-    db.commit()
+    with _transaction_scope(db):
+        _cleanup_expired(db, now_ts)
+        db.add(row)
     return SessionData(
         token=token,
         user_id=user_id,
