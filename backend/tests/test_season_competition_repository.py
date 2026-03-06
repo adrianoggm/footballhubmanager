@@ -38,7 +38,7 @@ def test_register_player_for_admin_maps_commit_integrity_error_to_conflict():
         surname2=None,
         nationality="Spain",
     )
-    link = SimpleNamespace(id_player=33, nickname="P1", position="CM")
+    link = SimpleNamespace(id_player=33, id_role=9, nickname="P1", position="CM")
 
     repo._get_pena = lambda _pena_guid: pena
     repo._get_season = lambda *, pena_id, season_guid: season
@@ -74,7 +74,7 @@ def test_register_players_bulk_maps_commit_integrity_error_to_conflict():
 
     links_result = Mock()
     links_result.scalars.return_value = [
-        SimpleNamespace(id_player=33, nickname="P1", position="CM")
+        SimpleNamespace(id_player=33, id_role=9, nickname="P1", position="CM")
     ]
 
     existing_result = Mock()

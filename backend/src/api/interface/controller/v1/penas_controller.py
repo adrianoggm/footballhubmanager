@@ -3,20 +3,20 @@ from dataclasses import asdict
 
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
+from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from api.interface.controller.v1.model.response.penas_response import (
     LinkTokenResponse,
     PenaResponse,
     PenasPageResponse,
 )
-from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from app.config import config as app_config
 from auth.dependencies import authorize_pena_access, get_current_session, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.use_cases import (
     GeneratePenaLinkTokenUseCase,
     GetPenasUseCase,
-    InvalidPenaLabelsDataError,
     InvalidLinkTokenError,
+    InvalidPenaLabelsDataError,
     LinkUserToPenaUseCase,
     ManagePenaLabelsUseCase,
     PenaAccessDeniedError,
@@ -27,11 +27,11 @@ from persistence.application.use_cases import (
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
-from persistence.infrastructure.repository.db.pena_link_repository import (
-    SqlAlchemyPenaLinkRepository,
-)
 from persistence.infrastructure.repository.db.pena_labels_repository import (
     SqlAlchemyPenaLabelsRepository,
+)
+from persistence.infrastructure.repository.db.pena_link_repository import (
+    SqlAlchemyPenaLinkRepository,
 )
 from persistence.infrastructure.repository.db.pena_query_repository import (
     SqlAlchemyPenaQueryRepository,
@@ -121,6 +121,8 @@ def get_pena_labels(
     return PenaLabelsResponse(
         role_labels=labels.role_labels,
         position_labels=labels.position_labels,
+        role_colors=labels.role_colors,
+        position_colors=labels.position_colors,
     )
 
 
@@ -138,6 +140,8 @@ def update_pena_labels(
             update=PenaLabelsUpdate(
                 role_labels=payload.role_labels,
                 position_labels=payload.position_labels,
+                role_colors=payload.role_colors,
+                position_colors=payload.position_colors,
             ),
         )
     except InvalidPenaLabelsDataError:
@@ -155,6 +159,8 @@ def update_pena_labels(
     return PenaLabelsResponse(
         role_labels=labels.role_labels,
         position_labels=labels.position_labels,
+        role_colors=labels.role_colors,
+        position_colors=labels.position_colors,
     )
 
 

@@ -799,6 +799,8 @@ def get_season_standings(
     season_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    role: str | None = Query(default=None),
+    position: str | None = Query(default=None),
     use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
@@ -806,6 +808,10 @@ def get_season_standings(
         result = use_case.get_standings(
             pena_guid=pena_guid,
             season_guid=season_guid,
+            filters=SeasonPlayerFilters(
+                role=_clean(role),
+                position=_clean(position),
+            ),
             page=page,
             page_size=page_size,
         )

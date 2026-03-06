@@ -26,6 +26,19 @@ class _FakeRepo:
         return PenaLabelsResult(
             role_labels=["president", "coordinator", "member", "guest"],
             position_labels=["attacker", "defender", "midfielder", "polivalent", "keeper"],
+            role_colors={
+                "president": "#B45309",
+                "coordinator": "#1D4ED8",
+                "member": "#15803D",
+                "guest": "#64748B",
+            },
+            position_colors={
+                "attacker": "#DC2626",
+                "defender": "#2563EB",
+                "midfielder": "#16A34A",
+                "polivalent": "#7C3AED",
+                "keeper": "#EA580C",
+            },
         )
 
     def get_by_pena_guid(self, *, pena_guid: str) -> PenaLabelsResult:
@@ -40,6 +53,8 @@ class _FakeRepo:
         admin_id: int,
         role_labels: list[str],
         position_labels: list[str],
+        role_colors: dict[str, str],
+        position_colors: dict[str, str],
     ) -> PenaLabelsResult:
         if self.should_raise_not_found:
             raise PenaNotFoundError()
@@ -50,8 +65,15 @@ class _FakeRepo:
             "admin_id": admin_id,
             "role_labels": role_labels,
             "position_labels": position_labels,
+            "role_colors": role_colors,
+            "position_colors": position_colors,
         }
-        return PenaLabelsResult(role_labels=role_labels, position_labels=position_labels)
+        return PenaLabelsResult(
+            role_labels=role_labels,
+            position_labels=position_labels,
+            role_colors=role_colors,
+            position_colors=position_colors,
+        )
 
 
 def test_get_for_pena_returns_labels():
@@ -61,6 +83,8 @@ def test_get_for_pena_returns_labels():
 
     assert result.role_labels == ["president", "coordinator", "member", "guest"]
     assert result.position_labels == ["attacker", "defender", "midfielder", "polivalent", "keeper"]
+    assert result.role_colors["member"] == "#15803D"
+    assert result.position_colors["keeper"] == "#EA580C"
 
 
 def test_update_for_admin_normalizes_labels_and_removes_duplicates():
@@ -81,9 +105,21 @@ def test_update_for_admin_normalizes_labels_and_removes_duplicates():
         "admin_id": 99,
         "role_labels": ["President", "member", "guest"],
         "position_labels": ["attacker", "midfielder", "keeper"],
+        "role_colors": {
+            "President": "#B45309",
+            "member": "#15803D",
+            "guest": "#64748B",
+        },
+        "position_colors": {
+            "attacker": "#DC2626",
+            "midfielder": "#16A34A",
+            "keeper": "#EA580C",
+        },
     }
     assert result.role_labels == ["President", "member", "guest"]
     assert result.position_labels == ["attacker", "midfielder", "keeper"]
+    assert result.role_colors["President"] == "#B45309"
+    assert result.position_colors["attacker"] == "#DC2626"
 
 
 def test_update_for_admin_rejects_invalid_payload():
@@ -94,6 +130,17 @@ def test_update_for_admin_rejects_invalid_payload():
             pena_guid="pena-guid",
             admin_id=1,
             update=PenaLabelsUpdate(role_labels=[" "], position_labels=["keeper"]),
+        )
+
+    with pytest.raises(InvalidPenaLabelsDataError):
+        use_case.update_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            update=PenaLabelsUpdate(
+                role_labels=["member"],
+                position_labels=["keeper"],
+                role_colors={"member": "blue"},
+            ),
         )
 
 
