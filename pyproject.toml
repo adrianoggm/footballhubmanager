@@ -12,3 +12,12 @@ select = ["E", "F", "I"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+[tool.coverage.run]
+branch = true
+source = ["backend/src"]
+omit = ["*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

@@ -47,6 +47,12 @@ frontend-check:
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q
 
+test-unit-coverage:
+    {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q --cov=backend/src --cov-report=term-missing --cov-report=xml:backend/coverage.xml
+
+test-unit-coverage-html:
+    {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q --cov=backend/src --cov-report=term-missing --cov-report=xml:backend/coverage.xml --cov-report=html:backend/htmlcov
+
 test-integration:
     {{venv_python}} -m pytest backend/tests/integration -q
 

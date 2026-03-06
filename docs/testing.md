@@ -14,6 +14,31 @@ Direct command:
 backend/.venv/bin/python -m pytest backend/tests --ignore=backend/tests/integration -q
 ```
 
+## Backend Unit Test Coverage
+
+From repository root:
+
+```bash
+just test-unit-coverage
+```
+
+Generate HTML report as well:
+
+```bash
+just test-unit-coverage-html
+```
+
+Direct command:
+
+```bash
+backend/.venv/bin/python -m pytest backend/tests --ignore=backend/tests/integration -q --cov=backend/src --cov-report=term-missing --cov-report=xml:backend/coverage.xml
+```
+
+Artifacts:
+
+- XML report: `backend/coverage.xml`
+- HTML report (when using `just test-unit-coverage-html`): `backend/htmlcov/index.html`
+
 ## Backend Integration Tests
 
 Requires backend + database available (local or CI-like stack).
