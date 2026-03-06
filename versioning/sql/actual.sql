@@ -41,7 +41,6 @@ create table if not exists pena (
   id        int auto_increment primary key,
   guid      char(36) not null default (uuid()),
   name      varchar(100) not null,
-  role_labels text null,
   position_labels text null,
   id_admin  int not null,
   unique key uq_pena_guid (guid),
@@ -49,6 +48,20 @@ create table if not exists pena (
   constraint fk_pena_admin
     foreign key (id_admin) references admin_accounts(id)
     on delete restrict on update cascade
+) engine=innodb;
+
+create table if not exists pena_role (
+  id         int auto_increment primary key,
+  guid       char(36) not null default (uuid()),
+  id_pena    int not null,
+  name       varchar(80) not null,
+  sort_order int not null default 0,
+  unique key uq_pena_role_guid (guid),
+  unique key uq_pena_role_name (id_pena, name),
+  key idx_pena_role_pena (id_pena),
+  constraint fk_pena_role_pena
+    foreign key (id_pena) references pena(id)
+    on delete cascade on update cascade
 ) engine=innodb;
 
 create table if not exists pena_link_token (
@@ -142,17 +155,21 @@ create table if not exists pena_player (
   id_player  int not null,
   id_pena    int not null,
   nickname   varchar(80) null,
-  role       varchar(80) null,
+  id_role    int null,
   position   varchar(50) null,
   unique key uq_pena_player_guid (guid),
   unique key uq_player_pena (id_player, id_pena),
   key idx_penaplayer_pena (id_pena),
+  key idx_penaplayer_role (id_role),
   constraint fk_penaplayer_player
     foreign key (id_player) references player(id)
     on delete cascade on update cascade,
   constraint fk_penaplayer_pena
     foreign key (id_pena) references pena(id)
-    on delete cascade on update cascade
+    on delete cascade on update cascade,
+  constraint fk_penaplayer_role
+    foreign key (id_role) references pena_role(id)
+    on delete set null on update cascade
 ) engine=innodb;
 
 create table if not exists season_player (
