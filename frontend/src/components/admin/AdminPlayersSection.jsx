@@ -96,7 +96,11 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           alignItems="center"
                           justifyContent="space-between"
                         >
-                          <Chip size="small" label={roleLabel} sx={labelChipSx(draftRoleColors[roleLabel])} />
+                          <Chip
+                            size="small"
+                            label={roleLabel}
+                            sx={labelChipSx(draftRoleColors[roleLabel])}
+                          />
                           <TextField
                             type="color"
                             size="small"
@@ -436,9 +440,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         onChange={onMemberFilterField('role')}
                         fullWidth
                       >
-                        <MenuItem value="">
-                          {t('dashboard.admin.members.filterAllRoles')}
-                        </MenuItem>
+                        <MenuItem value="">{t('dashboard.admin.members.filterAllRoles')}</MenuItem>
                         {penaLabels.role_labels.map((roleLabel) => (
                           <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
                             {roleLabel}

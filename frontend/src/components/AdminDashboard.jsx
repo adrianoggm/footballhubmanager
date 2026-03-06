@@ -123,14 +123,22 @@ const normalizeLabelArray = (values) => {
 }
 
 const defaultColorForLabel = (label, defaults) =>
-  normalizeHexColor(defaults[String(label || '').trim().toLowerCase()]) ||
+  normalizeHexColor(
+    defaults[
+      String(label || '')
+        .trim()
+        .toLowerCase()
+    ]
+  ) ||
   normalizeHexColor(DEFAULT_LABEL_COLOR) ||
   '#64748B'
 
 const normalizeLabelColorMap = (labels, rawColors = {}, defaults = {}) => {
   const byKey = {}
   Object.entries(rawColors || {}).forEach(([rawLabel, rawColor]) => {
-    const key = String(rawLabel || '').trim().toLowerCase()
+    const key = String(rawLabel || '')
+      .trim()
+      .toLowerCase()
     const color = normalizeHexColor(rawColor)
     if (!key || !color) {
       return
@@ -139,7 +147,9 @@ const normalizeLabelColorMap = (labels, rawColors = {}, defaults = {}) => {
   })
   const output = {}
   labels.forEach((label) => {
-    const key = String(label || '').trim().toLowerCase()
+    const key = String(label || '')
+      .trim()
+      .toLowerCase()
     if (!key) {
       return
     }
@@ -207,11 +217,18 @@ const normalizeLabelList = (value) => {
 }
 
 const hasLabel = (options, value) => {
-  const needle = String(value || '').trim().toLowerCase()
+  const needle = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!needle) {
     return false
   }
-  return (options || []).some((item) => String(item || '').trim().toLowerCase() === needle)
+  return (options || []).some(
+    (item) =>
+      String(item || '')
+        .trim()
+        .toLowerCase() === needle
+  )
 }
 
 const pickPreferredLabel = (options, preferred) => {
@@ -219,7 +236,10 @@ const pickPreferredLabel = (options, preferred) => {
     return ''
   }
   const preferredLabel = (options || []).find(
-    (item) => String(item || '').trim().toLowerCase() === String(preferred || '').toLowerCase()
+    (item) =>
+      String(item || '')
+        .trim()
+        .toLowerCase() === String(preferred || '').toLowerCase()
   )
   return preferredLabel || options[0] || ''
 }
@@ -669,7 +689,10 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const onMemberFilterField = (name) => (event) => {
-    setMemberFilters((prev) => ({ ...prev, [name]: String(event.target.value || '').toLowerCase() }))
+    setMemberFilters((prev) => ({
+      ...prev,
+      [name]: String(event.target.value || '').toLowerCase(),
+    }))
   }
 
   const onStandingsFilterField = (name) => (event) => {
@@ -2798,9 +2821,10 @@ export default function AdminDashboard({ session, onLogout }) {
                 fullWidth
               >
                 <MenuItem value="">{t('dashboard.admin.members.roleNone')}</MenuItem>
-                {membershipDraft.role && !hasLabel(penaLabels.role_labels, membershipDraft.role) && (
-                  <MenuItem value={membershipDraft.role}>{membershipDraft.role}</MenuItem>
-                )}
+                {membershipDraft.role &&
+                  !hasLabel(penaLabels.role_labels, membershipDraft.role) && (
+                    <MenuItem value={membershipDraft.role}>{membershipDraft.role}</MenuItem>
+                  )}
                 {penaLabels.role_labels.map((roleLabel) => (
                   <MenuItem key={roleLabel} value={roleLabel}>
                     {roleLabel}

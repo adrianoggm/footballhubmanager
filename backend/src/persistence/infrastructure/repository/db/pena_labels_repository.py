@@ -4,6 +4,7 @@ from persistence.application.ports.pena_labels_repository import (
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
+from persistence.domain.entity import Pena, PenaPlayer, PenaRole, SeasonPlayer
 from persistence.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,
@@ -17,7 +18,6 @@ from persistence.domain.label_config import (
     parse_labels_payload,
     pick_preferred_label,
 )
-from persistence.domain.entity import Pena, PenaPlayer, PenaRole, SeasonPlayer
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
@@ -94,9 +94,13 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
         )
 
     def _get_roles_for_pena(self, pena_id: int, *, for_update: bool) -> list[PenaRole]:
-        stmt = select(PenaRole).where(PenaRole.id_pena == pena_id).order_by(
-            PenaRole.sort_order.asc(),
-            PenaRole.id.asc(),
+        stmt = (
+            select(PenaRole)
+            .where(PenaRole.id_pena == pena_id)
+            .order_by(
+                PenaRole.sort_order.asc(),
+                PenaRole.id.asc(),
+            )
         )
         if for_update:
             stmt = stmt.with_for_update()
