@@ -9,7 +9,8 @@ from persistence.application.ports.pena_link_repository import (
     UserAlreadyLinkedToPenaError,
     UserPlayerNotFoundError,
 )
-from persistence.domain.entity import Pena, PenaLinkToken, PenaPlayer, Player
+from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
+from persistence.domain.entity import Pena, PenaLinkToken, PenaPlayer, PenaRole, Player
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -63,6 +64,24 @@ class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
                 if not link:
                     raise InvalidOrExpiredLinkTokenError()
 
+                roles = list(
+                    self.session.execute(
+                        select(PenaRole)
+                        .where(PenaRole.id_pena == link.id_pena)
+                        .order_by(PenaRole.sort_order.asc(), PenaRole.id.asc())
+                    ).scalars()
+                )
+                role_options = [role.name for role in roles] or list(DEFAULT_ROLE_LABELS)
+                default_role = pick_preferred_label(role_options, "member") or "member"
+                default_role_id = next(
+                    (
+                        role.id
+                        for role in roles
+                        if role.name.casefold() == default_role.casefold()
+                    ),
+                    roles[0].id if roles else None,
+                )
+
                 player = self.session.execute(
                     select(Player).where(Player.id_player_account == account_id)
                 ).scalar_one_or_none()
@@ -85,6 +104,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
                         id_player=player.id,
                         id_pena=link.id_pena,
                         nickname=nickname,
+                        id_role=default_role_id,
                         position=position,
                     )
                     self.session.add(membership)

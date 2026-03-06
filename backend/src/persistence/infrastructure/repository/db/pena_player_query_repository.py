@@ -3,8 +3,8 @@ from persistence.application.ports.pena_player_query_repository import (
     PenaPlayerQueryRepository,
     PenaPlayersPageResult,
 )
-from persistence.domain.entity import Pena, PenaPlayer, Player
-from sqlalchemy import func, or_, select
+from persistence.domain.entity import Pena, PenaPlayer, PenaRole, Player
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 
@@ -21,15 +21,18 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
         surname2: str | None,
         nationality: str | None,
         nickname: str | None,
+        role: str | None,
         position: str | None,
         search: str | None,
         page: int,
         page_size: int,
     ) -> PenaPlayersPageResult:
+        resolved_role = self._resolved_role_expression().label("resolved_role")
         stmt = (
-            select(Player, PenaPlayer)
+            select(Player, PenaPlayer, resolved_role)
             .join(PenaPlayer, PenaPlayer.id_player == Player.id)
             .join(Pena, Pena.id == PenaPlayer.id_pena)
+            .outerjoin(PenaRole, PenaRole.id == PenaPlayer.id_role)
             .where(Pena.guid == pena_guid)
         )
         stmt = self._apply_filters(
@@ -39,8 +42,10 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
             surname2=surname2,
             nationality=nationality,
             nickname=nickname,
+            role=role,
             position=position,
             search=search,
+            resolved_role=resolved_role,
         )
 
         total_stmt = (
@@ -48,6 +53,7 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
             .select_from(Player)
             .join(PenaPlayer, PenaPlayer.id_player == Player.id)
             .join(Pena, Pena.id == PenaPlayer.id_pena)
+            .outerjoin(PenaRole, PenaRole.id == PenaPlayer.id_role)
             .where(Pena.guid == pena_guid)
         )
         total_stmt = self._apply_filters(
@@ -57,8 +63,10 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
             surname2=surname2,
             nationality=nationality,
             nickname=nickname,
+            role=role,
             position=position,
             search=search,
+            resolved_role=self._resolved_role_expression(),
         )
 
         stmt = stmt.order_by(Player.surname1, Player.surname2, Player.name)
@@ -74,9 +82,10 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
                     surname2=player.surname2,
                     nationality=player.nationality,
                     nickname=link.nickname,
+                    role=role_value,
                     position=link.position,
                 )
-                for player, link in rows
+                for player, link, role_value in rows
             ],
             page=page,
             page_size=page_size,
@@ -92,8 +101,10 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
         surname2: str | None,
         nationality: str | None,
         nickname: str | None,
+        role: str | None,
         position: str | None,
         search: str | None,
+        resolved_role,
     ):
         if name:
             stmt = stmt.where(Player.name.ilike(f"%{name}%"))
@@ -105,6 +116,8 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
             stmt = stmt.where(Player.nationality.ilike(f"%{nationality}%"))
         if nickname:
             stmt = stmt.where(PenaPlayer.nickname.ilike(f"%{nickname}%"))
+        if role:
+            stmt = stmt.where(resolved_role.ilike(f"%{role}%"))
         if position:
             stmt = stmt.where(PenaPlayer.position.ilike(f"%{position}%"))
         if search:
@@ -115,6 +128,14 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
                     Player.surname1.ilike(pattern),
                     Player.surname2.ilike(pattern),
                     PenaPlayer.nickname.ilike(pattern),
+                    resolved_role.ilike(pattern),
                 )
             )
         return stmt
+
+    @staticmethod
+    def _resolved_role_expression():
+        return func.coalesce(
+            PenaRole.name,
+            case((Player.id_player_account.is_(None), "guest"), else_="member"),
+        )

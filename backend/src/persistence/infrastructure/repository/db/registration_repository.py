@@ -6,7 +6,12 @@ from persistence.application.ports.registration_repository import (
     RegisteredUserResult,
     UserRegistrationRepository,
 )
-from persistence.domain.entity import AdminAccounts, Pena, Player, PlayerAccount
+from persistence.domain.label_config import (
+    DEFAULT_POSITION_LABELS,
+    DEFAULT_ROLE_LABELS,
+    dump_labels_payload,
+)
+from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -71,9 +76,21 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
             # Business rule: each admin owns a default pena created at registration.
             pena = Pena(
                 name=name,
+                position_labels=dump_labels_payload(list(DEFAULT_POSITION_LABELS)),
                 id_admin=admin.id,
             )
             self.session.add(pena)
+            self.session.flush()
+
+            for index, role_name in enumerate(DEFAULT_ROLE_LABELS):
+                self.session.add(
+                    PenaRole(
+                        id_pena=pena.id,
+                        name=role_name,
+                        sort_order=index,
+                    )
+                )
+
             self.session.commit()
             self.session.refresh(admin)
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
