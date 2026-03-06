@@ -30,6 +30,10 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     seasonRosterLoading,
     seasonRoster,
     historicalPlayers,
+    filteredHistoricalPlayers,
+    penaLabels,
+    labelsDraft,
+    memberFilters,
     guestForm,
     nationalities,
   } = state
@@ -42,10 +46,61 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     handleCreateGuestPlayer,
     handleEditMembershipPlayer,
     handleRequestRemoveMembershipPlayer,
+    onMemberFilterField,
+    onLabelsDraftField,
+    handleSavePenaLabels,
   } = actions
 
   return (
     <Grid container spacing={2.5}>
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Typography variant="h6">{t('dashboard.admin.labels.title')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.admin.labels.description')}
+              </Typography>
+              <Grid container spacing={1.5}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label={t('dashboard.admin.labels.roleLabels')}
+                    value={labelsDraft.role_labels}
+                    onChange={onLabelsDraftField('role_labels')}
+                    helperText={t('dashboard.admin.labels.inputHelper')}
+                    multiline
+                    minRows={2}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label={t('dashboard.admin.labels.positionLabels')}
+                    value={labelsDraft.position_labels}
+                    onChange={onLabelsDraftField('position_labels')}
+                    helperText={t('dashboard.admin.labels.inputHelper')}
+                    multiline
+                    minRows={2}
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button variant="contained" onClick={handleSavePenaLabels} disabled={loading}>
+                  {t('dashboard.admin.labels.save')}
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  {t('dashboard.admin.labels.currentCounts', {
+                    roles: penaLabels.role_labels.length,
+                    positions: penaLabels.position_labels.length,
+                  })}
+                </Typography>
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+
       <Grid item xs={12} md={8}>
         <Card>
           <CardContent>
@@ -239,12 +294,36 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     onChange={onGuestField('nickname')}
                     fullWidth
                   />
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                   <TextField
+                    select
+                    label={t('dashboard.admin.guest.role')}
+                    value={guestForm.role}
+                    onChange={onGuestField('role')}
+                    fullWidth
+                  >
+                    <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
+                    {penaLabels.role_labels.map((roleLabel) => (
+                      <MenuItem key={roleLabel} value={roleLabel}>
+                        {roleLabel}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    select
                     label={t('dashboard.admin.guest.position')}
                     value={guestForm.position}
                     onChange={onGuestField('position')}
                     fullWidth
-                  />
+                  >
+                    <MenuItem value="">{t('dashboard.admin.guest.positionNone')}</MenuItem>
+                    {penaLabels.position_labels.map((positionLabel) => (
+                      <MenuItem key={positionLabel} value={positionLabel}>
+                        {positionLabel}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </Stack>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                   <Button
@@ -279,52 +358,100 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                   </Typography>
                 )}
                 {historicalPlayers.length > 0 && (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                          <TableCell>{t('dashboard.admin.members.nickname')}</TableCell>
-                          <TableCell>{t('dashboard.admin.members.position')}</TableCell>
-                          <TableCell>{t('dashboard.admin.members.actions')}</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {historicalPlayers.map((player) => (
-                          <TableRow key={player.guid}>
-                            <TableCell>
-                              {[player.name, player.surname1, player.surname2]
-                                .filter(Boolean)
-                                .join(' ')}
-                            </TableCell>
-                            <TableCell>{player.nickname || '-'}</TableCell>
-                            <TableCell>{player.position || '-'}</TableCell>
-                            <TableCell>
-                              <Stack direction="row" spacing={1}>
-                                <Button
-                                  size="small"
-                                  variant="text"
-                                  onClick={() => handleEditMembershipPlayer(player)}
-                                  disabled={loading}
-                                >
-                                  {t('dashboard.admin.members.edit')}
-                                </Button>
-                                <Button
-                                  size="small"
-                                  variant="text"
-                                  color="error"
-                                  onClick={() => handleRequestRemoveMembershipPlayer(player)}
-                                  disabled={loading}
-                                >
-                                  {t('dashboard.admin.members.remove')}
-                                </Button>
-                              </Stack>
-                            </TableCell>
-                          </TableRow>
+                  <Stack spacing={1.5}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <TextField
+                        select
+                        size="small"
+                        label={t('dashboard.admin.members.filterRole')}
+                        value={memberFilters.role}
+                        onChange={onMemberFilterField('role')}
+                        fullWidth
+                      >
+                        <MenuItem value="">
+                          {t('dashboard.admin.members.filterAllRoles')}
+                        </MenuItem>
+                        {penaLabels.role_labels.map((roleLabel) => (
+                          <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
+                            {roleLabel}
+                          </MenuItem>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                      </TextField>
+                      <TextField
+                        select
+                        size="small"
+                        label={t('dashboard.admin.members.filterPosition')}
+                        value={memberFilters.position}
+                        onChange={onMemberFilterField('position')}
+                        fullWidth
+                      >
+                        <MenuItem value="">
+                          {t('dashboard.admin.members.filterAllPositions')}
+                        </MenuItem>
+                        {penaLabels.position_labels.map((positionLabel) => (
+                          <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
+                            {positionLabel}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Stack>
+
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                            <TableCell>{t('dashboard.admin.members.nickname')}</TableCell>
+                            <TableCell>{t('dashboard.admin.members.role')}</TableCell>
+                            <TableCell>{t('dashboard.admin.members.position')}</TableCell>
+                            <TableCell>{t('dashboard.admin.members.actions')}</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredHistoricalPlayers.map((player) => (
+                            <TableRow key={player.guid}>
+                              <TableCell>
+                                {[player.name, player.surname1, player.surname2]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                              </TableCell>
+                              <TableCell>{player.nickname || '-'}</TableCell>
+                              <TableCell>{player.role || '-'}</TableCell>
+                              <TableCell>{player.position || '-'}</TableCell>
+                              <TableCell>
+                                <Stack direction="row" spacing={1}>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    onClick={() => handleEditMembershipPlayer(player)}
+                                    disabled={loading}
+                                  >
+                                    {t('dashboard.admin.members.edit')}
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    color="error"
+                                    onClick={() => handleRequestRemoveMembershipPlayer(player)}
+                                    disabled={loading}
+                                  >
+                                    {t('dashboard.admin.members.remove')}
+                                  </Button>
+                                </Stack>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {!filteredHistoricalPlayers.length && (
+                            <TableRow>
+                              <TableCell colSpan={5}>
+                                {t('dashboard.admin.members.noMembersForFilters')}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Stack>
                 )}
               </Stack>
             </CardContent>

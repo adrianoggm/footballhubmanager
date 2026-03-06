@@ -21,6 +21,14 @@ export class AdminService {
     return httpClient.get(`${API_V1}/penas${query}`)
   }
 
+  getPenaLabels(penaGuid) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/labels`)
+  }
+
+  updatePenaLabels(penaGuid, payload) {
+    return httpClient.put(`${API_V1}/penas/${penaGuid}/labels`, payload)
+  }
+
   listSeasons(penaGuid, { page = 1, pageSize = 100 } = {}) {
     const query = toQueryString({ page, page_size: pageSize })
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons${query}`)
