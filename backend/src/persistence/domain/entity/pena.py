@@ -9,4 +9,5 @@ class Pena(GuidMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column()
+    position_labels: Mapped[str | None] = mapped_column()
     id_admin: Mapped[int] = mapped_column(ForeignKey("admin_accounts.id"))

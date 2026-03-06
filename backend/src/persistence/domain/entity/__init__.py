@@ -5,6 +5,7 @@ from .nationality import Nationality
 from .pena import Pena
 from .pena_link_token import PenaLinkToken
 from .pena_player import PenaPlayer
+from .pena_role import PenaRole
 from .player import Player
 from .player_account import PlayerAccount
 from .season import Season
@@ -22,6 +23,7 @@ __all__ = [
     "AdminAccounts",
     "PlayerAccount",
     "PenaPlayer",
+    "PenaRole",
     "Season",
     "SeasonPlayer",
     "TeamPlayer",
