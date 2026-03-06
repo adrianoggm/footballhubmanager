@@ -3,6 +3,7 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterAdminRequest,
     RegisterUserRequest,
 )
+from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.pena_players_request import (
     CreateGuestPlayerRequest,
     UpdatePenaMembershipRequest,
@@ -47,6 +48,7 @@ __all__ = [
     "RegisterSeasonPlayersBulkRequest",
     "RegisterAdminRequest",
     "RegisterUserRequest",
+    "UpdatePenaLabelsRequest",
     "UpdatePenaMembershipRequest",
     "UpdatePenaSeasonRequest",
     "UpdateSeasonMatchLineupsRequest",

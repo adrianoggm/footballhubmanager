@@ -1,4 +1,5 @@
 from api.interface.controller.v1.model.response.auth_response import LoginResponse
+from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from api.interface.controller.v1.model.response.pena_players_response import (
     PenaMembershipResponse,
     PenaPlayerResponse,
@@ -53,6 +54,7 @@ __all__ = [
     "MatchInsightsTimelineByMatchResponse",
     "MatchInsightsTimelineBySeasonResponse",
     "PenaInfoResponse",
+    "PenaLabelsResponse",
     "PenaMembershipResponse",
     "PenaPlayerResponse",
     "PenaPlayersPageResponse",

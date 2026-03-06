@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class UpdatePenaMembershipRequest(BaseModel):
     nickname: str | None = None
+    role: str | None = None
     position: str | None = None
 
 
@@ -12,4 +13,5 @@ class CreateGuestPlayerRequest(BaseModel):
     surname2: str | None = None
     nationality: str
     nickname: str | None = None
+    role: str | None = None
     position: str | None = None

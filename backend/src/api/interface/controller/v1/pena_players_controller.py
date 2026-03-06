@@ -83,6 +83,7 @@ def create_guest_player_for_admin(
                 surname2=payload.surname2,
                 nationality=payload.nationality,
                 nickname=payload.nickname,
+                role=payload.role,
                 position=payload.position,
             ),
         )
@@ -113,6 +114,7 @@ def get_pena_players(
     surname2: str | None = Query(default=None),
     nationality: str | None = Query(default=None),
     nickname: str | None = Query(default=None),
+    role: str | None = Query(default=None),
     position: str | None = Query(default=None),
     search: str | None = Query(default=None),
     use_case: GetPenaPlayersUseCase = Depends(get_pena_players_use_case),
@@ -124,6 +126,7 @@ def get_pena_players(
         surname2=_clean(surname2),
         nationality=_clean(nationality),
         nickname=_clean(nickname),
+        role=_clean(role),
         position=_clean(position),
         search=_clean(search),
     )
@@ -197,8 +200,9 @@ def update_my_pena_membership(
 
     update = PenaMembershipUpdate(
         nickname=payload.nickname,
-        position=payload.position,
         nickname_provided="nickname" in payload.model_fields_set,
+        role_provided=False,
+        position=payload.position,
         position_provided="position" in payload.model_fields_set,
     )
     try:
@@ -263,8 +267,10 @@ def update_pena_player_membership_as_admin(
 ):
     update = PenaMembershipUpdate(
         nickname=payload.nickname,
+        role=payload.role,
         position=payload.position,
         nickname_provided="nickname" in payload.model_fields_set,
+        role_provided="role" in payload.model_fields_set,
         position_provided="position" in payload.model_fields_set,
     )
     try:

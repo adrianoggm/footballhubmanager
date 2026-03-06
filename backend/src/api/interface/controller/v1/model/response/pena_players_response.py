@@ -8,6 +8,7 @@ class PenaPlayerResponse(BaseModel):
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None
     position: str | None
 
 
