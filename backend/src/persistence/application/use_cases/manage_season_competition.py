@@ -86,7 +86,10 @@ class SeasonPlayerInfo:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None
+    role_color: str | None
     position: str | None
+    position_color: str | None
     played: int
     goals: int
     assists: int
@@ -862,12 +865,19 @@ class ManageSeasonCompetitionUseCase:
         return self._to_match_detail(result)
 
     def get_standings(
-        self, *, pena_guid: str, season_guid: str, page: int = 1, page_size: int = 20
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        filters: SeasonPlayerFilters | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> SeasonPlayersPage:
         try:
             result = self.repository.get_standings(
                 pena_guid=pena_guid,
                 season_guid=season_guid,
+                filters=filters or SeasonPlayerFilters(),
                 page=page,
                 page_size=page_size,
             )
@@ -1509,7 +1519,10 @@ class ManageSeasonCompetitionUseCase:
             surname2=item.surname2,
             nationality=item.nationality,
             nickname=item.nickname,
+            role=item.role,
+            role_color=item.role_color,
             position=item.position,
+            position_color=item.position_color,
             played=item.played,
             goals=item.goals,
             assists=item.assists,

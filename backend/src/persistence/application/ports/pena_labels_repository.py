@@ -6,6 +6,8 @@ from typing import Protocol
 class PenaLabelsResult:
     role_labels: list[str]
     position_labels: list[str]
+    role_colors: dict[str, str]
+    position_colors: dict[str, str]
 
 
 class PenaNotFoundError(Exception):
@@ -26,4 +28,6 @@ class PenaLabelsRepository(Protocol):
         admin_id: int,
         role_labels: list[str],
         position_labels: list[str],
+        role_colors: dict[str, str],
+        position_colors: dict[str, str],
     ) -> PenaLabelsResult: ...

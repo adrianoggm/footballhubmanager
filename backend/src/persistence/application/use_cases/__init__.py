@@ -19,6 +19,14 @@ from .link_user_to_pena import (
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
+from .manage_pena_labels import (
+    InvalidPenaLabelsDataError,
+    ManagePenaLabelsUseCase,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsInfo,
+    PenaLabelsPenaNotFoundError,
+    PenaLabelsUpdate,
+)
 from .manage_pena_membership import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
@@ -32,14 +40,6 @@ from .manage_pena_membership import (
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
-)
-from .manage_pena_labels import (
-    InvalidPenaLabelsDataError,
-    ManagePenaLabelsUseCase,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsInfo,
-    PenaLabelsPenaNotFoundError,
-    PenaLabelsUpdate,
 )
 from .manage_season_competition import (
     InvalidSeasonDataError,

@@ -21,7 +21,10 @@ class SeasonPlayerResult:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None
+    role_color: str | None
     position: str | None
+    position_color: str | None
     played: int
     goals: int
     assists: int
@@ -47,6 +50,7 @@ class SeasonPlayerFilters:
     surname2: str | None = None
     nationality: str | None = None
     nickname: str | None = None
+    role: str | None = None
     position: str | None = None
     search: str | None = None
 
@@ -403,6 +407,7 @@ class SeasonCompetitionRepository(Protocol):
         *,
         pena_guid: str,
         season_guid: str,
+        filters: SeasonPlayerFilters,
         page: int,
         page_size: int,
     ) -> SeasonPlayersPageResult: ...
