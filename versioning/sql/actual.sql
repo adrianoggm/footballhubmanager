@@ -42,6 +42,7 @@ create table if not exists pena (
   guid      char(36) not null default (uuid()),
   name      varchar(100) not null,
   position_labels text null,
+  position_label_colors text null,
   id_admin  int not null,
   unique key uq_pena_guid (guid),
   key idx_pena_admin (id_admin),
@@ -55,6 +56,7 @@ create table if not exists pena_role (
   guid       char(36) not null default (uuid()),
   id_pena    int not null,
   name       varchar(80) not null,
+  color      varchar(16) null,
   sort_order int not null default 0,
   unique key uq_pena_role_guid (guid),
   unique key uq_pena_role_name (id_pena, name),
@@ -177,6 +179,8 @@ create table if not exists season_player (
   id_player      int not null,
   id_pena        int not null,
   id_season      int not null,
+  id_role        int null,
+  position       varchar(50) null,
   wins           int not null default 0,
   losses         int not null default 0,
   draws          int not null default 0,
@@ -184,12 +188,16 @@ create table if not exists season_player (
   primary key (id_player, id_pena, id_season),
   unique key uq_season_player_guid (guid),
   key idx_seasonplayer_season (id_season),
+  key idx_seasonplayer_role (id_role),
   constraint fk_seasonplayer_player
     foreign key (id_player) references player(id)
     on delete cascade on update cascade,
   constraint fk_seasonplayer_pena
     foreign key (id_pena) references pena(id)
     on delete cascade on update cascade,
+  constraint fk_seasonplayer_role
+    foreign key (id_role) references pena_role(id)
+    on delete set null on update cascade,
   constraint fk_seasonplayer_season
     foreign key (id_season) references season(id)
     on delete cascade on update cascade

@@ -4,11 +4,15 @@ set foreign_key_checks = 0;
 alter table pena
   add column if not exists position_labels text null;
 
+alter table pena
+  add column if not exists position_label_colors text null;
+
 create table if not exists pena_role (
   id         int auto_increment primary key,
   guid       char(36) not null default (uuid()),
   id_pena    int not null,
   name       varchar(80) not null,
+  color      varchar(16) null,
   sort_order int not null default 0,
   unique key uq_pena_role_guid (guid),
   unique key uq_pena_role_name (id_pena, name),
@@ -69,6 +73,23 @@ join pena_role pr
  end
 set pp.id_role = pr.id
 where pp.id_role is null;
+
+alter table pena_role
+  add column if not exists color varchar(16) null;
+
+update pena_role
+set color = case lower(name)
+  when 'president' then '#B45309'
+  when 'coordinator' then '#1D4ED8'
+  when 'member' then '#15803D'
+  when 'guest' then '#64748B'
+  else '#64748B'
+end
+where color is null or trim(color) = '';
+
+update pena
+set position_label_colors = '{"attacker":"#DC2626","defender":"#2563EB","midfielder":"#16A34A","polivalent":"#7C3AED","keeper":"#EA580C"}'
+where position_label_colors is null or trim(position_label_colors) = '';
 
 alter table pena_player
   add key idx_penaplayer_role (id_role);
