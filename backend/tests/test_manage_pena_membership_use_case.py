@@ -47,6 +47,7 @@ class _FakeRepo:
             surname2=None,
             nationality="Spain",
             nickname="Nick",
+            role="member",
             position="ST",
         )
 
@@ -84,6 +85,8 @@ class _FakeRepo:
         account_id: int,
         nickname_provided: bool,
         nickname,
+        role_provided: bool,
+        role,
         position_provided: bool,
         position,
     ):
@@ -98,6 +101,8 @@ class _FakeRepo:
             "account_id": account_id,
             "nickname_provided": nickname_provided,
             "nickname": nickname,
+            "role_provided": role_provided,
+            "role": role,
             "position_provided": position_provided,
             "position": position,
         }
@@ -120,6 +125,8 @@ class _FakeRepo:
         player_guid: str,
         nickname_provided: bool,
         nickname,
+        role_provided: bool,
+        role,
         position_provided: bool,
         position,
     ):
@@ -130,6 +137,8 @@ class _FakeRepo:
             "player_guid": player_guid,
             "nickname_provided": nickname_provided,
             "nickname": nickname,
+            "role_provided": role_provided,
+            "role": role,
             "position_provided": position_provided,
             "position": position,
         }
@@ -153,6 +162,7 @@ class _FakeRepo:
         surname2: str | None,
         nationality: str,
         nickname: str | None,
+        role: str | None,
         position: str | None,
     ):
         if self.should_raise_pena_not_found:
@@ -169,6 +179,7 @@ class _FakeRepo:
             "surname2": surname2,
             "nationality": nationality,
             "nickname": nickname,
+            "role": role,
             "position": position,
         }
         return self._sample_result()
@@ -194,6 +205,8 @@ def test_update_for_user_positive_normalizes_blank_to_none():
         "account_id": 12,
         "nickname_provided": True,
         "nickname": None,
+        "role_provided": False,
+        "role": None,
         "position_provided": True,
         "position": "GK",
     }
@@ -290,6 +303,7 @@ def test_create_guest_for_admin_positive_normalizes_blank_to_none():
         "surname2": None,
         "nationality": "Spain",
         "nickname": "Invitado",
+        "role": None,
         "position": None,
     }
     assert result.role == "member"
