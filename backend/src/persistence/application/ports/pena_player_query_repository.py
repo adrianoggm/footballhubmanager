@@ -10,6 +10,7 @@ class PenaPlayerInfoResult:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None
     position: str | None
 
 
@@ -31,6 +32,7 @@ class PenaPlayerQueryRepository(Protocol):
         surname2: str | None,
         nationality: str | None,
         nickname: str | None,
+        role: str | None,
         position: str | None,
         search: str | None,
         page: int,

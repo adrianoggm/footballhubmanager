@@ -14,6 +14,7 @@ class PenaPlayerInfo:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None
     position: str | None
 
 
@@ -24,6 +25,7 @@ class PenaPlayerFilters:
     surname2: str | None = None
     nationality: str | None = None
     nickname: str | None = None
+    role: str | None = None
     position: str | None = None
     search: str | None = None
 
@@ -55,6 +57,7 @@ class GetPenaPlayersUseCase:
             surname2=filters.surname2 if filters else None,
             nationality=filters.nationality if filters else None,
             nickname=filters.nickname if filters else None,
+            role=filters.role if filters else None,
             position=filters.position if filters else None,
             search=filters.search if filters else None,
             page=page,
@@ -73,6 +76,7 @@ class GetPenaPlayersUseCase:
                     surname2=item.surname2,
                     nationality=item.nationality,
                     nickname=item.nickname,
+                    role=item.role,
                     position=item.position,
                 )
                 for item in result.items

@@ -33,6 +33,14 @@ from .manage_pena_membership import (
     PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
 )
+from .manage_pena_labels import (
+    InvalidPenaLabelsDataError,
+    ManagePenaLabelsUseCase,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsInfo,
+    PenaLabelsPenaNotFoundError,
+    PenaLabelsUpdate,
+)
 from .manage_season_competition import (
     InvalidSeasonDataError,
     InvalidSeasonInsightsDataError,

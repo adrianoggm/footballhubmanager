@@ -11,6 +11,7 @@ class PenaMembershipResult:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str
     position: str | None
 
 
@@ -38,6 +39,10 @@ class InvalidNationalityError(Exception):
     pass
 
 
+class InvalidRoleLabelError(Exception):
+    pass
+
+
 class PenaMembershipRepository(Protocol):
     def get_by_pena_and_player(
         self, *, pena_guid: str, player_guid: str
@@ -54,6 +59,8 @@ class PenaMembershipRepository(Protocol):
         account_id: int,
         nickname_provided: bool,
         nickname: str | None,
+        role_provided: bool,
+        role: str | None,
         position_provided: bool,
         position: str | None,
     ) -> PenaMembershipResult: ...
@@ -73,6 +80,8 @@ class PenaMembershipRepository(Protocol):
         player_guid: str,
         nickname_provided: bool,
         nickname: str | None,
+        role_provided: bool,
+        role: str | None,
         position_provided: bool,
         position: str | None,
     ) -> PenaMembershipResult: ...
@@ -95,5 +104,6 @@ class PenaMembershipRepository(Protocol):
         surname2: str | None,
         nationality: str,
         nickname: str | None,
+        role: str | None,
         position: str | None,
     ) -> PenaMembershipResult: ...
