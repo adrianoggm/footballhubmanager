@@ -17,6 +17,12 @@ import {
   Typography,
 } from '@mui/material'
 
+const labelChipSx = (color) => ({
+  backgroundColor: color || '#64748B',
+  color: '#fff',
+  border: '1px solid rgba(15, 23, 42, 0.12)',
+})
+
 export default function AdminPlayersSection({ state, actions, helpers }) {
   const { t, formatPlayerDisplayName } = helpers
   const {
@@ -33,6 +39,10 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     filteredHistoricalPlayers,
     penaLabels,
     labelsDraft,
+    draftRoleLabels,
+    draftPositionLabels,
+    draftRoleColors,
+    draftPositionColors,
     memberFilters,
     guestForm,
     nationalities,
@@ -48,6 +58,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     handleRequestRemoveMembershipPlayer,
     onMemberFilterField,
     onLabelsDraftField,
+    onLabelColorDraftChange,
     handleSavePenaLabels,
   } = actions
 
@@ -61,6 +72,9 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
               <Typography variant="body2" color="text.secondary">
                 {t('dashboard.admin.labels.description')}
               </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('dashboard.admin.labels.colorHelper')}
+              </Typography>
               <Grid container spacing={1.5}>
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -72,6 +86,31 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     minRows={2}
                     fullWidth
                   />
+                  {draftRoleLabels.length > 0 && (
+                    <Stack spacing={1} sx={{ mt: 1 }}>
+                      {draftRoleLabels.map((roleLabel) => (
+                        <Stack
+                          key={roleLabel}
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          justifyContent="space-between"
+                        >
+                          <Chip size="small" label={roleLabel} sx={labelChipSx(draftRoleColors[roleLabel])} />
+                          <TextField
+                            type="color"
+                            size="small"
+                            value={draftRoleColors[roleLabel]}
+                            onChange={onLabelColorDraftChange('role_colors', roleLabel)}
+                            sx={{ width: 72 }}
+                            inputProps={{
+                              'aria-label': `${roleLabel} color`,
+                            }}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -83,6 +122,35 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     minRows={2}
                     fullWidth
                   />
+                  {draftPositionLabels.length > 0 && (
+                    <Stack spacing={1} sx={{ mt: 1 }}>
+                      {draftPositionLabels.map((positionLabel) => (
+                        <Stack
+                          key={positionLabel}
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          justifyContent="space-between"
+                        >
+                          <Chip
+                            size="small"
+                            label={positionLabel}
+                            sx={labelChipSx(draftPositionColors[positionLabel])}
+                          />
+                          <TextField
+                            type="color"
+                            size="small"
+                            value={draftPositionColors[positionLabel]}
+                            onChange={onLabelColorDraftChange('position_colors', positionLabel)}
+                            sx={{ width: 72 }}
+                            inputProps={{
+                              'aria-label': `${positionLabel} color`,
+                            }}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
                 </Grid>
               </Grid>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
@@ -416,8 +484,28 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                   .join(' ')}
                               </TableCell>
                               <TableCell>{player.nickname || '-'}</TableCell>
-                              <TableCell>{player.role || '-'}</TableCell>
-                              <TableCell>{player.position || '-'}</TableCell>
+                              <TableCell>
+                                {player.role ? (
+                                  <Chip
+                                    size="small"
+                                    label={player.role}
+                                    sx={labelChipSx(penaLabels.role_colors?.[player.role])}
+                                  />
+                                ) : (
+                                  '-'
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {player.position ? (
+                                  <Chip
+                                    size="small"
+                                    label={player.position}
+                                    sx={labelChipSx(penaLabels.position_colors?.[player.position])}
+                                  />
+                                ) : (
+                                  '-'
+                                )}
+                              </TableCell>
                               <TableCell>
                                 <Stack direction="row" spacing={1}>
                                   <Button

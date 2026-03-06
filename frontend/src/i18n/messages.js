@@ -237,6 +237,7 @@ export const messages = {
           title: 'Classification Labels',
           description:
             'Configure role and position labels used to classify and filter players in this pena.',
+          colorHelper: 'Assign a color to each label to highlight it in standings and filters.',
           roleLabels: 'Role labels',
           positionLabels: 'Position labels',
           inputHelper: 'Separate labels with commas or line breaks.',
@@ -485,6 +486,8 @@ export const messages = {
         table: {
           rank: '#',
           player: 'Player',
+          role: 'Role',
+          position: 'Position',
           played: 'PJ',
           goals: 'G',
           assists: 'A',
@@ -764,6 +767,8 @@ export const messages = {
           title: 'Etiquetas de clasificación',
           description:
             'Configura las etiquetas de rol y posición para clasificar y filtrar jugadores en esta peña.',
+          colorHelper:
+            'Asigna un color a cada etiqueta para destacarla en clasificación y filtros.',
           roleLabels: 'Etiquetas de rol',
           positionLabels: 'Etiquetas de posición',
           inputHelper: 'Separa etiquetas por comas o saltos de línea.',
@@ -1017,6 +1022,8 @@ export const messages = {
         table: {
           rank: 'Pos.',
           player: 'Jugador',
+          role: 'Rol',
+          position: 'Posición',
           played: 'PJ',
           goals: 'G',
           assists: 'A',
