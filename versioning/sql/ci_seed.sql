@@ -21,6 +21,20 @@ on duplicate key update
   name = values(name),
   id_admin = values(id_admin);
 
+insert into pena_role (id, guid, id_pena, name, sort_order)
+values
+  (9501, '00000000-0000-0000-0000-000000009501', 9101, 'president', 0),
+  (9502, '00000000-0000-0000-0000-000000009502', 9101, 'coordinator', 1),
+  (9503, '00000000-0000-0000-0000-000000009503', 9101, 'member', 2),
+  (9504, '00000000-0000-0000-0000-000000009504', 9101, 'guest', 3),
+  (9511, '00000000-0000-0000-0000-000000009511', 9102, 'president', 0),
+  (9512, '00000000-0000-0000-0000-000000009512', 9102, 'coordinator', 1),
+  (9513, '00000000-0000-0000-0000-000000009513', 9102, 'member', 2),
+  (9514, '00000000-0000-0000-0000-000000009514', 9102, 'guest', 3)
+on duplicate key update
+  name = values(name),
+  sort_order = values(sort_order);
+
 insert into season (id, guid, id_pena, start_date, end_date)
 values
   (9151, '00000000-0000-0000-0000-000000009151', 9101, '2024-09-01', '2025-06-30'),
@@ -53,9 +67,10 @@ on duplicate key update
   nationality = values(nationality),
   id_player_account = values(id_player_account);
 
-insert into pena_player (id, guid, id_player, id_pena, nickname, position)
+insert into pena_player (id, guid, id_player, id_pena, nickname, id_role, position)
 values
-  (9401, '00000000-0000-0000-0000-000000009401', 9301, 9101, 'SeedNick', 'GK')
+  (9401, '00000000-0000-0000-0000-000000009401', 9301, 9101, 'SeedNick', 9503, 'GK')
 on duplicate key update
   nickname = values(nickname),
+  id_role = values(id_role),
   position = values(position);
