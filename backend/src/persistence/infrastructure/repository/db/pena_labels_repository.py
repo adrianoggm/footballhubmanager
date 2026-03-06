@@ -5,13 +5,19 @@ from persistence.application.ports.pena_labels_repository import (
     PenaNotManagedByAdminError,
 )
 from persistence.domain.label_config import (
+    DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,
+    DEFAULT_ROLE_LABEL_COLORS,
     DEFAULT_ROLE_LABELS,
+    align_label_colors,
+    default_color_for_label,
+    dump_label_colors_payload,
     dump_labels_payload,
+    parse_label_colors_payload,
     parse_labels_payload,
     pick_preferred_label,
 )
-from persistence.domain.entity import Pena, PenaPlayer, PenaRole
+from persistence.domain.entity import Pena, PenaPlayer, PenaRole, SeasonPlayer
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
@@ -32,6 +38,8 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
         admin_id: int,
         role_labels: list[str],
         position_labels: list[str],
+        role_colors: dict[str, str],
+        position_colors: dict[str, str],
     ) -> PenaLabelsResult:
         pena = self._get_pena(pena_guid, for_update=True)
         if pena.id_admin != admin_id:
@@ -43,8 +51,10 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
             pena_id=pena.id,
             current_roles=current_roles,
             desired_labels=role_labels,
+            desired_colors=role_colors,
         )
         pena.position_labels = dump_labels_payload(position_labels)
+        pena.position_label_colors = dump_label_colors_payload(position_colors)
         self.session.commit()
         return self._to_result(pena=pena, roles=updated_roles)
 
@@ -60,12 +70,27 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
 
     @staticmethod
     def _to_result(*, pena: Pena, roles: list[PenaRole]) -> PenaLabelsResult:
+        role_labels = [item.name for item in roles] or list(DEFAULT_ROLE_LABELS)
+        role_colors = align_label_colors(
+            role_labels,
+            configured_colors={item.name: item.color for item in roles if item.color},
+            defaults=DEFAULT_ROLE_LABEL_COLORS,
+        )
+
+        position_labels = parse_labels_payload(
+            pena.position_labels,
+            fallback=DEFAULT_POSITION_LABELS,
+        )
+        position_colors = align_label_colors(
+            position_labels,
+            configured_colors=parse_label_colors_payload(pena.position_label_colors),
+            defaults=DEFAULT_POSITION_LABEL_COLORS,
+        )
         return PenaLabelsResult(
-            role_labels=[item.name for item in roles] or list(DEFAULT_ROLE_LABELS),
-            position_labels=parse_labels_payload(
-                pena.position_labels,
-                fallback=DEFAULT_POSITION_LABELS,
-            ),
+            role_labels=role_labels,
+            position_labels=position_labels,
+            role_colors=role_colors,
+            position_colors=position_colors,
         )
 
     def _get_roles_for_pena(self, pena_id: int, *, for_update: bool) -> list[PenaRole]:
@@ -83,6 +108,7 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
         pena_id: int,
         current_roles: list[PenaRole],
         desired_labels: list[str],
+        desired_colors: dict[str, str],
     ) -> list[PenaRole]:
         by_name = {item.name.casefold(): item for item in current_roles}
         synced_roles: list[PenaRole] = []
@@ -90,15 +116,25 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
         for index, role_label in enumerate(desired_labels):
             key = role_label.casefold()
             role = by_name.pop(key, None)
+            color = desired_colors.get(
+                role_label,
+                default_color_for_label(role_label, defaults=DEFAULT_ROLE_LABEL_COLORS),
+            )
             if role is None:
-                role = PenaRole(id_pena=pena_id, name=role_label, sort_order=index)
+                role = PenaRole(
+                    id_pena=pena_id,
+                    name=role_label,
+                    color=color,
+                    sort_order=index,
+                )
                 self.session.add(role)
             else:
                 role.name = role_label
+                role.color = color
                 role.sort_order = index
             synced_roles.append(role)
 
-        # Ensure newly created roles have IDs before we reassign legacy memberships.
+        # Ensure newly created roles have IDs before we reassign memberships.
         self.session.flush()
 
         removed_role_ids = [item.id for item in by_name.values() if item.id is not None]
@@ -110,6 +146,14 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
                     .where(
                         PenaPlayer.id_pena == pena_id,
                         PenaPlayer.id_role.in_(removed_role_ids),
+                    )
+                    .values(id_role=fallback_role.id)
+                )
+                self.session.execute(
+                    update(SeasonPlayer)
+                    .where(
+                        SeasonPlayer.id_pena == pena_id,
+                        SeasonPlayer.id_role.in_(removed_role_ids),
                     )
                     .values(id_role=fallback_role.id)
                 )

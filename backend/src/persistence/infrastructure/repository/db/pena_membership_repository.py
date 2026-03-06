@@ -9,8 +9,8 @@ from persistence.application.ports.pena_membership_repository import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
-from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
 from persistence.domain.entity import Nationality, Pena, PenaPlayer, PenaRole, Player
+from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -210,8 +210,10 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipRepository):
         return link
 
     def _get_roles_for_pena(self, pena_id: int, *, for_update: bool) -> list[PenaRole]:
-        stmt = select(PenaRole).where(PenaRole.id_pena == pena_id).order_by(
-            PenaRole.sort_order.asc(), PenaRole.id.asc()
+        stmt = (
+            select(PenaRole)
+            .where(PenaRole.id_pena == pena_id)
+            .order_by(PenaRole.sort_order.asc(), PenaRole.id.asc())
         )
         if for_update:
             stmt = stmt.with_for_update()

@@ -9,8 +9,8 @@ from persistence.application.ports.pena_link_repository import (
     UserAlreadyLinkedToPenaError,
     UserPlayerNotFoundError,
 )
-from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
 from persistence.domain.entity import Pena, PenaLinkToken, PenaPlayer, PenaRole, Player
+from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -74,11 +74,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
                 role_options = [role.name for role in roles] or list(DEFAULT_ROLE_LABELS)
                 default_role = pick_preferred_label(role_options, "member") or "member"
                 default_role_id = next(
-                    (
-                        role.id
-                        for role in roles
-                        if role.name.casefold() == default_role.casefold()
-                    ),
+                    (role.id for role in roles if role.name.casefold() == default_role.casefold()),
                     roles[0].id if roles else None,
                 )
 

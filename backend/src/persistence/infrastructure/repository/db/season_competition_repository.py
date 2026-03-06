@@ -31,17 +31,24 @@ from persistence.application.ports.season_competition_repository import (
     SeasonPlayersPageResult,
     SeasonResult,
 )
+from persistence.domain.label_config import (
+    DEFAULT_POSITION_LABEL_COLORS,
+    DEFAULT_ROLE_LABEL_COLORS,
+    align_label_colors,
+    parse_label_colors_payload,
+)
 from persistence.domain.entity import (
     FootballMatch,
     Pena,
     PenaPlayer,
+    PenaRole,
     Player,
     Season,
     SeasonPlayer,
     Team,
     TeamPlayer,
 )
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -152,6 +159,8 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             id_player=player.id,
             id_pena=pena.id,
             id_season=season.id,
+            id_role=link.id_role,
+            position=link.position,
             wins=0,
             losses=0,
             draws=0,
@@ -163,6 +172,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         except IntegrityError as exc:
             self.session.rollback()
             raise SeasonPlayerAlreadyRegisteredError() from exc
+        position_color_map = parse_label_colors_payload(pena.position_label_colors)
         return self._to_season_player_result(
             player=player,
             link=link,
@@ -170,6 +180,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             points_win=season.points_win,
             points_draw=season.points_draw,
             points_loss=season.points_loss,
+            position_color_map=position_color_map,
         )
 
     def register_players_for_admin_bulk(
@@ -234,10 +245,13 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         try:
             for player_guid in cleaned_guids:
                 player = players_by_guid[player_guid]
+                link = links_by_player_id[player.id]
                 season_player = SeasonPlayer(
                     id_player=player.id,
                     id_pena=pena.id,
                     id_season=season.id,
+                    id_role=link.id_role,
+                    position=link.position,
                     wins=0,
                     losses=0,
                     draws=0,
@@ -250,6 +264,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.rollback()
             raise SeasonPlayerAlreadyRegisteredError() from exc
 
+        position_color_map = parse_label_colors_payload(pena.position_label_colors)
         return [
             self._to_season_player_result(
                 player=players_by_guid[player_guid],
@@ -258,6 +273,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 points_win=season.points_win,
                 points_draw=season.points_draw,
                 points_loss=season.points_loss,
+                position_color_map=position_color_map,
             )
             for player_guid in cleaned_guids
         ]
@@ -314,6 +330,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             season_player.quality_level = quality_level
 
         self.session.commit()
+        position_color_map = parse_label_colors_payload(pena.position_label_colors)
         return self._to_season_player_result(
             player=player,
             link=link,
@@ -321,6 +338,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             points_win=season.points_win,
             points_draw=season.points_draw,
             points_loss=season.points_loss,
+            position_color_map=position_color_map,
         )
 
     def unregister_player_for_admin(
@@ -366,12 +384,18 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
     ) -> SeasonPlayersPageResult:
         pena = self._get_pena(pena_guid)
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+        position_color_map = parse_label_colors_payload(pena.position_label_colors)
         points_expr = (
             SeasonPlayer.wins * season.points_win
             + SeasonPlayer.draws * season.points_draw
             + SeasonPlayer.losses * season.points_loss
         ).label("points")
         played_expr = (SeasonPlayer.wins + SeasonPlayer.draws + SeasonPlayer.losses).label("played")
+        role_expr = func.coalesce(
+            PenaRole.name,
+            case((Player.id_player_account.is_(None), "guest"), else_="member"),
+        ).label("role")
+        role_color_expr = PenaRole.color.label("role_color")
         season_player_stats = (
             select(
                 TeamPlayer.id_player.label("id_player"),
@@ -396,7 +420,9 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 Player.surname2.label("surname2"),
                 Player.nationality.label("nationality"),
                 PenaPlayer.nickname.label("nickname"),
-                PenaPlayer.position.label("position"),
+                role_expr,
+                role_color_expr,
+                SeasonPlayer.position.label("position"),
                 played_expr,
                 goals_expr,
                 assists_expr,
@@ -415,6 +441,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                     PenaPlayer.id_pena == SeasonPlayer.id_pena,
                 ),
             )
+            .outerjoin(PenaRole, PenaRole.id == SeasonPlayer.id_role)
             .outerjoin(
                 season_player_stats,
                 season_player_stats.c.id_player == SeasonPlayer.id_player,
@@ -425,7 +452,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             )
         )
 
-        stmt = self._apply_season_player_filters(stmt, filters)
+        stmt = self._apply_season_player_filters(stmt, filters, role_expr=role_expr)
         stmt = self._apply_player_order(
             stmt,
             order_by=order_by,
@@ -439,7 +466,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         )
         rows = self.session.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
         return SeasonPlayersPageResult(
-            items=[self._row_to_player_result(row) for row in rows],
+            items=[
+                self._row_to_player_result(row, position_color_map=position_color_map)
+                for row in rows
+            ],
             page=page,
             page_size=page_size,
             total=total,
@@ -1026,7 +1056,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 Player.surname1.label("player_surname1"),
                 Player.surname2.label("player_surname2"),
                 PenaPlayer.nickname.label("player_nickname"),
-                PenaPlayer.position.label("player_position"),
+                SeasonPlayer.position.label("player_position"),
                 TeamPlayer.goals.label("goals"),
                 TeamPlayer.assists.label("assists"),
                 TeamPlayer.saves.label("saves"),
@@ -1049,6 +1079,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 and_(
                     PenaPlayer.id_player == Player.id,
                     PenaPlayer.id_pena == pena.id,
+                ),
+            )
+            .outerjoin(
+                SeasonPlayer,
+                and_(
+                    SeasonPlayer.id_player == Player.id,
+                    SeasonPlayer.id_pena == pena.id,
+                    SeasonPlayer.id_season == Season.id,
                 ),
             )
             .where(FootballMatch.id_season.in_(season_ids_by_guid.values()))
@@ -1151,13 +1189,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         *,
         pena_guid: str,
         season_guid: str,
+        filters: SeasonPlayerFilters,
         page: int,
         page_size: int,
     ) -> SeasonPlayersPageResult:
         return self.list_season_players(
             pena_guid=pena_guid,
             season_guid=season_guid,
-            filters=SeasonPlayerFilters(),
+            filters=filters,
             page=page,
             page_size=page_size,
             order_by="points",
@@ -1295,10 +1334,16 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         points_win: int,
         points_draw: int,
         points_loss: int,
+        position_color_map: dict[str, str],
     ) -> SeasonPlayerResult:
         goals, assists = self._get_season_player_match_totals(
             season_id=season_player.id_season,
             player_id=player.id,
+        )
+        role, role_color = self._resolve_role_data(player=player, season_player=season_player)
+        position_color = self._resolve_position_color(
+            position=season_player.position,
+            position_color_map=position_color_map,
         )
         return SeasonPlayerResult(
             player_guid=player.guid,
@@ -1307,7 +1352,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             surname2=player.surname2,
             nationality=player.nationality,
             nickname=link.nickname,
-            position=link.position,
+            role=role,
+            role_color=role_color,
+            position=season_player.position,
+            position_color=position_color,
             played=season_player.wins + season_player.draws + season_player.losses,
             goals=goals,
             assists=assists,
@@ -1323,7 +1371,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         )
 
     @staticmethod
-    def _apply_season_player_filters(stmt, filters: SeasonPlayerFilters):
+    def _apply_season_player_filters(stmt, filters: SeasonPlayerFilters, *, role_expr):
         if filters.name:
             stmt = stmt.where(Player.name.ilike(f"%{filters.name}%"))
         if filters.surname1:
@@ -1334,8 +1382,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             stmt = stmt.where(Player.nationality.ilike(f"%{filters.nationality}%"))
         if filters.nickname:
             stmt = stmt.where(PenaPlayer.nickname.ilike(f"%{filters.nickname}%"))
+        if filters.role:
+            stmt = stmt.where(role_expr.ilike(f"%{filters.role}%"))
         if filters.position:
-            stmt = stmt.where(PenaPlayer.position.ilike(f"%{filters.position}%"))
+            stmt = stmt.where(SeasonPlayer.position.ilike(f"%{filters.position}%"))
         if filters.search:
             token = f"%{filters.search}%"
             stmt = stmt.where(
@@ -1344,7 +1394,8 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                     Player.surname1.ilike(token),
                     Player.surname2.ilike(token),
                     PenaPlayer.nickname.ilike(token),
-                    PenaPlayer.position.ilike(token),
+                    role_expr.ilike(token),
+                    SeasonPlayer.position.ilike(token),
                 )
             )
         return stmt
@@ -1376,8 +1427,52 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         return stmt.order_by(order_column.asc(), Player.name.asc())
 
     @staticmethod
-    def _row_to_player_result(row) -> SeasonPlayerResult:
+    def _resolve_position_color(
+        *, position: str | None, position_color_map: dict[str, str]
+    ) -> str | None:
+        if not position:
+            return None
+        return align_label_colors(
+            [position],
+            configured_colors=position_color_map,
+            defaults=DEFAULT_POSITION_LABEL_COLORS,
+        ).get(position)
+
+    def _resolve_role_data(self, *, player: Player, season_player: SeasonPlayer) -> tuple[str, str]:
+        if season_player.id_role is not None:
+            role_row = self.session.execute(
+                select(PenaRole.name, PenaRole.color).where(PenaRole.id == season_player.id_role)
+            ).one_or_none()
+            if role_row:
+                role_name = role_row.name
+                role_color = align_label_colors(
+                    [role_name],
+                    configured_colors={role_name: role_row.color} if role_row.color else None,
+                    defaults=DEFAULT_ROLE_LABEL_COLORS,
+                )[role_name]
+                return role_name, role_color
+
+        role_name = "member" if player.id_player_account is not None else "guest"
+        role_color = align_label_colors(
+            [role_name],
+            configured_colors=None,
+            defaults=DEFAULT_ROLE_LABEL_COLORS,
+        )[role_name]
+        return role_name, role_color
+
+    @staticmethod
+    def _row_to_player_result(row, *, position_color_map: dict[str, str]) -> SeasonPlayerResult:
         values = row._mapping
+        role_name = values["role"]
+        role_color = align_label_colors(
+            [role_name],
+            configured_colors={role_name: values["role_color"]} if values["role_color"] else None,
+            defaults=DEFAULT_ROLE_LABEL_COLORS,
+        )[role_name]
+        position_color = SqlAlchemySeasonCompetitionRepository._resolve_position_color(
+            position=values["position"],
+            position_color_map=position_color_map,
+        )
         return SeasonPlayerResult(
             player_guid=values["player_guid"],
             name=values["name"],
@@ -1385,7 +1480,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             surname2=values["surname2"],
             nationality=values["nationality"],
             nickname=values["nickname"],
+            role=role_name,
+            role_color=role_color,
             position=values["position"],
+            position_color=position_color,
             played=int(values["played"]),
             goals=int(values["goals"]),
             assists=int(values["assists"]),
@@ -1742,6 +1840,11 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             pena_id=pena_id,
             player_ids=player_ids,
         )
+        positions_by_player_id = self._get_season_player_positions(
+            pena_id=pena_id,
+            season_id=football_match.id_season,
+            player_ids=player_ids,
+        )
 
         return MatchDetailResult(
             guid=football_match.guid,
@@ -1753,12 +1856,14 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 team_players=home_players,
                 players_by_id=players_by_id,
                 links_by_player_id=links_by_player_id,
+                positions_by_player_id=positions_by_player_id,
             ),
             away_team=self._build_match_team_result(
                 team=away_team,
                 team_players=away_players,
                 players_by_id=players_by_id,
                 links_by_player_id=links_by_player_id,
+                positions_by_player_id=positions_by_player_id,
             ),
         )
 
@@ -1769,6 +1874,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         team_players: list[TeamPlayer],
         players_by_id: dict[int, Player],
         links_by_player_id: dict[int, PenaPlayer],
+        positions_by_player_id: dict[int, str | None],
     ) -> MatchTeamResult:
         players: list[MatchPlayerStatsResult] = []
         total_goals = 0
@@ -1794,7 +1900,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                     surname1=player.surname1,
                     surname2=player.surname2,
                     nickname=link.nickname if link else None,
-                    position=link.position if link else None,
+                    position=positions_by_player_id.get(player.id),
                     goals=int(team_player.goals),
                     assists=int(team_player.assists),
                     saves=int(team_player.saves),
@@ -1842,3 +1948,22 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             )
         ).scalars()
         return {row.id_player: row for row in rows}
+
+    def _get_season_player_positions(
+        self,
+        *,
+        pena_id: int,
+        season_id: int,
+        player_ids: set[int],
+    ) -> dict[int, str | None]:
+        if not player_ids:
+            return {}
+
+        rows = self.session.execute(
+            select(SeasonPlayer.id_player, SeasonPlayer.position).where(
+                SeasonPlayer.id_pena == pena_id,
+                SeasonPlayer.id_season == season_id,
+                SeasonPlayer.id_player.in_(player_ids),
+            )
+        ).all()
+        return {int(row.id_player): row.position for row in rows}
