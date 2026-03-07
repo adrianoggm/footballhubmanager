@@ -9,6 +9,15 @@ const toQueryString = (params) => {
     if (value === undefined || value === null || value === '') {
       return
     }
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item === undefined || item === null || item === '') {
+          return
+        }
+        query.append(key, String(item))
+      })
+      return
+    }
     query.set(key, String(value))
   })
   const queryString = query.toString()
@@ -71,7 +80,11 @@ export class AdminService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players${query}`)
   }
 
-  listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20, role = '', position = '' } = {}) {
+  listStandings(
+    penaGuid,
+    seasonGuid,
+    { page = 1, pageSize = 20, role = [], position = [] } = {}
+  ) {
     const query = toQueryString({ page, page_size: pageSize, role, position })
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings${query}`)
   }
@@ -137,9 +150,10 @@ export class AdminService {
     })
   }
 
-  registerSeasonPlayersBulk(penaGuid, seasonGuid, playerGuids) {
+  registerSeasonPlayersBulk(penaGuid, seasonGuid, playerGuids, { sourceSeasonGuid = null } = {}) {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players/bulk`, {
       player_guids: playerGuids,
+      source_season_guid: sourceSeasonGuid,
     })
   }
 

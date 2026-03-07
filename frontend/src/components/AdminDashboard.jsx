@@ -231,6 +231,31 @@ const hasLabel = (options, value) => {
   )
 }
 
+const normalizeFilterValues = (value) => {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '')
+        .split(',')
+        .map((item) => item.trim())
+  return Array.from(
+    new Set(source.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean))
+  )
+}
+
+const pruneFilterValues = (selectedValues, allowedLabels) => {
+  const allowed = new Set(
+    (allowedLabels || [])
+      .map((item) => String(item || '').trim().toLowerCase())
+      .filter(Boolean)
+  )
+  return normalizeFilterValues(selectedValues).filter((item) => allowed.has(item))
+}
+
+const defaultLabelFilters = () => ({
+  role: [],
+  position: [],
+})
+
 const pickPreferredLabel = (options, preferred) => {
   if (!(options || []).length) {
     return ''
@@ -445,8 +470,8 @@ export default function AdminDashboard({ session, onLogout }) {
   const [selectedSeasonForm, setSelectedSeasonForm] = useState(defaultSeasonForm)
   const [penaLabels, setPenaLabels] = useState(defaultPenaLabels)
   const [labelsDraft, setLabelsDraft] = useState(defaultLabelsDraft)
-  const [memberFilters, setMemberFilters] = useState({ role: '', position: '' })
-  const [standingsFilters, setStandingsFilters] = useState({ role: '', position: '' })
+  const [memberFilters, setMemberFilters] = useState(defaultLabelFilters)
+  const [standingsFilters, setStandingsFilters] = useState(defaultLabelFilters)
   const [matchForm, setMatchForm] = useState(defaultMatchForm)
   const [guestForm, setGuestForm] = useState(defaultGuestForm)
   const [pendingDeleteSeason, setPendingDeleteSeason] = useState(null)
@@ -532,14 +557,15 @@ export default function AdminDashboard({ session, onLogout }) {
   )
 
   const filteredHistoricalPlayers = useMemo(() => {
+    const roleFilters = normalizeFilterValues(memberFilters.role)
+    const positionFilters = normalizeFilterValues(memberFilters.position)
     return historicalPlayers.filter((player) => {
-      if (memberFilters.role && String(player.role || '').toLowerCase() !== memberFilters.role) {
+      const playerRole = String(player.role || '').toLowerCase()
+      const playerPosition = String(player.position || '').toLowerCase()
+      if (roleFilters.length && !roleFilters.includes(playerRole)) {
         return false
       }
-      if (
-        memberFilters.position &&
-        String(player.position || '').toLowerCase() !== memberFilters.position
-      ) {
+      if (positionFilters.length && !positionFilters.includes(playerPosition)) {
         return false
       }
       return true
@@ -689,14 +715,15 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const onMemberFilterField = (name) => (event) => {
+    const nextValue = normalizeFilterValues(event.target.value)
     setMemberFilters((prev) => ({
       ...prev,
-      [name]: String(event.target.value || '').toLowerCase(),
+      [name]: nextValue,
     }))
   }
 
   const onStandingsFilterField = (name) => (event) => {
-    const nextValue = String(event.target.value || '').toLowerCase()
+    const nextValue = normalizeFilterValues(event.target.value)
     const nextFilters = { ...standingsFilters, [name]: nextValue }
     setStandingsFilters(nextFilters)
     if (selectedPenaGuid && selectedSeasonGuid) {
@@ -756,14 +783,12 @@ export default function AdminDashboard({ session, onLogout }) {
         position: hasLabel(updated.position_labels, prev.position) ? prev.position : '',
       }))
       setMemberFilters((prev) => ({
-        role: hasLabel(updated.role_labels, prev.role) ? prev.role : '',
-        position: hasLabel(updated.position_labels, prev.position) ? prev.position : '',
+        role: pruneFilterValues(prev.role, updated.role_labels),
+        position: pruneFilterValues(prev.position, updated.position_labels),
       }))
       const nextStandingsFilters = {
-        role: hasLabel(updated.role_labels, standingsFilters.role) ? standingsFilters.role : '',
-        position: hasLabel(updated.position_labels, standingsFilters.position)
-          ? standingsFilters.position
-          : '',
+        role: pruneFilterValues(standingsFilters.role, updated.role_labels),
+        position: pruneFilterValues(standingsFilters.position, updated.position_labels),
       }
       setStandingsFilters(nextStandingsFilters)
       if (selectedSeasonGuid) {
@@ -802,8 +827,8 @@ export default function AdminDashboard({ session, onLogout }) {
   const loadStandings = async (penaGuid, seasonGuid, filters = standingsFilters) => {
     const standingsPage = await adminService.listStandings(penaGuid, seasonGuid, {
       pageSize: 10,
-      role: filters.role || '',
-      position: filters.position || '',
+      role: normalizeFilterValues(filters.role),
+      position: normalizeFilterValues(filters.position),
     })
     setStandings(standingsPage.items || [])
   }
@@ -895,8 +920,8 @@ export default function AdminDashboard({ session, onLogout }) {
       setHistoricalPlayers(penaPlayers)
       setPenaLabels(labels)
       setLabelsDraft(defaultLabelsDraft(labels))
-      setMemberFilters({ role: '', position: '' })
-      setStandingsFilters({ role: '', position: '' })
+      setMemberFilters(defaultLabelFilters())
+      setStandingsFilters(defaultLabelFilters())
 
       const nextRange = buildNextSeasonDateRange(seasonItems)
       const pointsReference = active || seasonItems[0]
@@ -969,7 +994,8 @@ export default function AdminDashboard({ session, onLogout }) {
         const fallbackLabels = defaultPenaLabels()
         setPenaLabels(fallbackLabels)
         setLabelsDraft(defaultLabelsDraft(fallbackLabels))
-        setMemberFilters({ role: '', position: '' })
+        setMemberFilters(defaultLabelFilters())
+        setStandingsFilters(defaultLabelFilters())
         setStandings([])
         setSeasonMatches([])
         setSelectedMatchGuid('')
@@ -1197,7 +1223,8 @@ export default function AdminDashboard({ session, onLogout }) {
           await adminService.registerSeasonPlayersBulk(
             selectedPenaGuid,
             createdSeason.guid,
-            sourcePlayerGuids
+            sourcePlayerGuids,
+            { sourceSeasonGuid: importSourceSeasonGuid }
           )
           importedCount = sourcePlayerGuids.length
         }
@@ -2506,9 +2533,16 @@ export default function AdminDashboard({ session, onLogout }) {
                   label={t('dashboard.admin.members.filterRole')}
                   value={standingsFilters.role}
                   onChange={onStandingsFilterField('role')}
+                  SelectProps={{
+                    multiple: true,
+                    displayEmpty: true,
+                    renderValue: (selected) =>
+                      selected.length
+                        ? selected.join(', ')
+                        : t('dashboard.admin.members.filterAllRoles'),
+                  }}
                   fullWidth
                 >
-                  <MenuItem value="">{t('dashboard.admin.members.filterAllRoles')}</MenuItem>
                   {penaLabels.role_labels.map((roleLabel) => (
                     <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
                       {roleLabel}
@@ -2521,9 +2555,16 @@ export default function AdminDashboard({ session, onLogout }) {
                   label={t('dashboard.admin.members.filterPosition')}
                   value={standingsFilters.position}
                   onChange={onStandingsFilterField('position')}
+                  SelectProps={{
+                    multiple: true,
+                    displayEmpty: true,
+                    renderValue: (selected) =>
+                      selected.length
+                        ? selected.join(', ')
+                        : t('dashboard.admin.members.filterAllPositions'),
+                  }}
                   fullWidth
                 >
-                  <MenuItem value="">{t('dashboard.admin.members.filterAllPositions')}</MenuItem>
                   {penaLabels.position_labels.map((positionLabel) => (
                     <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
                       {positionLabel}

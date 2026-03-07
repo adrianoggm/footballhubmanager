@@ -10,6 +10,7 @@ class RegisterSeasonPlayerRequest(BaseModel):
 
 class RegisterSeasonPlayersBulkRequest(BaseModel):
     player_guids: list[str] = Field(min_length=1)
+    source_season_guid: str | None = None
 
 
 class UpdateSeasonPlayerStatsRequest(BaseModel):

@@ -86,6 +86,23 @@ def _clean(value: str | None) -> str | None:
     return value or None
 
 
+def _clean_many(values: list[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    output: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        cleaned = _clean(raw)
+        if not cleaned:
+            continue
+        key = cleaned.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append(cleaned)
+    return tuple(output)
+
+
 def _page_response(page: SeasonPlayersPage) -> SeasonPlayersPageResponse:
     total_pages = math.ceil(page.total / page.page_size) if page.total else 0
     return SeasonPlayersPageResponse(
@@ -192,6 +209,7 @@ def register_players_in_season_bulk(
             season_guid=season_guid,
             admin_id=admin_session.user_id,
             player_guids=payload.player_guids,
+            source_season_guid=payload.source_season_guid,
         )
     except InvalidSeasonPlayerBatchDataError:
         raise HTTPException(
@@ -322,7 +340,8 @@ def list_season_players(
     surname2: str | None = Query(default=None),
     nationality: str | None = Query(default=None),
     nickname: str | None = Query(default=None),
-    position: str | None = Query(default=None),
+    role: list[str] | None = Query(default=None),
+    position: list[str] | None = Query(default=None),
     search: str | None = Query(default=None),
     order_by: Literal[
         "quality_level",
@@ -344,7 +363,10 @@ def list_season_players(
         surname2=_clean(surname2),
         nationality=_clean(nationality),
         nickname=_clean(nickname),
-        position=_clean(position),
+        role=_clean(role[0]) if role and len(role) == 1 else None,
+        roles=_clean_many(role),
+        position=_clean(position[0]) if position and len(position) == 1 else None,
+        positions=_clean_many(position),
         search=_clean(search),
     )
     try:
@@ -799,8 +821,8 @@ def get_season_standings(
     season_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    role: str | None = Query(default=None),
-    position: str | None = Query(default=None),
+    role: list[str] | None = Query(default=None),
+    position: list[str] | None = Query(default=None),
     use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
@@ -809,8 +831,10 @@ def get_season_standings(
             pena_guid=pena_guid,
             season_guid=season_guid,
             filters=SeasonPlayerFilters(
-                role=_clean(role),
-                position=_clean(position),
+                role=_clean(role[0]) if role and len(role) == 1 else None,
+                roles=_clean_many(role),
+                position=_clean(position[0]) if position and len(position) == 1 else None,
+                positions=_clean_many(position),
             ),
             page=page,
             page_size=page_size,

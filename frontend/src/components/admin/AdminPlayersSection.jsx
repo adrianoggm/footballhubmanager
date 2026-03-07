@@ -438,9 +438,16 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         label={t('dashboard.admin.members.filterRole')}
                         value={memberFilters.role}
                         onChange={onMemberFilterField('role')}
+                        SelectProps={{
+                          multiple: true,
+                          displayEmpty: true,
+                          renderValue: (selected) =>
+                            selected.length
+                              ? selected.join(', ')
+                              : t('dashboard.admin.members.filterAllRoles'),
+                        }}
                         fullWidth
                       >
-                        <MenuItem value="">{t('dashboard.admin.members.filterAllRoles')}</MenuItem>
                         {penaLabels.role_labels.map((roleLabel) => (
                           <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
                             {roleLabel}
@@ -453,11 +460,16 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         label={t('dashboard.admin.members.filterPosition')}
                         value={memberFilters.position}
                         onChange={onMemberFilterField('position')}
+                        SelectProps={{
+                          multiple: true,
+                          displayEmpty: true,
+                          renderValue: (selected) =>
+                            selected.length
+                              ? selected.join(', ')
+                              : t('dashboard.admin.members.filterAllPositions'),
+                        }}
                         fullWidth
                       >
-                        <MenuItem value="">
-                          {t('dashboard.admin.members.filterAllPositions')}
-                        </MenuItem>
                         {penaLabels.position_labels.map((positionLabel) => (
                           <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
                             {positionLabel}

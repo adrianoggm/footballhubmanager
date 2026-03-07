@@ -11,6 +11,7 @@ class SeasonPlayer(GuidMixin, Base):
     id_pena: Mapped[int] = mapped_column(ForeignKey("pena.id"))
     id_season: Mapped[int] = mapped_column(ForeignKey("season.id"))
     id_role: Mapped[int | None] = mapped_column(ForeignKey("pena_role.id"))
+    role: Mapped[str | None] = mapped_column()
     position: Mapped[str | None] = mapped_column()
     wins: Mapped[int] = mapped_column(default=0)
     losses: Mapped[int] = mapped_column(default=0)

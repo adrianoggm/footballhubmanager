@@ -180,6 +180,7 @@ create table if not exists season_player (
   id_pena        int not null,
   id_season      int not null,
   id_role        int null,
+  role           varchar(80) null,
   position       varchar(50) null,
   wins           int not null default 0,
   losses         int not null default 0,

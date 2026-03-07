@@ -598,9 +598,11 @@ def test_register_players_bulk_validates_and_forwards_cleaned_guids():
         season_guid="season-guid",
         admin_id=1,
         player_guids=[" player-a ", "player-b"],
+        source_season_guid=" source-season-guid ",
     )
     assert len(registered) == 2
     assert repo.last_payload["player_guids"] == ["player-a", "player-b"]
+    assert repo.last_payload["source_season_guid"] == "source-season-guid"
 
 
 def test_unregister_player_maps_in_match_error():

@@ -4,7 +4,7 @@ from persistence.application.ports.pena_labels_repository import (
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.domain.entity import Pena, PenaPlayer, PenaRole, SeasonPlayer
+from persistence.domain.entity import Pena, PenaPlayer, PenaRole
 from persistence.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,
@@ -150,14 +150,6 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
                     .where(
                         PenaPlayer.id_pena == pena_id,
                         PenaPlayer.id_role.in_(removed_role_ids),
-                    )
-                    .values(id_role=fallback_role.id)
-                )
-                self.session.execute(
-                    update(SeasonPlayer)
-                    .where(
-                        SeasonPlayer.id_pena == pena_id,
-                        SeasonPlayer.id_role.in_(removed_role_ids),
                     )
                     .values(id_role=fallback_role.id)
                 )

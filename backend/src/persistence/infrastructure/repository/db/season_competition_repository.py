@@ -155,11 +155,23 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.rollback()
             raise SeasonPlayerAlreadyRegisteredError()
 
+        role_names_by_id = self._get_role_names_by_ids(
+            pena_id=pena.id,
+            role_ids={link.id_role} if link.id_role is not None else set(),
+        )
+        resolved_role = self._resolve_snapshot_role(
+            explicit_role=None,
+            role_id=link.id_role,
+            player=player,
+            role_names_by_id=role_names_by_id,
+        )
+
         season_player = SeasonPlayer(
             id_player=player.id,
             id_pena=pena.id,
             id_season=season.id,
             id_role=link.id_role,
+            role=resolved_role,
             position=link.position,
             wins=0,
             losses=0,
@@ -190,6 +202,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         season_guid: str,
         admin_id: int,
         player_guids: list[str],
+        source_season_guid: str | None = None,
     ) -> list[SeasonPlayerResult]:
         if not player_guids:
             self.session.rollback()
@@ -205,6 +218,11 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.rollback()
             raise PenaNotManagedByAdminError()
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
+        source_season = (
+            self._get_season(pena_id=pena.id, season_guid=source_season_guid)
+            if source_season_guid
+            else None
+        )
 
         players = list(
             self.session.execute(
@@ -241,17 +259,55 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             self.session.rollback()
             raise SeasonPlayerAlreadyRegisteredError()
 
+        source_rows_by_player_id: dict[int, object] = {}
+        if source_season is not None:
+            source_rows = self.session.execute(
+                select(
+                    SeasonPlayer.id_player.label("id_player"),
+                    SeasonPlayer.id_role.label("id_role"),
+                    SeasonPlayer.role.label("role"),
+                    SeasonPlayer.position.label("position"),
+                ).where(
+                    SeasonPlayer.id_pena == pena.id,
+                    SeasonPlayer.id_season == source_season.id,
+                    SeasonPlayer.id_player.in_(player_ids),
+                )
+            ).all()
+            source_rows_by_player_id = {int(row.id_player): row for row in source_rows}
+
+        role_ids = {link.id_role for link in links if link.id_role is not None}
+        role_ids.update(
+            int(row.id_role)
+            for row in source_rows_by_player_id.values()
+            if getattr(row, "id_role", None) is not None
+        )
+        role_names_by_id = self._get_role_names_by_ids(pena_id=pena.id, role_ids=role_ids)
+
         season_players: dict[int, SeasonPlayer] = {}
         try:
             for player_guid in cleaned_guids:
                 player = players_by_guid[player_guid]
                 link = links_by_player_id[player.id]
+                source_row = source_rows_by_player_id.get(player.id)
+                role_id = source_row.id_role if source_row is not None else link.id_role
+                role_name = self._resolve_snapshot_role(
+                    explicit_role=source_row.role if source_row is not None else None,
+                    role_id=role_id,
+                    player=player,
+                    role_names_by_id=role_names_by_id,
+                )
+                position = (
+                    source_row.position
+                    if source_row is not None and source_row.position is not None
+                    else link.position
+                )
                 season_player = SeasonPlayer(
                     id_player=player.id,
                     id_pena=pena.id,
                     id_season=season.id,
-                    id_role=link.id_role,
-                    position=link.position,
+                    id_role=role_id,
+                    role=role_name,
+                    position=position,
                     wins=0,
                     losses=0,
                     draws=0,
@@ -392,6 +448,7 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         ).label("points")
         played_expr = (SeasonPlayer.wins + SeasonPlayer.draws + SeasonPlayer.losses).label("played")
         role_expr = func.coalesce(
+            SeasonPlayer.role,
             PenaRole.name,
             case((Player.id_player_account.is_(None), "guest"), else_="member"),
         ).label("role")
@@ -1248,6 +1305,39 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             raise PlayerNotInPenaError()
         return link
 
+    def _get_role_names_by_ids(
+        self,
+        *,
+        pena_id: int,
+        role_ids: set[int | None],
+    ) -> dict[int, str]:
+        cleaned_role_ids = {int(role_id) for role_id in role_ids if role_id is not None}
+        if not cleaned_role_ids:
+            return {}
+        rows = self.session.execute(
+            select(PenaRole.id, PenaRole.name).where(
+                PenaRole.id_pena == pena_id,
+                PenaRole.id.in_(cleaned_role_ids),
+            )
+        ).all()
+        return {int(row.id): str(row.name) for row in rows}
+
+    @staticmethod
+    def _resolve_snapshot_role(
+        *,
+        explicit_role: str | None,
+        role_id: int | None,
+        player: Player,
+        role_names_by_id: dict[int, str],
+    ) -> str:
+        if explicit_role and explicit_role.strip():
+            return explicit_role.strip()
+        if role_id is not None:
+            mapped = role_names_by_id.get(int(role_id))
+            if mapped:
+                return mapped
+        return "member" if player.id_player_account is not None else "guest"
+
     def _get_season_player(
         self,
         *,
@@ -1382,10 +1472,17 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             stmt = stmt.where(Player.nationality.ilike(f"%{filters.nationality}%"))
         if filters.nickname:
             stmt = stmt.where(PenaPlayer.nickname.ilike(f"%{filters.nickname}%"))
-        if filters.role:
-            stmt = stmt.where(role_expr.ilike(f"%{filters.role}%"))
-        if filters.position:
-            stmt = stmt.where(SeasonPlayer.position.ilike(f"%{filters.position}%"))
+        role_values = SqlAlchemySeasonCompetitionRepository._normalize_exact_filter_values(
+            [*filters.roles, filters.role] if filters.role else list(filters.roles)
+        )
+        if role_values:
+            stmt = stmt.where(func.lower(role_expr).in_(role_values))
+
+        position_values = SqlAlchemySeasonCompetitionRepository._normalize_exact_filter_values(
+            [*filters.positions, filters.position] if filters.position else list(filters.positions)
+        )
+        if position_values:
+            stmt = stmt.where(func.lower(SeasonPlayer.position).in_(position_values))
         if filters.search:
             token = f"%{filters.search}%"
             stmt = stmt.where(
@@ -1399,6 +1496,18 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 )
             )
         return stmt
+
+    @staticmethod
+    def _normalize_exact_filter_values(values: list[str]) -> tuple[str, ...]:
+        output: list[str] = []
+        seen: set[str] = set()
+        for raw in values:
+            normalized = str(raw or "").strip().casefold()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            output.append(normalized)
+        return tuple(output)
 
     @staticmethod
     def _apply_player_order(
@@ -1439,6 +1548,22 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         ).get(position)
 
     def _resolve_role_data(self, *, player: Player, season_player: SeasonPlayer) -> tuple[str, str]:
+        if season_player.role and season_player.role.strip():
+            role_name = season_player.role.strip()
+            configured_color = None
+            if season_player.id_role is not None:
+                role_row = self.session.execute(
+                    select(PenaRole.color).where(PenaRole.id == season_player.id_role)
+                ).one_or_none()
+                if role_row and role_row.color:
+                    configured_color = role_row.color
+            role_color = align_label_colors(
+                [role_name],
+                configured_colors={role_name: configured_color} if configured_color else None,
+                defaults=DEFAULT_ROLE_LABEL_COLORS,
+            )[role_name]
+            return role_name, role_color
+
         if season_player.id_role is not None:
             role_row = self.session.execute(
                 select(PenaRole.name, PenaRole.color).where(PenaRole.id == season_player.id_role)

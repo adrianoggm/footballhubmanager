@@ -51,7 +51,9 @@ class SeasonPlayerFilters:
     nationality: str | None = None
     nickname: str | None = None
     role: str | None = None
+    roles: tuple[str, ...] = ()
     position: str | None = None
+    positions: tuple[str, ...] = ()
     search: str | None = None
 
 
@@ -256,6 +258,7 @@ class SeasonCompetitionRepository(Protocol):
         season_guid: str,
         admin_id: int,
         player_guids: list[str],
+        source_season_guid: str | None = None,
     ) -> list[SeasonPlayerResult]: ...
 
     def update_player_stats_for_admin(

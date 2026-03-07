@@ -411,6 +411,7 @@ class ManageSeasonCompetitionUseCase:
         season_guid: str,
         admin_id: int,
         player_guids: list[str],
+        source_season_guid: str | None = None,
     ) -> list[SeasonPlayerInfo]:
         cleaned_guids = self._normalize_player_guids(player_guids)
         try:
@@ -419,6 +420,9 @@ class ManageSeasonCompetitionUseCase:
                 season_guid=season_guid,
                 admin_id=admin_id,
                 player_guids=cleaned_guids,
+                source_season_guid=(
+                    str(source_season_guid).strip() if source_season_guid else None
+                ),
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
