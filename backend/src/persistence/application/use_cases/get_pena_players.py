@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from persistence.application.ports.pena_player_query_repository import (
     PenaPlayerQueryRepository,
@@ -14,7 +14,7 @@ class PenaPlayerInfo:
     surname2: str | None
     nationality: str
     nickname: str | None
-    role: str | None
+    role: str | None = field(default=None, kw_only=True)
     position: str | None
 
 
