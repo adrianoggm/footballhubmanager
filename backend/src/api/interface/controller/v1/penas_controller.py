@@ -1,7 +1,9 @@
 import math
 from dataclasses import asdict
 
+from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
+from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from api.interface.controller.v1.model.response.penas_response import (
     LinkTokenResponse,
     PenaResponse,
@@ -14,11 +16,19 @@ from persistence.application.use_cases import (
     GeneratePenaLinkTokenUseCase,
     GetPenasUseCase,
     InvalidLinkTokenError,
+    InvalidPenaLabelsDataError,
     LinkUserToPenaUseCase,
+    ManagePenaLabelsUseCase,
     PenaAccessDeniedError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
+    PenaLabelsUpdate,
     PenasPage,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
+)
+from persistence.infrastructure.repository.db.pena_labels_repository import (
+    SqlAlchemyPenaLabelsRepository,
 )
 from persistence.infrastructure.repository.db.pena_link_repository import (
     SqlAlchemyPenaLinkRepository,
@@ -47,6 +57,11 @@ def get_generate_pena_link_token_use_case(
 def get_link_user_to_pena_use_case(db: Session = Depends(get_db)) -> LinkUserToPenaUseCase:
     repository = SqlAlchemyPenaLinkRepository(db)
     return LinkUserToPenaUseCase(repository)
+
+
+def get_pena_labels_use_case(db: Session = Depends(get_db)) -> ManagePenaLabelsUseCase:
+    repository = SqlAlchemyPenaLabelsRepository(db)
+    return ManagePenaLabelsUseCase(repository)
 
 
 def _page_response(page: PenasPage) -> PenasPageResponse:
@@ -91,6 +106,62 @@ def get_pena(
     if not pena:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
     return PenaResponse(**asdict(pena))
+
+
+@router.get("/penas/{pena_guid}/labels", response_model=PenaLabelsResponse)
+def get_pena_labels(
+    pena_guid: str,
+    _session=Depends(authorize_pena_access),
+    use_case: ManagePenaLabelsUseCase = Depends(get_pena_labels_use_case),
+):
+    try:
+        labels = use_case.get_for_pena(pena_guid=pena_guid)
+    except PenaLabelsPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    return PenaLabelsResponse(
+        role_labels=labels.role_labels,
+        position_labels=labels.position_labels,
+        role_colors=labels.role_colors,
+        position_colors=labels.position_colors,
+    )
+
+
+@router.put("/penas/{pena_guid}/labels", response_model=PenaLabelsResponse)
+def update_pena_labels(
+    pena_guid: str,
+    payload: UpdatePenaLabelsRequest,
+    admin_session=Depends(require_admin),
+    use_case: ManagePenaLabelsUseCase = Depends(get_pena_labels_use_case),
+):
+    try:
+        labels = use_case.update_for_admin(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            update=PenaLabelsUpdate(
+                role_labels=payload.role_labels,
+                position_labels=payload.position_labels,
+                role_colors=payload.role_colors,
+                position_colors=payload.position_colors,
+            ),
+        )
+    except InvalidPenaLabelsDataError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid pena labels data",
+        )
+    except PenaLabelsPenaNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    except PenaLabelsAccessDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin does not manage this pena",
+        )
+    return PenaLabelsResponse(
+        role_labels=labels.role_labels,
+        position_labels=labels.position_labels,
+        role_colors=labels.role_colors,
+        position_colors=labels.position_colors,
+    )
 
 
 @router.post("/penas/{pena_guid}/link-tokens", response_model=LinkTokenResponse)

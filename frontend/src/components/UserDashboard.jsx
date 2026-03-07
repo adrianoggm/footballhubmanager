@@ -47,7 +47,14 @@ const defaultMembershipForm = () => ({
   position: '',
 })
 
+const DEFAULT_LABEL_COLOR = '#64748B'
+
 const asText = (value) => value ?? ''
+
+const labelChipSx = (color) => ({
+  backgroundColor: color || DEFAULT_LABEL_COLOR,
+  color: '#fff',
+})
 
 const formatDate = (value) => {
   if (!value) {
@@ -794,6 +801,13 @@ export default function UserDashboard({ session, onLogout }) {
                                             position: currentStanding.position || '-',
                                           })}
                                         />
+                                        {currentStanding.role && (
+                                          <Chip
+                                            size="small"
+                                            label={currentStanding.role}
+                                            sx={labelChipSx(currentStanding.role_color)}
+                                          />
+                                        )}
                                         <Chip
                                           size="small"
                                           variant="outlined"
@@ -823,6 +837,10 @@ export default function UserDashboard({ session, onLogout }) {
                                             <TableCell>{t('dashboard.user.table.rank')}</TableCell>
                                             <TableCell>
                                               {t('dashboard.user.table.player')}
+                                            </TableCell>
+                                            <TableCell>{t('dashboard.user.table.role')}</TableCell>
+                                            <TableCell>
+                                              {t('dashboard.user.table.position')}
                                             </TableCell>
                                             <TableCell align="right">
                                               {t('dashboard.user.table.played')}
@@ -886,6 +904,28 @@ export default function UserDashboard({ session, onLogout }) {
                                                       />
                                                     )}
                                                   </Stack>
+                                                </TableCell>
+                                                <TableCell>
+                                                  {player.role ? (
+                                                    <Chip
+                                                      size="small"
+                                                      label={player.role}
+                                                      sx={labelChipSx(player.role_color)}
+                                                    />
+                                                  ) : (
+                                                    '-'
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>
+                                                  {player.position ? (
+                                                    <Chip
+                                                      size="small"
+                                                      label={player.position}
+                                                      sx={labelChipSx(player.position_color)}
+                                                    />
+                                                  ) : (
+                                                    '-'
+                                                  )}
                                                 </TableCell>
                                                 <TableCell align="right">
                                                   {player.played ??

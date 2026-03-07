@@ -10,6 +10,7 @@ class RegisterSeasonPlayerRequest(BaseModel):
 
 class RegisterSeasonPlayersBulkRequest(BaseModel):
     player_guids: list[str] = Field(min_length=1)
+    source_season_guid: str | None = None
 
 
 class UpdateSeasonPlayerStatsRequest(BaseModel):
@@ -17,6 +18,8 @@ class UpdateSeasonPlayerStatsRequest(BaseModel):
     losses: int | None = Field(default=None, ge=0)
     draws: int | None = Field(default=None, ge=0)
     quality_level: float | None = Field(default=None, ge=0)
+    role: str | None = None
+    position: str | None = None
 
 
 class CreateSeasonMatchRequest(BaseModel):

@@ -80,10 +80,27 @@ def get_season_competition_use_case(
 
 
 def _clean(value: str | None) -> str | None:
-    if value is None:
+    if value is None or not isinstance(value, str):
         return None
     value = value.strip()
     return value or None
+
+
+def _clean_many(values: list[str] | tuple[str, ...] | None) -> tuple[str, ...]:
+    if not values or not isinstance(values, (list, tuple)):
+        return ()
+    output: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        cleaned = _clean(raw)
+        if not cleaned:
+            continue
+        key = cleaned.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        output.append(cleaned)
+    return tuple(output)
 
 
 def _page_response(page: SeasonPlayersPage) -> SeasonPlayersPageResponse:
@@ -192,6 +209,7 @@ def register_players_in_season_bulk(
             season_guid=season_guid,
             admin_id=admin_session.user_id,
             player_guids=payload.player_guids,
+            source_season_guid=payload.source_season_guid,
         )
     except InvalidSeasonPlayerBatchDataError:
         raise HTTPException(
@@ -240,10 +258,14 @@ def update_season_player_stats(
         losses=payload.losses,
         draws=payload.draws,
         quality_level=payload.quality_level,
+        role=payload.role,
+        position=payload.position,
         wins_provided="wins" in payload.model_fields_set,
         losses_provided="losses" in payload.model_fields_set,
         draws_provided="draws" in payload.model_fields_set,
         quality_level_provided="quality_level" in payload.model_fields_set,
+        role_provided="role" in payload.model_fields_set,
+        position_provided="position" in payload.model_fields_set,
     )
     try:
         updated = use_case.update_player_stats_for_admin(
@@ -322,7 +344,8 @@ def list_season_players(
     surname2: str | None = Query(default=None),
     nationality: str | None = Query(default=None),
     nickname: str | None = Query(default=None),
-    position: str | None = Query(default=None),
+    role: list[str] | None = Query(default=None),
+    position: list[str] | None = Query(default=None),
     search: str | None = Query(default=None),
     order_by: Literal[
         "quality_level",
@@ -338,13 +361,18 @@ def list_season_players(
     use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
+    cleaned_roles = _clean_many(role)
+    cleaned_positions = _clean_many(position)
     filters = SeasonPlayerFilters(
         name=_clean(name),
         surname1=_clean(surname1),
         surname2=_clean(surname2),
         nationality=_clean(nationality),
         nickname=_clean(nickname),
-        position=_clean(position),
+        role=cleaned_roles[0] if len(cleaned_roles) == 1 else None,
+        roles=cleaned_roles,
+        position=cleaned_positions[0] if len(cleaned_positions) == 1 else None,
+        positions=cleaned_positions,
         search=_clean(search),
     )
     try:
@@ -799,13 +827,23 @@ def get_season_standings(
     season_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    role: list[str] | None = Query(default=None),
+    position: list[str] | None = Query(default=None),
     use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
+    cleaned_roles = _clean_many(role)
+    cleaned_positions = _clean_many(position)
     try:
         result = use_case.get_standings(
             pena_guid=pena_guid,
             season_guid=season_guid,
+            filters=SeasonPlayerFilters(
+                role=cleaned_roles[0] if len(cleaned_roles) == 1 else None,
+                roles=cleaned_roles,
+                position=cleaned_positions[0] if len(cleaned_positions) == 1 else None,
+                positions=cleaned_positions,
+            ),
             page=page,
             page_size=page_size,
         )

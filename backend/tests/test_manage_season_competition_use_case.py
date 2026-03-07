@@ -107,7 +107,10 @@ class _FakeRepo:
             surname2=None,
             nationality="Spain",
             nickname="JD",
+            role="member",
+            role_color="#15803D",
             position="CM",
+            position_color="#16A34A",
             played=1,
             goals=2,
             assists=1,
@@ -490,10 +493,19 @@ class _FakeRepo:
             raise MatchNotFoundError()
         self.last_payload = kwargs
 
-    def get_standings(self, *, pena_guid: str, season_guid: str, page: int, page_size: int):
+    def get_standings(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        filters: SeasonPlayerFilters,
+        page: int,
+        page_size: int,
+    ):
         self.last_payload = {
             "pena_guid": pena_guid,
             "season_guid": season_guid,
+            "filters": filters,
             "page": page,
             "page_size": page_size,
         }
@@ -586,9 +598,11 @@ def test_register_players_bulk_validates_and_forwards_cleaned_guids():
         season_guid="season-guid",
         admin_id=1,
         player_guids=[" player-a ", "player-b"],
+        source_season_guid=" source-season-guid ",
     )
     assert len(registered) == 2
     assert repo.last_payload["player_guids"] == ["player-a", "player-b"]
+    assert repo.last_payload["source_season_guid"] == "source-season-guid"
 
 
 def test_unregister_player_maps_in_match_error():

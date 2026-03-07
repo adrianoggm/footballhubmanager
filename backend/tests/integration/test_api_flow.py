@@ -82,6 +82,44 @@ def test_admin_register_creates_default_pena():
     assert any(item["name"] == admin_payload["name"] for item in penas["items"])
 
 
+def test_admin_can_read_and_update_pena_labels():
+    admin_auth, _ = _register_admin()
+    status, penas = _request("GET", f"{API_V1}/penas", token=admin_auth["token"])
+    assert status == 200, penas
+    pena_guid = penas["items"][0]["guid"]
+
+    status, defaults = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/labels",
+        token=admin_auth["token"],
+    )
+    assert status == 200, defaults
+    assert "member" in defaults["role_labels"]
+    assert "guest" in defaults["role_labels"]
+    assert "attacker" in defaults["position_labels"]
+
+    status, updated = _request(
+        "PUT",
+        f"{API_V1}/penas/{pena_guid}/labels",
+        token=admin_auth["token"],
+        payload={
+            "role_labels": ["president", "member", "guest", "supporter"],
+            "position_labels": ["attacker", "defender", "midfielder", "keeper"],
+        },
+    )
+    assert status == 200, updated
+    assert updated["role_labels"] == ["president", "member", "guest", "supporter"]
+    assert updated["position_labels"] == ["attacker", "defender", "midfielder", "keeper"]
+
+    status, reread = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/labels",
+        token=admin_auth["token"],
+    )
+    assert status == 200, reread
+    assert reread == updated
+
+
 def test_link_token_happy_path_end_to_end():
     admin_auth, _ = _register_admin()
     status, penas = _request("GET", f"{API_V1}/penas", token=admin_auth["token"])

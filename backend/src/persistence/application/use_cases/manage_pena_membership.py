@@ -4,6 +4,9 @@ from persistence.application.ports.pena_membership_repository import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
 from persistence.application.ports.pena_membership_repository import (
+    InvalidRoleLabelError as RepositoryInvalidRoleLabelError,
+)
+from persistence.application.ports.pena_membership_repository import (
     PenaMembershipNotFoundError as RepositoryPenaMembershipNotFoundError,
 )
 from persistence.application.ports.pena_membership_repository import (
@@ -40,8 +43,10 @@ class PenaMembershipInfo:
 @dataclass(frozen=True)
 class PenaMembershipUpdate:
     nickname: str | None = None
+    role: str | None = None
     position: str | None = None
     nickname_provided: bool = False
+    role_provided: bool = False
     position_provided: bool = False
 
 
@@ -52,6 +57,7 @@ class PenaGuestPlayerCreate:
     surname2: str | None = None
     nationality: str = ""
     nickname: str | None = None
+    role: str | None = None
     position: str | None = None
 
 
@@ -117,18 +123,22 @@ class ManagePenaMembershipUseCase:
             raise PenaMembershipUserProfileNotFoundError() from exc
         except RepositoryPenaMembershipNotFoundError as exc:
             raise PenaMembershipAccessDeniedError() from exc
+        except RepositoryInvalidRoleLabelError as exc:
+            raise InvalidPenaMembershipUpdateDataError() from exc
         return self._to_info(membership)
 
     def update_for_user(
         self, *, pena_guid: str, account_id: int, update: PenaMembershipUpdate
     ) -> PenaMembershipInfo:
-        nickname, position = self._normalize_update(update)
+        nickname, role, position = self._normalize_update(update)
         try:
             membership = self.repository.update_by_account(
                 pena_guid=pena_guid,
                 account_id=account_id,
                 nickname_provided=update.nickname_provided,
                 nickname=nickname,
+                role_provided=update.role_provided,
+                role=role,
                 position_provided=update.position_provided,
                 position=position,
             )
@@ -161,7 +171,7 @@ class ManagePenaMembershipUseCase:
         player_guid: str,
         update: PenaMembershipUpdate,
     ) -> PenaMembershipInfo:
-        nickname, position = self._normalize_update(update)
+        nickname, role, position = self._normalize_update(update)
         try:
             membership = self.repository.update_by_player_for_admin(
                 pena_guid=pena_guid,
@@ -169,6 +179,8 @@ class ManagePenaMembershipUseCase:
                 player_guid=player_guid,
                 nickname_provided=update.nickname_provided,
                 nickname=nickname,
+                role_provided=update.role_provided,
+                role=role,
                 position_provided=update.position_provided,
                 position=position,
             )
@@ -180,6 +192,8 @@ class ManagePenaMembershipUseCase:
             raise PenaMembershipPlayerNotFoundError() from exc
         except RepositoryPenaMembershipNotFoundError as exc:
             raise PenaMembershipNotFoundError() from exc
+        except RepositoryInvalidRoleLabelError as exc:
+            raise InvalidPenaMembershipUpdateDataError() from exc
         return self._to_info(membership)
 
     def remove_for_admin(self, *, pena_guid: str, admin_id: int, player_guid: str) -> None:
@@ -206,11 +220,14 @@ class ManagePenaMembershipUseCase:
         nationality = data.nationality.strip()
         surname2 = data.surname2.strip() if data.surname2 is not None else None
         nickname = data.nickname.strip() if data.nickname is not None else None
+        role = data.role.strip() if data.role is not None else None
         position = data.position.strip() if data.position is not None else None
         if surname2 == "":
             surname2 = None
         if nickname == "":
             nickname = None
+        if role == "":
+            role = None
         if position == "":
             position = None
 
@@ -226,6 +243,7 @@ class ManagePenaMembershipUseCase:
                 surname2=surname2,
                 nationality=nationality,
                 nickname=nickname,
+                role=role,
                 position=position,
             )
         except RepositoryPenaNotFoundError as exc:
@@ -234,14 +252,23 @@ class ManagePenaMembershipUseCase:
             raise PenaMembershipAccessDeniedError() from exc
         except RepositoryInvalidNationalityError as exc:
             raise PenaMembershipInvalidNationalityError() from exc
+        except RepositoryInvalidRoleLabelError as exc:
+            raise InvalidPenaGuestPlayerDataError() from exc
         return self._to_info(created)
 
     @staticmethod
-    def _normalize_update(update: PenaMembershipUpdate) -> tuple[str | None, str | None]:
-        if not update.nickname_provided and not update.position_provided:
+    def _normalize_update(
+        update: PenaMembershipUpdate,
+    ) -> tuple[str | None, str | None, str | None]:
+        if (
+            not update.nickname_provided
+            and not update.role_provided
+            and not update.position_provided
+        ):
             raise InvalidPenaMembershipUpdateDataError()
 
         nickname = update.nickname
+        role = update.role
         position = update.position
 
         if update.nickname_provided:
@@ -249,12 +276,17 @@ class ManagePenaMembershipUseCase:
             if nickname == "":
                 nickname = None
 
+        if update.role_provided:
+            role = role.strip() if role is not None else None
+            if role == "":
+                role = None
+
         if update.position_provided:
             position = position.strip() if position is not None else None
             if position == "":
                 position = None
 
-        return nickname, position
+        return nickname, role, position
 
     @staticmethod
     def _to_info(membership: PenaMembershipResult) -> PenaMembershipInfo:
@@ -266,6 +298,6 @@ class ManagePenaMembershipUseCase:
             surname2=membership.surname2,
             nationality=membership.nationality,
             nickname=membership.nickname,
+            role=membership.role,
             position=membership.position,
-            role="member",
         )

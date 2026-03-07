@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from persistence.application.ports.season_competition_repository import (
@@ -86,7 +86,10 @@ class SeasonPlayerInfo:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None = field(default=None, kw_only=True)
+    role_color: str | None = field(default=None, kw_only=True)
     position: str | None
+    position_color: str | None = field(default=None, kw_only=True)
     played: int
     goals: int
     assists: int
@@ -120,10 +123,14 @@ class SeasonPlayerStatsUpdate:
     losses: int | None = None
     draws: int | None = None
     quality_level: float | None = None
+    role: str | None = None
+    position: str | None = None
     wins_provided: bool = False
     losses_provided: bool = False
     draws_provided: bool = False
     quality_level_provided: bool = False
+    role_provided: bool = False
+    position_provided: bool = False
 
 
 @dataclass(frozen=True)
@@ -408,6 +415,7 @@ class ManageSeasonCompetitionUseCase:
         season_guid: str,
         admin_id: int,
         player_guids: list[str],
+        source_season_guid: str | None = None,
     ) -> list[SeasonPlayerInfo]:
         cleaned_guids = self._normalize_player_guids(player_guids)
         try:
@@ -416,6 +424,9 @@ class ManageSeasonCompetitionUseCase:
                 season_guid=season_guid,
                 admin_id=admin_id,
                 player_guids=cleaned_guids,
+                source_season_guid=(
+                    str(source_season_guid).strip() if source_season_guid else None
+                ),
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -447,6 +458,8 @@ class ManageSeasonCompetitionUseCase:
             or update.losses_provided
             or update.draws_provided
             or update.quality_level_provided
+            or update.role_provided
+            or update.position_provided
         ):
             raise InvalidSeasonPlayerUpdateDataError()
 
@@ -454,6 +467,16 @@ class ManageSeasonCompetitionUseCase:
         self._validate_stat_value(update.losses_provided, update.losses)
         self._validate_stat_value(update.draws_provided, update.draws)
         self._validate_quality_value(update.quality_level_provided, update.quality_level)
+        normalized_role = self._normalize_optional_text(
+            update.role if update.role_provided else None,
+            max_length=80,
+            invalid_error=InvalidSeasonPlayerUpdateDataError,
+        )
+        normalized_position = self._normalize_optional_text(
+            update.position if update.position_provided else None,
+            max_length=50,
+            invalid_error=InvalidSeasonPlayerUpdateDataError,
+        )
 
         try:
             updated = self.repository.update_player_stats_for_admin(
@@ -469,6 +492,10 @@ class ManageSeasonCompetitionUseCase:
                 draws=update.draws,
                 quality_level_provided=update.quality_level_provided,
                 quality_level=update.quality_level,
+                role_provided=update.role_provided,
+                role=normalized_role,
+                position_provided=update.position_provided,
+                position=normalized_position,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -862,12 +889,19 @@ class ManageSeasonCompetitionUseCase:
         return self._to_match_detail(result)
 
     def get_standings(
-        self, *, pena_guid: str, season_guid: str, page: int = 1, page_size: int = 20
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        filters: SeasonPlayerFilters | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> SeasonPlayersPage:
         try:
             result = self.repository.get_standings(
                 pena_guid=pena_guid,
                 season_guid=season_guid,
+                filters=filters or SeasonPlayerFilters(),
                 page=page,
                 page_size=page_size,
             )
@@ -1451,6 +1485,22 @@ class ManageSeasonCompetitionUseCase:
         return cleaned or None
 
     @staticmethod
+    def _normalize_optional_text(
+        value: str | None,
+        *,
+        max_length: int,
+        invalid_error: type[Exception],
+    ) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if len(cleaned) > max_length:
+            raise invalid_error()
+        return cleaned
+
+    @staticmethod
     def _normalize_player_guids(player_guids: list[str]) -> list[str]:
         if not player_guids:
             raise InvalidSeasonPlayerBatchDataError()
@@ -1509,7 +1559,10 @@ class ManageSeasonCompetitionUseCase:
             surname2=item.surname2,
             nationality=item.nationality,
             nickname=item.nickname,
+            role=item.role,
+            role_color=item.role_color,
             position=item.position,
+            position_color=item.position_color,
             played=item.played,
             goals=item.goals,
             assists=item.assists,

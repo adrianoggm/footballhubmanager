@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Protocol
 
@@ -21,7 +21,10 @@ class SeasonPlayerResult:
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None = field(default=None, kw_only=True)
+    role_color: str | None = field(default=None, kw_only=True)
     position: str | None
+    position_color: str | None = field(default=None, kw_only=True)
     played: int
     goals: int
     assists: int
@@ -47,7 +50,10 @@ class SeasonPlayerFilters:
     surname2: str | None = None
     nationality: str | None = None
     nickname: str | None = None
+    role: str | None = None
+    roles: tuple[str, ...] = ()
     position: str | None = None
+    positions: tuple[str, ...] = ()
     search: str | None = None
 
 
@@ -252,6 +258,7 @@ class SeasonCompetitionRepository(Protocol):
         season_guid: str,
         admin_id: int,
         player_guids: list[str],
+        source_season_guid: str | None = None,
     ) -> list[SeasonPlayerResult]: ...
 
     def update_player_stats_for_admin(
@@ -269,6 +276,10 @@ class SeasonCompetitionRepository(Protocol):
         draws: int | None,
         quality_level_provided: bool,
         quality_level: float | None,
+        role_provided: bool,
+        role: str | None,
+        position_provided: bool,
+        position: str | None,
     ) -> SeasonPlayerResult: ...
 
     def unregister_player_for_admin(
@@ -403,6 +414,7 @@ class SeasonCompetitionRepository(Protocol):
         *,
         pena_guid: str,
         season_guid: str,
+        filters: SeasonPlayerFilters,
         page: int,
         page_size: int,
     ) -> SeasonPlayersPageResult: ...

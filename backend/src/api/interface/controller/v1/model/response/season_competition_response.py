@@ -11,7 +11,10 @@ class SeasonPlayerResponse(BaseModel):
     surname2: str | None
     nationality: str
     nickname: str | None
+    role: str | None
+    role_color: str | None
     position: str | None
+    position_color: str | None
     played: int
     goals: int
     assists: int

@@ -43,9 +43,9 @@ export class UserService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`)
   }
 
-  listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20 } = {}) {
+  listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20, role = '', position = '' } = {}) {
     return httpClient.get(
-      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings?page=${page}&page_size=${pageSize}`
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings?page=${page}&page_size=${pageSize}&role=${encodeURIComponent(role)}&position=${encodeURIComponent(position)}`
     )
   }
 

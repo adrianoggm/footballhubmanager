@@ -23,7 +23,9 @@ def test_register_player_for_admin_maps_commit_integrity_error_to_conflict():
     session = Mock()
     no_existing_row = Mock()
     no_existing_row.scalar_one_or_none.return_value = None
-    session.execute.return_value = no_existing_row
+    role_names_row = Mock()
+    role_names_row.all.return_value = []
+    session.execute.side_effect = [no_existing_row, role_names_row]
     session.commit.side_effect = _integrity_error()
 
     repo = SqlAlchemySeasonCompetitionRepository(session)
@@ -37,8 +39,9 @@ def test_register_player_for_admin_maps_commit_integrity_error_to_conflict():
         surname1="One",
         surname2=None,
         nationality="Spain",
+        id_player_account=77,
     )
-    link = SimpleNamespace(id_player=33, nickname="P1", position="CM")
+    link = SimpleNamespace(id_player=33, id_role=9, nickname="P1", position="CM")
 
     repo._get_pena = lambda _pena_guid: pena
     repo._get_season = lambda *, pena_id, season_guid: season
@@ -68,19 +71,22 @@ def test_register_players_bulk_maps_commit_integrity_error_to_conflict():
             surname1="One",
             surname2=None,
             nationality="Spain",
+            id_player_account=77,
         )
     ]
     players_result.scalars.return_value = players
 
     links_result = Mock()
     links_result.scalars.return_value = [
-        SimpleNamespace(id_player=33, nickname="P1", position="CM")
+        SimpleNamespace(id_player=33, id_role=9, nickname="P1", position="CM")
     ]
 
     existing_result = Mock()
     existing_result.all.return_value = []
+    role_names_result = Mock()
+    role_names_result.all.return_value = []
 
-    session.execute.side_effect = [players_result, links_result, existing_result]
+    session.execute.side_effect = [players_result, links_result, existing_result, role_names_result]
     session.commit.side_effect = _integrity_error()
 
     repo = SqlAlchemySeasonCompetitionRepository(session)
