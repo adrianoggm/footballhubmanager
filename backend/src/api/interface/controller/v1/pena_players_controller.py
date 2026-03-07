@@ -40,7 +40,7 @@ router = APIRouter()
 
 
 def _clean(value: str | None) -> str | None:
-    if value is None:
+    if value is None or not isinstance(value, str):
         return None
     value = value.strip()
     return value or None

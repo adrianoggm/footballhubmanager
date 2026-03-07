@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from persistence.application.ports.season_competition_repository import (
@@ -86,10 +86,10 @@ class SeasonPlayerInfo:
     surname2: str | None
     nationality: str
     nickname: str | None
-    role: str | None
-    role_color: str | None
+    role: str | None = field(default=None, kw_only=True)
+    role_color: str | None = field(default=None, kw_only=True)
     position: str | None
-    position_color: str | None
+    position_color: str | None = field(default=None, kw_only=True)
     played: int
     goals: int
     assists: int

@@ -80,14 +80,14 @@ def get_season_competition_use_case(
 
 
 def _clean(value: str | None) -> str | None:
-    if value is None:
+    if value is None or not isinstance(value, str):
         return None
     value = value.strip()
     return value or None
 
 
-def _clean_many(values: list[str] | None) -> tuple[str, ...]:
-    if not values:
+def _clean_many(values: list[str] | tuple[str, ...] | None) -> tuple[str, ...]:
+    if not values or not isinstance(values, (list, tuple)):
         return ()
     output: list[str] = []
     seen: set[str] = set()
@@ -361,16 +361,18 @@ def list_season_players(
     use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
+    cleaned_roles = _clean_many(role)
+    cleaned_positions = _clean_many(position)
     filters = SeasonPlayerFilters(
         name=_clean(name),
         surname1=_clean(surname1),
         surname2=_clean(surname2),
         nationality=_clean(nationality),
         nickname=_clean(nickname),
-        role=_clean(role[0]) if role and len(role) == 1 else None,
-        roles=_clean_many(role),
-        position=_clean(position[0]) if position and len(position) == 1 else None,
-        positions=_clean_many(position),
+        role=cleaned_roles[0] if len(cleaned_roles) == 1 else None,
+        roles=cleaned_roles,
+        position=cleaned_positions[0] if len(cleaned_positions) == 1 else None,
+        positions=cleaned_positions,
         search=_clean(search),
     )
     try:
@@ -830,15 +832,17 @@ def get_season_standings(
     use_case: ManageSeasonCompetitionUseCase = Depends(get_season_competition_use_case),
     _session=Depends(authorize_pena_access),
 ):
+    cleaned_roles = _clean_many(role)
+    cleaned_positions = _clean_many(position)
     try:
         result = use_case.get_standings(
             pena_guid=pena_guid,
             season_guid=season_guid,
             filters=SeasonPlayerFilters(
-                role=_clean(role[0]) if role and len(role) == 1 else None,
-                roles=_clean_many(role),
-                position=_clean(position[0]) if position and len(position) == 1 else None,
-                positions=_clean_many(position),
+                role=cleaned_roles[0] if len(cleaned_roles) == 1 else None,
+                roles=cleaned_roles,
+                position=cleaned_positions[0] if len(cleaned_positions) == 1 else None,
+                positions=cleaned_positions,
             ),
             page=page,
             page_size=page_size,
