@@ -174,9 +174,10 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
       </Grid>
 
       <Grid item xs={12} md={8}>
-        <Card>
-          <CardContent>
-            <Stack spacing={2}>
+        <Stack spacing={2.5}>
+          <Card>
+            <CardContent>
+              <Stack spacing={2}>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 alignItems={{ sm: 'center' }}
@@ -248,6 +249,8 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     <TableHead>
                       <TableRow>
                         <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                        <TableCell>{t('dashboard.admin.members.role')}</TableCell>
+                        <TableCell>{t('dashboard.admin.members.position')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
                         <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
@@ -262,6 +265,28 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                       {seasonRoster.map((player) => (
                         <TableRow key={player.player_guid}>
                           <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                          <TableCell>
+                            {player.role ? (
+                              <Chip
+                                size="small"
+                                label={player.role}
+                                sx={labelChipSx(penaLabels.role_colors?.[player.role])}
+                              />
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {player.position ? (
+                              <Chip
+                                size="small"
+                                label={player.position}
+                                sx={labelChipSx(penaLabels.position_colors?.[player.position])}
+                              />
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
                           <TableCell align="right">
                             {player.played ?? player.wins + player.draws + player.losses}
                           </TableCell>
@@ -296,7 +321,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                       ))}
                       {!seasonRoster.length && (
                         <TableRow>
-                          <TableCell colSpan={9}>
+                          <TableCell colSpan={11}>
                             {t('dashboard.admin.players.noPlayersInSeason')}
                           </TableCell>
                         </TableRow>
@@ -305,114 +330,6 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                   </Table>
                 </TableContainer>
               )}
-            </Stack>
-          </CardContent>
-        </Card>
-      </Grid>
-
-      <Grid item xs={12} md={4}>
-        <Stack spacing={2.5}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.guest.description')}
-                </Typography>
-                <TextField
-                  label={t('dashboard.admin.guest.name')}
-                  value={guestForm.name}
-                  onChange={onGuestField('name')}
-                  fullWidth
-                />
-                <TextField
-                  label={t('dashboard.admin.guest.surname1')}
-                  value={guestForm.surname1}
-                  onChange={onGuestField('surname1')}
-                  fullWidth
-                />
-                <TextField
-                  label={t('dashboard.admin.guest.surname2')}
-                  value={guestForm.surname2}
-                  onChange={onGuestField('surname2')}
-                  fullWidth
-                />
-                {nationalities.length > 0 ? (
-                  <TextField
-                    select
-                    label={t('dashboard.admin.guest.nationality')}
-                    value={guestForm.nationality}
-                    onChange={onGuestField('nationality')}
-                    fullWidth
-                  >
-                    {nationalities.map((nationality) => (
-                      <MenuItem key={nationality} value={nationality}>
-                        {nationality}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                ) : (
-                  <TextField
-                    label={t('dashboard.admin.guest.nationality')}
-                    value={guestForm.nationality}
-                    onChange={onGuestField('nationality')}
-                    fullWidth
-                  />
-                )}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <TextField
-                    label={t('dashboard.admin.guest.nickname')}
-                    value={guestForm.nickname}
-                    onChange={onGuestField('nickname')}
-                    fullWidth
-                  />
-                </Stack>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <TextField
-                    select
-                    label={t('dashboard.admin.guest.role')}
-                    value={guestForm.role}
-                    onChange={onGuestField('role')}
-                    fullWidth
-                  >
-                    <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
-                    {penaLabels.role_labels.map((roleLabel) => (
-                      <MenuItem key={roleLabel} value={roleLabel}>
-                        {roleLabel}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField
-                    select
-                    label={t('dashboard.admin.guest.position')}
-                    value={guestForm.position}
-                    onChange={onGuestField('position')}
-                    fullWidth
-                  >
-                    <MenuItem value="">{t('dashboard.admin.guest.positionNone')}</MenuItem>
-                    {penaLabels.position_labels.map((positionLabel) => (
-                      <MenuItem key={positionLabel} value={positionLabel}>
-                        {positionLabel}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Stack>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => handleCreateGuestPlayer(false)}
-                    disabled={loading}
-                  >
-                    {t('dashboard.admin.guest.createGuest')}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={() => handleCreateGuestPlayer(true)}
-                    disabled={loading || !selectedSeasonGuid}
-                  >
-                    {t('dashboard.admin.guest.createAndAdd')}
-                  </Button>
-                </Stack>
               </Stack>
             </CardContent>
           </Card>
@@ -559,6 +476,113 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
             </CardContent>
           </Card>
         </Stack>
+      </Grid>
+
+      <Grid item xs={12} md={4}>
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.admin.guest.description')}
+              </Typography>
+              <TextField
+                label={t('dashboard.admin.guest.name')}
+                value={guestForm.name}
+                onChange={onGuestField('name')}
+                fullWidth
+              />
+              <TextField
+                label={t('dashboard.admin.guest.surname1')}
+                value={guestForm.surname1}
+                onChange={onGuestField('surname1')}
+                fullWidth
+              />
+              <TextField
+                label={t('dashboard.admin.guest.surname2')}
+                value={guestForm.surname2}
+                onChange={onGuestField('surname2')}
+                fullWidth
+              />
+              {nationalities.length > 0 ? (
+                <TextField
+                  select
+                  label={t('dashboard.admin.guest.nationality')}
+                  value={guestForm.nationality}
+                  onChange={onGuestField('nationality')}
+                  fullWidth
+                >
+                  {nationalities.map((nationality) => (
+                    <MenuItem key={nationality} value={nationality}>
+                      {nationality}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              ) : (
+                <TextField
+                  label={t('dashboard.admin.guest.nationality')}
+                  value={guestForm.nationality}
+                  onChange={onGuestField('nationality')}
+                  fullWidth
+                />
+              )}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <TextField
+                  label={t('dashboard.admin.guest.nickname')}
+                  value={guestForm.nickname}
+                  onChange={onGuestField('nickname')}
+                  fullWidth
+                />
+              </Stack>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <TextField
+                  select
+                  label={t('dashboard.admin.guest.role')}
+                  value={guestForm.role}
+                  onChange={onGuestField('role')}
+                  fullWidth
+                >
+                  <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
+                  {penaLabels.role_labels.map((roleLabel) => (
+                    <MenuItem key={roleLabel} value={roleLabel}>
+                      {roleLabel}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  label={t('dashboard.admin.guest.position')}
+                  value={guestForm.position}
+                  onChange={onGuestField('position')}
+                  fullWidth
+                >
+                  <MenuItem value="">{t('dashboard.admin.guest.positionNone')}</MenuItem>
+                  {penaLabels.position_labels.map((positionLabel) => (
+                    <MenuItem key={positionLabel} value={positionLabel}>
+                      {positionLabel}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleCreateGuestPlayer(false)}
+                  disabled={loading}
+                >
+                  {t('dashboard.admin.guest.createGuest')}
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => handleCreateGuestPlayer(true)}
+                  disabled={loading || !selectedSeasonGuid}
+                >
+                  {t('dashboard.admin.guest.createAndAdd')}
+                </Button>
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
       </Grid>
     </Grid>
   )

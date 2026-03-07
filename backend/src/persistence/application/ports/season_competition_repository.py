@@ -276,6 +276,10 @@ class SeasonCompetitionRepository(Protocol):
         draws: int | None,
         quality_level_provided: bool,
         quality_level: float | None,
+        role_provided: bool,
+        role: str | None,
+        position_provided: bool,
+        position: str | None,
     ) -> SeasonPlayerResult: ...
 
     def unregister_player_for_admin(

@@ -349,6 +349,10 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
         draws: int | None,
         quality_level_provided: bool,
         quality_level: float | None,
+        role_provided: bool,
+        role: str | None,
+        position_provided: bool,
+        position: str | None,
     ) -> SeasonPlayerResult:
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
@@ -384,6 +388,15 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
                 self.session.rollback()
                 raise InvalidSeasonPlayerStatsError()
             season_player.quality_level = quality_level
+        if role_provided:
+            resolved_role_id, resolved_role_name = self._resolve_role_snapshot_for_update(
+                pena_id=pena.id,
+                role=role,
+            )
+            season_player.id_role = resolved_role_id
+            season_player.role = resolved_role_name
+        if position_provided:
+            season_player.position = position
 
         self.session.commit()
         position_color_map = parse_label_colors_payload(pena.position_label_colors)
@@ -1337,6 +1350,25 @@ class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
             if mapped:
                 return mapped
         return "member" if player.id_player_account is not None else "guest"
+
+    def _resolve_role_snapshot_for_update(
+        self,
+        *,
+        pena_id: int,
+        role: str | None,
+    ) -> tuple[int | None, str | None]:
+        if role is None:
+            return None, None
+
+        role_row = self.session.execute(
+            select(PenaRole.id, PenaRole.name).where(
+                PenaRole.id_pena == pena_id,
+                func.lower(PenaRole.name) == func.lower(role),
+            )
+        ).one_or_none()
+        if role_row:
+            return int(role_row.id), str(role_row.name)
+        return None, role
 
     def _get_season_player(
         self,

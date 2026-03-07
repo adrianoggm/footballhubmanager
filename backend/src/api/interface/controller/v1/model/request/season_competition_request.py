@@ -18,6 +18,8 @@ class UpdateSeasonPlayerStatsRequest(BaseModel):
     losses: int | None = Field(default=None, ge=0)
     draws: int | None = Field(default=None, ge=0)
     quality_level: float | None = Field(default=None, ge=0)
+    role: str | None = None
+    position: str | None = None
 
 
 class CreateSeasonMatchRequest(BaseModel):

@@ -72,6 +72,8 @@ const defaultSeasonPlayerDraft = () => ({
   draws: '0',
   losses: '0',
   quality_level: '0',
+  role: '',
+  position: '',
 })
 
 const defaultMembershipDraft = () => ({
@@ -1436,6 +1438,8 @@ export default function AdminDashboard({ session, onLogout }) {
       draws: String(player.draws ?? 0),
       losses: String(player.losses ?? 0),
       quality_level: String(player.quality_level ?? 0),
+      role: player.role || '',
+      position: player.position || '',
     })
   }
 
@@ -1478,6 +1482,8 @@ export default function AdminDashboard({ session, onLogout }) {
           draws,
           losses,
           quality_level: qualityLevel,
+          role: seasonPlayerDraft.role.trim() || null,
+          position: seasonPlayerDraft.position.trim() || null,
         }
       )
       await Promise.all([
@@ -2748,6 +2754,45 @@ export default function AdminDashboard({ session, onLogout }) {
               : ''}
           </DialogContentText>
           <Stack spacing={1.5}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <TextField
+                select
+                label={t('dashboard.admin.members.role')}
+                value={seasonPlayerDraft.role}
+                onChange={onSeasonPlayerDraftField('role')}
+                fullWidth
+              >
+                <MenuItem value="">{t('dashboard.admin.members.roleNone')}</MenuItem>
+                {seasonPlayerDraft.role && !hasLabel(penaLabels.role_labels, seasonPlayerDraft.role) && (
+                  <MenuItem value={seasonPlayerDraft.role}>{seasonPlayerDraft.role}</MenuItem>
+                )}
+                {penaLabels.role_labels.map((roleLabel) => (
+                  <MenuItem key={roleLabel} value={roleLabel}>
+                    {roleLabel}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label={t('dashboard.admin.members.position')}
+                value={seasonPlayerDraft.position}
+                onChange={onSeasonPlayerDraftField('position')}
+                fullWidth
+              >
+                <MenuItem value="">{t('dashboard.admin.members.positionNone')}</MenuItem>
+                {seasonPlayerDraft.position &&
+                  !hasLabel(penaLabels.position_labels, seasonPlayerDraft.position) && (
+                    <MenuItem value={seasonPlayerDraft.position}>
+                      {seasonPlayerDraft.position}
+                    </MenuItem>
+                  )}
+                {penaLabels.position_labels.map((positionLabel) => (
+                  <MenuItem key={positionLabel} value={positionLabel}>
+                    {positionLabel}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <TextField
                 type="number"

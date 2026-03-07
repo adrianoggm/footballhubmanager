@@ -258,10 +258,14 @@ def update_season_player_stats(
         losses=payload.losses,
         draws=payload.draws,
         quality_level=payload.quality_level,
+        role=payload.role,
+        position=payload.position,
         wins_provided="wins" in payload.model_fields_set,
         losses_provided="losses" in payload.model_fields_set,
         draws_provided="draws" in payload.model_fields_set,
         quality_level_provided="quality_level" in payload.model_fields_set,
+        role_provided="role" in payload.model_fields_set,
+        position_provided="position" in payload.model_fields_set,
     )
     try:
         updated = use_case.update_player_stats_for_admin(

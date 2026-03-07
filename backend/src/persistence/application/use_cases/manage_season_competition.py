@@ -123,10 +123,14 @@ class SeasonPlayerStatsUpdate:
     losses: int | None = None
     draws: int | None = None
     quality_level: float | None = None
+    role: str | None = None
+    position: str | None = None
     wins_provided: bool = False
     losses_provided: bool = False
     draws_provided: bool = False
     quality_level_provided: bool = False
+    role_provided: bool = False
+    position_provided: bool = False
 
 
 @dataclass(frozen=True)
@@ -454,6 +458,8 @@ class ManageSeasonCompetitionUseCase:
             or update.losses_provided
             or update.draws_provided
             or update.quality_level_provided
+            or update.role_provided
+            or update.position_provided
         ):
             raise InvalidSeasonPlayerUpdateDataError()
 
@@ -461,6 +467,16 @@ class ManageSeasonCompetitionUseCase:
         self._validate_stat_value(update.losses_provided, update.losses)
         self._validate_stat_value(update.draws_provided, update.draws)
         self._validate_quality_value(update.quality_level_provided, update.quality_level)
+        normalized_role = self._normalize_optional_text(
+            update.role if update.role_provided else None,
+            max_length=80,
+            invalid_error=InvalidSeasonPlayerUpdateDataError,
+        )
+        normalized_position = self._normalize_optional_text(
+            update.position if update.position_provided else None,
+            max_length=50,
+            invalid_error=InvalidSeasonPlayerUpdateDataError,
+        )
 
         try:
             updated = self.repository.update_player_stats_for_admin(
@@ -476,6 +492,10 @@ class ManageSeasonCompetitionUseCase:
                 draws=update.draws,
                 quality_level_provided=update.quality_level_provided,
                 quality_level=update.quality_level,
+                role_provided=update.role_provided,
+                role=normalized_role,
+                position_provided=update.position_provided,
+                position=normalized_position,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -1463,6 +1483,22 @@ class ManageSeasonCompetitionUseCase:
             return None
         cleaned = value.strip()
         return cleaned or None
+
+    @staticmethod
+    def _normalize_optional_text(
+        value: str | None,
+        *,
+        max_length: int,
+        invalid_error: type[Exception],
+    ) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if len(cleaned) > max_length:
+            raise invalid_error()
+        return cleaned
 
     @staticmethod
     def _normalize_player_guids(player_guids: list[str]) -> list[str]:
