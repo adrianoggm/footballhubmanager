@@ -80,11 +80,7 @@ export class AdminService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/players${query}`)
   }
 
-  listStandings(
-    penaGuid,
-    seasonGuid,
-    { page = 1, pageSize = 20, role = [], position = [] } = {}
-  ) {
+  listStandings(penaGuid, seasonGuid, { page = 1, pageSize = 20, role = [], position = [] } = {}) {
     const query = toQueryString({ page, page_size: pageSize, role, position })
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/standings${query}`)
   }

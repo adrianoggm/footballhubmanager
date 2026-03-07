@@ -185,158 +185,158 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
           <Card>
             <CardContent>
               <Stack spacing={2}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                alignItems={{ sm: 'center' }}
-                justifyContent="space-between"
-                spacing={1.5}
-              >
-                <Typography variant="h6">{t('dashboard.admin.players.squadTitle')}</Typography>
-                {selectedSeason && (
-                  <Chip size="small" color="primary" label={selectedSeasonLabel} />
-                )}
-              </Stack>
-
-              {!seasonList.length && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.players.createSeasonFirst')}
-                </Typography>
-              )}
-
-              <TextField
-                select
-                label={t('dashboard.admin.players.historicalMembersLabel')}
-                value={selectedHistoricalGuids}
-                onChange={handleSelectHistoricalPlayers}
-                SelectProps={{
-                  multiple: true,
-                  renderValue: (selected) =>
-                    t('dashboard.admin.players.selectedCount', {
-                      count: selected.length,
-                    }),
-                }}
-                disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
-                helperText={
-                  !selectedSeasonGuid
-                    ? t('dashboard.admin.players.helperSelectSeason')
-                    : availableHistoricalPlayers.length
-                      ? t('dashboard.admin.players.helperSome')
-                      : t('dashboard.admin.players.helperNone')
-                }
-                fullWidth
-              >
-                {availableHistoricalPlayers.map((player) => (
-                  <MenuItem key={player.guid} value={player.guid}>
-                    {formatPlayerDisplayName(player)}
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Button
-                  variant="contained"
-                  onClick={handleRegisterHistoricalPlayersInSeason}
-                  disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  alignItems={{ sm: 'center' }}
+                  justifyContent="space-between"
+                  spacing={1.5}
                 >
-                  {t('dashboard.admin.players.addSelectedToSeason')}
-                </Button>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.players.registeredAvailable', {
-                    registered: seasonRoster.length,
-                    available: availableHistoricalPlayers.length,
-                  })}
-                </Typography>
-              </Stack>
+                  <Typography variant="h6">{t('dashboard.admin.players.squadTitle')}</Typography>
+                  {selectedSeason && (
+                    <Chip size="small" color="primary" label={selectedSeasonLabel} />
+                  )}
+                </Stack>
 
-              {seasonRosterLoading && <LinearProgress />}
+                {!seasonList.length && (
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.admin.players.createSeasonFirst')}
+                  </Typography>
+                )}
 
-              {selectedSeasonGuid && !seasonRosterLoading && (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                        <TableCell>{t('dashboard.admin.members.role')}</TableCell>
-                        <TableCell>{t('dashboard.admin.members.position')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
-                        <TableCell>{t('dashboard.admin.players.actions')}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {seasonRoster.map((player) => (
-                        <TableRow key={player.player_guid}>
-                          <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                          <TableCell>
-                            {player.role ? (
-                              <Chip
-                                size="small"
-                                label={player.role}
-                                sx={labelChipSx(penaLabels.role_colors?.[player.role])}
-                              />
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {player.position ? (
-                              <Chip
-                                size="small"
-                                label={player.position}
-                                sx={labelChipSx(penaLabels.position_colors?.[player.position])}
-                              />
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell align="right">
-                            {player.played ?? player.wins + player.draws + player.losses}
-                          </TableCell>
-                          <TableCell align="right">{player.wins}</TableCell>
-                          <TableCell align="right">{player.draws}</TableCell>
-                          <TableCell align="right">{player.losses}</TableCell>
-                          <TableCell align="right">{player.goals ?? 0}</TableCell>
-                          <TableCell align="right">{player.assists ?? 0}</TableCell>
-                          <TableCell align="right">{player.points}</TableCell>
-                          <TableCell>
-                            <Stack direction="row" spacing={1}>
-                              <Button
-                                size="small"
-                                variant="text"
-                                onClick={() => handleEditSeasonPlayer(player)}
-                                disabled={loading}
-                              >
-                                {t('dashboard.admin.players.editSeasonPlayer')}
-                              </Button>
-                              <Button
-                                size="small"
-                                variant="text"
-                                color="error"
-                                onClick={() => handleRequestRemoveSeasonPlayer(player)}
-                                disabled={loading}
-                              >
-                                {t('dashboard.admin.players.removeFromSeason')}
-                              </Button>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {!seasonRoster.length && (
+                <TextField
+                  select
+                  label={t('dashboard.admin.players.historicalMembersLabel')}
+                  value={selectedHistoricalGuids}
+                  onChange={handleSelectHistoricalPlayers}
+                  SelectProps={{
+                    multiple: true,
+                    renderValue: (selected) =>
+                      t('dashboard.admin.players.selectedCount', {
+                        count: selected.length,
+                      }),
+                  }}
+                  disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
+                  helperText={
+                    !selectedSeasonGuid
+                      ? t('dashboard.admin.players.helperSelectSeason')
+                      : availableHistoricalPlayers.length
+                        ? t('dashboard.admin.players.helperSome')
+                        : t('dashboard.admin.players.helperNone')
+                  }
+                  fullWidth
+                >
+                  {availableHistoricalPlayers.map((player) => (
+                    <MenuItem key={player.guid} value={player.guid}>
+                      {formatPlayerDisplayName(player)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                  <Button
+                    variant="contained"
+                    onClick={handleRegisterHistoricalPlayersInSeason}
+                    disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
+                  >
+                    {t('dashboard.admin.players.addSelectedToSeason')}
+                  </Button>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('dashboard.admin.players.registeredAvailable', {
+                      registered: seasonRoster.length,
+                      available: availableHistoricalPlayers.length,
+                    })}
+                  </Typography>
+                </Stack>
+
+                {seasonRosterLoading && <LinearProgress />}
+
+                {selectedSeasonGuid && !seasonRosterLoading && (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
                         <TableRow>
-                          <TableCell colSpan={11}>
-                            {t('dashboard.admin.players.noPlayersInSeason')}
-                          </TableCell>
+                          <TableCell>{t('dashboard.admin.table.player')}</TableCell>
+                          <TableCell>{t('dashboard.admin.members.role')}</TableCell>
+                          <TableCell>{t('dashboard.admin.members.position')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
+                          <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
+                          <TableCell>{t('dashboard.admin.players.actions')}</TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
+                      </TableHead>
+                      <TableBody>
+                        {seasonRoster.map((player) => (
+                          <TableRow key={player.player_guid}>
+                            <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                            <TableCell>
+                              {player.role ? (
+                                <Chip
+                                  size="small"
+                                  label={player.role}
+                                  sx={labelChipSx(penaLabels.role_colors?.[player.role])}
+                                />
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {player.position ? (
+                                <Chip
+                                  size="small"
+                                  label={player.position}
+                                  sx={labelChipSx(penaLabels.position_colors?.[player.position])}
+                                />
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                            <TableCell align="right">
+                              {player.played ?? player.wins + player.draws + player.losses}
+                            </TableCell>
+                            <TableCell align="right">{player.wins}</TableCell>
+                            <TableCell align="right">{player.draws}</TableCell>
+                            <TableCell align="right">{player.losses}</TableCell>
+                            <TableCell align="right">{player.goals ?? 0}</TableCell>
+                            <TableCell align="right">{player.assists ?? 0}</TableCell>
+                            <TableCell align="right">{player.points}</TableCell>
+                            <TableCell>
+                              <Stack direction="row" spacing={1}>
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  onClick={() => handleEditSeasonPlayer(player)}
+                                  disabled={loading}
+                                >
+                                  {t('dashboard.admin.players.editSeasonPlayer')}
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  color="error"
+                                  onClick={() => handleRequestRemoveSeasonPlayer(player)}
+                                  disabled={loading}
+                                >
+                                  {t('dashboard.admin.players.removeFromSeason')}
+                                </Button>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {!seasonRoster.length && (
+                          <TableRow>
+                            <TableCell colSpan={11}>
+                              {t('dashboard.admin.players.noPlayersInSeason')}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </Stack>
             </CardContent>
           </Card>
@@ -367,7 +367,10 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           multiple: true,
                           displayEmpty: true,
                           renderValue: (selected) =>
-                            renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles')),
+                            renderFilterValue(
+                              selected,
+                              t('dashboard.admin.members.filterAllRoles')
+                            ),
                         }}
                         fullWidth
                       >

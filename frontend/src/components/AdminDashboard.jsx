@@ -240,7 +240,15 @@ const normalizeFilterValues = (value) => {
         .split(',')
         .map((item) => item.trim())
   return Array.from(
-    new Set(source.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean))
+    new Set(
+      source
+        .map((item) =>
+          String(item || '')
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    )
   )
 }
 
@@ -254,7 +262,11 @@ const renderFilterValue = (selected, emptyLabel) => {
 const pruneFilterValues = (selectedValues, allowedLabels) => {
   const allowed = new Set(
     (allowedLabels || [])
-      .map((item) => String(item || '').trim().toLowerCase())
+      .map((item) =>
+        String(item || '')
+          .trim()
+          .toLowerCase()
+      )
       .filter(Boolean)
   )
   return normalizeFilterValues(selectedValues).filter((item) => allowed.has(item))
@@ -2768,9 +2780,10 @@ export default function AdminDashboard({ session, onLogout }) {
                 fullWidth
               >
                 <MenuItem value="">{t('dashboard.admin.members.roleNone')}</MenuItem>
-                {seasonPlayerDraft.role && !hasLabel(penaLabels.role_labels, seasonPlayerDraft.role) && (
-                  <MenuItem value={seasonPlayerDraft.role}>{seasonPlayerDraft.role}</MenuItem>
-                )}
+                {seasonPlayerDraft.role &&
+                  !hasLabel(penaLabels.role_labels, seasonPlayerDraft.role) && (
+                    <MenuItem value={seasonPlayerDraft.role}>{seasonPlayerDraft.role}</MenuItem>
+                  )}
                 {penaLabels.role_labels.map((roleLabel) => (
                   <MenuItem key={roleLabel} value={roleLabel}>
                     {roleLabel}
