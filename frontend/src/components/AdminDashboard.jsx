@@ -244,6 +244,13 @@ const normalizeFilterValues = (value) => {
   )
 }
 
+const renderFilterValue = (selected, emptyLabel) => {
+  const values = Array.isArray(selected)
+    ? selected.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+  return values.length ? values.join(', ') : emptyLabel
+}
+
 const pruneFilterValues = (selectedValues, allowedLabels) => {
   const allowed = new Set(
     (allowedLabels || [])
@@ -2539,13 +2546,12 @@ export default function AdminDashboard({ session, onLogout }) {
                   label={t('dashboard.admin.members.filterRole')}
                   value={standingsFilters.role}
                   onChange={onStandingsFilterField('role')}
+                  InputLabelProps={{ shrink: true }}
                   SelectProps={{
                     multiple: true,
                     displayEmpty: true,
                     renderValue: (selected) =>
-                      selected.length
-                        ? selected.join(', ')
-                        : t('dashboard.admin.members.filterAllRoles'),
+                      renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles')),
                   }}
                   fullWidth
                 >
@@ -2561,13 +2567,12 @@ export default function AdminDashboard({ session, onLogout }) {
                   label={t('dashboard.admin.members.filterPosition')}
                   value={standingsFilters.position}
                   onChange={onStandingsFilterField('position')}
+                  InputLabelProps={{ shrink: true }}
                   SelectProps={{
                     multiple: true,
                     displayEmpty: true,
                     renderValue: (selected) =>
-                      selected.length
-                        ? selected.join(', ')
-                        : t('dashboard.admin.members.filterAllPositions'),
+                      renderFilterValue(selected, t('dashboard.admin.members.filterAllPositions')),
                   }}
                   fullWidth
                 >

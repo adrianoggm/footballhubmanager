@@ -23,6 +23,13 @@ const labelChipSx = (color) => ({
   border: '1px solid rgba(15, 23, 42, 0.12)',
 })
 
+const renderFilterValue = (selected, emptyLabel) => {
+  const values = Array.isArray(selected)
+    ? selected.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+  return values.length ? values.join(', ') : emptyLabel
+}
+
 export default function AdminPlayersSection({ state, actions, helpers }) {
   const { t, formatPlayerDisplayName } = helpers
   const {
@@ -355,13 +362,12 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         label={t('dashboard.admin.members.filterRole')}
                         value={memberFilters.role}
                         onChange={onMemberFilterField('role')}
+                        InputLabelProps={{ shrink: true }}
                         SelectProps={{
                           multiple: true,
                           displayEmpty: true,
                           renderValue: (selected) =>
-                            selected.length
-                              ? selected.join(', ')
-                              : t('dashboard.admin.members.filterAllRoles'),
+                            renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles')),
                         }}
                         fullWidth
                       >
@@ -377,13 +383,15 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         label={t('dashboard.admin.members.filterPosition')}
                         value={memberFilters.position}
                         onChange={onMemberFilterField('position')}
+                        InputLabelProps={{ shrink: true }}
                         SelectProps={{
                           multiple: true,
                           displayEmpty: true,
                           renderValue: (selected) =>
-                            selected.length
-                              ? selected.join(', ')
-                              : t('dashboard.admin.members.filterAllPositions'),
+                            renderFilterValue(
+                              selected,
+                              t('dashboard.admin.members.filterAllPositions')
+                            ),
                         }}
                         fullWidth
                       >
