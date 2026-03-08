@@ -1420,7 +1420,7 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const handleSelectSeasonFromHistory = (seasonGuid) => {
-    selectSeason(seasonGuid)
+    selectSeason(selectedSeasonGuid === seasonGuid ? '' : seasonGuid)
   }
 
   const handleSelectHistoricalPlayers = (event) => {
