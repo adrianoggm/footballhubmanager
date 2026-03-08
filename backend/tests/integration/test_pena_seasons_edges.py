@@ -315,6 +315,42 @@ def test_non_member_user_cannot_read_pena_seasons():
     assert denied["detail"] == "User does not belong to this pena"
 
 
+def test_list_seasons_returns_newest_ranges_first_even_when_future():
+    admin_auth = _register_admin()
+    admin_token = admin_auth["token"]
+    pena_guid = _first_pena_guid(admin_token)
+
+    older_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+    )
+    middle_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date="2025-01-01",
+        end_date="2025-12-31",
+    )
+    future_guid = _create_season(
+        admin_token,
+        pena_guid,
+        start_date="2027-01-01",
+        end_date="2027-12-31",
+    )
+
+    status, listing = _request(
+        "GET",
+        f"{API_V1}/penas/{pena_guid}/seasons?page=1&page_size=100",
+        token=admin_token,
+    )
+    assert status == 200, listing
+    returned_guids = [item["guid"] for item in listing["items"]]
+    assert returned_guids[:3] == [future_guid, middle_guid, older_guid]
+    returned_end_dates = [item["end_date"] for item in listing["items"]]
+    assert returned_end_dates == sorted(returned_end_dates, reverse=True)
+
+
 def test_admin_cannot_manage_foreign_pena_seasons():
     owner_admin = _register_admin()
     owner_token = owner_admin["token"]

@@ -25,7 +25,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonRepository):
         stmt = (
             select(Season)
             .where(Season.id_pena == pena.id)
-            .order_by(Season.start_date.desc(), Season.end_date.desc())
+            .order_by(Season.end_date.desc(), Season.start_date.desc())
             .limit(page_size)
             .offset((page - 1) * page_size)
         )
