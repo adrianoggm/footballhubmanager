@@ -19,7 +19,6 @@ from persistence.application.ports.season_competition_port import (
     MatchSummaryResult,
     MatchTeamResult,
     SeasonCompetitionPort,
-    SeasonPlayerFilters as RepositorySeasonPlayerFilters,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
     SeasonResult,
@@ -59,6 +58,9 @@ from persistence.application.ports.season_competition_port import (
 )
 from persistence.application.ports.season_competition_port import (
     SeasonPlayerAlreadyRegisteredError as RepositorySeasonPlayerAlreadyRegisteredError,
+)
+from persistence.application.ports.season_competition_port import (
+    SeasonPlayerFilters as RepositorySeasonPlayerFilters,
 )
 from persistence.application.ports.season_competition_port import (
     SeasonPlayerHasMatchesError as RepositorySeasonPlayerHasMatchesError,

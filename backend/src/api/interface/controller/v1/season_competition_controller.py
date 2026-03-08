@@ -57,10 +57,10 @@ from persistence.application.use_cases import (
     SeasonMatchTeamInfo,
     SeasonMatchUpdate,
     SeasonPlayerAlreadyRegisteredError,
-    SeasonPlayersFilters,
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
+    SeasonPlayersFilters,
     SeasonPlayersPage,
     SeasonPlayerStatsUpdate,
 )

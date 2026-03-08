@@ -45,8 +45,8 @@ from persistence.application.use_cases.manage_season_competition_usecase import 
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    SeasonPlayersPage,
     SeasonPlayersFilters,
+    SeasonPlayersPage,
 )
 
 

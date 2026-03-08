@@ -78,8 +78,8 @@ from .manage_season_competition_usecase import (
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    SeasonPlayersPage,
     SeasonPlayersFilters,
+    SeasonPlayersPage,
     SeasonPlayerStatsUpdate,
 )
 from .register_admin_usecase import (
