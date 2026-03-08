@@ -43,7 +43,7 @@ class InvalidRoleLabelError(Exception):
     pass
 
 
-class PenaMembershipRepository(Protocol):
+class PenaMembershipPort(Protocol):
     def get_by_pena_and_player(
         self, *, pena_guid: str, player_guid: str
     ) -> PenaMembershipResult: ...

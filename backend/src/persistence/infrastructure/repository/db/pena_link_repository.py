@@ -1,9 +1,9 @@
 import secrets
 import time
 
-from persistence.application.ports.pena_link_repository import (
+from persistence.application.ports.pena_link_port import (
     InvalidOrExpiredLinkTokenError,
-    PenaLinkRepository,
+    PenaLinkPort,
     PenaLinkTokenResult,
     PenaNotManagedByAdminError,
     UserAlreadyLinkedToPenaError,
@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPenaLinkRepository(PenaLinkRepository):
+class SqlAlchemyPenaLinkRepository(PenaLinkPort):
     def __init__(self, session: Session):
         self.session = session
 

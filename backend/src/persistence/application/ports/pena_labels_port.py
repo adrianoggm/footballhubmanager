@@ -18,7 +18,7 @@ class PenaNotManagedByAdminError(Exception):
     pass
 
 
-class PenaLabelsRepository(Protocol):
+class PenaLabelsPort(Protocol):
     def get_by_pena_guid(self, *, pena_guid: str) -> PenaLabelsResult: ...
 
     def update_for_admin(

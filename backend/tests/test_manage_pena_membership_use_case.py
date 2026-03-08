@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     InvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipResult,

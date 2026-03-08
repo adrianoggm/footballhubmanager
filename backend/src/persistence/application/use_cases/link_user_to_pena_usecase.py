@@ -1,6 +1,6 @@
-from persistence.application.ports.pena_link_repository import (
+from persistence.application.ports.pena_link_port import (
     InvalidOrExpiredLinkTokenError,
-    PenaLinkRepository,
+    PenaLinkPort,
     UserAlreadyLinkedToPenaError,
     UserPlayerNotFoundError,
 )
@@ -19,7 +19,7 @@ class UserProfileNotFoundError(Exception):
 
 
 class LinkUserToPenaUseCase:
-    def __init__(self, repository: PenaLinkRepository):
+    def __init__(self, repository: PenaLinkPort):
         self.repository = repository
 
     def execute(

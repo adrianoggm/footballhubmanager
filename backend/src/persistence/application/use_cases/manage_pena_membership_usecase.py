@@ -1,28 +1,28 @@
 from dataclasses import dataclass
 
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     InvalidRoleLabelError as RepositoryInvalidRoleLabelError,
 )
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     PenaMembershipNotFoundError as RepositoryPenaMembershipNotFoundError,
 )
-from persistence.application.ports.pena_membership_repository import (
-    PenaMembershipRepository,
+from persistence.application.ports.pena_membership_port import (
+    PenaMembershipPort,
     PenaMembershipResult,
 )
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
 )
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     PlayerNotFoundError as RepositoryPlayerNotFoundError,
 )
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     UserPlayerNotFoundError as RepositoryUserPlayerNotFoundError,
 )
 
@@ -94,7 +94,7 @@ class PenaMembershipInvalidNationalityError(Exception):
 
 
 class ManagePenaMembershipUseCase:
-    def __init__(self, repository: PenaMembershipRepository):
+    def __init__(self, repository: PenaMembershipPort):
         self.repository = repository
 
     def get_for_player(self, *, pena_guid: str, player_guid: str) -> PenaMembershipInfo:

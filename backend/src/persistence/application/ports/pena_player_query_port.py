@@ -22,7 +22,7 @@ class PenaPlayersPageResult:
     total: int
 
 
-class PenaPlayerQueryRepository(Protocol):
+class PenaPlayerQueryPort(Protocol):
     def find_by_pena_guid(
         self,
         pena_guid: str,

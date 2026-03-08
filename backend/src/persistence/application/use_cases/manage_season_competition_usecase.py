@@ -1,16 +1,16 @@
 from dataclasses import dataclass, field
 from datetime import date
 
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     InvalidMatchDataError as RepositoryInvalidMatchDataError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     InvalidSeasonDateRangeError as RepositoryInvalidSeasonDateRangeError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     MatchDetailResult,
     MatchesPageResult,
     MatchPlayerStatsResult,
@@ -18,52 +18,52 @@ from persistence.application.ports.season_competition_repository import (
     MatchResult,
     MatchSummaryResult,
     MatchTeamResult,
-    SeasonCompetitionRepository,
+    SeasonCompetitionPort,
     SeasonPlayerFilters,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
     SeasonResult,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     MatchLineupLockedError as RepositoryMatchLineupLockedError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     MatchNotFoundError as RepositoryMatchNotFoundError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     MatchStatsMismatchError as RepositoryMatchStatsMismatchError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     PlayerNotFoundError as RepositoryPlayerNotFoundError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     PlayerNotInPenaError as RepositoryPlayerNotInPenaError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SamePlayerMatchError as RepositorySamePlayerMatchError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonDateRangeOverlapError as RepositorySeasonDateRangeOverlapError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonPlayerAlreadyRegisteredError as RepositorySeasonPlayerAlreadyRegisteredError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonPlayerHasMatchesError as RepositorySeasonPlayerHasMatchesError,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
 
@@ -335,7 +335,7 @@ class InvalidSeasonInsightsDataError(Exception):
 
 
 class ManageSeasonCompetitionUseCase:
-    def __init__(self, repository: SeasonCompetitionRepository):
+    def __init__(self, repository: SeasonCompetitionPort):
         self.repository = repository
 
     def get_active_for_pena(

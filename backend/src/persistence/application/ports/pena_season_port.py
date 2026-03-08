@@ -41,7 +41,7 @@ class InvalidSeasonDateRangeError(Exception):
     pass
 
 
-class PenaSeasonRepository(Protocol):
+class PenaSeasonPort(Protocol):
     def find_for_pena(
         self, *, pena_guid: str, page: int, page_size: int
     ) -> PenaSeasonsPageResult: ...

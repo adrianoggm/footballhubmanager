@@ -22,7 +22,7 @@ class InvalidNationalityError(Exception):
     pass
 
 
-class PlayerProfileRepository(Protocol):
+class PlayerProfilePort(Protocol):
     def find_by_guid(self, player_guid: str) -> PlayerProfileResult | None: ...
 
     def find_by_account_id(self, account_id: int) -> PlayerProfileResult | None: ...

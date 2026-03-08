@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.player_profile_repository import (
+from persistence.application.ports.player_profile_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
-from persistence.application.ports.player_profile_repository import (
+from persistence.application.ports.player_profile_port import (
     PenaInfoResult,
     PlayerProfileResult,
 )

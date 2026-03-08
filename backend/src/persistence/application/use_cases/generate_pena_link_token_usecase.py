@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from persistence.application.ports.pena_link_repository import (
-    PenaLinkRepository,
+from persistence.application.ports.pena_link_port import (
+    PenaLinkPort,
     PenaNotManagedByAdminError,
 )
 
@@ -18,7 +18,7 @@ class PenaLinkToken:
 
 
 class GeneratePenaLinkTokenUseCase:
-    def __init__(self, repository: PenaLinkRepository):
+    def __init__(self, repository: PenaLinkPort):
         self.repository = repository
 
     def execute(self, *, admin_id: int, pena_guid: str, ttl_seconds: int) -> PenaLinkToken:

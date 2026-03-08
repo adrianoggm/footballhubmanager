@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from persistence.application.ports.player_profile_repository import (
-    PlayerProfileRepository,
+from persistence.application.ports.player_profile_port import (
+    PlayerProfilePort,
     PlayerProfileResult,
 )
 
@@ -23,7 +23,7 @@ class PlayerProfile:
 
 
 class GetPlayerProfileUseCase:
-    def __init__(self, repository: PlayerProfileRepository):
+    def __init__(self, repository: PlayerProfilePort):
         self.repository = repository
 
     def execute_by_guid(self, player_guid: str) -> PlayerProfile | None:

@@ -25,7 +25,7 @@ class UserPlayerNotFoundError(Exception):
     pass
 
 
-class PenaLinkRepository(Protocol):
+class PenaLinkPort(Protocol):
     def create_token_for_admin_pena(
         self, *, admin_id: int, pena_guid: str, ttl_seconds: int
     ) -> PenaLinkTokenResult: ...

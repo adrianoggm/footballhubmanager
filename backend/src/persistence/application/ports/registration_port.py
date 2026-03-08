@@ -23,7 +23,7 @@ class RegisteredAdminResult:
     admin_guid: str
 
 
-class UserRegistrationRepository(Protocol):
+class UserRegistrationPort(Protocol):
     def register_user(
         self,
         *,
@@ -36,7 +36,7 @@ class UserRegistrationRepository(Protocol):
     ) -> RegisteredUserResult: ...
 
 
-class AdminRegistrationRepository(Protocol):
+class AdminRegistrationPort(Protocol):
     def register_admin(
         self, *, username: str, password_hash: str, name: str
     ) -> RegisteredAdminResult: ...

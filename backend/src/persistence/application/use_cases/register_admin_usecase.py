@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from auth.security import hash_password
-from persistence.application.ports.registration_repository import (
-    AdminRegistrationRepository,
+from persistence.application.ports.registration_port import (
+    AdminRegistrationPort,
     DuplicateUsernameError,
 )
 
@@ -29,7 +29,7 @@ class RegisteredAdmin:
 
 
 class RegisterAdminUseCase:
-    def __init__(self, repository: AdminRegistrationRepository):
+    def __init__(self, repository: AdminRegistrationPort):
         self.repository = repository
 
     def execute(self, data: AdminRegistration) -> RegisteredAdmin:

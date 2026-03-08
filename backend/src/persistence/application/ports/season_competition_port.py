@@ -225,7 +225,7 @@ class SeasonPlayerHasMatchesError(Exception):
     pass
 
 
-class SeasonCompetitionRepository(Protocol):
+class SeasonCompetitionPort(Protocol):
     def find_active_for_pena(
         self, *, pena_guid: str, reference_date: date
     ) -> SeasonResult | None: ...

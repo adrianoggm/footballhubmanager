@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from persistence.application.ports.pena_query_repository import (
-    PenaQueryRepository,
+from persistence.application.ports.pena_query_port import (
+    PenaQueryPort,
     PenasPageResult,
 )
 
@@ -21,7 +21,7 @@ class PenasPage:
 
 
 class GetPenasUseCase:
-    def __init__(self, repository: PenaQueryRepository):
+    def __init__(self, repository: PenaQueryPort):
         self.repository = repository
 
     def execute_for_admin(

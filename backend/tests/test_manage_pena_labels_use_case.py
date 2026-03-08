@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.pena_labels_repository import (
+from persistence.application.ports.pena_labels_port import (
     PenaLabelsResult,
     PenaNotFoundError,
     PenaNotManagedByAdminError,

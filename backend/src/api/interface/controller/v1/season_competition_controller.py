@@ -28,7 +28,7 @@ from api.interface.controller.v1.model.response.season_competition_response impo
 )
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
+from persistence.application.ports.season_competition_port import SeasonPlayerFilters
 from persistence.application.use_cases import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,

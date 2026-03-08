@@ -1,24 +1,24 @@
 from dataclasses import dataclass
 from datetime import date
 
-from persistence.application.ports.pena_season_repository import (
+from persistence.application.ports.pena_season_port import (
     InvalidSeasonDateRangeError as RepositoryInvalidSeasonDateRangeError,
 )
-from persistence.application.ports.pena_season_repository import (
+from persistence.application.ports.pena_season_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
-from persistence.application.ports.pena_season_repository import (
+from persistence.application.ports.pena_season_port import (
     PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
 )
-from persistence.application.ports.pena_season_repository import (
-    PenaSeasonRepository,
+from persistence.application.ports.pena_season_port import (
+    PenaSeasonPort,
     PenaSeasonResult,
     PenaSeasonsPageResult,
 )
-from persistence.application.ports.pena_season_repository import (
+from persistence.application.ports.pena_season_port import (
     SeasonDateRangeOverlapError as RepositorySeasonDateRangeOverlapError,
 )
-from persistence.application.ports.pena_season_repository import (
+from persistence.application.ports.pena_season_port import (
     SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
 
@@ -85,7 +85,7 @@ class PenaSeasonDateOverlapError(Exception):
 
 
 class ManagePenaSeasonsUseCase:
-    def __init__(self, repository: PenaSeasonRepository):
+    def __init__(self, repository: PenaSeasonPort):
         self.repository = repository
 
     def list_for_pena(

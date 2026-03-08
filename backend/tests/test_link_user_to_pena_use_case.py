@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.pena_link_repository import (
+from persistence.application.ports.pena_link_port import (
     InvalidOrExpiredLinkTokenError,
     UserAlreadyLinkedToPenaError,
     UserPlayerNotFoundError,

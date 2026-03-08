@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-from persistence.application.ports.player_profile_repository import (
+from persistence.application.ports.player_profile_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
-from persistence.application.ports.player_profile_repository import (
-    PlayerProfileRepository,
+from persistence.application.ports.player_profile_port import (
+    PlayerProfilePort,
 )
 from persistence.application.use_cases.get_player_profile_usecase import (
     GetPlayerProfileUseCase,
@@ -29,7 +29,7 @@ class InvalidPlayerUpdateDataError(Exception):
 
 
 class UpdatePlayerProfileUseCase:
-    def __init__(self, repository: PlayerProfileRepository):
+    def __init__(self, repository: PlayerProfilePort):
         self.repository = repository
 
     def execute_by_guid(self, player_guid: str, update: PlayerUpdate) -> PlayerProfile | None:

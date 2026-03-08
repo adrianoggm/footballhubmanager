@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-from persistence.application.ports.pena_season_repository import (
+from persistence.application.ports.pena_season_port import (
     InvalidSeasonDateRangeError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,

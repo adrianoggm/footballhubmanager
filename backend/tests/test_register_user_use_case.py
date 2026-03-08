@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
-from persistence.application.ports.registration_repository import (
+from persistence.application.ports.registration_port import (
     DuplicateUsernameError,
     RegisteredUserResult,
 )
-from persistence.application.ports.registration_repository import (
+from persistence.application.ports.registration_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
 from persistence.application.use_cases.register_user_usecase import (

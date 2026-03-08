@@ -16,7 +16,7 @@ class PenasPageResult:
     total: int
 
 
-class PenaQueryRepository(Protocol):
+class PenaQueryPort(Protocol):
     def find_for_admin(
         self, admin_id: int, *, page: int, page_size: int, search: str | None
     ) -> PenasPageResult: ...

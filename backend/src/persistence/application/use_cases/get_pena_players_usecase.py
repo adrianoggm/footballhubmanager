@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from persistence.application.ports.pena_player_query_repository import (
-    PenaPlayerQueryRepository,
+from persistence.application.ports.pena_player_query_port import (
+    PenaPlayerQueryPort,
     PenaPlayersPageResult,
 )
 
@@ -39,7 +39,7 @@ class PenaPlayersPage:
 
 
 class GetPenaPlayersUseCase:
-    def __init__(self, repository: PenaPlayerQueryRepository):
+    def __init__(self, repository: PenaPlayerQueryPort):
         self.repository = repository
 
     def execute(

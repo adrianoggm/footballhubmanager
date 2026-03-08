@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
 from auth.security import hash_password
-from persistence.application.ports.registration_repository import (
+from persistence.application.ports.registration_port import (
     DuplicateUsernameError,
-    UserRegistrationRepository,
+    UserRegistrationPort,
 )
-from persistence.application.ports.registration_repository import (
+from persistence.application.ports.registration_port import (
     InvalidNationalityError as RegistrationInvalidNationalityError,
 )
 
@@ -40,7 +40,7 @@ class RegisteredUser:
 
 
 class RegisterUserUseCase:
-    def __init__(self, repository: UserRegistrationRepository):
+    def __init__(self, repository: UserRegistrationPort):
         self.repository = repository
 
     def execute(self, data: UserRegistration) -> RegisteredUser:

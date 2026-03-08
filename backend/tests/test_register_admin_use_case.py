@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
-from persistence.application.ports.registration_repository import (
+from persistence.application.ports.registration_port import (
     DuplicateUsernameError,
     RegisteredAdminResult,
 )

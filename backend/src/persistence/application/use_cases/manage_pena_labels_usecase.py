@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from persistence.application.ports.pena_labels_repository import (
-    PenaLabelsRepository,
+from persistence.application.ports.pena_labels_port import (
+    PenaLabelsPort,
 )
-from persistence.application.ports.pena_labels_repository import (
+from persistence.application.ports.pena_labels_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
-from persistence.application.ports.pena_labels_repository import (
+from persistence.application.ports.pena_labels_port import (
     PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
 )
 from persistence.domain.label_config import (
@@ -49,7 +49,7 @@ class InvalidPenaLabelsDataError(Exception):
 
 
 class ManagePenaLabelsUseCase:
-    def __init__(self, repository: PenaLabelsRepository):
+    def __init__(self, repository: PenaLabelsPort):
         self.repository = repository
 
     def get_for_pena(self, *, pena_guid: str) -> PenaLabelsInfo:

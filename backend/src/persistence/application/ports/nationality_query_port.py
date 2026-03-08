@@ -1,5 +1,5 @@
 from typing import Protocol
 
 
-class NationalityQueryRepository(Protocol):
+class NationalityQueryPort(Protocol):
     def list_names(self) -> list[str]: ...
