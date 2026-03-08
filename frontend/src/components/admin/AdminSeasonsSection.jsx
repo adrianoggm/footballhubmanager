@@ -8,6 +8,9 @@ import {
   FormControlLabel,
   Grid,
   MenuItem,
+  Step,
+  StepLabel,
+  Stepper,
   Stack,
   Switch,
   TextField,
@@ -48,6 +51,19 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
   const onSeasonFieldsChange = isEditingSelectedSeason ? onSelectedSeasonField : onSeasonField
   const startDateError = isEditingSelectedSeason ? selectedSeasonDateErrors.start_date : ''
   const endDateError = isEditingSelectedSeason ? selectedSeasonDateErrors.end_date : ''
+  const pointsValues = [seasonFields.points_win, seasonFields.points_draw, seasonFields.points_loss]
+  const pointsValid = pointsValues.every((value) => Number.isInteger(value) && value >= 0)
+  const dateRangeValid =
+    Boolean(seasonFields.start_date) &&
+    Boolean(seasonFields.end_date) &&
+    seasonFields.start_date <= seasonFields.end_date
+  const stepTwoComplete = dateRangeValid && pointsValid
+  const flowSteps = [
+    t('dashboard.admin.seasons.stepSelectCreate'),
+    t('dashboard.admin.seasons.stepConfigure'),
+    t('dashboard.admin.seasons.stepSave'),
+  ]
+  const activeStep = loading ? 2 : stepTwoComplete ? 2 : 1
   const handleResetToCreate = () => {
     if (!selectedSeasonGuid) {
       return
@@ -88,6 +104,17 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
               {!activeSeason && (
                 <Alert severity="warning">{t('dashboard.admin.seasons.noActiveWarning')}</Alert>
               )}
+
+              <Stepper activeStep={activeStep}>
+                {flowSteps.map((label, index) => (
+                  <Step
+                    key={label}
+                    completed={index === 0 ? true : index === 1 ? stepTwoComplete : false}
+                  >
+                    <StepLabel>{label}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                 <TextField
@@ -249,82 +276,97 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                   {t('dashboard.admin.seasons.noHistory')}
                 </Typography>
               )}
-              {historySeasons.map((season) => (
-                // Entire season card is clickable to keep the interaction model simple.
-                <Box
-                  key={season.guid}
-                  role="button"
-                  tabIndex={loading ? -1 : 0}
-                  onClick={() => {
-                    if (!loading) {
-                      handleSelectSeasonFromHistory(season.guid)
-                    }
-                  }}
-                  onKeyDown={(event) => {
-                    if (loading) {
-                      return
-                    }
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      handleSelectSeasonFromHistory(season.guid)
-                    }
-                  }}
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 2,
-                    border:
-                      selectedSeasonGuid === season.guid
+              {historySeasons.map((season) => {
+                const isSelected = selectedSeasonGuid === season.guid
+                const isActive = activeSeason?.guid === season.guid
+                const canSelect = !loading && !isSelected
+                return (
+                  // Entire season card is clickable to keep the interaction model simple.
+                  <Box
+                    key={season.guid}
+                    role="button"
+                    aria-pressed={isSelected}
+                    tabIndex={canSelect ? 0 : -1}
+                    onClick={() => {
+                      if (canSelect) {
+                        handleSelectSeasonFromHistory(season.guid)
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (!canSelect) {
+                        return
+                      }
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        handleSelectSeasonFromHistory(season.guid)
+                      }
+                    }}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      border: isSelected
                         ? '1px solid rgba(25,118,210,0.35)'
                         : '1px solid rgba(15,23,42,0.08)',
-                    backgroundColor:
-                      selectedSeasonGuid === season.guid
+                      backgroundColor: isSelected
                         ? 'rgba(25,118,210,0.06)'
                         : 'rgba(255,255,255,0.6)',
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.7 : 1,
-                    transition: 'border-color 120ms ease, background-color 120ms ease',
-                    '&:hover': loading
-                      ? undefined
-                      : {
-                          borderColor: 'rgba(25,118,210,0.35)',
-                          backgroundColor: 'rgba(25,118,210,0.03)',
-                        },
-                    '&:focus-visible': {
-                      outline: '2px solid rgba(25,118,210,0.6)',
-                      outlineOffset: 2,
-                    },
-                  }}
-                >
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    alignItems={{ sm: 'center' }}
-                    justifyContent="space-between"
+                      cursor: canSelect ? 'pointer' : 'default',
+                      opacity: loading ? 0.7 : 1,
+                      transition: 'border-color 120ms ease, background-color 120ms ease',
+                      '&:hover': canSelect
+                        ? {
+                            borderColor: 'rgba(25,118,210,0.35)',
+                            backgroundColor: 'rgba(25,118,210,0.03)',
+                          }
+                        : undefined,
+                      '&:focus-visible': canSelect
+                        ? {
+                            outline: '2px solid rgba(25,118,210,0.6)',
+                            outlineOffset: 2,
+                          }
+                        : undefined,
+                    }}
                   >
-                    <Box>
-                      <Typography variant="body2">
-                        {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {t('dashboard.admin.seasons.historyPoints', {
-                          win: season.points_win,
-                          draw: season.points_draw,
-                          loss: season.points_loss,
-                        })}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      size="small"
-                      color={selectedSeasonGuid === season.guid ? 'primary' : 'default'}
-                      label={
-                        selectedSeasonGuid === season.guid
-                          ? t('dashboard.admin.seasons.historyEditingBadge')
-                          : t('dashboard.admin.seasons.historyEditBadge')
-                      }
-                    />
-                  </Stack>
-                </Box>
-              ))}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems={{ sm: 'center' }}
+                      justifyContent="space-between"
+                    >
+                      <Box>
+                        <Typography variant="body2">
+                          {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('dashboard.admin.seasons.historyPoints', {
+                            win: season.points_win,
+                            draw: season.points_draw,
+                            loss: season.points_loss,
+                          })}
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" spacing={0.75}>
+                        {isActive && (
+                          <Chip
+                            size="small"
+                            color="secondary"
+                            label={t('dashboard.admin.seasons.historyActiveBadge')}
+                          />
+                        )}
+                        <Chip
+                          size="small"
+                          color={isSelected ? 'primary' : 'default'}
+                          label={
+                            isSelected
+                              ? t('dashboard.admin.seasons.historyEditingBadge')
+                              : t('dashboard.admin.seasons.historyEditBadge')
+                          }
+                        />
+                      </Stack>
+                    </Stack>
+                  </Box>
+                )
+              })}
             </Stack>
           </CardContent>
         </Card>

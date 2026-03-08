@@ -182,6 +182,9 @@ export const messages = {
         seasons: {
           configTitle: 'Season Configuration',
           noActiveWarning: 'No active season found for today. Create one to start orchestration.',
+          stepSelectCreate: 'Select or create',
+          stepConfigure: 'Configure',
+          stepSave: 'Save',
           formCreateTitle: 'Create new season',
           formEditTitle: 'Edit selected season',
           formCreateHint:
@@ -215,6 +218,7 @@ export const messages = {
           noHistory: 'No previous seasons found.',
           historyPoints: 'W:{win} / D:{draw} / L:{loss}',
           startNewSeasonAction: 'Start new season',
+          historyActiveBadge: 'Active',
           historyEditBadge: 'Edit',
           historyEditingBadge: 'Editing',
           selectSeasonAction: 'Use season',
@@ -723,6 +727,9 @@ export const messages = {
         seasons: {
           configTitle: 'Configuración de temporada',
           noActiveWarning: 'No hay temporada activa para hoy. Crea una para empezar.',
+          stepSelectCreate: 'Seleccionar o crear',
+          stepConfigure: 'Configurar',
+          stepSave: 'Guardar',
           formCreateTitle: 'Crear nueva temporada',
           formEditTitle: 'Editar temporada seleccionada',
           formCreateHint:
@@ -758,6 +765,7 @@ export const messages = {
           noHistory: 'No se encontraron temporadas anteriores.',
           historyPoints: 'V:{win} / E:{draw} / D:{loss}',
           startNewSeasonAction: 'Crear nueva temporada',
+          historyActiveBadge: 'Activa',
           historyEditBadge: 'Editar',
           historyEditingBadge: 'Editando',
           selectSeasonAction: 'Usar temporada',

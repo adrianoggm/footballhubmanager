@@ -504,11 +504,13 @@ export default function AdminDashboard({ session, onLogout }) {
   const [pendingRemoveMembershipPlayer, setPendingRemoveMembershipPlayer] = useState(null)
 
   const historySeasons = useMemo(() => {
-    if (!activeSeason) {
-      return seasonList
-    }
-    return seasonList.filter((item) => item.guid !== activeSeason.guid)
-  }, [activeSeason, seasonList])
+    return [...seasonList].sort((left, right) => {
+      if (left.end_date === right.end_date) {
+        return String(right.start_date || '').localeCompare(String(left.start_date || ''))
+      }
+      return String(right.end_date || '').localeCompare(String(left.end_date || ''))
+    })
+  }, [seasonList])
 
   const latestSeasonEndDate = useMemo(() => getLatestSeasonEndDate(seasonList), [seasonList])
 
