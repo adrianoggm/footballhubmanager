@@ -6,7 +6,7 @@ from persistence.application.ports.registration_repository import (
     DuplicateUsernameError,
     RegisteredAdminResult,
 )
-from persistence.application.use_cases.register_admin import (
+from persistence.application.use_cases.register_admin_usecase import (
     AdminRegistration,
     InvalidAdminRegistrationDataError,
     RegisterAdminUseCase,

@@ -32,7 +32,7 @@ from persistence.application.ports.season_competition_repository import (
 from persistence.application.ports.season_competition_repository import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonDataError,
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
@@ -60,10 +60,10 @@ from persistence.application.use_cases.manage_season_competition import (
     SeasonPlayerNotFoundError,
     SeasonPlayerStatsUpdate,
 )
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
 )
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     SeasonPlayerNotInPenaError as UseCaseSeasonPlayerNotInPenaError,
 )
 

@@ -6,7 +6,7 @@ from persistence.application.ports.pena_link_repository import (
     UserAlreadyLinkedToPenaError,
     UserPlayerNotFoundError,
 )
-from persistence.application.use_cases.link_user_to_pena import (
+from persistence.application.use_cases.link_user_to_pena_usecase import (
     InvalidLinkTokenError,
     LinkUserToPenaUseCase,
     UserAlreadyLinkedError,

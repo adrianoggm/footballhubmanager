@@ -9,7 +9,7 @@ from persistence.application.ports.registration_repository import (
 from persistence.application.ports.registration_repository import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     InvalidNationalityError,
     InvalidRegistrationDataError,
     RegisterUserUseCase,

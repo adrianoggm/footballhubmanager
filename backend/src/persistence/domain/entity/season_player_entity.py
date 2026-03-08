@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Index, PrimaryKeyConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base, GuidMixin
+from .base_entity import Base, GuidMixin
 
 
 class SeasonPlayer(GuidMixin, Base):

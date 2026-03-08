@@ -5,7 +5,7 @@ from persistence.application.ports.pena_link_repository import (
     PenaLinkTokenResult,
     PenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.generate_pena_link_token import (
+from persistence.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
     PenaAccessDeniedError,
 )

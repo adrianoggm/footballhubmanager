@@ -11,7 +11,7 @@ from persistence.application.ports.pena_season_repository import (
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_seasons import (
+from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
     PenaSeasonAccessDeniedError,

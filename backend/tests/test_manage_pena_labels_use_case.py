@@ -6,7 +6,7 @@ from persistence.application.ports.pena_labels_repository import (
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.manage_pena_labels import (
+from persistence.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     ManagePenaLabelsUseCase,
     PenaLabelsAccessDeniedError,

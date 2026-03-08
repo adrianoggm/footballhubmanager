@@ -21,7 +21,7 @@ from api.interface.controller.v1.model.request.season_competition_request import
 from auth.session import SessionData
 from fastapi import HTTPException
 from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,

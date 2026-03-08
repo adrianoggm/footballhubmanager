@@ -9,21 +9,21 @@ from auth.application.models import AuthAccount
 from auth.application.use_cases.login import InvalidCredentialsError
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.register_admin import (
+from persistence.application.use_cases.register_admin_usecase import (
     InvalidAdminRegistrationDataError,
     RegisteredAdmin,
 )
-from persistence.application.use_cases.register_admin import (
+from persistence.application.use_cases.register_admin_usecase import (
     UsernameAlreadyExistsError as AdminUsernameExistsError,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     InvalidNationalityError as UserInvalidNationalityError,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     InvalidRegistrationDataError,
     RegisteredUser,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     UsernameAlreadyExistsError as UserUsernameExistsError,
 )
 

@@ -12,7 +12,7 @@ from api.interface.controller.v1.model.response.pena_seasons_response import (
 )
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from persistence.application.use_cases.manage_pena_seasons import (
+from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
     PenaSeasonAccessDeniedError,

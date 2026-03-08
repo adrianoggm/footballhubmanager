@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base import Base, GuidMixin
+from .base_entity import Base, GuidMixin
 
 
 class Season(GuidMixin, Base):

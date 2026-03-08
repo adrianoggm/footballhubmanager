@@ -6,17 +6,17 @@ from api.interface.controller.v1.model.request.pena_labels_request import Update
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.generate_pena_link_token import (
+from persistence.application.use_cases.generate_pena_link_token_usecase import (
     PenaAccessDeniedError,
     PenaLinkToken,
 )
-from persistence.application.use_cases.get_penas import PenaInfo, PenasPage
-from persistence.application.use_cases.link_user_to_pena import (
+from persistence.application.use_cases.get_penas_usecase import PenaInfo, PenasPage
+from persistence.application.use_cases.link_user_to_pena_usecase import (
     InvalidLinkTokenError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_labels import (
+from persistence.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     PenaLabelsAccessDeniedError,
     PenaLabelsInfo,

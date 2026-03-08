@@ -6,11 +6,11 @@ from api.interface.controller.v1.model.request.pena_players_request import (
 )
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.get_pena_players import (
+from persistence.application.use_cases.get_pena_players_usecase import (
     PenaPlayerInfo,
     PenaPlayersPage,
 )
-from persistence.application.use_cases.manage_pena_membership import (
+from persistence.application.use_cases.manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     PenaMembershipAccessDeniedError,

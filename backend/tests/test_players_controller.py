@@ -3,11 +3,11 @@ from api.interface.controller.v1 import players_controller
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.get_player_profile import PenaInfo, PlayerProfile
-from persistence.application.use_cases.update_player_profile import (
+from persistence.application.use_cases.get_player_profile_usecase import PenaInfo, PlayerProfile
+from persistence.application.use_cases.update_player_profile_usecase import (
     InvalidNationalityError as PlayerInvalidNationalityError,
 )
-from persistence.application.use_cases.update_player_profile import (
+from persistence.application.use_cases.update_player_profile_usecase import (
     InvalidPlayerUpdateDataError,
 )
 

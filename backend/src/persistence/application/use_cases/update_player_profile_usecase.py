@@ -6,7 +6,7 @@ from persistence.application.ports.player_profile_repository import (
 from persistence.application.ports.player_profile_repository import (
     PlayerProfileRepository,
 )
-from persistence.application.use_cases.get_player_profile import (
+from persistence.application.use_cases.get_player_profile_usecase import (
     GetPlayerProfileUseCase,
     PlayerProfile,
 )

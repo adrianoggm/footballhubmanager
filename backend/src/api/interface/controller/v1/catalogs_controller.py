@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from persistence.application.use_cases.get_nationalities import GetNationalitiesUseCase
+from persistence.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
 )
