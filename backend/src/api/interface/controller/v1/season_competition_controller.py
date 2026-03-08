@@ -2,6 +2,7 @@ import math
 from dataclasses import asdict
 from typing import Literal
 
+from api.dependencies.use_cases import get_season_competition_use_case
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
     CreateSeasonMatchRequest,
@@ -28,7 +29,6 @@ from api.interface.controller.v1.model.response.season_competition_response impo
 )
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from persistence.application.ports.season_competition_port import SeasonPlayerFilters
 from persistence.application.use_cases import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
@@ -57,26 +57,15 @@ from persistence.application.use_cases import (
     SeasonMatchTeamInfo,
     SeasonMatchUpdate,
     SeasonPlayerAlreadyRegisteredError,
+    SeasonPlayersFilters,
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
     SeasonPlayersPage,
     SeasonPlayerStatsUpdate,
 )
-from persistence.infrastructure.repository.db.season_competition_repository import (
-    SqlAlchemySeasonCompetitionRepository,
-)
-from persistence.module import get_db
-from sqlalchemy.orm import Session
 
 router = APIRouter()
-
-
-def get_season_competition_use_case(
-    db: Session = Depends(get_db),
-) -> ManageSeasonCompetitionUseCase:
-    repository = SqlAlchemySeasonCompetitionRepository(db)
-    return ManageSeasonCompetitionUseCase(repository)
 
 
 def _clean(value: str | None) -> str | None:
@@ -363,7 +352,7 @@ def list_season_players(
 ):
     cleaned_roles = _clean_many(role)
     cleaned_positions = _clean_many(position)
-    filters = SeasonPlayerFilters(
+    filters = SeasonPlayersFilters(
         name=_clean(name),
         surname1=_clean(surname1),
         surname2=_clean(surname2),
@@ -838,7 +827,7 @@ def get_season_standings(
         result = use_case.get_standings(
             pena_guid=pena_guid,
             season_guid=season_guid,
-            filters=SeasonPlayerFilters(
+            filters=SeasonPlayersFilters(
                 role=cleaned_roles[0] if len(cleaned_roles) == 1 else None,
                 roles=cleaned_roles,
                 position=cleaned_positions[0] if len(cleaned_positions) == 1 else None,

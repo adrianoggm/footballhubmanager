@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
 import pytest
+from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import penas_controller
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
+from auth.dependencies import require_user
 from auth.session import SessionData
 from fastapi import HTTPException
 from persistence.application.use_cases.generate_pena_link_token_usecase import (
@@ -309,13 +311,9 @@ def test_create_link_token_maps_access_denied_to_403():
 
 def test_consume_link_token_rejects_non_user_sessions():
     with pytest.raises(HTTPException) as exc:
-        penas_controller.consume_link_token(
-            ConsumeLinkTokenRequest(token="abc"),
-            session=_session(user_type="admin"),
-            use_case=object(),
-        )
+        require_user(_session(user_type="admin"))
     assert exc.value.status_code == 403
-    assert exc.value.detail == "User access only"
+    assert exc.value.detail == "User access required"
 
 
 def test_consume_link_token_success():
@@ -391,8 +389,8 @@ def test_get_penas_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaQueryRepository", _Repo)
-    monkeypatch.setattr(penas_controller, "GetPenasUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaQueryRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "GetPenasUseCase", _UseCase)
 
     use_case = penas_controller.get_penas_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -412,8 +410,8 @@ def test_get_generate_pena_link_token_use_case_builds_expected_dependencies(monk
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaLinkRepository", _Repo)
-    monkeypatch.setattr(penas_controller, "GeneratePenaLinkTokenUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "GeneratePenaLinkTokenUseCase", _UseCase)
 
     use_case = penas_controller.get_generate_pena_link_token_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -433,8 +431,8 @@ def test_get_link_user_to_pena_use_case_builds_expected_dependencies(monkeypatch
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaLinkRepository", _Repo)
-    monkeypatch.setattr(penas_controller, "LinkUserToPenaUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "LinkUserToPenaUseCase", _UseCase)
 
     use_case = penas_controller.get_link_user_to_pena_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -454,8 +452,8 @@ def test_get_pena_labels_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaLabelsRepository", _Repo)
-    monkeypatch.setattr(penas_controller, "ManagePenaLabelsUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLabelsRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "ManagePenaLabelsUseCase", _UseCase)
 
     use_case = penas_controller.get_pena_labels_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)

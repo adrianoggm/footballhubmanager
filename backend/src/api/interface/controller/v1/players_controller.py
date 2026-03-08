@@ -1,10 +1,14 @@
 from dataclasses import asdict
 
+from api.dependencies.use_cases import (
+    get_player_profile_use_case,
+    get_update_player_profile_use_case,
+)
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
 from api.interface.controller.v1.model.response.players_response import (
     PlayerProfileResponse,
 )
-from auth.dependencies import authorize_player_access, get_current_session
+from auth.dependencies import authorize_player_access, require_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from persistence.application.use_cases import (
     GetPlayerProfileUseCase,
@@ -14,23 +18,8 @@ from persistence.application.use_cases import (
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
 )
-from persistence.infrastructure.repository.db.player_profile_repository import (
-    SqlAlchemyPlayerProfileRepository,
-)
-from persistence.module import get_db
-from sqlalchemy.orm import Session
 
 router = APIRouter()
-
-
-def get_player_profile_use_case(db: Session = Depends(get_db)) -> GetPlayerProfileUseCase:
-    repository = SqlAlchemyPlayerProfileRepository(db)
-    return GetPlayerProfileUseCase(repository)
-
-
-def get_update_player_profile_use_case(db: Session = Depends(get_db)) -> UpdatePlayerProfileUseCase:
-    repository = SqlAlchemyPlayerProfileRepository(db)
-    return UpdatePlayerProfileUseCase(repository)
 
 
 def _profile_or_404(profile: PlayerProfile | None) -> PlayerProfile:
@@ -41,11 +30,9 @@ def _profile_or_404(profile: PlayerProfile | None) -> PlayerProfile:
 
 @router.get("/players/me", response_model=PlayerProfileResponse)
 def get_me(
-    session=Depends(get_current_session),
+    session=Depends(require_user),
     use_case: GetPlayerProfileUseCase = Depends(get_player_profile_use_case),
 ):
-    if session.user_type != "user":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
     profile = _profile_or_404(use_case.execute_by_account_id(session.user_id))
     return PlayerProfileResponse(**asdict(profile))
 
@@ -53,11 +40,9 @@ def get_me(
 @router.put("/players/me", response_model=PlayerProfileResponse)
 def update_me(
     payload: PlayerUpdateRequest,
-    session=Depends(get_current_session),
+    session=Depends(require_user),
     use_case: UpdatePlayerProfileUseCase = Depends(get_update_player_profile_use_case),
 ):
-    if session.user_type != "user":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
     update = PlayerUpdate(
         name=payload.name,
         surname1=payload.surname1,

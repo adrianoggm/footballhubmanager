@@ -19,7 +19,7 @@ from persistence.application.ports.season_competition_port import (
     MatchSummaryResult,
     MatchTeamResult,
     SeasonCompetitionPort,
-    SeasonPlayerFilters,
+    SeasonPlayerFilters as RepositorySeasonPlayerFilters,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
     SeasonResult,
@@ -106,6 +106,20 @@ class SeasonPlayersPage:
     page: int
     page_size: int
     total: int
+
+
+@dataclass(frozen=True)
+class SeasonPlayersFilters:
+    name: str | None = None
+    surname1: str | None = None
+    surname2: str | None = None
+    nationality: str | None = None
+    nickname: str | None = None
+    role: str | None = None
+    roles: tuple[str, ...] = ()
+    position: str | None = None
+    positions: tuple[str, ...] = ()
+    search: str | None = None
 
 
 @dataclass(frozen=True)
@@ -540,7 +554,7 @@ class ManageSeasonCompetitionUseCase:
         *,
         pena_guid: str,
         season_guid: str,
-        filters: SeasonPlayerFilters,
+        filters: SeasonPlayersFilters,
         page: int = 1,
         page_size: int = 20,
         order_by: str = "quality_level",
@@ -550,7 +564,7 @@ class ManageSeasonCompetitionUseCase:
             result = self.repository.list_season_players(
                 pena_guid=pena_guid,
                 season_guid=season_guid,
-                filters=filters,
+                filters=self._to_repository_filters(filters),
                 page=page,
                 page_size=page_size,
                 order_by=order_by,
@@ -893,7 +907,7 @@ class ManageSeasonCompetitionUseCase:
         *,
         pena_guid: str,
         season_guid: str,
-        filters: SeasonPlayerFilters | None = None,
+        filters: SeasonPlayersFilters | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> SeasonPlayersPage:
@@ -901,7 +915,7 @@ class ManageSeasonCompetitionUseCase:
             result = self.repository.get_standings(
                 pena_guid=pena_guid,
                 season_guid=season_guid,
-                filters=filters or SeasonPlayerFilters(),
+                filters=self._to_repository_filters(filters or SeasonPlayersFilters()),
                 page=page,
                 page_size=page_size,
             )
@@ -1538,6 +1552,21 @@ class ManageSeasonCompetitionUseCase:
                 )
             )
         return result
+
+    @staticmethod
+    def _to_repository_filters(filters: SeasonPlayersFilters) -> RepositorySeasonPlayerFilters:
+        return RepositorySeasonPlayerFilters(
+            name=filters.name,
+            surname1=filters.surname1,
+            surname2=filters.surname2,
+            nationality=filters.nationality,
+            nickname=filters.nickname,
+            role=filters.role,
+            roles=filters.roles,
+            position=filters.position,
+            positions=filters.positions,
+            search=filters.search,
+        )
 
     @staticmethod
     def _to_season_info(item: SeasonResult) -> SeasonInfo:

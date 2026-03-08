@@ -1,6 +1,7 @@
 import pytest
 from api.interface.controller.v1 import players_controller
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
+from auth.dependencies import require_user
 from auth.session import SessionData
 from fastapi import HTTPException
 from persistence.application.use_cases.get_player_profile_usecase import PenaInfo, PlayerProfile
@@ -47,9 +48,9 @@ def test_profile_or_404_raises_404_when_missing():
 
 def test_get_me_rejects_non_user_session():
     with pytest.raises(HTTPException) as exc:
-        players_controller.get_me(session=_session(user_type="admin"), use_case=object())
+        require_user(_session(user_type="admin"))
     assert exc.value.status_code == 403
-    assert exc.value.detail == "User access only"
+    assert exc.value.detail == "User access required"
 
 
 def test_get_me_returns_profile_for_user():
@@ -85,13 +86,9 @@ def test_get_me_returns_404_when_profile_missing():
 
 def test_update_me_rejects_non_user_session():
     with pytest.raises(HTTPException) as exc:
-        players_controller.update_me(
-            PlayerUpdateRequest(name="A"),
-            session=_session(user_type="admin"),
-            use_case=object(),
-        )
+        require_user(_session(user_type="admin"))
     assert exc.value.status_code == 403
-    assert exc.value.detail == "User access only"
+    assert exc.value.detail == "User access required"
 
 
 def test_update_me_success_calls_use_case_with_payload_fields():

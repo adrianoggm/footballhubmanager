@@ -1,6 +1,10 @@
 import math
 from dataclasses import asdict
 
+from api.dependencies.use_cases import (
+    get_pena_membership_use_case,
+    get_pena_players_use_case,
+)
 from api.interface.controller.v1.model.request.pena_players_request import (
     CreateGuestPlayerRequest,
     UpdatePenaMembershipRequest,
@@ -10,7 +14,7 @@ from api.interface.controller.v1.model.response.pena_players_response import (
     PenaPlayerResponse,
     PenaPlayersPageResponse,
 )
-from auth.dependencies import authorize_pena_access, get_current_session, require_admin
+from auth.dependencies import authorize_pena_access, require_admin, require_user
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from persistence.application.use_cases import (
     GetPenaPlayersUseCase,
@@ -27,14 +31,6 @@ from persistence.application.use_cases import (
     PenaMembershipUserProfileNotFoundError,
     PenaPlayerFilters,
 )
-from persistence.infrastructure.repository.db.pena_membership_repository import (
-    SqlAlchemyPenaMembershipRepository,
-)
-from persistence.infrastructure.repository.db.pena_player_query_repository import (
-    SqlAlchemyPenaPlayerQueryRepository,
-)
-from persistence.module import get_db
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -48,18 +44,6 @@ def _clean(value: str | None) -> str | None:
 
 def _to_membership_response(data) -> PenaMembershipResponse:
     return PenaMembershipResponse(**asdict(data))
-
-
-def get_pena_membership_use_case(
-    db: Session = Depends(get_db),
-) -> ManagePenaMembershipUseCase:
-    repository = SqlAlchemyPenaMembershipRepository(db)
-    return ManagePenaMembershipUseCase(repository)
-
-
-def get_pena_players_use_case(db: Session = Depends(get_db)) -> GetPenaPlayersUseCase:
-    repository = SqlAlchemyPenaPlayerQueryRepository(db)
-    return GetPenaPlayersUseCase(repository)
 
 
 @router.post(
@@ -166,11 +150,9 @@ def get_pena_player_membership(
 @router.get("/players/me/penas/{pena_guid}", response_model=PenaMembershipResponse)
 def get_my_pena_membership(
     pena_guid: str,
-    session=Depends(get_current_session),
+    session=Depends(require_user),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    if session.user_type != "user":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
     try:
         membership = use_case.get_for_user(pena_guid=pena_guid, account_id=session.user_id)
     except PenaMembershipPenaNotFoundError:
@@ -192,12 +174,9 @@ def get_my_pena_membership(
 def update_my_pena_membership(
     pena_guid: str,
     payload: UpdatePenaMembershipRequest,
-    session=Depends(get_current_session),
+    session=Depends(require_user),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    if session.user_type != "user":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
-
     update = PenaMembershipUpdate(
         nickname=payload.nickname,
         nickname_provided="nickname" in payload.model_fields_set,
@@ -234,12 +213,9 @@ def update_my_pena_membership(
 @router.delete("/penas/{pena_guid}/players/me", status_code=status.HTTP_204_NO_CONTENT)
 def remove_my_pena_membership(
     pena_guid: str,
-    session=Depends(get_current_session),
+    session=Depends(require_user),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    if session.user_type != "user":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
-
     try:
         use_case.remove_for_user(pena_guid=pena_guid, account_id=session.user_id)
     except PenaMembershipPenaNotFoundError:

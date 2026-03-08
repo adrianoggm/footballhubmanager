@@ -51,7 +51,7 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
                 id_player_account=account.id,
             )
             self.session.add(player)
-            self.session.commit()
+            self.session.flush()
             self.session.refresh(account)
             self.session.refresh(player)
             return RegisteredUserResult(
@@ -108,7 +108,7 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
                     )
                 )
 
-            self.session.commit()
+            self.session.flush()
             self.session.refresh(admin)
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
         except IntegrityError as exc:
