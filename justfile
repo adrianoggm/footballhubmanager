@@ -56,6 +56,10 @@ test-unit-coverage-html:
 test-integration:
     {{venv_python}} -m pytest backend/tests/integration -q
 
+test-all:
+    @just test-unit
+    @just test-integration
+
 lint:
     {{venv_python}} -m ruff check backend/src backend/tests
 
@@ -72,3 +76,9 @@ check:
     @just format-check
     @just lint
     @just test-unit
+
+quality-all:
+    @just format-check
+    @just lint
+    @just frontend-format-check
+    @just frontend-lint

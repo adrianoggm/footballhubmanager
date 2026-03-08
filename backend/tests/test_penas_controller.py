@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 from api.interface.controller.v1 import penas_controller
+from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
 from auth.session import SessionData
 from fastapi import HTTPException
@@ -14,6 +15,12 @@ from persistence.application.use_cases.link_user_to_pena import (
     InvalidLinkTokenError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
+)
+from persistence.application.use_cases.manage_pena_labels import (
+    InvalidPenaLabelsDataError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsInfo,
+    PenaLabelsPenaNotFoundError,
 )
 
 
@@ -33,6 +40,15 @@ def _penas_page(*, total: int, page: int = 1, page_size: int = 20) -> PenasPage:
         page=page,
         page_size=page_size,
         total=total,
+    )
+
+
+def _labels_info() -> PenaLabelsInfo:
+    return PenaLabelsInfo(
+        role_labels=["Capitan", "Titular"],
+        position_labels=["POR", "DEF"],
+        role_colors={"Capitan": "#FF0000", "Titular": "#00FF00"},
+        position_colors={"POR": "#111111", "DEF": "#222222"},
     )
 
 
@@ -157,6 +173,98 @@ def test_get_pena_returns_pena_when_found():
     assert response.name == "Pena Found"
 
 
+def test_get_pena_labels_returns_labels():
+    class _UseCase:
+        def get_for_pena(self, *, pena_guid: str):
+            assert pena_guid == "pena-1"
+            return _labels_info()
+
+    response = penas_controller.get_pena_labels(
+        "pena-1",
+        _session=object(),
+        use_case=_UseCase(),
+    )
+    assert response.role_labels == ["Capitan", "Titular"]
+    assert response.position_colors == {"POR": "#111111", "DEF": "#222222"}
+
+
+def test_get_pena_labels_maps_not_found_error():
+    class _UseCase:
+        def get_for_pena(self, **_kwargs):
+            raise PenaLabelsPenaNotFoundError()
+
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.get_pena_labels(
+            "pena-1",
+            _session=object(),
+            use_case=_UseCase(),
+        )
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "Pena not found"
+
+
+def test_update_pena_labels_success():
+    class _UseCase:
+        def __init__(self):
+            self.last_call: dict | None = None
+
+        def update_for_admin(self, *, pena_guid: str, admin_id: int, update):
+            self.last_call = {
+                "pena_guid": pena_guid,
+                "admin_id": admin_id,
+                "update": update,
+            }
+            return _labels_info()
+
+    use_case = _UseCase()
+    response = penas_controller.update_pena_labels(
+        "pena-1",
+        payload=UpdatePenaLabelsRequest(
+            role_labels=["Capitan", "Titular"],
+            position_labels=["POR", "DEF"],
+            role_colors={"Capitan": "#ff0000"},
+            position_colors={"POR": "#111111"},
+        ),
+        admin_session=_session(user_type="admin", user_id=99),
+        use_case=use_case,
+    )
+
+    assert response.role_labels == ["Capitan", "Titular"]
+    assert use_case.last_call is not None
+    assert use_case.last_call["pena_guid"] == "pena-1"
+    assert use_case.last_call["admin_id"] == 99
+    assert use_case.last_call["update"].role_labels == ["Capitan", "Titular"]
+    assert use_case.last_call["update"].position_labels == ["POR", "DEF"]
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidPenaLabelsDataError(), 400, "Invalid pena labels data"),
+        (PenaLabelsPenaNotFoundError(), 404, "Pena not found"),
+        (PenaLabelsAccessDeniedError(), 403, "Admin does not manage this pena"),
+    ],
+)
+def test_update_pena_labels_maps_domain_errors(error, status_code, detail):
+    class _UseCase:
+        def update_for_admin(self, **_kwargs):
+            raise error
+
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.update_pena_labels(
+            "pena-1",
+            payload=UpdatePenaLabelsRequest(
+                role_labels=["Capitan"],
+                position_labels=["POR"],
+            ),
+            admin_session=_session(user_type="admin", user_id=5),
+            use_case=_UseCase(),
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
 def test_create_link_token_success():
     class _UseCase:
         def __init__(self):
@@ -269,3 +377,87 @@ def test_consume_link_token_maps_domain_errors_to_http(error, status_code, detai
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
+
+
+def test_get_penas_use_case_builds_expected_dependencies(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    class _UseCase:
+        def __init__(self, repo):
+            captured["repo_type"] = type(repo)
+            self.repo = repo
+
+    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaQueryRepository", _Repo)
+    monkeypatch.setattr(penas_controller, "GetPenasUseCase", _UseCase)
+
+    use_case = penas_controller.get_penas_use_case(db="db-session")
+    assert isinstance(use_case, _UseCase)
+    assert captured["db"] == "db-session"
+    assert captured["repo_type"] is _Repo
+
+
+def test_get_generate_pena_link_token_use_case_builds_expected_dependencies(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    class _UseCase:
+        def __init__(self, repo):
+            captured["repo_type"] = type(repo)
+            self.repo = repo
+
+    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaLinkRepository", _Repo)
+    monkeypatch.setattr(penas_controller, "GeneratePenaLinkTokenUseCase", _UseCase)
+
+    use_case = penas_controller.get_generate_pena_link_token_use_case(db="db-session")
+    assert isinstance(use_case, _UseCase)
+    assert captured["db"] == "db-session"
+    assert captured["repo_type"] is _Repo
+
+
+def test_get_link_user_to_pena_use_case_builds_expected_dependencies(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    class _UseCase:
+        def __init__(self, repo):
+            captured["repo_type"] = type(repo)
+            self.repo = repo
+
+    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaLinkRepository", _Repo)
+    monkeypatch.setattr(penas_controller, "LinkUserToPenaUseCase", _UseCase)
+
+    use_case = penas_controller.get_link_user_to_pena_use_case(db="db-session")
+    assert isinstance(use_case, _UseCase)
+    assert captured["db"] == "db-session"
+    assert captured["repo_type"] is _Repo
+
+
+def test_get_pena_labels_use_case_builds_expected_dependencies(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    class _UseCase:
+        def __init__(self, repo):
+            captured["repo_type"] = type(repo)
+            self.repo = repo
+
+    monkeypatch.setattr(penas_controller, "SqlAlchemyPenaLabelsRepository", _Repo)
+    monkeypatch.setattr(penas_controller, "ManagePenaLabelsUseCase", _UseCase)
+
+    use_case = penas_controller.get_pena_labels_use_case(db="db-session")
+    assert isinstance(use_case, _UseCase)
+    assert captured["db"] == "db-session"
+    assert captured["repo_type"] is _Repo
