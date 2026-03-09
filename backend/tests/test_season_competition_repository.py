@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonPlayerAlreadyRegisteredError,
 )
 from persistence.infrastructure.repository.db.season_competition_repository import (

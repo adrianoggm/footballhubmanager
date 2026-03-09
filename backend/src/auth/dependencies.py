@@ -52,6 +52,15 @@ def require_admin(session: SessionData = Depends(get_current_session)) -> Sessio
     return session
 
 
+def require_user(session: SessionData = Depends(get_current_session)) -> SessionData:
+    if session.user_type != "user":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User access required",
+        )
+    return session
+
+
 def authorize_pena_access(
     pena_guid: str,
     session: SessionData = Depends(get_current_session),

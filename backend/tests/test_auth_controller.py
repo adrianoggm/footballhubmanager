@@ -1,4 +1,5 @@
 import pytest
+from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import auth_controller
 from api.interface.controller.v1.model.request.auth_request import (
     LoginRequest,
@@ -9,21 +10,21 @@ from auth.application.models import AuthAccount
 from auth.application.use_cases.login import InvalidCredentialsError
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.register_admin import (
+from persistence.application.use_cases.register_admin_usecase import (
     InvalidAdminRegistrationDataError,
     RegisteredAdmin,
 )
-from persistence.application.use_cases.register_admin import (
+from persistence.application.use_cases.register_admin_usecase import (
     UsernameAlreadyExistsError as AdminUsernameExistsError,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     InvalidNationalityError as UserInvalidNationalityError,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     InvalidRegistrationDataError,
     RegisteredUser,
 )
-from persistence.application.use_cases.register_user import (
+from persistence.application.use_cases.register_user_usecase import (
     UsernameAlreadyExistsError as UserUsernameExistsError,
 )
 
@@ -50,8 +51,8 @@ def test_get_login_user_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(auth_controller, "SqlAlchemyAuthAccountRepository", _Repo)
-    monkeypatch.setattr(auth_controller, "LoginUserUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyAuthAccountRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "LoginUserUseCase", _UseCase)
 
     use_case = auth_controller.get_login_user_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -71,8 +72,8 @@ def test_get_login_admin_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(auth_controller, "SqlAlchemyAuthAccountRepository", _Repo)
-    monkeypatch.setattr(auth_controller, "LoginAdminUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyAuthAccountRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "LoginAdminUseCase", _UseCase)
 
     use_case = auth_controller.get_login_admin_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -92,8 +93,8 @@ def test_get_register_user_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(auth_controller, "SqlAlchemyRegistrationRepository", _Repo)
-    monkeypatch.setattr(auth_controller, "RegisterUserUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyRegistrationRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "RegisterUserUseCase", _UseCase)
 
     use_case = auth_controller.get_register_user_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -113,8 +114,8 @@ def test_get_register_admin_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(auth_controller, "SqlAlchemyRegistrationRepository", _Repo)
-    monkeypatch.setattr(auth_controller, "RegisterAdminUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyRegistrationRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "RegisterAdminUseCase", _UseCase)
 
     use_case = auth_controller.get_register_admin_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -258,6 +259,46 @@ def test_register_user_returns_session_response(monkeypatch):
     assert response.user_type == "user"
 
 
+def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
+    class _UseCase:
+        def execute(self, _registration):
+            return RegisteredUser(
+                account_id=17,
+                account_guid="user-guid-17",
+                player_guid="player-guid-17",
+            )
+
+    class _Db:
+        def __init__(self):
+            self.rolled_back = False
+
+        def rollback(self):
+            self.rolled_back = True
+
+    db = _Db()
+
+    def _raise_create_session(*_args, **_kwargs):
+        raise RuntimeError("session failure")
+
+    monkeypatch.setattr(auth_controller, "create_session", _raise_create_session)
+
+    with pytest.raises(RuntimeError):
+        auth_controller.register_user(
+            RegisterUserRequest(
+                username="u17",
+                password="secret",
+                name="Ana",
+                surname1="Lopez",
+                surname2=None,
+                nationality="ES",
+            ),
+            use_case=_UseCase(),
+            db=db,
+        )
+
+    assert db.rolled_back is True
+
+
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
     [
@@ -315,6 +356,35 @@ def test_register_admin_returns_session_response(monkeypatch):
     assert use_case.last_registration.username == "a23"
     assert response.user_guid == "admin-guid-23"
     assert response.user_type == "admin"
+
+
+def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
+    class _UseCase:
+        def execute(self, _registration):
+            return RegisteredAdmin(admin_id=23, admin_guid="admin-guid-23")
+
+    class _Db:
+        def __init__(self):
+            self.rolled_back = False
+
+        def rollback(self):
+            self.rolled_back = True
+
+    db = _Db()
+
+    def _raise_create_session(*_args, **_kwargs):
+        raise RuntimeError("session failure")
+
+    monkeypatch.setattr(auth_controller, "create_session", _raise_create_session)
+
+    with pytest.raises(RuntimeError):
+        auth_controller.register_admin(
+            RegisterAdminRequest(username="a23", password="secret", name="Admin"),
+            use_case=_UseCase(),
+            db=db,
+        )
+
+    assert db.rolled_back is True
 
 
 @pytest.mark.parametrize(

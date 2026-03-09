@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import season_competition_controller as controller
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
@@ -20,8 +21,7 @@ from api.interface.controller.v1.model.request.season_competition_request import
 )
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
@@ -45,6 +45,7 @@ from persistence.application.use_cases.manage_season_competition import (
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
+    SeasonPlayersFilters,
     SeasonPlayersPage,
 )
 
@@ -302,8 +303,8 @@ def test_get_season_competition_use_case_builds_expected_dependencies(monkeypatc
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(controller, "SqlAlchemySeasonCompetitionRepository", _Repo)
-    monkeypatch.setattr(controller, "ManageSeasonCompetitionUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonCompetitionRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "ManageSeasonCompetitionUseCase", _UseCase)
 
     use_case = controller.get_season_competition_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)
@@ -423,7 +424,7 @@ def test_list_season_players_success_and_filter_cleaning():
     method, payload = use_case.last_call
     assert method == "list_season_players"
     filters = payload["filters"]
-    assert isinstance(filters, SeasonPlayerFilters)
+    assert isinstance(filters, SeasonPlayersFilters)
     assert filters.name == "Ana"
     assert filters.surname1 is None
     assert filters.search == "text"

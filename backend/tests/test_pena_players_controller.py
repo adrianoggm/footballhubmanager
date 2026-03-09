@@ -4,13 +4,14 @@ from api.interface.controller.v1.model.request.pena_players_request import (
     CreateGuestPlayerRequest,
     UpdatePenaMembershipRequest,
 )
+from auth.dependencies import require_user
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.get_pena_players import (
+from persistence.application.use_cases.get_pena_players_usecase import (
     PenaPlayerInfo,
     PenaPlayersPage,
 )
-from persistence.application.use_cases.manage_pena_membership import (
+from persistence.application.use_cases.manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     PenaMembershipAccessDeniedError,
@@ -217,13 +218,9 @@ def test_get_pena_player_membership_maps_errors(error, status_code, detail):
 
 def test_get_my_pena_membership_requires_user_session():
     with pytest.raises(HTTPException) as exc:
-        pena_players_controller.get_my_pena_membership(
-            "pena-1",
-            session=_session(user_type="admin", user_id=1),
-            use_case=object(),
-        )
+        require_user(_session(user_type="admin", user_id=1))
     assert exc.value.status_code == 403
-    assert exc.value.detail == "User access only"
+    assert exc.value.detail == "User access required"
 
 
 def test_get_my_pena_membership_success():

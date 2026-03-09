@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     InvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipResult,
@@ -10,7 +10,7 @@ from persistence.application.ports.pena_membership_repository import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_membership import (
+from persistence.application.use_cases.manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
@@ -22,7 +22,7 @@ from persistence.application.use_cases.manage_pena_membership import (
     PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_membership import (
+from persistence.application.use_cases.manage_pena_membership_usecase import (
     PenaMembershipNotFoundError as UseCasePenaMembershipNotFoundError,
 )
 

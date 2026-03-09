@@ -1,7 +1,7 @@
-from persistence.application.ports.player_profile_repository import (
+from persistence.application.ports.player_profile_port import (
     InvalidNationalityError,
     PenaInfoResult,
-    PlayerProfileRepository,
+    PlayerProfilePort,
     PlayerProfileResult,
 )
 from persistence.domain.entity import Pena, PenaPlayer, Player
@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
+class SqlAlchemyPlayerProfileRepository(PlayerProfilePort):
     def __init__(self, session: Session):
         self.session = session
 

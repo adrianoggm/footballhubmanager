@@ -1,6 +1,12 @@
 import math
 from dataclasses import asdict
 
+from api.dependencies.use_cases import (
+    get_generate_pena_link_token_use_case,
+    get_link_user_to_pena_use_case,
+    get_pena_labels_use_case,
+    get_penas_use_case,
+)
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
 from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
@@ -10,7 +16,12 @@ from api.interface.controller.v1.model.response.penas_response import (
     PenasPageResponse,
 )
 from app.config import config as app_config
-from auth.dependencies import authorize_pena_access, get_current_session, require_admin
+from auth.dependencies import (
+    authorize_pena_access,
+    get_current_session,
+    require_admin,
+    require_user,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.use_cases import (
     GeneratePenaLinkTokenUseCase,
@@ -27,41 +38,8 @@ from persistence.application.use_cases import (
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
-from persistence.infrastructure.repository.db.pena_labels_repository import (
-    SqlAlchemyPenaLabelsRepository,
-)
-from persistence.infrastructure.repository.db.pena_link_repository import (
-    SqlAlchemyPenaLinkRepository,
-)
-from persistence.infrastructure.repository.db.pena_query_repository import (
-    SqlAlchemyPenaQueryRepository,
-)
-from persistence.module import get_db
-from sqlalchemy.orm import Session
 
 router = APIRouter()
-
-
-def get_penas_use_case(db: Session = Depends(get_db)) -> GetPenasUseCase:
-    repository = SqlAlchemyPenaQueryRepository(db)
-    return GetPenasUseCase(repository)
-
-
-def get_generate_pena_link_token_use_case(
-    db: Session = Depends(get_db),
-) -> GeneratePenaLinkTokenUseCase:
-    repository = SqlAlchemyPenaLinkRepository(db)
-    return GeneratePenaLinkTokenUseCase(repository)
-
-
-def get_link_user_to_pena_use_case(db: Session = Depends(get_db)) -> LinkUserToPenaUseCase:
-    repository = SqlAlchemyPenaLinkRepository(db)
-    return LinkUserToPenaUseCase(repository)
-
-
-def get_pena_labels_use_case(db: Session = Depends(get_db)) -> ManagePenaLabelsUseCase:
-    repository = SqlAlchemyPenaLabelsRepository(db)
-    return ManagePenaLabelsUseCase(repository)
 
 
 def _page_response(page: PenasPage) -> PenasPageResponse:
@@ -189,11 +167,9 @@ def create_link_token(
 @router.post("/penas/link/consume")
 def consume_link_token(
     payload: ConsumeLinkTokenRequest,
-    session=Depends(get_current_session),
+    session=Depends(require_user),
     use_case: LinkUserToPenaUseCase = Depends(get_link_user_to_pena_use_case),
 ):
-    if session.user_type != "user":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User access only")
     try:
         use_case.execute(
             token=payload.token,

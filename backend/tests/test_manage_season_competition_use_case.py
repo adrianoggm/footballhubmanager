@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     MatchDetailResult,
@@ -29,10 +29,10 @@ from persistence.application.ports.season_competition_repository import (
     SeasonPlayersPageResult,
     SeasonResult,
 )
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonDataError,
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
@@ -60,10 +60,10 @@ from persistence.application.use_cases.manage_season_competition import (
     SeasonPlayerNotFoundError,
     SeasonPlayerStatsUpdate,
 )
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
 )
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     SeasonPlayerNotInPenaError as UseCaseSeasonPlayerNotInPenaError,
 )
 
@@ -405,7 +405,7 @@ class _FakeRepo:
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         if self.should_raise_match_not_found:
-            from persistence.application.ports.season_competition_repository import (
+            from persistence.application.ports.season_competition_port import (
                 MatchNotFoundError,
             )
 
@@ -425,7 +425,7 @@ class _FakeRepo:
         if self.should_raise_match_stats_mismatch:
             raise MatchStatsMismatchError()
         if self.should_raise_match_not_found:
-            from persistence.application.ports.season_competition_repository import (
+            from persistence.application.ports.season_competition_port import (
                 MatchNotFoundError,
             )
 
@@ -440,7 +440,7 @@ class _FakeRepo:
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         if self.should_raise_match_not_found:
-            from persistence.application.ports.season_competition_repository import (
+            from persistence.application.ports.season_competition_port import (
                 MatchNotFoundError,
             )
 
@@ -463,7 +463,7 @@ class _FakeRepo:
 
     def get_match_detail(self, *, pena_guid: str, season_guid: str, match_guid: str):
         if self.should_raise_match_not_found:
-            from persistence.application.ports.season_competition_repository import (
+            from persistence.application.ports.season_competition_port import (
                 MatchNotFoundError,
             )
 
@@ -486,7 +486,7 @@ class _FakeRepo:
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         if self.should_raise_match_not_found:
-            from persistence.application.ports.season_competition_repository import (
+            from persistence.application.ports.season_competition_port import (
                 MatchNotFoundError,
             )
 

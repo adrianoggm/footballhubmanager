@@ -1,18 +1,18 @@
-from .admin_accounts import AdminAccounts
-from .base import Base
-from .football_match import FootballMatch
-from .nationality import Nationality
-from .pena import Pena
-from .pena_link_token import PenaLinkToken
-from .pena_player import PenaPlayer
-from .pena_role import PenaRole
-from .player import Player
-from .player_account import PlayerAccount
-from .season import Season
-from .season_player import SeasonPlayer
-from .team import Team
-from .team_player import TeamPlayer
-from .user_session import UserSession
+from .admin_accounts_entity import AdminAccounts
+from .base_entity import Base
+from .football_match_entity import FootballMatch
+from .nationality_entity import Nationality
+from .pena_entity import Pena
+from .pena_link_token_entity import PenaLinkToken
+from .pena_player_entity import PenaPlayer
+from .pena_role_entity import PenaRole
+from .player_account_entity import PlayerAccount
+from .player_entity import Player
+from .season_entity import Season
+from .season_player_entity import SeasonPlayer
+from .team_entity import Team
+from .team_player_entity import TeamPlayer
+from .user_session_entity import UserSession
 
 __all__ = [
     "Base",
