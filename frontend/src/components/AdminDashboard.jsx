@@ -576,7 +576,11 @@ export default function AdminDashboard({
   )
 
   useEffect(() => {
-    if (routeSectionId && adminSectionIds.includes(routeSectionId) && routeSectionId !== activeSection) {
+    if (
+      routeSectionId &&
+      adminSectionIds.includes(routeSectionId) &&
+      routeSectionId !== activeSection
+    ) {
       setActiveSection(routeSectionId)
     }
   }, [activeSection, adminSectionIds, routeSectionId])

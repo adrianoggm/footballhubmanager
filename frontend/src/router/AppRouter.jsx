@@ -37,7 +37,10 @@ export default function AppRouter({ auth, onLogout }) {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<RootRedirect isAuthenticated={isAuthenticated} session={auth.session} />} />
+        <Route
+          path="/"
+          element={<RootRedirect isAuthenticated={isAuthenticated} session={auth.session} />}
+        />
 
         <Route element={<RequireGuest isAuthenticated={isAuthenticated} session={auth.session} />}>
           <Route element={<PublicLayout />}>

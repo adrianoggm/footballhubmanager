@@ -4,7 +4,9 @@ import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 
 export default function PublicLayout() {
   return (
-    <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', py: { xs: 3, md: 5 } }}>
+    <Box
+      sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', py: { xs: 3, md: 5 } }}
+    >
       <Box
         sx={{
           position: 'absolute',
