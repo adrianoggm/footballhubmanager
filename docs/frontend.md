@@ -30,6 +30,9 @@ The frontend is a role-based application, not only an auth playground.
   - `frontend/src/layouts/PublicLayout.jsx`
   - `frontend/src/layouts/AdminLayout.jsx`
   - `frontend/src/layouts/UserLayout.jsx`
+- Route feature pages:
+  - `frontend/src/pages/admin/*.jsx`
+  - `frontend/src/pages/user/*.jsx`
 - Frontend sitemap source of truth: `frontend/src/navigation/sitemap.js`
 - Auth and session state: `frontend/src/hooks/useAuth.js`
 - Dashboards:

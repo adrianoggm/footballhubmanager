@@ -18,7 +18,13 @@ It is implemented in code at:
 
 Admin navigation is section-based (tabbed in `AdminDashboard`), backed by `ADMIN_DASHBOARD_SITEMAP`.
 
-- Base route: `/app/admin/:sectionId`
+- Base route: `/app/admin`
+- Section routes:
+  - `/app/admin/overview`
+  - `/app/admin/seasons`
+  - `/app/admin/players`
+  - `/app/admin/matches`
+  - `/app/admin/standings`
 - `overview`
   - Current context, quick actions, snapshots
 - `seasons`
@@ -34,7 +40,13 @@ Admin navigation is section-based (tabbed in `AdminDashboard`), backed by `ADMIN
 
 User navigation is section-based with quick anchors, backed by `USER_DASHBOARD_SITEMAP`.
 
-- Base route: `/app/user/:sectionId`
+- Base route: `/app/user`
+- Section routes:
+  - `/app/user/join`
+  - `/app/user/membership`
+  - `/app/user/standings`
+  - `/app/user/matches`
+  - `/app/user/insights`
 - `join` (`#user-section-join`)
   - Join by invite token
 - `membership` (`#user-section-membership`)
