@@ -86,6 +86,24 @@ export const FRONTEND_SITEMAP = Object.freeze({
   },
 })
 
+export const ADMIN_SECTION_IDS = Object.freeze(
+  ADMIN_DASHBOARD_SITEMAP.map((section) => section.id).filter(Boolean)
+)
+export const USER_SECTION_IDS = Object.freeze(
+  USER_DASHBOARD_SITEMAP.map((section) => section.id).filter(Boolean)
+)
+
+export const DEFAULT_ADMIN_SECTION_ID = ADMIN_SECTION_IDS[0] || 'overview'
+export const DEFAULT_USER_SECTION_ID = USER_SECTION_IDS.includes('membership')
+  ? 'membership'
+  : USER_SECTION_IDS[0] || 'join'
+
+export const normalizeAdminSectionId = (sectionId) =>
+  ADMIN_SECTION_IDS.includes(sectionId) ? sectionId : DEFAULT_ADMIN_SECTION_ID
+
+export const normalizeUserSectionId = (sectionId) =>
+  USER_SECTION_IDS.includes(sectionId) ? sectionId : DEFAULT_USER_SECTION_ID
+
 export const resolveUserDashboardSections = ({
   hasSelectedPena = false,
   hasSelectedSeason = false,

@@ -88,7 +88,12 @@ const mapDashboardErrorMessage = (error, t) => {
   return error.message
 }
 
-export default function UserDashboard({ session, onLogout }) {
+export default function UserDashboard({
+  session,
+  onLogout,
+  routeSectionId = '',
+  onSectionChange = null,
+}) {
   const { t } = useI18n()
   const [initializing, setInitializing] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -141,6 +146,14 @@ export default function UserDashboard({ session, onLogout }) {
       }),
     [selectedPenaGuid, selectedSeasonGuid]
   )
+  const activeNavSectionId = useMemo(() => {
+    if (!routeSectionId) {
+      return ''
+    }
+    return userQuickNavSections.some((section) => section.id === routeSectionId)
+      ? routeSectionId
+      : ''
+  }, [routeSectionId, userQuickNavSections])
   const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
   const currentStanding = useMemo(() => {
     if (!currentPlayerGuid || standings.length === 0) {
@@ -168,6 +181,25 @@ export default function UserDashboard({ session, onLogout }) {
     () => compareMatchInsightSummaries(insightsReport, insightsComparisonReport),
     [insightsReport, insightsComparisonReport]
   )
+
+  useEffect(() => {
+    if (!activeNavSectionId) {
+      return
+    }
+    const targetSection = userQuickNavSections.find((section) => section.id === activeNavSectionId)
+    if (!targetSection?.anchor) {
+      return
+    }
+
+    const rafId = window.requestAnimationFrame(() => {
+      const node = document.getElementById(targetSection.anchor)
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    })
+
+    return () => window.cancelAnimationFrame(rafId)
+  }, [activeNavSectionId, userQuickNavSections])
 
   const runAction = async (action, successMessage = '') => {
     setLoading(true)
@@ -636,10 +668,18 @@ export default function UserDashboard({ session, onLogout }) {
                   key={section.id}
                   label={t(section.titleKey)}
                   clickable
-                  component="a"
-                  href={`#${section.anchor}`}
-                  variant="outlined"
-                  color="secondary"
+                  color={activeNavSectionId === section.id ? 'secondary' : 'default'}
+                  variant={activeNavSectionId === section.id ? 'filled' : 'outlined'}
+                  onClick={() => {
+                    if (onSectionChange) {
+                      onSectionChange(section.id)
+                      return
+                    }
+                    const node = document.getElementById(section.anchor)
+                    if (node) {
+                      node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }}
                 />
               ))}
             </Stack>

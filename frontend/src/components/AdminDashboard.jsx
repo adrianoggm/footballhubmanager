@@ -442,7 +442,12 @@ const collectPagedItems = async (fetchPage) => {
   return items
 }
 
-export default function AdminDashboard({ session, onLogout }) {
+export default function AdminDashboard({
+  session,
+  onLogout,
+  routeSectionId = '',
+  onSectionChange = null,
+}) {
   const { language, t } = useI18n()
   const seasonMatchesRequestIdRef = useRef(0)
   const penaDataRequestIdRef = useRef(0)
@@ -455,7 +460,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
-  const [activeSection, setActiveSection] = useState('overview')
+  const [activeSection, setActiveSection] = useState(routeSectionId || 'overview')
 
   const [activeSeason, setActiveSeason] = useState(null)
   const [seasonList, setSeasonList] = useState([])
@@ -571,10 +576,26 @@ export default function AdminDashboard({ session, onLogout }) {
   )
 
   useEffect(() => {
+    if (routeSectionId && adminSectionIds.includes(routeSectionId) && routeSectionId !== activeSection) {
+      setActiveSection(routeSectionId)
+    }
+  }, [activeSection, adminSectionIds, routeSectionId])
+
+  useEffect(() => {
     if (!adminSectionIds.includes(activeSection)) {
       setActiveSection(adminSectionIds[0] || 'overview')
     }
   }, [activeSection, adminSectionIds])
+
+  const handleSectionChange = (nextSectionId) => {
+    const resolvedSectionId = adminSectionIds.includes(nextSectionId)
+      ? nextSectionId
+      : adminSectionIds[0] || 'overview'
+    setActiveSection(resolvedSectionId)
+    if (onSectionChange) {
+      onSectionChange(resolvedSectionId)
+    }
+  }
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -2148,7 +2169,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
             <Tabs
               value={activeSection}
-              onChange={(_, value) => setActiveSection(value)}
+              onChange={(_, value) => handleSectionChange(value)}
               variant="scrollable"
               scrollButtons="auto"
             >
@@ -2257,16 +2278,16 @@ export default function AdminDashboard({ session, onLogout }) {
                     {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                    <Button variant="outlined" onClick={() => setActiveSection('seasons')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
                       {t('dashboard.admin.overview.manageSeasons')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('players')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('players')}>
                       {t('dashboard.admin.overview.managePlayers')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('matches')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('standings')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('standings')}>
                       {t('dashboard.admin.overview.viewStandings')}
                     </Button>
                   </Stack>
@@ -2381,7 +2402,7 @@ export default function AdminDashboard({ session, onLogout }) {
                         {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
                       </Typography>
                     </Box>
-                    <Button variant="text" onClick={() => setActiveSection('matches')}>
+                    <Button variant="text" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
                   </Stack>
