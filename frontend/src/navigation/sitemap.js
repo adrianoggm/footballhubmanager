@@ -76,7 +76,7 @@ export const FRONTEND_SITEMAP = Object.freeze({
   shared: [
     {
       id: 'auth-landing',
-      path: '/',
+      path: '/auth',
       titleKey: 'app.auth.welcome',
     },
   ],
