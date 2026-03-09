@@ -21,6 +21,18 @@ The frontend is a role-based application, not only an auth playground.
 ## Main Architecture
 
 - App shell: `frontend/src/App.jsx`
+- Router entry: `frontend/src/router/AppRouter.jsx`
+- Route guards:
+  - `frontend/src/router/guards/RequireAuth.jsx`
+  - `frontend/src/router/guards/RequireGuest.jsx`
+  - `frontend/src/router/guards/RequireRole.jsx`
+- Layouts:
+  - `frontend/src/layouts/PublicLayout.jsx`
+  - `frontend/src/layouts/AdminLayout.jsx`
+  - `frontend/src/layouts/UserLayout.jsx`
+- Route feature pages:
+  - `frontend/src/pages/admin/*.jsx`
+  - `frontend/src/pages/user/*.jsx`
 - Frontend sitemap source of truth: `frontend/src/navigation/sitemap.js`
 - Auth and session state: `frontend/src/hooks/useAuth.js`
 - Dashboards:
@@ -49,6 +61,9 @@ The frontend is a role-based application, not only an auth playground.
   - Dashboards, section components, dialogs, and tables.
 - Hooks and state orchestration:
   - `useAuth`, `useAdminPlayers`, `useAdminSeasons`, `useAdminMatches`.
+  - Shared async view-model hooks:
+    - `useInsightsReport`
+    - `useMatchDetailDialog`
 - API services:
   - `authService`, `adminService`, `userService`, `httpClient`.
 - Client session persistence:

@@ -30,6 +30,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
+import { useInsightsReport } from '../hooks/useInsightsReport.js'
+import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
@@ -423,26 +425,51 @@ const buildMatchLineupsDraft = (detail) => ({
   away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
 })
 
-const collectPagedItems = async (fetchPage) => {
-  const items = []
-  let page = 1
-  while (true) {
-    const response = await fetchPage(page)
-    const pageItems = response.items || []
-    items.push(...pageItems)
-    const totalPages = Number(response.total_pages || 0)
-    if (totalPages && page >= totalPages) {
-      break
+const collectPagedItems = async (fetchPage, { maxConcurrent = 3 } = {}) => {
+  const firstResponse = await fetchPage(1)
+  const firstItems = firstResponse.items || []
+  const totalPages = Number(firstResponse.total_pages || 0)
+  const items = [...firstItems]
+
+  if (!totalPages) {
+    let page = 2
+    while (true) {
+      const response = await fetchPage(page)
+      const pageItems = response.items || []
+      if (!pageItems.length) {
+        break
+      }
+      items.push(...pageItems)
+      page += 1
     }
-    if (!totalPages && !pageItems.length) {
-      break
-    }
-    page += 1
+    return items
   }
+
+  if (totalPages <= 1) {
+    return items
+  }
+
+  for (let startPage = 2; startPage <= totalPages; startPage += maxConcurrent) {
+    const endPage = Math.min(totalPages, startPage + maxConcurrent - 1)
+    const batchPages = Array.from(
+      { length: endPage - startPage + 1 },
+      (_, index) => startPage + index
+    )
+    const batchResponses = await Promise.all(batchPages.map((page) => fetchPage(page)))
+    batchResponses.forEach((response) => {
+      items.push(...(response.items || []))
+    })
+  }
+
   return items
 }
 
-export default function AdminDashboard({ session, onLogout }) {
+export default function AdminDashboard({
+  session,
+  onLogout,
+  routeSectionId = '',
+  onSectionChange = null,
+}) {
   const { language, t } = useI18n()
   const seasonMatchesRequestIdRef = useRef(0)
   const penaDataRequestIdRef = useRef(0)
@@ -455,7 +482,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
-  const [activeSection, setActiveSection] = useState('overview')
+  const [activeSection, setActiveSection] = useState(routeSectionId || 'overview')
 
   const [activeSeason, setActiveSeason] = useState(null)
   const [seasonList, setSeasonList] = useState([])
@@ -473,18 +500,10 @@ export default function AdminDashboard({ session, onLogout }) {
   const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
   const [matchStatsDraft, setMatchStatsDraft] = useState(null)
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
-  const [overviewMatchGuid, setOverviewMatchGuid] = useState('')
-  const [overviewMatchDetail, setOverviewMatchDetail] = useState(null)
-  const [overviewMatchLoading, setOverviewMatchLoading] = useState(false)
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [insightsReport, setInsightsReport] = useState(null)
-  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
-  const overviewMatchRequestIdRef = useRef(0)
-  const insightsRequestIdRef = useRef(0)
 
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
@@ -524,6 +543,36 @@ export default function AdminDashboard({ session, onLogout }) {
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
     [penas, selectedPenaGuid]
   )
+
+  const {
+    matchGuid: overviewMatchGuid,
+    matchDetail: overviewMatchDetail,
+    isLoading: overviewMatchLoading,
+    open: openOverviewMatchDetailDialog,
+    close: closeOverviewMatchDetailDialog,
+    reset: resetOverviewMatchDetailDialog,
+  } = useMatchDetailDialog({
+    fetchDetail: (matchGuid) =>
+      adminService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
+
+  const {
+    loading: insightsLoading,
+    report: insightsReport,
+    comparisonReport: insightsComparisonReport,
+    refresh: refreshInsightsReport,
+    reset: resetInsightsReport,
+  } = useInsightsReport({
+    fetchInsights: ({ scope, seasonGuids }) =>
+      adminService.getMatchInsights(selectedPenaGuid, {
+        scope,
+        season_guids: seasonGuids,
+      }),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
 
   const draftRoleLabels = useMemo(
     () => normalizeLabelList(labelsDraft.role_labels || ''),
@@ -571,10 +620,30 @@ export default function AdminDashboard({ session, onLogout }) {
   )
 
   useEffect(() => {
+    if (
+      routeSectionId &&
+      adminSectionIds.includes(routeSectionId) &&
+      routeSectionId !== activeSection
+    ) {
+      setActiveSection(routeSectionId)
+    }
+  }, [activeSection, adminSectionIds, routeSectionId])
+
+  useEffect(() => {
     if (!adminSectionIds.includes(activeSection)) {
       setActiveSection(adminSectionIds[0] || 'overview')
     }
   }, [activeSection, adminSectionIds])
+
+  const handleSectionChange = (nextSectionId) => {
+    const resolvedSectionId = adminSectionIds.includes(nextSectionId)
+      ? nextSectionId
+      : adminSectionIds[0] || 'overview'
+    setActiveSection(resolvedSectionId)
+    if (onSectionChange) {
+      onSectionChange(resolvedSectionId)
+    }
+  }
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -1106,20 +1175,19 @@ export default function AdminDashboard({ session, onLogout }) {
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
 
   useEffect(() => {
-    overviewMatchRequestIdRef.current += 1
-    setOverviewMatchGuid('')
-    setOverviewMatchDetail(null)
-    setOverviewMatchLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid])
+    resetOverviewMatchDetailDialog()
+  }, [resetOverviewMatchDetailDialog, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    insightsRequestIdRef.current += 1
-    setInsightsReport(null)
-    setInsightsComparisonReport(null)
-    setInsightsLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
+    resetInsightsReport()
+  }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
+    const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
+    if (!shouldLoadSeasonMatches) {
+      setSeasonMatchesLoading(false)
+      return
+    }
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
       setSeasonMatches([])
       setSelectedMatchGuid('')
@@ -1164,7 +1232,7 @@ export default function AdminDashboard({ session, onLogout }) {
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
 
   useEffect(() => {
     const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
@@ -1651,57 +1719,12 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
       return
     }
-    const requestId = overviewMatchRequestIdRef.current + 1
-    overviewMatchRequestIdRef.current = requestId
-    setOverviewMatchGuid(matchGuid)
-    setOverviewMatchLoading(true)
     setError(null)
-    try {
-      const detail = await adminService.getMatchDetail(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        matchGuid
-      )
-      if (requestId !== overviewMatchRequestIdRef.current) {
-        return
-      }
-      setOverviewMatchDetail(detail)
-    } catch (requestError) {
-      if (requestId !== overviewMatchRequestIdRef.current) {
-        return
-      }
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === overviewMatchRequestIdRef.current) {
-        setOverviewMatchLoading(false)
-      }
-    }
+    await openOverviewMatchDetailDialog(matchGuid)
   }
 
   const handleCloseOverviewMatchDetail = () => {
-    overviewMatchRequestIdRef.current += 1
-    setOverviewMatchGuid('')
-    setOverviewMatchDetail(null)
-    setOverviewMatchLoading(false)
-  }
-
-  const loadScopeInsightReport = async (penaGuid, scope) => {
-    const seasonGuids =
-      scope === 'all_seasons'
-        ? seasonList.map((season) => season.guid).filter(Boolean)
-        : [selectedSeasonGuid].filter(Boolean)
-
-    if (!seasonGuids.length) {
-      return null
-    }
-    return adminService.getMatchInsights(penaGuid, {
-      scope,
-      season_guids: seasonGuids,
-    })
+    closeOverviewMatchDetailDialog()
   }
 
   const handleRefreshInsights = async () => {
@@ -1709,36 +1732,12 @@ export default function AdminDashboard({ session, onLogout }) {
       return
     }
 
-    const requestId = insightsRequestIdRef.current + 1
-    insightsRequestIdRef.current = requestId
-
-    setInsightsLoading(true)
     setError(null)
-
-    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
-    try {
-      const [primaryReport, comparisonReport] = await Promise.all([
-        loadScopeInsightReport(selectedPenaGuid, insightsScope),
-        seasonList.length > 1 || comparisonScope === 'selected_season'
-          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
-          : Promise.resolve(null),
-      ])
-      if (requestId !== insightsRequestIdRef.current) {
-        return
-      }
-      setInsightsReport(primaryReport)
-      setInsightsComparisonReport(comparisonReport)
-    } catch (requestError) {
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === insightsRequestIdRef.current) {
-        setInsightsLoading(false)
-      }
-    }
+    await refreshInsightsReport({
+      scope: insightsScope,
+      selectedSeasonGuid,
+      seasonList,
+    })
   }
 
   const handleRequestDeleteSeasonMatch = (match) => {
@@ -2148,7 +2147,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
             <Tabs
               value={activeSection}
-              onChange={(_, value) => setActiveSection(value)}
+              onChange={(_, value) => handleSectionChange(value)}
               variant="scrollable"
               scrollButtons="auto"
             >
@@ -2257,16 +2256,16 @@ export default function AdminDashboard({ session, onLogout }) {
                     {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                    <Button variant="outlined" onClick={() => setActiveSection('seasons')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
                       {t('dashboard.admin.overview.manageSeasons')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('players')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('players')}>
                       {t('dashboard.admin.overview.managePlayers')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('matches')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('standings')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('standings')}>
                       {t('dashboard.admin.overview.viewStandings')}
                     </Button>
                   </Stack>
@@ -2381,7 +2380,7 @@ export default function AdminDashboard({ session, onLogout }) {
                         {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
                       </Typography>
                     </Box>
-                    <Button variant="text" onClick={() => setActiveSection('matches')}>
+                    <Button variant="text" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
                   </Stack>
