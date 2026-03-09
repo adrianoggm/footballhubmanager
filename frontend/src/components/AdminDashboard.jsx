@@ -31,6 +31,7 @@ import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
@@ -563,6 +564,17 @@ export default function AdminDashboard({ session, onLogout }) {
   )
 
   const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
+  const adminSections = useMemo(() => ADMIN_DASHBOARD_SITEMAP, [])
+  const adminSectionIds = useMemo(
+    () => adminSections.map((section) => section.id).filter(Boolean),
+    [adminSections]
+  )
+
+  useEffect(() => {
+    if (!adminSectionIds.includes(activeSection)) {
+      setActiveSection(adminSectionIds[0] || 'overview')
+    }
+  }, [activeSection, adminSectionIds])
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -2140,11 +2152,9 @@ export default function AdminDashboard({ session, onLogout }) {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab value="overview" label={t('dashboard.admin.tabs.overview')} />
-              <Tab value="seasons" label={t('dashboard.admin.tabs.seasons')} />
-              <Tab value="players" label={t('dashboard.admin.tabs.players')} />
-              <Tab value="matches" label={t('dashboard.admin.tabs.matches')} />
-              <Tab value="standings" label={t('dashboard.admin.tabs.standings')} />
+              {adminSections.map((section) => (
+                <Tab key={section.id} value={section.id} label={t(section.titleKey)} />
+              ))}
             </Tabs>
           </Stack>
         </CardContent>

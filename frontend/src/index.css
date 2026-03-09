@@ -1,15 +1,42 @@
 :root {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  color: #0f172a;
-  background:
+  --fh-font-family: 'Space Grotesk', system-ui, sans-serif;
+  --fh-color-text-primary: #0f172a;
+  --fh-color-text-secondary: #475569;
+  --fh-color-primary-main: #1f2937;
+  --fh-color-primary-light: #334155;
+  --fh-color-primary-dark: #0f172a;
+  --fh-color-secondary-main: #0f766e;
+  --fh-color-secondary-light: #14b8a6;
+  --fh-color-secondary-dark: #115e59;
+  --fh-color-info-main: #0ea5a3;
+  --fh-color-success-main: #15803d;
+  --fh-color-warning-main: #b45309;
+  --fh-color-error-main: #b91c1c;
+  --fh-color-surface-page: #f7f3e8;
+  --fh-color-surface-card: #fffdf7;
+  --fh-gradient-page:
     radial-gradient(900px 520px at 92% 12%, #fdebd1 0%, rgba(253, 235, 209, 0) 62%),
     radial-gradient(1200px 640px at 12% -10%, #dff2ec 0%, #eef4eb 38%, #f9f3e6 82%);
+  font-family: var(--fh-font-family);
+  color: var(--fh-color-text-primary);
+  background: var(--fh-gradient-page);
+  color-scheme: light;
   line-height: 1.5;
   font-weight: 400;
 }
 
-* {
+html {
+  scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+[data-sitemap-anchor] {
+  scroll-margin-top: 92px;
 }
 
 @keyframes floatOrb {
@@ -27,8 +54,28 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--fh-gradient-page);
+  color: var(--fh-color-text-primary);
+}
+
+a {
+  color: inherit;
 }
 
 #root {
   min-height: 100vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

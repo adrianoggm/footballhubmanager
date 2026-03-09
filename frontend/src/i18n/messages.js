@@ -460,6 +460,7 @@ export const messages = {
       user: {
         panelTitle: 'Player Panel',
         loadingTitle: 'Player Panel',
+        sectionsNavTitle: 'Quick section map',
         profileTitle: 'My Profile',
         openSettings: 'Settings',
         profileSettingsTitle: 'Profile settings',
@@ -1013,6 +1014,7 @@ export const messages = {
       user: {
         panelTitle: 'Panel de jugador',
         loadingTitle: 'Panel de jugador',
+        sectionsNavTitle: 'Mapa rápido de secciones',
         profileTitle: 'Mi perfil',
         openSettings: 'Configuración',
         profileSettingsTitle: 'Configuración de perfil',

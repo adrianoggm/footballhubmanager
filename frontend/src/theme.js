@@ -4,43 +4,43 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1f2937',
-      light: '#334155',
-      dark: '#0f172a',
+      main: 'var(--fh-color-primary-main)',
+      light: 'var(--fh-color-primary-light)',
+      dark: 'var(--fh-color-primary-dark)',
       contrastText: '#f8fafc',
     },
     secondary: {
-      main: '#0f766e',
-      light: '#14b8a6',
-      dark: '#115e59',
+      main: 'var(--fh-color-secondary-main)',
+      light: 'var(--fh-color-secondary-light)',
+      dark: 'var(--fh-color-secondary-dark)',
       contrastText: '#f0fdfa',
     },
     info: {
-      main: '#0ea5a3',
+      main: 'var(--fh-color-info-main)',
     },
     success: {
-      main: '#15803d',
+      main: 'var(--fh-color-success-main)',
     },
     warning: {
-      main: '#b45309',
+      main: 'var(--fh-color-warning-main)',
     },
     error: {
-      main: '#b91c1c',
+      main: 'var(--fh-color-error-main)',
     },
     background: {
-      default: '#f7f3e8',
-      paper: '#fffdf7',
+      default: 'var(--fh-color-surface-page)',
+      paper: 'var(--fh-color-surface-card)',
     },
     text: {
-      primary: '#0f172a',
-      secondary: '#475569',
+      primary: 'var(--fh-color-text-primary)',
+      secondary: 'var(--fh-color-text-secondary)',
     },
   },
   shape: {
     borderRadius: 14,
   },
   typography: {
-    fontFamily: '"Space Grotesk", system-ui, sans-serif',
+    fontFamily: 'var(--fh-font-family)',
     h3: {
       fontWeight: 700,
       letterSpacing: -0.5,
@@ -66,6 +66,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          border: '1px solid rgba(15,23,42,0.08)',
         },
       },
     },
