@@ -7,15 +7,18 @@ It is implemented in code at:
 
 ## 1) Shared Surface
 
-- `/` Auth + product overview
+- `/auth` Auth + product overview
   - Login / register
   - Language switch
   - Session handoff to role dashboards
+- `/app`
+  - Role-aware redirect to admin/user base route
 
 ## 2) Admin Surface
 
 Admin navigation is section-based (tabbed in `AdminDashboard`), backed by `ADMIN_DASHBOARD_SITEMAP`.
 
+- Base route: `/app/admin/:sectionId`
 - `overview`
   - Current context, quick actions, snapshots
 - `seasons`
@@ -31,6 +34,7 @@ Admin navigation is section-based (tabbed in `AdminDashboard`), backed by `ADMIN
 
 User navigation is section-based with quick anchors, backed by `USER_DASHBOARD_SITEMAP`.
 
+- Base route: `/app/user/:sectionId`
 - `join` (`#user-section-join`)
   - Join by invite token
 - `membership` (`#user-section-membership`)
@@ -53,6 +57,7 @@ Global tokens and behavior are centralized in:
 
 1. Add or update the section definition in `frontend/src/navigation/sitemap.js`.
 2. Render the section in the role dashboard (`AdminDashboard` or `UserDashboard`).
-3. If user-facing anchor navigation is needed, assign an anchor id and mark it as `data-sitemap-anchor`.
-4. Add i18n labels in `frontend/src/i18n/messages.js`.
-5. Validate with `npm --prefix frontend run check`.
+3. Ensure route normalization (default/invalid section behavior) in route pages under `frontend/src/pages/*RoutePage.jsx`.
+4. If user-facing anchor navigation is needed, assign an anchor id and mark it as `data-sitemap-anchor`.
+5. Add i18n labels in `frontend/src/i18n/messages.js`.
+6. Validate with `npm --prefix frontend run check`.
