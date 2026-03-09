@@ -1,24 +1,27 @@
 import { useCallback } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import UserDashboard from '../components/UserDashboard.jsx'
-import { DEFAULT_USER_SECTION_ID, normalizeUserSectionId } from '../navigation/sitemap.js'
+import {
+  DEFAULT_USER_SECTION_ID,
+  getUserSectionPath,
+  normalizeUserSectionId,
+} from '../navigation/sitemap.js'
 
-export default function UserDashboardRoutePage({ session, onLogout }) {
+export default function UserDashboardRoutePage({
+  session,
+  onLogout,
+  sectionId = DEFAULT_USER_SECTION_ID,
+}) {
   const navigate = useNavigate()
-  const { sectionId = DEFAULT_USER_SECTION_ID } = useParams()
   const normalizedSectionId = normalizeUserSectionId(sectionId)
 
   const handleSectionChange = useCallback(
     (nextSectionId) => {
       const resolvedSectionId = normalizeUserSectionId(nextSectionId)
-      navigate(`/app/user/${resolvedSectionId}`)
+      navigate(getUserSectionPath(resolvedSectionId))
     },
     [navigate]
   )
-
-  if (sectionId !== normalizedSectionId) {
-    return <Navigate to={`/app/user/${normalizedSectionId}`} replace />
-  }
 
   return (
     <UserDashboard
