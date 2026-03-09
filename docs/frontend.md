@@ -61,6 +61,9 @@ The frontend is a role-based application, not only an auth playground.
   - Dashboards, section components, dialogs, and tables.
 - Hooks and state orchestration:
   - `useAuth`, `useAdminPlayers`, `useAdminSeasons`, `useAdminMatches`.
+  - Shared async view-model hooks:
+    - `useInsightsReport`
+    - `useMatchDetailDialog`
 - API services:
   - `authService`, `adminService`, `userService`, `httpClient`.
 - Client session persistence:
