@@ -12,10 +12,12 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material'
+import { useEffect, useMemo, useState } from 'react'
 
 const labelChipSx = (color) => ({
   backgroundColor: color || '#64748B',
@@ -68,6 +70,24 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     onLabelColorDraftChange,
     handleSavePenaLabels,
   } = actions
+
+  const [membersPage, setMembersPage] = useState(0)
+  const [membersRowsPerPage, setMembersRowsPerPage] = useState(25)
+
+  const pagedHistoricalPlayers = useMemo(() => {
+    const start = membersPage * membersRowsPerPage
+    return filteredHistoricalPlayers.slice(start, start + membersRowsPerPage)
+  }, [filteredHistoricalPlayers, membersPage, membersRowsPerPage])
+
+  useEffect(() => {
+    const maxPage = Math.max(
+      0,
+      Math.ceil(filteredHistoricalPlayers.length / membersRowsPerPage) - 1
+    )
+    if (membersPage > maxPage) {
+      setMembersPage(maxPage)
+    }
+  }, [filteredHistoricalPlayers.length, membersPage, membersRowsPerPage])
 
   return (
     <Grid container spacing={2.5}>
@@ -418,7 +438,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {filteredHistoricalPlayers.map((player) => (
+                          {pagedHistoricalPlayers.map((player) => (
                             <TableRow key={player.guid}>
                               <TableCell>
                                 {[player.name, player.surname1, player.surname2]
@@ -481,6 +501,18 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         </TableBody>
                       </Table>
                     </TableContainer>
+                    <TablePagination
+                      component="div"
+                      count={filteredHistoricalPlayers.length}
+                      page={membersPage}
+                      onPageChange={(_, nextPage) => setMembersPage(nextPage)}
+                      rowsPerPage={membersRowsPerPage}
+                      onRowsPerPageChange={(event) => {
+                        setMembersRowsPerPage(Number(event.target.value))
+                        setMembersPage(0)
+                      }}
+                      rowsPerPageOptions={[10, 25, 50, 100]}
+                    />
                   </Stack>
                 )}
               </Stack>

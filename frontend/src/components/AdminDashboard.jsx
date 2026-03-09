@@ -425,22 +425,42 @@ const buildMatchLineupsDraft = (detail) => ({
   away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
 })
 
-const collectPagedItems = async (fetchPage) => {
-  const items = []
-  let page = 1
-  while (true) {
-    const response = await fetchPage(page)
-    const pageItems = response.items || []
-    items.push(...pageItems)
-    const totalPages = Number(response.total_pages || 0)
-    if (totalPages && page >= totalPages) {
-      break
+const collectPagedItems = async (fetchPage, { maxConcurrent = 3 } = {}) => {
+  const firstResponse = await fetchPage(1)
+  const firstItems = firstResponse.items || []
+  const totalPages = Number(firstResponse.total_pages || 0)
+  const items = [...firstItems]
+
+  if (!totalPages) {
+    let page = 2
+    while (true) {
+      const response = await fetchPage(page)
+      const pageItems = response.items || []
+      if (!pageItems.length) {
+        break
+      }
+      items.push(...pageItems)
+      page += 1
     }
-    if (!totalPages && !pageItems.length) {
-      break
-    }
-    page += 1
+    return items
   }
+
+  if (totalPages <= 1) {
+    return items
+  }
+
+  for (let startPage = 2; startPage <= totalPages; startPage += maxConcurrent) {
+    const endPage = Math.min(totalPages, startPage + maxConcurrent - 1)
+    const batchPages = Array.from(
+      { length: endPage - startPage + 1 },
+      (_, index) => startPage + index
+    )
+    const batchResponses = await Promise.all(batchPages.map((page) => fetchPage(page)))
+    batchResponses.forEach((response) => {
+      items.push(...(response.items || []))
+    })
+  }
+
   return items
 }
 
@@ -1163,6 +1183,11 @@ export default function AdminDashboard({
   }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
+    const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
+    if (!shouldLoadSeasonMatches) {
+      setSeasonMatchesLoading(false)
+      return
+    }
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
       setSeasonMatches([])
       setSelectedMatchGuid('')
@@ -1207,7 +1232,7 @@ export default function AdminDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
 
   useEffect(() => {
     const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
