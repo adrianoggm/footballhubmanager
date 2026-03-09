@@ -118,16 +118,8 @@ export default function UserDashboard({
   const [seasonMatches, setSeasonMatches] = useState([])
   const [seasonDataLoading, setSeasonDataLoading] = useState(false)
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [insightsReport, setInsightsReport] = useState(null)
-  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
-  const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
-  const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
-  const [matchDetailLoading, setMatchDetailLoading] = useState(false)
   const seasonListRequestIdRef = useRef(0)
   const seasonDataRequestIdRef = useRef(0)
-  const matchDetailRequestIdRef = useRef(0)
-  const insightsRequestIdRef = useRef(0)
 
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
@@ -138,6 +130,36 @@ export default function UserDashboard({
     () => seasonList.find((item) => item.guid === selectedSeasonGuid) || null,
     [seasonList, selectedSeasonGuid]
   )
+
+  const {
+    loading: insightsLoading,
+    report: insightsReport,
+    comparisonReport: insightsComparisonReport,
+    refresh: refreshInsightsReport,
+    reset: resetInsightsReport,
+  } = useInsightsReport({
+    fetchInsights: ({ scope, seasonGuids }) =>
+      userService.getMatchInsights(selectedPenaGuid, {
+        scope,
+        season_guids: seasonGuids,
+      }),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
+
+  const {
+    matchGuid: selectedMatchGuid,
+    matchDetail: selectedMatchDetail,
+    isLoading: matchDetailLoading,
+    open: openMatchDetailDialog,
+    close: closeMatchDetailDialog,
+    reset: resetMatchDetailDialog,
+  } = useMatchDetailDialog({
+    fetchDetail: (matchGuid) =>
+      userService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
 
   const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
   const userQuickNavSections = useMemo(
@@ -294,8 +316,7 @@ export default function UserDashboard({
       }
       setStandings([])
       setSeasonMatches([])
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
+      resetMatchDetailDialog()
       return
     }
 
@@ -368,8 +389,7 @@ export default function UserDashboard({
         setSelectedSeasonGuid('')
         setStandings([])
         setSeasonMatches([])
-        setSelectedMatchGuid('')
-        setSelectedMatchDetail(null)
+        resetMatchDetailDialog()
       }
       return
     }
@@ -417,18 +437,12 @@ export default function UserDashboard({
   }, [selectedPenaGuid, selectedSeasonGuid, initializing])
 
   useEffect(() => {
-    matchDetailRequestIdRef.current += 1
-    setSelectedMatchGuid('')
-    setSelectedMatchDetail(null)
-    setMatchDetailLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid])
+    resetMatchDetailDialog()
+  }, [resetMatchDetailDialog, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    insightsRequestIdRef.current += 1
-    setInsightsReport(null)
-    setInsightsComparisonReport(null)
-    setInsightsLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
+    resetInsightsReport()
+  }, [resetInsightsReport, selectedPenaGuid, selectedSeasonGuid, insightsScope])
 
   const onProfileField = (name) => (event) => {
     setProfileForm((prev) => ({ ...prev, [name]: event.target.value }))
@@ -522,99 +536,29 @@ export default function UserDashboard({
     }, t('dashboard.user.noticeLeftPena'))
   }
 
-  const loadScopeInsightReport = async (penaGuid, scope) => {
-    const seasonGuids =
-      scope === 'all_seasons'
-        ? seasonList.map((season) => season.guid).filter(Boolean)
-        : [selectedSeasonGuid].filter(Boolean)
-
-    if (!seasonGuids.length) {
-      return null
-    }
-
-    return userService.getMatchInsights(penaGuid, {
-      scope,
-      season_guids: seasonGuids,
-    })
-  }
-
   const handleRefreshInsights = async () => {
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
 
-    const requestId = insightsRequestIdRef.current + 1
-    insightsRequestIdRef.current = requestId
-
-    setInsightsLoading(true)
     setError(null)
-
-    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
-    try {
-      const [primaryReport, comparisonReport] = await Promise.all([
-        loadScopeInsightReport(selectedPenaGuid, insightsScope),
-        seasonList.length > 1 || comparisonScope === 'selected_season'
-          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
-          : Promise.resolve(null),
-      ])
-      if (requestId !== insightsRequestIdRef.current) {
-        return
-      }
-      setInsightsReport(primaryReport)
-      setInsightsComparisonReport(comparisonReport)
-    } catch (requestError) {
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === insightsRequestIdRef.current) {
-        setInsightsLoading(false)
-      }
-    }
+    await refreshInsightsReport({
+      scope: insightsScope,
+      selectedSeasonGuid,
+      seasonList,
+    })
   }
 
   const handleOpenMatchDetail = async (matchGuid) => {
     if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
       return
     }
-    const requestId = matchDetailRequestIdRef.current + 1
-    matchDetailRequestIdRef.current = requestId
-    setSelectedMatchGuid(matchGuid)
-    setMatchDetailLoading(true)
     setError(null)
-    try {
-      const detail = await userService.getMatchDetail(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        matchGuid
-      )
-      if (requestId !== matchDetailRequestIdRef.current) {
-        return
-      }
-      setSelectedMatchDetail(detail)
-    } catch (requestError) {
-      if (requestId !== matchDetailRequestIdRef.current) {
-        return
-      }
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === matchDetailRequestIdRef.current) {
-        setMatchDetailLoading(false)
-      }
-    }
+    await openMatchDetailDialog(matchGuid)
   }
 
   const handleCloseMatchDetail = () => {
-    matchDetailRequestIdRef.current += 1
-    setSelectedMatchGuid('')
-    setSelectedMatchDetail(null)
-    setMatchDetailLoading(false)
+    closeMatchDetailDialog()
   }
 
   if (initializing) {

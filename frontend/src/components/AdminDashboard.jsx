@@ -30,6 +30,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
+import { useInsightsReport } from '../hooks/useInsightsReport.js'
+import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
@@ -478,18 +480,10 @@ export default function AdminDashboard({
   const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
   const [matchStatsDraft, setMatchStatsDraft] = useState(null)
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
-  const [overviewMatchGuid, setOverviewMatchGuid] = useState('')
-  const [overviewMatchDetail, setOverviewMatchDetail] = useState(null)
-  const [overviewMatchLoading, setOverviewMatchLoading] = useState(false)
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [insightsReport, setInsightsReport] = useState(null)
-  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
-  const overviewMatchRequestIdRef = useRef(0)
-  const insightsRequestIdRef = useRef(0)
 
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
@@ -529,6 +523,36 @@ export default function AdminDashboard({
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
     [penas, selectedPenaGuid]
   )
+
+  const {
+    matchGuid: overviewMatchGuid,
+    matchDetail: overviewMatchDetail,
+    isLoading: overviewMatchLoading,
+    open: openOverviewMatchDetailDialog,
+    close: closeOverviewMatchDetailDialog,
+    reset: resetOverviewMatchDetailDialog,
+  } = useMatchDetailDialog({
+    fetchDetail: (matchGuid) =>
+      adminService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
+
+  const {
+    loading: insightsLoading,
+    report: insightsReport,
+    comparisonReport: insightsComparisonReport,
+    refresh: refreshInsightsReport,
+    reset: resetInsightsReport,
+  } = useInsightsReport({
+    fetchInsights: ({ scope, seasonGuids }) =>
+      adminService.getMatchInsights(selectedPenaGuid, {
+        scope,
+        season_guids: seasonGuids,
+      }),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
 
   const draftRoleLabels = useMemo(
     () => normalizeLabelList(labelsDraft.role_labels || ''),
@@ -1131,18 +1155,12 @@ export default function AdminDashboard({
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
 
   useEffect(() => {
-    overviewMatchRequestIdRef.current += 1
-    setOverviewMatchGuid('')
-    setOverviewMatchDetail(null)
-    setOverviewMatchLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid])
+    resetOverviewMatchDetailDialog()
+  }, [resetOverviewMatchDetailDialog, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    insightsRequestIdRef.current += 1
-    setInsightsReport(null)
-    setInsightsComparisonReport(null)
-    setInsightsLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
+    resetInsightsReport()
+  }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
@@ -1676,57 +1694,12 @@ export default function AdminDashboard({
     if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
       return
     }
-    const requestId = overviewMatchRequestIdRef.current + 1
-    overviewMatchRequestIdRef.current = requestId
-    setOverviewMatchGuid(matchGuid)
-    setOverviewMatchLoading(true)
     setError(null)
-    try {
-      const detail = await adminService.getMatchDetail(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        matchGuid
-      )
-      if (requestId !== overviewMatchRequestIdRef.current) {
-        return
-      }
-      setOverviewMatchDetail(detail)
-    } catch (requestError) {
-      if (requestId !== overviewMatchRequestIdRef.current) {
-        return
-      }
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === overviewMatchRequestIdRef.current) {
-        setOverviewMatchLoading(false)
-      }
-    }
+    await openOverviewMatchDetailDialog(matchGuid)
   }
 
   const handleCloseOverviewMatchDetail = () => {
-    overviewMatchRequestIdRef.current += 1
-    setOverviewMatchGuid('')
-    setOverviewMatchDetail(null)
-    setOverviewMatchLoading(false)
-  }
-
-  const loadScopeInsightReport = async (penaGuid, scope) => {
-    const seasonGuids =
-      scope === 'all_seasons'
-        ? seasonList.map((season) => season.guid).filter(Boolean)
-        : [selectedSeasonGuid].filter(Boolean)
-
-    if (!seasonGuids.length) {
-      return null
-    }
-    return adminService.getMatchInsights(penaGuid, {
-      scope,
-      season_guids: seasonGuids,
-    })
+    closeOverviewMatchDetailDialog()
   }
 
   const handleRefreshInsights = async () => {
@@ -1734,36 +1707,12 @@ export default function AdminDashboard({
       return
     }
 
-    const requestId = insightsRequestIdRef.current + 1
-    insightsRequestIdRef.current = requestId
-
-    setInsightsLoading(true)
     setError(null)
-
-    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
-    try {
-      const [primaryReport, comparisonReport] = await Promise.all([
-        loadScopeInsightReport(selectedPenaGuid, insightsScope),
-        seasonList.length > 1 || comparisonScope === 'selected_season'
-          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
-          : Promise.resolve(null),
-      ])
-      if (requestId !== insightsRequestIdRef.current) {
-        return
-      }
-      setInsightsReport(primaryReport)
-      setInsightsComparisonReport(comparisonReport)
-    } catch (requestError) {
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === insightsRequestIdRef.current) {
-        setInsightsLoading(false)
-      }
-    }
+    await refreshInsightsReport({
+      scope: insightsScope,
+      selectedSeasonGuid,
+      seasonList,
+    })
   }
 
   const handleRequestDeleteSeasonMatch = (match) => {
