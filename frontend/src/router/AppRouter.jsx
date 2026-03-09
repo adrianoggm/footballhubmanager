@@ -2,10 +2,18 @@ import { Navigate, Route, Routes, BrowserRouter } from 'react-router-dom'
 import AdminLayout from '../layouts/AdminLayout.jsx'
 import PublicLayout from '../layouts/PublicLayout.jsx'
 import UserLayout from '../layouts/UserLayout.jsx'
-import AdminDashboardRoutePage from '../pages/AdminDashboardRoutePage.jsx'
 import AuthLandingPage from '../pages/AuthLandingPage.jsx'
 import SessionIncompletePage from '../pages/SessionIncompletePage.jsx'
-import UserDashboardRoutePage from '../pages/UserDashboardRoutePage.jsx'
+import AdminMatchesPage from '../pages/admin/AdminMatchesPage.jsx'
+import AdminOverviewPage from '../pages/admin/AdminOverviewPage.jsx'
+import AdminPlayersPage from '../pages/admin/AdminPlayersPage.jsx'
+import AdminSeasonsPage from '../pages/admin/AdminSeasonsPage.jsx'
+import AdminStandingsPage from '../pages/admin/AdminStandingsPage.jsx'
+import UserInsightsPage from '../pages/user/UserInsightsPage.jsx'
+import UserJoinPage from '../pages/user/UserJoinPage.jsx'
+import UserMatchesPage from '../pages/user/UserMatchesPage.jsx'
+import UserMembershipPage from '../pages/user/UserMembershipPage.jsx'
+import UserStandingsPage from '../pages/user/UserStandingsPage.jsx'
 import RequireAuth from './guards/RequireAuth.jsx'
 import RequireGuest from './guards/RequireGuest.jsx'
 import RequireRole from './guards/RequireRole.jsx'
@@ -59,9 +67,26 @@ export default function AppRouter({ auth, onLogout }) {
             <Route element={<AdminLayout />}>
               <Route index element={<Navigate to="overview" replace />} />
               <Route
-                path=":sectionId"
-                element={<AdminDashboardRoutePage session={auth.session} onLogout={onLogout} />}
+                path="overview"
+                element={<AdminOverviewPage session={auth.session} onLogout={onLogout} />}
               />
+              <Route
+                path="seasons"
+                element={<AdminSeasonsPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="players"
+                element={<AdminPlayersPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="matches"
+                element={<AdminMatchesPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="standings"
+                element={<AdminStandingsPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route path="*" element={<Navigate to="overview" replace />} />
             </Route>
           </Route>
 
@@ -69,9 +94,26 @@ export default function AppRouter({ auth, onLogout }) {
             <Route element={<UserLayout />}>
               <Route index element={<Navigate to="membership" replace />} />
               <Route
-                path=":sectionId"
-                element={<UserDashboardRoutePage session={auth.session} onLogout={onLogout} />}
+                path="join"
+                element={<UserJoinPage session={auth.session} onLogout={onLogout} />}
               />
+              <Route
+                path="membership"
+                element={<UserMembershipPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="standings"
+                element={<UserStandingsPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="matches"
+                element={<UserMatchesPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="insights"
+                element={<UserInsightsPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route path="*" element={<Navigate to="membership" replace />} />
             </Route>
           </Route>
         </Route>

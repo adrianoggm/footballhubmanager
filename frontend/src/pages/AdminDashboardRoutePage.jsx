@@ -1,24 +1,27 @@
 import { useCallback } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminDashboard from '../components/AdminDashboard.jsx'
-import { DEFAULT_ADMIN_SECTION_ID, normalizeAdminSectionId } from '../navigation/sitemap.js'
+import {
+  DEFAULT_ADMIN_SECTION_ID,
+  getAdminSectionPath,
+  normalizeAdminSectionId,
+} from '../navigation/sitemap.js'
 
-export default function AdminDashboardRoutePage({ session, onLogout }) {
+export default function AdminDashboardRoutePage({
+  session,
+  onLogout,
+  sectionId = DEFAULT_ADMIN_SECTION_ID,
+}) {
   const navigate = useNavigate()
-  const { sectionId = DEFAULT_ADMIN_SECTION_ID } = useParams()
   const normalizedSectionId = normalizeAdminSectionId(sectionId)
 
   const handleSectionChange = useCallback(
     (nextSectionId) => {
       const resolvedSectionId = normalizeAdminSectionId(nextSectionId)
-      navigate(`/app/admin/${resolvedSectionId}`)
+      navigate(getAdminSectionPath(resolvedSectionId))
     },
     [navigate]
   )
-
-  if (sectionId !== normalizedSectionId) {
-    return <Navigate to={`/app/admin/${normalizedSectionId}`} replace />
-  }
 
   return (
     <AdminDashboard
