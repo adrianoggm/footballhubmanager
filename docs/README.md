@@ -7,6 +7,7 @@ This folder contains the technical documentation for `footballhubmanager`.
 - [Project Overview](overview.md)
 - [Backend Guide](backend.md)
 - [Frontend Guide](frontend.md)
+- [Frontend Sitemap](frontend-sitemap.md)
 - [Frontend Implementation Planning](frontend-implementation-planning.md)
 - [Docker Guide](docker.md)
 - [Database and SQL](database.md)

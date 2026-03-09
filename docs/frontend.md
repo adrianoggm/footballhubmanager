@@ -21,6 +21,7 @@ The frontend is a role-based application, not only an auth playground.
 ## Main Architecture
 
 - App shell: `frontend/src/App.jsx`
+- Frontend sitemap source of truth: `frontend/src/navigation/sitemap.js`
 - Auth and session state: `frontend/src/hooks/useAuth.js`
 - Dashboards:
   - `frontend/src/components/AdminDashboard.jsx`
@@ -32,6 +33,15 @@ The frontend is a role-based application, not only an auth playground.
   - `frontend/src/components/admin/AdminInsightsSection.jsx`
 - Shared match viewer:
   - `frontend/src/components/MatchDetailViewer.jsx`
+
+## Sitemap and Global Styles
+
+- Sitemap reference document: `docs/frontend-sitemap.md`
+- Global style tokens and browser-level rules:
+  - `frontend/src/index.css`
+- MUI theme mapped to global tokens:
+  - `frontend/src/theme.js`
+- User dashboard quick section navigation is driven by sitemap anchors for easier feature placement.
 
 ## Frontend Layers
 
