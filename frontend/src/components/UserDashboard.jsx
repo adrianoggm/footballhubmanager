@@ -26,6 +26,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import { useI18n } from '../i18n/useI18n.js'
+import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { userService } from '../services/userService.js'
 
@@ -132,6 +133,14 @@ export default function UserDashboard({ session, onLogout }) {
   )
 
   const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
+  const userQuickNavSections = useMemo(
+    () =>
+      resolveUserDashboardSections({
+        hasSelectedPena: Boolean(selectedPenaGuid),
+        hasSelectedSeason: Boolean(selectedSeasonGuid),
+      }),
+    [selectedPenaGuid, selectedSeasonGuid]
+  )
   const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
   const currentStanding = useMemo(() => {
     if (!currentPlayerGuid || standings.length === 0) {
@@ -617,7 +626,28 @@ export default function UserDashboard({ session, onLogout }) {
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
-      <Card>
+      <Card variant="outlined">
+        <CardContent>
+          <Stack spacing={1.25}>
+            <Typography variant="subtitle2">{t('dashboard.user.sectionsNavTitle')}</Typography>
+            <Stack direction="row" flexWrap="wrap" gap={1}>
+              {userQuickNavSections.map((section) => (
+                <Chip
+                  key={section.id}
+                  label={t(section.titleKey)}
+                  clickable
+                  component="a"
+                  href={`#${section.anchor}`}
+                  variant="outlined"
+                  color="secondary"
+                />
+              ))}
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card id={USER_DASHBOARD_ANCHORS.join} data-sitemap-anchor>
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="h6">{t('dashboard.user.joinTitle')}</Typography>
@@ -644,7 +674,7 @@ export default function UserDashboard({ session, onLogout }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id={USER_DASHBOARD_ANCHORS.membership} data-sitemap-anchor>
         <CardContent>
           <Stack spacing={2.5}>
             <Stack
@@ -766,7 +796,13 @@ export default function UserDashboard({ session, onLogout }) {
 
                     {selectedSeasonGuid && !seasonDataLoading && (
                       <Grid container spacing={2}>
-                        <Grid item xs={12} md={12}>
+                        <Grid
+                          item
+                          xs={12}
+                          md={12}
+                          id={USER_DASHBOARD_ANCHORS.standings}
+                          data-sitemap-anchor
+                        >
                           <Card variant="outlined">
                             <CardContent>
                               <Stack spacing={1.5}>
@@ -954,7 +990,13 @@ export default function UserDashboard({ session, onLogout }) {
                           </Card>
                         </Grid>
 
-                        <Grid item xs={12} md={12}>
+                        <Grid
+                          item
+                          xs={12}
+                          md={12}
+                          id={USER_DASHBOARD_ANCHORS.matches}
+                          data-sitemap-anchor
+                        >
                           <Card variant="outlined">
                             <CardContent>
                               <Stack spacing={1.5}>
@@ -1017,26 +1059,28 @@ export default function UserDashboard({ session, onLogout }) {
                     )}
 
                     {selectedSeasonGuid && (
-                      <AdminInsightsSection
-                        state={{
-                          selectedSeasonGuid,
-                          insightsScope,
-                          insightsLoading,
-                          insightsReport,
-                          insightsComparisonReport,
-                          insightsComparison,
-                        }}
-                        actions={{
-                          onInsightsScopeChange: setInsightsScope,
-                          onRefreshInsights: handleRefreshInsights,
-                        }}
-                        helpers={{
-                          t,
-                          formatDecimal,
-                          formatSignedDecimal,
-                          formatPercent,
-                        }}
-                      />
+                      <Box id={USER_DASHBOARD_ANCHORS.insights} data-sitemap-anchor>
+                        <AdminInsightsSection
+                          state={{
+                            selectedSeasonGuid,
+                            insightsScope,
+                            insightsLoading,
+                            insightsReport,
+                            insightsComparisonReport,
+                            insightsComparison,
+                          }}
+                          actions={{
+                            onInsightsScopeChange: setInsightsScope,
+                            onRefreshInsights: handleRefreshInsights,
+                          }}
+                          helpers={{
+                            t,
+                            formatDecimal,
+                            formatSignedDecimal,
+                            formatPercent,
+                          }}
+                        />
+                      </Box>
                     )}
                   </Stack>
                 </CardContent>
