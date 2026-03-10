@@ -13,7 +13,7 @@ export class HttpClient {
   async request(path, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...(options.headers || {})
+      ...(options.headers || {}),
     }
 
     if (this.sessionToken) {
@@ -22,13 +22,25 @@ export class HttpClient {
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...options,
-      headers
+      headers,
     })
 
     const contentType = response.headers.get('content-type') || ''
-    const payload = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text()
+    const hasNoContentStatus = response.status === 204 || response.status === 205
+    const rawPayload = hasNoContentStatus ? '' : await response.text()
+
+    let payload = null
+    if (rawPayload) {
+      if (contentType.includes('application/json')) {
+        try {
+          payload = JSON.parse(rawPayload)
+        } catch {
+          payload = rawPayload
+        }
+      } else {
+        payload = rawPayload
+      }
+    }
 
     if (!response.ok) {
       let message = response.statusText || 'Request failed'
@@ -55,11 +67,29 @@ export class HttpClient {
   }
 
   post(path, body, options = {}) {
-    return this.request(path, {
+    return this.request(path, this.withJsonBody({ ...options, method: 'POST' }, body))
+  }
+
+  put(path, body, options = {}) {
+    return this.request(path, this.withJsonBody({ ...options, method: 'PUT' }, body))
+  }
+
+  patch(path, body, options = {}) {
+    return this.request(path, this.withJsonBody({ ...options, method: 'PATCH' }, body))
+  }
+
+  delete(path, options = {}) {
+    return this.request(path, { ...options, method: 'DELETE' })
+  }
+
+  withJsonBody(options, body) {
+    if (typeof body === 'undefined') {
+      return options
+    }
+    return {
       ...options,
-      method: 'POST',
-      body: JSON.stringify(body)
-    })
+      body: JSON.stringify(body),
+    }
   }
 }
 

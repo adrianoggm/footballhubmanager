@@ -1,7 +1,9 @@
-pylint
+ruff
 sqlalchemy
 fastapi
 uvicorn
 pydantic-settings
 pymysql
+cryptography
 pytest
+pytest-cov

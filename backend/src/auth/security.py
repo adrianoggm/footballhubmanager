@@ -3,7 +3,6 @@ import hashlib
 import os
 import secrets
 
-
 _ITERATIONS = 260000
 _ALGO = "sha256"
 
@@ -24,13 +23,14 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, stored: str) -> bool:
-    if stored.startswith("pbkdf2$"):
-        try:
-            _, algo, iterations, salt_b64, hash_b64 = stored.split("$", 4)
-            salt = _b64decode(salt_b64)
-            expected = _b64decode(hash_b64)
-            dk = hashlib.pbkdf2_hmac(algo, plain.encode("utf-8"), salt, int(iterations))
-            return secrets.compare_digest(dk, expected)
-        except Exception:
-            return False
-    return secrets.compare_digest(plain, stored)
+    if not stored.startswith("pbkdf2$"):
+        return False
+
+    try:
+        _, algo, iterations, salt_b64, hash_b64 = stored.split("$", 4)
+        salt = _b64decode(salt_b64)
+        expected = _b64decode(hash_b64)
+        dk = hashlib.pbkdf2_hmac(algo, plain.encode("utf-8"), salt, int(iterations))
+        return secrets.compare_digest(dk, expected)
+    except Exception:
+        return False

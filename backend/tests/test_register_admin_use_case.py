@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
-
-from persistence.application.ports.registration_repository import (
+from persistence.application.ports.registration_port import (
     DuplicateUsernameError,
     RegisteredAdminResult,
 )
-from persistence.application.use_cases.register_admin import (
+from persistence.application.use_cases.register_admin_usecase import (
     AdminRegistration,
     InvalidAdminRegistrationDataError,
     RegisterAdminUseCase,
@@ -20,7 +19,9 @@ class _FakeRepo:
     should_raise_duplicate: bool = False
     last_payload: dict | None = None
 
-    def register_admin(self, *, username: str, password_hash: str, name: str) -> RegisteredAdminResult:
+    def register_admin(
+        self, *, username: str, password_hash: str, name: str
+    ) -> RegisteredAdminResult:
         if self.should_raise_duplicate:
             raise DuplicateUsernameError()
         self.last_payload = {"username": username, "password_hash": password_hash, "name": name}
@@ -48,7 +49,9 @@ def test_register_admin_negative_duplicate_username():
     use_case = RegisterAdminUseCase(repo)
 
     with pytest.raises(UsernameAlreadyExistsError):
-        use_case.execute(AdminRegistration(username="admin.one", password="secret", name="Admin Name"))
+        use_case.execute(
+            AdminRegistration(username="admin.one", password="secret", name="Admin Name")
+        )
 
 
 def test_register_admin_edge_empty_username():

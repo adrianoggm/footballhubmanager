@@ -6,7 +6,7 @@ const initialState = {
   status: 'idle',
   token: null,
   error: null,
-  session: null
+  session: null,
 }
 
 export function useAuth() {
@@ -14,9 +14,16 @@ export function useAuth() {
 
   useEffect(() => {
     sessionStore.init()
+    const session = sessionStore.getSession()
+    if (session?.token) {
+      setState({ status: 'authenticated', token: session.token, error: null, session })
+      return
+    }
     const token = sessionStore.getToken()
     if (token) {
-      setState((prev) => ({ ...prev, token }))
+      // Legacy token-only sessions (without metadata) are invalid for role-based UI.
+      sessionStore.clear()
+      setState(initialState)
     }
   }, [])
 
@@ -94,6 +101,6 @@ export function useAuth() {
     loginAdmin,
     registerUser,
     registerAdmin,
-    logout
+    logout,
   }
 }

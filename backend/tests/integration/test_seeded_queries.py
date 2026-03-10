@@ -3,13 +3,18 @@ import os
 import urllib.error
 import urllib.request
 
+import pytest
 
 API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
 
-CI_ADMIN_USERNAME = "ci_admin"
-CI_ADMIN_PASSWORD = "ci_admin_pass"
-CI_PENA_ONE_GUID = "00000000-0000-0000-0000-000000009101"
-CI_USER_NAME = "CI"
+CI_ADMIN_USERNAME = os.getenv("TEST_CI_ADMIN_USERNAME", "ci_admin")
+CI_ADMIN_PASSWORD = os.getenv("TEST_CI_ADMIN_PASSWORD", "ci_admin_pass")
+CI_PENA_ONE_GUID = os.getenv("TEST_CI_PENA_ONE_GUID", "00000000-0000-0000-0000-000000009101")
+CI_PENA_ONE_SEASON_GUID = os.getenv(
+    "TEST_CI_PENA_ONE_SEASON_GUID", "00000000-0000-0000-0000-000000009151"
+)
+CI_USER_NAME = os.getenv("TEST_CI_USER_NAME", "CI")
+REQUIRE_CI_SEED = os.getenv("TEST_REQUIRE_CI_SEED", "0").lower() in {"1", "true", "yes"}
 
 
 def _request(method: str, url: str, *, token: str | None = None, payload: dict | None = None):
@@ -38,7 +43,13 @@ def _admin_token() -> str:
         f"{API_V1}/auth/admin/login",
         payload={"username": CI_ADMIN_USERNAME, "password": CI_ADMIN_PASSWORD},
     )
-    assert status == 200, data
+    if status != 200:
+        if REQUIRE_CI_SEED:
+            assert status == 200, data
+        pytest.skip(
+            "CI seed admin not available in current DB. "
+            "Load versioning/sql/ci_seed.sql or run with docker-compose.ci.yml"
+        )
     return data["token"]
 
 
@@ -61,3 +72,24 @@ def test_seeded_pena_players_query_returns_seeded_membership():
         item["name"] == CI_USER_NAME and item["nickname"] == "SeedNick" and item["position"] == "GK"
         for item in data["items"]
     )
+
+
+def test_seeded_pena_seasons_query_returns_seeded_season():
+    token = _admin_token()
+    status, data = _request("GET", f"{API_V1}/penas/{CI_PENA_ONE_GUID}/seasons", token=token)
+
+    assert status == 200, data
+    guids = {item["guid"] for item in data["items"]}
+    assert CI_PENA_ONE_SEASON_GUID in guids
+
+
+def test_seeded_pena_active_season_query_returns_seeded_season():
+    token = _admin_token()
+    status, data = _request(
+        "GET",
+        f"{API_V1}/penas/{CI_PENA_ONE_GUID}/seasons/active?at_date=2025-02-01",
+        token=token,
+    )
+
+    assert status == 200, data
+    assert data["guid"] == CI_PENA_ONE_SEASON_GUID

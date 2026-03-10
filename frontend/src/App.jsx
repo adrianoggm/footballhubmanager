@@ -1,18 +1,16 @@
-import { Box, Container, Stack, Typography } from '@mui/material'
-import AuthPanel from './components/AuthPanel.jsx'
+import { useAuth } from './hooks/useAuth.js'
+import AppRouter from './router/AppRouter.jsx'
 
 export default function App() {
-  return (
-    <Container maxWidth="lg" sx={{ py: 6 }}>
-      <Stack spacing={4}>
-        <Box>
-          <Typography variant="h3">PenaHub</Typography>
-          <Typography variant="body1" sx={{ maxWidth: 640, mt: 1 }}>
-            Auth and registration playground. Use the panels below to test the API endpoints.
-          </Typography>
-        </Box>
-        <AuthPanel />
-      </Stack>
-    </Container>
-  )
+  const auth = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await auth.logout()
+    } catch {
+      // handled in auth state
+    }
+  }
+
+  return <AppRouter auth={auth} onLogout={handleLogout} />
 }

@@ -1,18 +1,26 @@
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
-from persistence.application.ports.registration_repository import (
-    AdminRegistrationRepository,
+from persistence.application.ports.registration_port import (
+    AdminRegistrationPort,
     DuplicateUsernameError,
     InvalidNationalityError,
     RegisteredAdminResult,
     RegisteredUserResult,
-    UserRegistrationRepository,
+    UserRegistrationPort,
 )
-from persistence.domain.entity import AdminAccounts, Pena, Player, PlayerAccount
+from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
+from persistence.domain.label_config import (
+    DEFAULT_POSITION_LABEL_COLORS,
+    DEFAULT_POSITION_LABELS,
+    DEFAULT_ROLE_LABEL_COLORS,
+    DEFAULT_ROLE_LABELS,
+    align_label_colors,
+    dump_label_colors_payload,
+    dump_labels_payload,
+)
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 
-class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistrationRepository):
+class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPort):
     def __init__(self, session: Session):
         self.session = session
 
@@ -43,7 +51,7 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
                 id_player_account=account.id,
             )
             self.session.add(player)
-            self.session.commit()
+            self.session.flush()
             self.session.refresh(account)
             self.session.refresh(player)
             return RegisteredUserResult(
@@ -72,10 +80,35 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
             # Business rule: each admin owns a default pena created at registration.
             pena = Pena(
                 name=name,
+                position_labels=dump_labels_payload(list(DEFAULT_POSITION_LABELS)),
+                position_label_colors=dump_label_colors_payload(
+                    align_label_colors(
+                        list(DEFAULT_POSITION_LABELS),
+                        configured_colors=None,
+                        defaults=DEFAULT_POSITION_LABEL_COLORS,
+                    )
+                ),
                 id_admin=admin.id,
             )
             self.session.add(pena)
-            self.session.commit()
+            self.session.flush()
+
+            role_colors = align_label_colors(
+                list(DEFAULT_ROLE_LABELS),
+                configured_colors=None,
+                defaults=DEFAULT_ROLE_LABEL_COLORS,
+            )
+            for index, role_name in enumerate(DEFAULT_ROLE_LABELS):
+                self.session.add(
+                    PenaRole(
+                        id_pena=pena.id,
+                        name=role_name,
+                        color=role_colors.get(role_name),
+                        sort_order=index,
+                    )
+                )
+
+            self.session.flush()
             self.session.refresh(admin)
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
         except IntegrityError as exc:

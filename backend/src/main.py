@@ -1,7 +1,7 @@
+import asyncio
 import logging
 import os
 import sys
-import asyncio
 from contextlib import asynccontextmanager
 
 # Add src to path
@@ -13,6 +13,9 @@ if not logging.getLogger().handlers:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
+from api.module import api_router
+from app.config import config as app_config
+from app.module import engine
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -20,10 +23,6 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from uvicorn import run
-
-from app.config import config as app_config
-from app.module import engine
-from api.module import api_router
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -73,14 +72,19 @@ def _resolve_cors_allow_credentials(origins: list[str]) -> bool:
 
     # Browsers reject '*' when credentials are enabled, and it is insecure.
     if allow_credentials and "*" in origins:
-        logger.warning(
-            "CORS_ALLOW_CREDENTIALS ignored because CORS_ALLOWED_ORIGINS contains '*'."
-        )
+        logger.warning("CORS_ALLOW_CREDENTIALS ignored because CORS_ALLOWED_ORIGINS contains '*'.")
         return False
     return allow_credentials
 
 
 def _include_debug_error_detail() -> bool:
+    raw_value = os.getenv("EXPOSE_INTERNAL_ERRORS")
+    if raw_value is None:
+        return False
+    expose_internal_errors = raw_value.strip().lower() in {"1", "true", "yes", "on"}
+    if not expose_internal_errors:
+        return False
+
     app_env = _app_env()
     return app_env in {"dev", "development", "local", "test"}
 
@@ -97,6 +101,7 @@ def _db_startup_retries() -> tuple[int, float]:
     except ValueError:
         delay = 1.0
     return max(1, attempts), max(0.1, delay)
+
 
 # Lifespan for startup/shutdown
 @asynccontextmanager
@@ -135,6 +140,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down FootballHubManager API")
 
+
 # Create FastAPI app
 app = FastAPI(
     title="FootballHubManager API",
@@ -143,7 +149,7 @@ app = FastAPI(
     root_path="/api",
     lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Middleware
@@ -158,6 +164,7 @@ app.add_middleware(
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
 
+
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -169,15 +176,14 @@ async def global_exception_handler(request: Request, exc: Exception):
     detail = "Internal server error"
     if _include_debug_error_detail():
         detail = f"{exc.__class__.__name__}: {exc}"
-    return JSONResponse(
-        status_code=500,
-        content={"detail": detail}
-    )
+    return JSONResponse(status_code=500, content={"detail": detail})
+
 
 # Health check
 @app.get("/")
 async def health_check():
     return {"status": "ok", "service": "FootballHubManager API"}
+
 
 # Placeholder for auth dependency (to be implemented)
 # from auth.auth import get_current_user
@@ -197,5 +203,5 @@ if __name__ == "__main__":
         host=app_config.APP_HOST,
         port=app_config.APP_PORT,
         reload=app_config.APP_RELOAD,
-        log_level="info"
+        log_level="info",
     )

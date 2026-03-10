@@ -1,6 +1,3 @@
-from fastapi import Depends, Header, HTTPException, status
-from sqlalchemy.orm import Session
-
 from auth.application.use_cases.authorize_access import (
     AccessDeniedError,
     AuthorizePenaAccessUseCase,
@@ -11,7 +8,9 @@ from auth.infrastructure.repositories.sqlalchemy_access_repository import (
     SqlAlchemyAccessRepository,
 )
 from auth.session import SessionData, get_session
+from fastapi import Depends, Header, HTTPException, status
 from persistence.module import get_db
+from sqlalchemy.orm import Session
 
 
 def _extract_token(authorization: str | None, x_session_token: str | None) -> str | None:
@@ -49,6 +48,15 @@ def require_admin(session: SessionData = Depends(get_current_session)) -> Sessio
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
+        )
+    return session
+
+
+def require_user(session: SessionData = Depends(get_current_session)) -> SessionData:
+    if session.user_type != "user":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User access required",
         )
     return session
 

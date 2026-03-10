@@ -1,13 +1,12 @@
+from persistence.application.ports.nationality_query_port import (
+    NationalityQueryPort,
+)
+from persistence.domain.entity import Nationality
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from persistence.application.ports.nationality_query_repository import (
-    NationalityQueryRepository,
-)
-from persistence.domain.entity import Nationality
 
-
-class SqlAlchemyNationalityQueryRepository(NationalityQueryRepository):
+class SqlAlchemyNationalityQueryRepository(NationalityQueryPort):
     def __init__(self, session: Session):
         self.session = session
 

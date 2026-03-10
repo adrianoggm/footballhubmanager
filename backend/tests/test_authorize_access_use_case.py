@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import pytest
-
 from auth.application.use_cases.authorize_access import (
     AccessDeniedError,
     AuthorizePenaAccessUseCase,

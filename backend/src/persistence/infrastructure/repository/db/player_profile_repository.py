@@ -1,17 +1,16 @@
+from persistence.application.ports.player_profile_port import (
+    InvalidNationalityError,
+    PenaInfoResult,
+    PlayerProfilePort,
+    PlayerProfileResult,
+)
+from persistence.domain.entity import Pena, PenaPlayer, Player
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from persistence.application.ports.player_profile_repository import (
-    InvalidNationalityError,
-    PenaInfoResult,
-    PlayerProfileRepository,
-    PlayerProfileResult,
-)
-from persistence.domain.entity import Pena, PenaPlayer, Player
 
-
-class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
+class SqlAlchemyPlayerProfileRepository(PlayerProfilePort):
     def __init__(self, session: Session):
         self.session = session
 
@@ -65,9 +64,7 @@ class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
         nationality: str | None,
     ) -> PlayerProfileResult | None:
         player = (
-            self.session.query(Player)
-            .filter(Player.id_player_account == account_id)
-            .one_or_none()
+            self.session.query(Player).filter(Player.id_player_account == account_id).one_or_none()
         )
         if not player:
             return None
@@ -84,12 +81,16 @@ class SqlAlchemyPlayerProfileRepository(PlayerProfileRepository):
         return self._build_profile(player)
 
     def _build_profile(self, player: Player) -> PlayerProfileResult:
-        penas = self.session.execute(
-            select(Pena)
-            .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
-            .where(PenaPlayer.id_player == player.id)
-            .order_by(Pena.name)
-        ).scalars().all()
+        penas = (
+            self.session.execute(
+                select(Pena)
+                .join(PenaPlayer, PenaPlayer.id_pena == Pena.id)
+                .where(PenaPlayer.id_player == player.id)
+                .order_by(Pena.name)
+            )
+            .scalars()
+            .all()
+        )
         return PlayerProfileResult(
             guid=player.guid,
             name=player.name,

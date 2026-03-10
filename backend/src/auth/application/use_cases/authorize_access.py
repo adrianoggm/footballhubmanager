@@ -21,7 +21,9 @@ class AuthorizePenaAccessUseCase:
             raise AccessDeniedError("Admin does not manage this pena")
 
         if session.user_type == "user":
-            if self.repository.user_belongs_to_pena(account_id=session.user_id, pena_guid=pena_guid):
+            if self.repository.user_belongs_to_pena(
+                account_id=session.user_id, pena_guid=pena_guid
+            ):
                 return
             raise AccessDeniedError("User does not belong to this pena")
 
@@ -34,12 +36,16 @@ class AuthorizePlayerAccessUseCase:
 
     def execute(self, *, player_guid: str, session: SessionData) -> None:
         if session.user_type == "user":
-            if self.repository.user_owns_player(account_id=session.user_id, player_guid=player_guid):
+            if self.repository.user_owns_player(
+                account_id=session.user_id, player_guid=player_guid
+            ):
                 return
             raise AccessDeniedError("User cannot access this player")
 
         if session.user_type == "admin":
-            if self.repository.admin_manages_player(admin_id=session.user_id, player_guid=player_guid):
+            if self.repository.admin_manages_player(
+                admin_id=session.user_id, player_guid=player_guid
+            ):
                 return
             raise AccessDeniedError("Admin cannot access this player")
 
