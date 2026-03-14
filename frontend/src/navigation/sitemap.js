@@ -1,6 +1,7 @@
 export const USER_DASHBOARD_ANCHORS = Object.freeze({
   join: 'user-section-join',
   membership: 'user-section-membership',
+  accountability: 'user-section-accountability',
   standings: 'user-section-standings',
   matches: 'user-section-matches',
   insights: 'user-section-insights',
@@ -20,6 +21,12 @@ export const ADMIN_DASHBOARD_SITEMAP = Object.freeze([
     id: 'seasons',
     path: `${ADMIN_BASE_PATH}/seasons`,
     titleKey: 'dashboard.admin.tabs.seasons',
+    requiresSelectedPena: true,
+  },
+  {
+    id: 'accountability',
+    path: `${ADMIN_BASE_PATH}/accountability`,
+    titleKey: 'dashboard.admin.tabs.accountability',
     requiresSelectedPena: true,
   },
   {
@@ -57,6 +64,14 @@ export const USER_DASHBOARD_SITEMAP = Object.freeze([
     path: `${USER_BASE_PATH}/membership`,
     titleKey: 'dashboard.user.myPenasTitle',
     requiresSelectedPena: false,
+    requiresSelectedSeason: false,
+  },
+  {
+    id: 'accountability',
+    anchor: USER_DASHBOARD_ANCHORS.accountability,
+    path: `${USER_BASE_PATH}/accountability`,
+    titleKey: 'dashboard.user.accountabilityTitle',
+    requiresSelectedPena: true,
     requiresSelectedSeason: false,
   },
   {

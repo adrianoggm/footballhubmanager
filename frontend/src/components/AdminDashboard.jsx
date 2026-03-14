@@ -37,6 +37,7 @@ import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
+import AdminAccountabilitySection from './admin/AdminAccountabilitySection.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
 import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
@@ -2262,6 +2263,12 @@ export default function AdminDashboard({
                     <Button variant="outlined" onClick={() => handleSectionChange('players')}>
                       {t('dashboard.admin.overview.managePlayers')}
                     </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleSectionChange('accountability')}
+                    >
+                      {t('dashboard.admin.overview.manageAccountability')}
+                    </Button>
                     <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
@@ -2518,6 +2525,15 @@ export default function AdminDashboard({
             t,
             formatDate,
           }}
+        />
+      )}
+
+      {selectedPenaGuid && activeSection === 'accountability' && (
+        <AdminAccountabilitySection
+          penaGuid={selectedPenaGuid}
+          players={historicalPlayers}
+          t={t}
+          formatPlayerDisplayName={formatPlayerDisplayName}
         />
       )}
 

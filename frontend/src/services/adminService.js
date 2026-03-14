@@ -34,6 +34,33 @@ export class AdminService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/labels`)
   }
 
+  getPenaAccountability(penaGuid) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/accountability`)
+  }
+
+  updatePenaAccountability(penaGuid, payload) {
+    return httpClient.put(`${API_V1}/penas/${penaGuid}/accountability`, payload)
+  }
+
+  upsertPenaMemberAccount(penaGuid, playerGuid, payload) {
+    return httpClient.put(
+      `${API_V1}/penas/${penaGuid}/accountability/members/${playerGuid}`,
+      payload
+    )
+  }
+
+  removePenaMemberAccount(penaGuid, playerGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/accountability/members/${playerGuid}`)
+  }
+
+  createPenaExpense(penaGuid, payload) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/accountability/expenses`, payload)
+  }
+
+  deletePenaExpense(penaGuid, expenseGuid) {
+    return httpClient.delete(`${API_V1}/penas/${penaGuid}/accountability/expenses/${expenseGuid}`)
+  }
+
   updatePenaLabels(penaGuid, payload) {
     return httpClient.put(`${API_V1}/penas/${penaGuid}/labels`, payload)
   }
