@@ -24,6 +24,10 @@ export class UserService {
     return httpClient.get(`${API_V1}/players/me/penas/${penaGuid}`)
   }
 
+  getPenaAccountability(penaGuid) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/accountability`)
+  }
+
   listSeasons(penaGuid, { page = 1, pageSize = 100 } = {}) {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons?page=${page}&page_size=${pageSize}`)
   }
