@@ -271,8 +271,12 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
                     <TableHead>
                       <TableRow>
                         <TableCell>{t('dashboard.user.accountability.member')}</TableCell>
-                        <TableCell align="right">{t('dashboard.user.accountability.debt')}</TableCell>
-                        <TableCell align="right">{t('dashboard.user.accountability.paid')}</TableCell>
+                        <TableCell align="right">
+                          {t('dashboard.user.accountability.debt')}
+                        </TableCell>
+                        <TableCell align="right">
+                          {t('dashboard.user.accountability.paid')}
+                        </TableCell>
                         <TableCell>{t('dashboard.user.accountability.note')}</TableCell>
                       </TableRow>
                     </TableHead>
@@ -350,7 +354,9 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
                         <TableCell>{t('dashboard.user.accountability.expense')}</TableCell>
                         <TableCell>{t('dashboard.user.accountability.category')}</TableCell>
                         <TableCell>{t('dashboard.user.accountability.date')}</TableCell>
-                        <TableCell align="right">{t('dashboard.user.accountability.amount')}</TableCell>
+                        <TableCell align="right">
+                          {t('dashboard.user.accountability.amount')}
+                        </TableCell>
                         <TableCell>{t('dashboard.user.accountability.note')}</TableCell>
                       </TableRow>
                     </TableHead>

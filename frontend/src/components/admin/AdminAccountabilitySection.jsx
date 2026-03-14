@@ -296,7 +296,7 @@ export default function AdminAccountabilitySection({
           amount_cents: amountCents,
           occurred_on: expenseDraft.occurred_on,
           note: expenseDraft.note,
-      }),
+        }),
       'dashboard.admin.accountability.notices.expenseAdded'
     )
     if (created) {
@@ -429,7 +429,9 @@ export default function AdminAccountabilitySection({
                 >
                   {ACCOUNTABILITY_TRANSPARENCY_LEVELS.map((level) => (
                     <MenuItem key={level} value={level}>
-                      {t(`dashboard.admin.accountability.level${level[0].toUpperCase()}${level.slice(1)}`)}
+                      {t(
+                        `dashboard.admin.accountability.level${level[0].toUpperCase()}${level.slice(1)}`
+                      )}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -442,7 +444,9 @@ export default function AdminAccountabilitySection({
                 >
                   {ACCOUNTABILITY_TRANSPARENCY_LEVELS.map((level) => (
                     <MenuItem key={level} value={level}>
-                      {t(`dashboard.admin.accountability.level${level[0].toUpperCase()}${level.slice(1)}`)}
+                      {t(
+                        `dashboard.admin.accountability.level${level[0].toUpperCase()}${level.slice(1)}`
+                      )}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -640,7 +644,9 @@ export default function AdminAccountabilitySection({
         <Card>
           <CardContent>
             <Stack spacing={2}>
-              <Typography variant="h6">{t('dashboard.admin.accountability.expensesTitle')}</Typography>
+              <Typography variant="h6">
+                {t('dashboard.admin.accountability.expensesTitle')}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('dashboard.admin.accountability.expensesDescription')}
               </Typography>
