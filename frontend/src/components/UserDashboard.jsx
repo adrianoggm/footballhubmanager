@@ -25,6 +25,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
+import UserAccountabilitySection from './user/UserAccountabilitySection.jsx'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
@@ -769,6 +770,14 @@ export default function UserDashboard({
                         {t('dashboard.user.noSeasonsAvailable')}
                       </Typography>
                     )}
+
+                    <Box id={USER_DASHBOARD_ANCHORS.accountability} data-sitemap-anchor>
+                      <UserAccountabilitySection
+                        penaGuid={selectedPenaGuid}
+                        currentPlayerGuid={currentPlayerGuid}
+                        t={t}
+                      />
+                    </Box>
 
                     {selectedSeason && (
                       <Typography variant="body2" color="text.secondary">

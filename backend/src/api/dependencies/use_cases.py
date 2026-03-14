@@ -13,6 +13,9 @@ from persistence.application.use_cases.get_player_profile_usecase import (
     GetPlayerProfileUseCase,
 )
 from persistence.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
+from persistence.application.use_cases.manage_pena_accountability_usecase import (
+    ManagePenaAccountabilityUseCase,
+)
 from persistence.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
@@ -32,6 +35,9 @@ from persistence.application.use_cases.update_player_profile_usecase import (
 )
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
+)
+from persistence.infrastructure.repository.db.pena_accountability_repository import (
+    SqlAlchemyPenaAccountabilityRepository,
 )
 from persistence.infrastructure.repository.db.pena_labels_repository import (
     SqlAlchemyPenaLabelsRepository,
@@ -100,6 +106,12 @@ def get_link_user_to_pena_use_case(db: Session = Depends(get_db)) -> LinkUserToP
 
 def get_pena_labels_use_case(db: Session = Depends(get_db)) -> ManagePenaLabelsUseCase:
     return ManagePenaLabelsUseCase(SqlAlchemyPenaLabelsRepository(db))
+
+
+def get_pena_accountability_use_case(
+    db: Session = Depends(get_db),
+) -> ManagePenaAccountabilityUseCase:
+    return ManagePenaAccountabilityUseCase(SqlAlchemyPenaAccountabilityRepository(db))
 
 
 def get_pena_membership_use_case(
