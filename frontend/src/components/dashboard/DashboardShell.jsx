@@ -183,9 +183,9 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
       elevation={0}
       sx={{
         display: { xs: 'none', xl: 'flex' },
-        width: 104,
-        minWidth: 104,
-        p: 1.5,
+        width: 88,
+        minWidth: 88,
+        p: 1.25,
         borderRadius: 5,
         position: 'sticky',
         top: 24,
@@ -200,13 +200,21 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
         boxShadow: '0 24px 56px rgba(15, 23, 42, 0.12)',
       }}
     >
-      <Stack justifyContent="space-between" sx={{ minHeight: '100%' }}>
-        <Stack spacing={2}>
-          <Stack spacing={1.25} alignItems="center">
+      <Stack spacing={1.5} alignItems="center" sx={{ width: '100%' }}>
+        <Tooltip title={railLabel || brand} placement="right">
+          <Stack
+            spacing={0.85}
+            alignItems="center"
+            sx={{
+              width: '100%',
+              pb: 1.25,
+              borderBottom: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
+            }}
+          >
             <Box
               sx={{
-                width: 56,
-                height: 56,
+                width: 50,
+                height: 50,
                 borderRadius: 3.5,
                 display: 'grid',
                 placeItems: 'center',
@@ -215,84 +223,65 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                 boxShadow: '0 18px 36px rgba(15, 23, 42, 0.22)',
               }}
             >
-              <BrandGlyph sx={{ fontSize: 26 }} />
+              <BrandGlyph sx={{ fontSize: 24 }} />
             </Box>
-            <Stack spacing={0.25} alignItems="center">
-              <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: 1.1 }}>
-                {brandShort}
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ textAlign: 'center', lineHeight: 1.2 }}
-              >
-                {brand}
-              </Typography>
-            </Stack>
+            <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: 1.1 }}>
+              {brandShort}
+            </Typography>
           </Stack>
+        </Tooltip>
 
-          <Stack spacing={1}>
-            {navItems.map((item) => {
-              const active = item.id === activeNavId
-              return (
-                <Tooltip key={item.id} title={item.label} placement="right">
-                  <ButtonBase
-                    onClick={() => onNavChange(item.id)}
+        <Stack spacing={0.85} sx={{ width: '100%' }}>
+          {navItems.map((item) => {
+            const active = item.id === activeNavId
+            return (
+              <Tooltip key={item.id} title={item.label} placement="right">
+                <ButtonBase
+                  aria-label={item.label}
+                  onClick={() => onNavChange(item.id)}
+                  sx={{
+                    width: '100%',
+                    minHeight: 52,
+                    borderRadius: 3,
+                    position: 'relative',
+                    color: active ? 'primary.dark' : 'text.secondary',
+                    border: `1px solid ${
+                      active
+                        ? alpha(theme.palette.secondary.main, 0.22)
+                        : alpha(theme.palette.primary.dark, 0.08)
+                    }`,
+                    background: active
+                      ? `linear-gradient(135deg, ${alpha(
+                          theme.palette.secondary.light,
+                          0.22
+                        )} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
+                      : alpha(theme.palette.common.white, 0.58),
+                    boxShadow: active ? '0 14px 28px rgba(15, 23, 42, 0.12)' : 'none',
+                    transition:
+                      'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 14px 28px rgba(15, 23, 42, 0.10)',
+                    },
+                  }}
+                >
+                  <Box
                     sx={{
-                      width: '100%',
-                      borderRadius: 3,
-                      px: 1,
-                      py: 1.1,
-                      color: active ? 'primary.dark' : 'text.secondary',
-                      border: `1px solid ${
-                        active
-                          ? alpha(theme.palette.secondary.main, 0.22)
-                          : alpha(theme.palette.primary.dark, 0.08)
-                      }`,
-                      background: active
-                        ? `linear-gradient(135deg, ${alpha(
-                            theme.palette.secondary.light,
-                            0.22
-                          )} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
-                        : alpha(theme.palette.common.white, 0.58),
-                      boxShadow: active ? '0 14px 28px rgba(15, 23, 42, 0.12)' : 'none',
-                      transition:
-                        'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 14px 28px rgba(15, 23, 42, 0.10)',
-                      },
+                      position: 'absolute',
+                      left: 6,
+                      top: 10,
+                      bottom: 10,
+                      width: 3,
+                      borderRadius: 999,
+                      bgcolor: active ? 'secondary.main' : 'transparent',
                     }}
-                  >
-                    <Stack spacing={0.5} alignItems="center">
-                      <NavigationIcon kind={item.icon || item.id} active={active} />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontWeight: active ? 700 : 600,
-                          textAlign: 'center',
-                          lineHeight: 1.15,
-                        }}
-                      >
-                        {item.shortLabel || item.label}
-                      </Typography>
-                    </Stack>
-                  </ButtonBase>
-                </Tooltip>
-              )
-            })}
-          </Stack>
+                  />
+                  <NavigationIcon kind={item.icon || item.id} active={active} />
+                </ButtonBase>
+              </Tooltip>
+            )
+          })}
         </Stack>
-
-        {railLabel ? (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ textAlign: 'center', lineHeight: 1.35 }}
-          >
-            {railLabel}
-          </Typography>
-        ) : null}
       </Stack>
     </Paper>
   )
