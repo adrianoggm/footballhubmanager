@@ -10,6 +10,15 @@ const toneMap = {
   error: 'error.main',
 }
 
+const getInitials = (value = '') =>
+  String(value || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((chunk) => chunk[0]?.toUpperCase() || '')
+    .join('') || 'FH'
+
 function BrandGlyph(props) {
   return (
     <SvgIcon {...props} viewBox="0 0 24 24">
@@ -171,6 +180,104 @@ function DashboardStatCard({ item }) {
         ) : null}
       </Stack>
     </Paper>
+  )
+}
+
+export function DashboardControlField({ label, helper = '', children }) {
+  return (
+    <Stack spacing={0.65}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ fontWeight: 800, letterSpacing: 0.45, pl: 0.25 }}
+      >
+        {label}
+      </Typography>
+      {children}
+      {helper ? (
+        <Typography variant="caption" color="text.secondary" sx={{ pl: 0.25 }}>
+          {helper}
+        </Typography>
+      ) : null}
+    </Stack>
+  )
+}
+
+export function DashboardIdentitySlot({
+  imageUrl = '',
+  imageAlt = '',
+  title = '',
+  name = '',
+  subtitle = '',
+  placeholderLabel = '',
+}) {
+  const theme = useTheme()
+  const initials = getInitials(name)
+
+  return (
+    <Stack
+      direction={{ xs: 'column', sm: 'row' }}
+      spacing={1.35}
+      alignItems={{ xs: 'center', sm: 'center' }}
+    >
+      <Box
+        sx={{
+          width: 88,
+          height: 88,
+          flexShrink: 0,
+          overflow: 'hidden',
+          borderRadius: 4,
+          border: `1px dashed ${alpha(theme.palette.primary.dark, 0.16)}`,
+          background:
+            'linear-gradient(145deg, rgba(27,39,64,0.08) 0%, rgba(15,118,110,0.10) 100%)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
+        }}
+      >
+        {imageUrl ? (
+          <Box
+            component="img"
+            src={imageUrl}
+            alt={imageAlt || name || title}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <Stack
+            alignItems="center"
+            justifyContent="center"
+            spacing={0.45}
+            sx={{ width: '100%', height: '100%', p: 1.25, textAlign: 'center' }}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>
+              {placeholderLabel}
+            </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1 }}>
+              {initials}
+            </Typography>
+          </Stack>
+        )}
+      </Box>
+
+      <Stack spacing={0.35} sx={{ minWidth: 0, textAlign: { xs: 'center', sm: 'left' } }}>
+        {title ? (
+          <Typography
+            variant="overline"
+            sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.1 }}
+          >
+            {title}
+          </Typography>
+        ) : null}
+        {name ? (
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+            {name}
+          </Typography>
+        ) : null}
+        {subtitle ? (
+          <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+            {subtitle}
+          </Typography>
+        ) : null}
+      </Stack>
+    </Stack>
   )
 }
 
@@ -387,47 +494,53 @@ export default function DashboardShell({
       />
 
       <Stack flex={1} spacing={3} sx={{ minWidth: 0 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: { xs: 4, md: 5 },
-            border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
-            background:
-              'linear-gradient(142deg, rgba(255,255,255,0.9) 0%, rgba(231,244,240,0.85) 52%, rgba(255,241,225,0.88) 100%)',
-            boxShadow: '0 28px 60px rgba(15, 23, 42, 0.14)',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              inset: 0,
-              background:
-                'radial-gradient(circle at top right, rgba(15,118,110,0.18) 0%, rgba(15,118,110,0) 36%), radial-gradient(circle at bottom left, rgba(180,83,9,0.16) 0%, rgba(180,83,9,0) 34%)',
-              pointerEvents: 'none',
-            },
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              inset: 0,
-              opacity: 0.08,
-              backgroundImage:
-                'linear-gradient(rgba(15,23,42,0.45) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.45) 1px, transparent 1px)',
-              backgroundSize: '28px 28px',
-              maskImage:
-                'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 76%, transparent 100%)',
-              pointerEvents: 'none',
-            },
-          }}
-        >
-          <Box sx={{ position: 'relative', zIndex: 1, p: { xs: 2.25, md: 3.25 } }}>
-            <Stack spacing={3}>
-              <Stack
-                direction={{ xs: 'column', xl: 'row' }}
-                spacing={2.5}
-                justifyContent="space-between"
-                alignItems={{ xl: 'flex-start' }}
+        <Grid container spacing={2.25} alignItems="stretch">
+          <Grid item xs={12} xl={headerAside ? 8 : 12}>
+            <Paper
+              elevation={0}
+              sx={{
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: { xs: 220, md: 250 },
+                height: '100%',
+                borderRadius: { xs: 4, md: 5 },
+                border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
+                background:
+                  'linear-gradient(142deg, rgba(255,255,255,0.94) 0%, rgba(237,247,243,0.9) 54%, rgba(255,244,230,0.9) 100%)',
+                boxShadow: '0 24px 50px rgba(15, 23, 42, 0.12)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  background:
+                    'radial-gradient(circle at top right, rgba(15,118,110,0.18) 0%, rgba(15,118,110,0) 34%), radial-gradient(circle at bottom left, rgba(180,83,9,0.16) 0%, rgba(180,83,9,0) 30%)',
+                  pointerEvents: 'none',
+                },
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  opacity: 0.055,
+                  backgroundImage:
+                    'linear-gradient(rgba(15,23,42,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.4) 1px, transparent 1px)',
+                  backgroundSize: '26px 26px',
+                  maskImage:
+                    'linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.12) 100%)',
+                  pointerEvents: 'none',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'relative',
+                  zIndex: 1,
+                  height: '100%',
+                  p: { xs: 2.25, md: 3.25 },
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
               >
-                <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
+                <Stack spacing={1.75} sx={{ maxWidth: 820, minWidth: 0 }}>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                     <Typography
                       variant="overline"
@@ -454,7 +567,9 @@ export default function DashboardShell({
                   <Typography
                     variant="h3"
                     sx={{
-                      fontSize: { xs: '1.85rem', sm: '2.15rem', lg: '2.55rem' },
+                      maxWidth: { xs: '100%', lg: '20ch' },
+                      fontSize: { xs: '1.9rem', sm: '2.25rem', lg: '2.85rem' },
+                      lineHeight: 1,
                       overflowWrap: 'anywhere',
                     }}
                   >
@@ -466,7 +581,8 @@ export default function DashboardShell({
                       variant="body1"
                       color="text.secondary"
                       sx={{
-                        fontSize: { xs: '0.98rem', md: '1.04rem' },
+                        maxWidth: { xs: '100%', lg: '60ch' },
+                        fontSize: { xs: '0.98rem', md: '1.06rem' },
                         overflowWrap: 'anywhere',
                       }}
                     >
@@ -475,19 +591,21 @@ export default function DashboardShell({
                   ) : null}
 
                   {badges ? (
-                    <Stack direction="row" gap={1} flexWrap="wrap">
+                    <Stack direction="row" gap={1} flexWrap="wrap" sx={{ pt: 0.35 }}>
                       {badges}
                     </Stack>
                   ) : null}
                 </Stack>
+              </Box>
+            </Paper>
+          </Grid>
 
-                {headerAside ? (
-                  <Box sx={{ width: { xs: '100%', xl: 360 }, flexShrink: 0 }}>{headerAside}</Box>
-                ) : null}
-              </Stack>
-            </Stack>
-          </Box>
-        </Paper>
+          {headerAside ? (
+            <Grid item xs={12} xl={4}>
+              <Box sx={{ height: '100%' }}>{headerAside}</Box>
+            </Grid>
+          ) : null}
+        </Grid>
 
         {navItems.length > 0 ? (
           <MobileNav navItems={navItems} activeNavId={activeNavId} onNavChange={onNavChange} />

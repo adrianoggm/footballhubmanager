@@ -81,6 +81,9 @@ export const messages = {
         refresh: 'Refresh',
         refreshData: 'Refresh data',
         logout: 'Logout',
+        identityTitle: 'Visual identity',
+        identityHint: 'Reserved space for the pena or league crest.',
+        identityPlaceholder: 'Crest',
         matchDetail: {
           title: 'Match detail',
           subtitle: 'Review what happened: score, highlights and player-by-player breakdown.',
@@ -116,6 +119,7 @@ export const messages = {
       },
       admin: {
         panelTitle: 'Admin Workspace',
+        heroSubtitle: 'Manage seasons, squad, accountability and matches from one place.',
         currentPena: 'Current pena',
         referenceSeason: 'Reference season',
         noLinkedPenaInfo:
@@ -521,6 +525,7 @@ export const messages = {
       user: {
         panelTitle: 'Player Panel',
         loadingTitle: 'Player Panel',
+        heroSubtitle: 'Check your pena, active season and the main updates from one place.',
         sectionsNavTitle: 'Quick section map',
         profileTitle: 'My Profile',
         openSettings: 'Settings',
@@ -721,6 +726,9 @@ export const messages = {
         refresh: 'Refrescar',
         refreshData: 'Refrescar datos',
         logout: 'Cerrar sesión',
+        identityTitle: 'Identidad visual',
+        identityHint: 'Espacio reservado para el escudo de la peña o de la liga.',
+        identityPlaceholder: 'Escudo',
         matchDetail: {
           title: 'Detalle del partido',
           subtitle: 'Revisa qué pasó: marcador, destacados y desglose jugador a jugador.',
@@ -756,6 +764,7 @@ export const messages = {
       },
       admin: {
         panelTitle: 'Espacio de administración',
+        heroSubtitle: 'Gestiona temporadas, plantilla, contabilidad y partidos desde un único panel.',
         currentPena: 'Peña actual',
         referenceSeason: 'Temporada de referencia',
         noLinkedPenaInfo:
@@ -1170,6 +1179,7 @@ export const messages = {
       user: {
         panelTitle: 'Panel de jugador',
         loadingTitle: 'Panel de jugador',
+        heroSubtitle: 'Consulta tu peña, la temporada activa y las novedades principales de un vistazo.',
         sectionsNavTitle: 'Mapa rápido de secciones',
         profileTitle: 'Mi perfil',
         openSettings: 'Configuración',

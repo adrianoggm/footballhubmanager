@@ -9,9 +9,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Grid,
   LinearProgress,
   MenuItem,
+  Paper,
   Stack,
   Table,
   TableBody,
@@ -26,6 +28,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
+import {
+  DashboardControlField,
+  DashboardIdentitySlot,
+} from './dashboard/DashboardShell.jsx'
+import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import UserAccountabilitySection from './user/UserAccountabilitySection.jsx'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
@@ -637,12 +644,7 @@ export default function UserDashboard({
       activeNavId={activeNavSectionId}
       onNavChange={handleNavigateToSection}
       title={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-      subtitle={[
-        profileDisplayName,
-        `${t('dashboard.common.loggedAs')} ${session?.user_guid || '-'}`,
-      ]
-        .filter(Boolean)
-        .join(' · ')}
+      subtitle={t('dashboard.user.heroSubtitle')}
       badges={
         <>
           <Chip
@@ -664,56 +666,83 @@ export default function UserDashboard({
         </>
       }
       headerAside={
-        <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <LanguageSwitcher />
-            <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
-              {t('dashboard.user.openSettings')}
-            </Button>
-            <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
-              {t('dashboard.common.refresh')}
-            </Button>
-            <Button variant="text" onClick={onLogout} disabled={loading}>
-              {t('dashboard.common.logout')}
-            </Button>
-          </Stack>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 1.5, sm: 1.75 },
+            height: '100%',
+            borderRadius: 4,
+            border: '1px solid rgba(15,23,42,0.08)',
+            bgcolor: 'rgba(255,255,255,0.56)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <Stack spacing={1.5}>
+            <DashboardIdentitySlot
+              title={t('dashboard.common.identityTitle')}
+              name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+              subtitle={profileDisplayName || ''}
+              placeholderLabel={t('dashboard.common.identityPlaceholder')}
+              imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
+              imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+            />
 
-          <Grid container spacing={1.25}>
-            <Grid item xs={12}>
-              <TextField
-                select
-                size="small"
-                label={t('dashboard.user.selectedPena')}
-                value={selectedPenaGuid}
-                onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                fullWidth
-              >
-                {penas.map((pena) => (
-                  <MenuItem key={pena.guid} value={pena.guid}>
-                    {pena.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+            <Divider />
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <LanguageSwitcher />
+              <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
+                {t('dashboard.user.openSettings')}
+              </Button>
+              <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
+                {t('dashboard.common.refresh')}
+              </Button>
+              <Button variant="text" onClick={onLogout} disabled={loading}>
+                {t('dashboard.common.logout')}
+              </Button>
+            </Stack>
+
+            <Grid container spacing={1.25}>
+              <Grid item xs={12}>
+                <DashboardControlField label={t('dashboard.user.selectedPena')}>
+                  <TextField
+                    select
+                    size="small"
+                    value={selectedPenaGuid}
+                    onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                    inputProps={{ 'aria-label': t('dashboard.user.selectedPena') }}
+                    fullWidth
+                  >
+                    {penas.map((pena) => (
+                      <MenuItem key={pena.guid} value={pena.guid}>
+                        {pena.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </DashboardControlField>
+              </Grid>
+              <Grid item xs={12}>
+                <DashboardControlField label={t('dashboard.user.selectedSeason')}>
+                  <TextField
+                    select
+                    size="small"
+                    value={selectedSeasonGuid}
+                    onChange={(event) => setSelectedSeasonGuid(event.target.value)}
+                    disabled={!selectedPenaGuid || !seasonList.length || loading}
+                    inputProps={{ 'aria-label': t('dashboard.user.selectedSeason') }}
+                    fullWidth
+                  >
+                    {seasonList.map((season) => (
+                      <MenuItem key={season.guid} value={season.guid}>
+                        {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </DashboardControlField>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                select
-                size="small"
-                label={t('dashboard.user.selectedSeason')}
-                value={selectedSeasonGuid}
-                onChange={(event) => setSelectedSeasonGuid(event.target.value)}
-                disabled={!selectedPenaGuid || !seasonList.length || loading}
-                fullWidth
-              >
-                {seasonList.map((season) => (
-                  <MenuItem key={season.guid} value={season.guid}>
-                    {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-          </Grid>
-        </Stack>
+          </Stack>
+        </Paper>
       }
       summaryCards={userSummaryCards}
     >
@@ -1202,11 +1231,6 @@ export default function UserDashboard({
                 </MenuItem>
               ))}
             </TextField>
-            {profile?.guid && (
-              <Typography variant="caption" color="text.secondary">
-                {t('dashboard.user.playerGuid', { guid: profile.guid })}
-              </Typography>
-            )}
           </Stack>
         </DialogContent>
         <DialogActions>
