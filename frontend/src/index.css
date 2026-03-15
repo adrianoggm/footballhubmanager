@@ -1,22 +1,27 @@
 :root {
   --fh-font-family: 'Space Grotesk', system-ui, sans-serif;
   --fh-color-text-primary: #0f172a;
-  --fh-color-text-secondary: #475569;
-  --fh-color-primary-main: #1f2937;
-  --fh-color-primary-light: #334155;
+  --fh-color-text-secondary: #526073;
+  --fh-color-primary-main: #1b2740;
+  --fh-color-primary-light: #30466f;
   --fh-color-primary-dark: #0f172a;
   --fh-color-secondary-main: #0f766e;
-  --fh-color-secondary-light: #14b8a6;
+  --fh-color-secondary-light: #35b9ab;
   --fh-color-secondary-dark: #115e59;
-  --fh-color-info-main: #0ea5a3;
+  --fh-color-info-main: #0284c7;
   --fh-color-success-main: #15803d;
-  --fh-color-warning-main: #b45309;
+  --fh-color-warning-main: #b7791f;
   --fh-color-error-main: #b91c1c;
-  --fh-color-surface-page: #f7f3e8;
-  --fh-color-surface-card: #fffdf7;
+  --fh-color-surface-page: #f3f0e6;
+  --fh-color-surface-card: #fffdf8;
   --fh-gradient-page:
-    radial-gradient(900px 520px at 92% 12%, #fdebd1 0%, rgba(253, 235, 209, 0) 62%),
-    radial-gradient(1200px 640px at 12% -10%, #dff2ec 0%, #eef4eb 38%, #f9f3e6 82%);
+    radial-gradient(900px 520px at 92% 12%, rgba(53, 185, 171, 0.16) 0%, rgba(53, 185, 171, 0) 62%),
+    radial-gradient(
+      1200px 640px at 12% -10%,
+      rgba(183, 121, 31, 0.14) 0%,
+      rgba(183, 121, 31, 0) 46%
+    ),
+    linear-gradient(180deg, #f4f1e8 0%, #f1eee5 100%);
   font-family: var(--fh-font-family);
   color: var(--fh-color-text-primary);
   background: var(--fh-gradient-page);
@@ -35,8 +40,27 @@ html {
   box-sizing: border-box;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(27, 39, 64, 0.32) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(27, 39, 64, 0.22);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 [data-sitemap-anchor] {
-  scroll-margin-top: 92px;
+  scroll-margin-top: 108px;
 }
 
 @keyframes floatOrb {
@@ -60,6 +84,14 @@ body {
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 #root {

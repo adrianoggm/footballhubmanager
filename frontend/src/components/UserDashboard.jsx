@@ -23,8 +23,10 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
+import DashboardShell from './dashboard/DashboardShell.jsx'
 import UserAccountabilitySection from './user/UserAccountabilitySection.jsx'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
@@ -562,6 +564,61 @@ export default function UserDashboard({
     closeMatchDetailDialog()
   }
 
+  const handleNavigateToSection = (sectionId) => {
+    if (onSectionChange) {
+      onSectionChange(sectionId)
+      return
+    }
+    const targetSection = userQuickNavSections.find((section) => section.id === sectionId)
+    const node = targetSection?.anchor ? document.getElementById(targetSection.anchor) : null
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  const selectedSeasonLabel = selectedSeason
+    ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
+    : t('dashboard.user.noSeasonsAvailable')
+
+  const profileDisplayName = [profile?.name, profile?.surname1, profile?.surname2]
+    .filter(Boolean)
+    .join(' ')
+
+  const userNavItems = userQuickNavSections.map((section) => ({
+    id: section.id,
+    label: t(section.titleKey),
+    icon: section.id,
+  }))
+
+  const userSummaryCards = [
+    {
+      label: t('dashboard.user.myPenasTitle'),
+      value: String(penas.length),
+      helper: selectedPena?.name || t('dashboard.user.noPenasLinked'),
+      tone: 'secondary',
+    },
+    {
+      label: t('dashboard.user.selectedSeason'),
+      value: selectedSeason ? selectedSeasonLabel : '-',
+      helper: selectedPena ? selectedPena.name : t('dashboard.user.noPenasLinked'),
+      tone: 'primary',
+    },
+    {
+      label: t('dashboard.user.standingsTitle'),
+      value: currentStanding ? `#${currentStanding.rank}` : '-',
+      helper: currentStanding
+        ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
+        : t('dashboard.user.notInStandingsYet'),
+      tone: 'info',
+    },
+    {
+      label: t('dashboard.user.matchesTitle'),
+      value: String(orderedSeasonMatches.length),
+      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.user.noMatchesForSeason'),
+      tone: 'warning',
+    },
+  ]
+
   if (initializing) {
     return (
       <Stack spacing={2}>
@@ -572,67 +629,97 @@ export default function UserDashboard({
   }
 
   return (
-    <Stack spacing={3}>
-      <Card>
-        <CardContent>
-          <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h4">{t('dashboard.user.panelTitle')}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.common.loggedAs')} <strong>{session?.user_guid || '-'}</strong>
-              </Typography>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
-                {t('dashboard.user.openSettings')}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => runAction(loadDashboard)}
-                disabled={loading}
-              >
-                {t('dashboard.common.refresh')}
-              </Button>
-              <Button variant="text" onClick={onLogout} disabled={loading}>
-                {t('dashboard.common.logout')}
-              </Button>
-            </Stack>
+    <DashboardShell
+      brand={t('app.brand')}
+      brandShort="FH"
+      railLabel={t('dashboard.user.panelTitle')}
+      navItems={userNavItems}
+      activeNavId={activeNavSectionId}
+      onNavChange={handleNavigateToSection}
+      title={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+      subtitle={[
+        profileDisplayName,
+        `${t('dashboard.common.loggedAs')} ${session?.user_guid || '-'}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')}
+      badges={
+        <>
+          <Chip
+            size="small"
+            color="secondary"
+            label={selectedPena?.name || t('dashboard.user.noPenasLinked')}
+          />
+          <Chip size="small" color="primary" label={selectedSeason ? selectedSeasonLabel : '-'} />
+          {membership?.role ? (
+            <Chip size="small" label={membership.role} sx={labelChipSx(membership.role_color)} />
+          ) : null}
+          {currentStanding ? (
+            <Chip
+              size="small"
+              color="info"
+              label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
+            />
+          ) : null}
+        </>
+      }
+      headerAside={
+        <Stack spacing={1.5}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            <LanguageSwitcher />
+            <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
+              {t('dashboard.user.openSettings')}
+            </Button>
+            <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
+              {t('dashboard.common.refresh')}
+            </Button>
+            <Button variant="text" onClick={onLogout} disabled={loading}>
+              {t('dashboard.common.logout')}
+            </Button>
           </Stack>
-        </CardContent>
-      </Card>
 
+          <Grid container spacing={1.25}>
+            <Grid item xs={12}>
+              <TextField
+                select
+                size="small"
+                label={t('dashboard.user.selectedPena')}
+                value={selectedPenaGuid}
+                onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                fullWidth
+              >
+                {penas.map((pena) => (
+                  <MenuItem key={pena.guid} value={pena.guid}>
+                    {pena.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                select
+                size="small"
+                label={t('dashboard.user.selectedSeason')}
+                value={selectedSeasonGuid}
+                onChange={(event) => setSelectedSeasonGuid(event.target.value)}
+                disabled={!selectedPenaGuid || !seasonList.length || loading}
+                fullWidth
+              >
+                {seasonList.map((season) => (
+                  <MenuItem key={season.guid} value={season.guid}>
+                    {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          </Grid>
+        </Stack>
+      }
+      summaryCards={userSummaryCards}
+    >
       {loading && <LinearProgress />}
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
-
-      <Card variant="outlined">
-        <CardContent>
-          <Stack spacing={1.25}>
-            <Typography variant="subtitle2">{t('dashboard.user.sectionsNavTitle')}</Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
-              {userQuickNavSections.map((section) => (
-                <Chip
-                  key={section.id}
-                  label={t(section.titleKey)}
-                  clickable
-                  color={activeNavSectionId === section.id ? 'secondary' : 'default'}
-                  variant={activeNavSectionId === section.id ? 'filled' : 'outlined'}
-                  onClick={() => {
-                    if (onSectionChange) {
-                      onSectionChange(section.id)
-                      return
-                    }
-                    const node = document.getElementById(section.anchor)
-                    if (node) {
-                      node.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }}
-                />
-              ))}
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
 
       <Card id={USER_DASHBOARD_ANCHORS.join} data-sitemap-anchor>
         <CardContent>
@@ -664,35 +751,15 @@ export default function UserDashboard({
       <Card id={USER_DASHBOARD_ANCHORS.membership} data-sitemap-anchor>
         <CardContent>
           <Stack spacing={2.5}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={1.5}
-              alignItems={{ md: 'center' }}
-            >
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6">{t('dashboard.user.myPenasTitle')}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.user.linkedCount', {
-                    count: penas.length,
-                    suffix: penas.length === 1 ? '' : 's',
-                  })}
-                </Typography>
-              </Box>
-              <TextField
-                select
-                size="small"
-                label={t('dashboard.user.selectedPena')}
-                value={selectedPenaGuid}
-                onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                sx={{ minWidth: 280 }}
-              >
-                {penas.map((pena) => (
-                  <MenuItem key={pena.guid} value={pena.guid}>
-                    {pena.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
+            <Box>
+              <Typography variant="h6">{t('dashboard.user.myPenasTitle')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.user.linkedCount', {
+                  count: penas.length,
+                  suffix: penas.length === 1 ? '' : 's',
+                })}
+              </Typography>
+            </Box>
 
             <Stack direction="row" flexWrap="wrap" gap={1}>
               {penas.map((pena) => (
@@ -749,22 +816,6 @@ export default function UserDashboard({
                       {t('dashboard.user.leaveHint')}
                     </Typography>
 
-                    <TextField
-                      select
-                      size="small"
-                      label={t('dashboard.user.selectedSeason')}
-                      value={selectedSeasonGuid}
-                      onChange={(event) => setSelectedSeasonGuid(event.target.value)}
-                      disabled={!seasonList.length || loading}
-                      fullWidth
-                    >
-                      {seasonList.map((season) => (
-                        <MenuItem key={season.guid} value={season.guid}>
-                          {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
                     {!seasonList.length && (
                       <Typography variant="body2" color="text.secondary">
                         {t('dashboard.user.noSeasonsAvailable')}
@@ -782,7 +833,7 @@ export default function UserDashboard({
                     {selectedSeason && (
                       <Typography variant="body2" color="text.secondary">
                         {t('dashboard.user.statsReadOnlyHint', {
-                          season: `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`,
+                          season: selectedSeasonLabel,
                         })}
                       </Typography>
                     )}
@@ -1167,6 +1218,6 @@ export default function UserDashboard({
           </Button>
         </DialogActions>
       </Dialog>
-    </Stack>
+    </DashboardShell>
   )
 }

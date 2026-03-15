@@ -12,6 +12,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
 import { normalizeNationalities } from '../services/catalogUtils.js'
@@ -170,17 +171,22 @@ export default function AuthPanel({ auth }) {
   return (
     <Card
       sx={{
-        maxWidth: 460,
         width: '100%',
-        borderRadius: 4,
-        bgcolor: 'rgba(255,253,248,0.93)',
-        border: '1px solid rgba(31,41,55,0.1)',
-        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 118, 110, 0.16)',
+        borderRadius: 4.5,
+        bgcolor: alpha('#fffdf8', 0.92),
+        border: `1px solid ${alpha('#0f172a', 0.08)}`,
+        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.12), 0 8px 20px rgba(15, 118, 110, 0.1)',
       }}
     >
-      <CardContent sx={{ p: 4 }}>
+      <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
         <Stack spacing={3}>
           <Stack spacing={1}>
+            <Typography
+              variant="overline"
+              sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.2 }}
+            >
+              {accountType === 'admin' ? t('auth.roleAdmin') : t('auth.rolePlayer')}
+            </Typography>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {mode === 'login' ? t('auth.titleLogin') : t('auth.titleRegister')}
             </Typography>
