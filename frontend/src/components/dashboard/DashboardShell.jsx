@@ -228,8 +228,7 @@ export function DashboardIdentitySlot({
           overflow: 'hidden',
           borderRadius: 4,
           border: `1px dashed ${alpha(theme.palette.primary.dark, 0.16)}`,
-          background:
-            'linear-gradient(145deg, rgba(27,39,64,0.08) 0%, rgba(15,118,110,0.10) 100%)',
+          background: 'linear-gradient(145deg, rgba(27,39,64,0.08) 0%, rgba(15,118,110,0.10) 100%)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
         }}
       >

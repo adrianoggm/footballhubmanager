@@ -129,8 +129,7 @@ export const messages = {
             'Manage season squad, guest players, memberships and classification labels in one place.',
           matches:
             'Create matches, define lineups and keep match operations centralized for the selected season.',
-          standings:
-            'Review standings and advanced insights generated from season match activity.',
+          standings: 'Review standings and advanced insights generated from season match activity.',
         },
         currentPena: 'Current pena',
         referenceSeason: 'Reference season',
@@ -544,8 +543,7 @@ export const messages = {
             'Review your linked penas and keep your member information aligned with the current group.',
           accountability:
             'Check your balance, payments and the finance visibility shared by the admins.',
-          standings:
-            'Follow the ranking, your points and your impact in the selected season.',
+          standings: 'Follow the ranking, your points and your impact in the selected season.',
           matches: 'Browse season fixtures and results for the currently selected pena.',
           insights: 'Explore match trends and advanced metrics built from recorded activity.',
         },
@@ -787,9 +785,11 @@ export const messages = {
       },
       admin: {
         panelTitle: 'Espacio de administración',
-        heroSubtitle: 'Gestiona temporadas, plantilla, contabilidad y partidos desde un único panel.',
+        heroSubtitle:
+          'Gestiona temporadas, plantilla, contabilidad y partidos desde un único panel.',
         heroSections: {
-          overview: 'Vista general de la peña, la temporada activa y los accesos rápidos de administración.',
+          overview:
+            'Vista general de la peña, la temporada activa y los accesos rápidos de administración.',
           seasons: 'Crea, ajusta y revisa temporadas sin perder el contexto histórico.',
           accountability:
             'Controla saldos, deudas de miembros y reglas de visibilidad desde un único espacio financiero.',
@@ -1214,7 +1214,8 @@ export const messages = {
       user: {
         panelTitle: 'Panel de jugador',
         loadingTitle: 'Panel de jugador',
-        heroSubtitle: 'Consulta tu peña, la temporada activa y las novedades principales de un vistazo.',
+        heroSubtitle:
+          'Consulta tu peña, la temporada activa y las novedades principales de un vistazo.',
         heroSections: {
           join: 'Usa un código de invitación para unirte a una peña y empezar a aparecer en su espacio compartido.',
           membership:
@@ -1224,7 +1225,8 @@ export const messages = {
           standings:
             'Sigue la clasificación, tus puntos y tu impacto dentro de la temporada seleccionada.',
           matches: 'Consulta los partidos y resultados de la peña que tienes seleccionada.',
-          insights: 'Explora tendencias de juego y métricas avanzadas generadas a partir de la actividad registrada.',
+          insights:
+            'Explora tendencias de juego y métricas avanzadas generadas a partir de la actividad registrada.',
         },
         sectionsNavTitle: 'Mapa rápido de secciones',
         profileTitle: 'Mi perfil',

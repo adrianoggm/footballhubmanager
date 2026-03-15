@@ -28,10 +28,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
-import {
-  DashboardControlField,
-  DashboardIdentitySlot,
-} from './dashboard/DashboardShell.jsx'
+import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import UserAccountabilitySection from './user/UserAccountabilitySection.jsx'
@@ -714,7 +711,11 @@ export default function UserDashboard({
               <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
                 {t('dashboard.user.openSettings')}
               </Button>
-              <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
+              <Button
+                variant="outlined"
+                onClick={() => runAction(loadDashboard)}
+                disabled={loading}
+              >
                 {t('dashboard.common.refresh')}
               </Button>
               <Button variant="text" onClick={onLogout} disabled={loading}>
