@@ -2182,7 +2182,7 @@ export default function AdminDashboard({
 
       {selectedPenaGuid && activeSection === 'overview' && (
         <Grid container spacing={2.5}>
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} xl={5} sx={{ minWidth: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2215,7 +2215,7 @@ export default function AdminDashboard({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={7}>
+          <Grid item xs={12} xl={7} sx={{ minWidth: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2225,7 +2225,7 @@ export default function AdminDashboard({
                   <Typography variant="body2" color="text.secondary">
                     {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
                       {t('dashboard.admin.overview.manageSeasons')}
                     </Button>

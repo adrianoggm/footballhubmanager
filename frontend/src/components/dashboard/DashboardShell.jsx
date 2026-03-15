@@ -182,9 +182,9 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
       component="aside"
       elevation={0}
       sx={{
-        display: { xs: 'none', lg: 'flex' },
-        width: { lg: 90, xl: 104 },
-        minWidth: { lg: 90, xl: 104 },
+        display: { xs: 'none', xl: 'flex' },
+        width: 104,
+        minWidth: 104,
         p: 1.5,
         borderRadius: 5,
         position: 'sticky',
@@ -305,7 +305,7 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
     <Paper
       elevation={0}
       sx={{
-        display: { xs: 'block', lg: 'none' },
+        display: { xs: 'block', xl: 'none' },
         p: 1,
         borderRadius: 4,
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
@@ -433,16 +433,21 @@ export default function DashboardShell({
           <Box sx={{ position: 'relative', zIndex: 1, p: { xs: 2.25, md: 3.25 } }}>
             <Stack spacing={3}>
               <Stack
-                direction={{ xs: 'column', lg: 'row' }}
+                direction={{ xs: 'column', xl: 'row' }}
                 spacing={2.5}
                 justifyContent="space-between"
-                alignItems={{ lg: 'flex-start' }}
+                alignItems={{ xl: 'flex-start' }}
               >
                 <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                     <Typography
                       variant="overline"
-                      sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.4 }}
+                      sx={{
+                        color: 'secondary.dark',
+                        fontWeight: 800,
+                        letterSpacing: 1.4,
+                        overflowWrap: 'anywhere',
+                      }}
                     >
                       {brand}
                     </Typography>
@@ -457,13 +462,24 @@ export default function DashboardShell({
                     />
                   </Stack>
 
-                  <Typography variant="h3">{title}</Typography>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontSize: { xs: '1.85rem', sm: '2.15rem', lg: '2.55rem' },
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {title}
+                  </Typography>
 
                   {subtitle ? (
                     <Typography
                       variant="body1"
                       color="text.secondary"
-                      sx={{ fontSize: { xs: '0.98rem', md: '1.04rem' } }}
+                      sx={{
+                        fontSize: { xs: '0.98rem', md: '1.04rem' },
+                        overflowWrap: 'anywhere',
+                      }}
                     >
                       {subtitle}
                     </Typography>
@@ -477,9 +493,7 @@ export default function DashboardShell({
                 </Stack>
 
                 {headerAside ? (
-                  <Box sx={{ width: { xs: '100%', lg: 320, xl: 360 }, flexShrink: 0 }}>
-                    {headerAside}
-                  </Box>
+                  <Box sx={{ width: { xs: '100%', xl: 360 }, flexShrink: 0 }}>{headerAside}</Box>
                 ) : null}
               </Stack>
             </Stack>

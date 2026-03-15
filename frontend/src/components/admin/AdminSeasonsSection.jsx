@@ -73,7 +73,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
 
   return (
     <Grid container spacing={2.5}>
-      <Grid item xs={12} md={8}>
+      <Grid item xs={12} xl={8} sx={{ minWidth: 0 }}>
         <Card>
           <CardContent>
             <Stack spacing={2.5}>
@@ -217,7 +217,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                 </Box>
               )}
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
                 <Button
                   variant="contained"
                   onClick={
@@ -256,7 +256,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
         </Card>
       </Grid>
 
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} xl={4} sx={{ minWidth: 0 }}>
         <Card>
           <CardContent>
             <Stack spacing={1.5}>

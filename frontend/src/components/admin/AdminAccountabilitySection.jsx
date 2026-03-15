@@ -409,7 +409,7 @@ export default function AdminAccountabilitySection({
         </Card>
       </Grid>
 
-      <Grid item xs={12} md={6}>
+      <Grid item xs={12} lg={6} sx={{ minWidth: 0 }}>
         <Card>
           <CardContent>
             <Stack spacing={2}>
@@ -456,7 +456,7 @@ export default function AdminAccountabilitySection({
         </Card>
       </Grid>
 
-      <Grid item xs={12} md={6}>
+      <Grid item xs={12} lg={6} sx={{ minWidth: 0 }}>
         <Card>
           <CardContent>
             <Stack spacing={2}>
@@ -509,7 +509,7 @@ export default function AdminAccountabilitySection({
               </Typography>
 
               <Grid container spacing={1.5}>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} lg={4}>
                   <TextField
                     select
                     label={t('dashboard.admin.accountability.memberLabel')}
@@ -524,7 +524,7 @@ export default function AdminAccountabilitySection({
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} sm={6} lg={2}>
                   <TextField
                     label={t('dashboard.admin.accountability.debtAmount')}
                     type="number"
@@ -534,7 +534,7 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} sm={6} lg={2}>
                   <TextField
                     label={t('dashboard.admin.accountability.contributionAmount')}
                     type="number"
@@ -544,7 +544,7 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} lg={4}>
                   <TextField
                     label={t('dashboard.admin.accountability.note')}
                     value={memberDraft.note}
@@ -594,7 +594,13 @@ export default function AdminAccountabilitySection({
                         return (
                           <TableRow key={entry.player_guid}>
                             <TableCell>
-                              <Stack direction="row" spacing={1} alignItems="center">
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
                                 <span>{playerLabel}</span>
                                 <Chip
                                   size="small"
@@ -610,7 +616,7 @@ export default function AdminAccountabilitySection({
                             </TableCell>
                             <TableCell>{entry.note || '-'}</TableCell>
                             <TableCell>
-                              <Stack direction="row" spacing={1}>
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                 <Button
                                   size="small"
                                   variant="text"
@@ -651,7 +657,7 @@ export default function AdminAccountabilitySection({
                 {t('dashboard.admin.accountability.expensesDescription')}
               </Typography>
               <Grid container spacing={1.5}>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} lg={4}>
                   <TextField
                     label={t('dashboard.admin.accountability.expenseTitle')}
                     value={expenseDraft.title}
@@ -659,7 +665,7 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} sm={6} lg={2}>
                   <TextField
                     label={t('dashboard.admin.accountability.expenseCategory')}
                     value={expenseDraft.category}
@@ -667,7 +673,7 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} sm={6} lg={2}>
                   <TextField
                     type="date"
                     label={t('dashboard.admin.accountability.expenseDate')}
@@ -677,7 +683,7 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} sm={6} lg={2}>
                   <TextField
                     type="number"
                     label={t('dashboard.admin.accountability.expenseAmount')}
@@ -687,7 +693,7 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} sm={6} lg={2}>
                   <Button
                     variant="contained"
                     onClick={handleAddExpense}

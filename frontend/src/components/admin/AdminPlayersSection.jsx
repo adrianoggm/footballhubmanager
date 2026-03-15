@@ -225,7 +225,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
         </Card>
       </Grid>
 
-      <Grid item xs={12} md={8}>
+      <Grid item xs={12} xl={8} sx={{ minWidth: 0 }}>
         <Stack spacing={2.5}>
           <Card>
             <CardContent>
@@ -355,7 +355,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                               <TableCell align="right">{player.assists ?? 0}</TableCell>
                               <TableCell align="right">{player.points}</TableCell>
                               <TableCell>
-                                <Stack direction="row" spacing={1}>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                   <Button
                                     size="small"
                                     variant="text"
@@ -513,7 +513,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 )}
                               </TableCell>
                               <TableCell>
-                                <Stack direction="row" spacing={1}>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                   <Button
                                     size="small"
                                     variant="text"
@@ -565,7 +565,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
         </Stack>
       </Grid>
 
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} xl={4} sx={{ minWidth: 0 }}>
         <Card>
           <CardContent>
             <Stack spacing={2}>
