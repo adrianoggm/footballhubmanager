@@ -486,7 +486,7 @@ export default function DashboardShell({
       sx={{
         display: 'flex',
         width: '100%',
-        gap: { xs: 1.5, lg: 2, xl: 2.25 },
+        gap: { xs: 1.25, lg: 1.5, xl: 1.75 },
         alignItems: 'flex-start',
       }}
     >
@@ -499,15 +499,15 @@ export default function DashboardShell({
         railLabel={railLabel}
       />
 
-      <Stack flex={1} spacing={2.25} sx={{ minWidth: 0 }}>
-        <Grid container spacing={1.75} alignItems="stretch">
+      <Stack flex={1} spacing={1.75} sx={{ minWidth: 0 }}>
+        <Grid container spacing={1.25} alignItems="stretch">
           <Grid item xs={12} xl={headerAside ? 8 : 12}>
             <Paper
               elevation={0}
               sx={{
                 position: 'relative',
                 overflow: 'hidden',
-                minHeight: { xs: 200, md: 208, xl: 196 },
+                minHeight: { xs: 188, md: 192, xl: 178 },
                 height: '100%',
                 borderRadius: { xs: 4, md: 4.5 },
                 border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
@@ -541,13 +541,13 @@ export default function DashboardShell({
                   position: 'relative',
                   zIndex: 1,
                   height: '100%',
-                  p: { xs: 2, md: 2.45, xl: 2.3 },
+                  p: { xs: 1.65, md: 1.9, xl: 1.8 },
                   display: 'flex',
                   alignItems: 'center',
                 }}
               >
-                <Stack spacing={1.25} sx={{ maxWidth: 760, minWidth: 0 }}>
-                  <Stack direction="row" spacing={0.85} alignItems="center" flexWrap="wrap">
+                <Stack spacing={0.95} sx={{ maxWidth: 720, minWidth: 0 }}>
+                  <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
                     <Typography
                       variant="overline"
                       sx={{
@@ -574,7 +574,7 @@ export default function DashboardShell({
                     variant="h3"
                     sx={{
                       maxWidth: { xs: '100%', lg: '20ch' },
-                      fontSize: { xs: '1.68rem', sm: '1.95rem', lg: '2.28rem' },
+                      fontSize: { xs: '1.52rem', sm: '1.72rem', lg: '1.95rem' },
                       lineHeight: 1,
                       overflowWrap: 'anywhere',
                     }}
@@ -588,7 +588,7 @@ export default function DashboardShell({
                       color="text.secondary"
                       sx={{
                         maxWidth: { xs: '100%', lg: '60ch' },
-                        fontSize: { xs: '0.92rem', md: '0.98rem' },
+                        fontSize: { xs: '0.84rem', md: '0.9rem' },
                         overflowWrap: 'anywhere',
                       }}
                     >
@@ -597,7 +597,7 @@ export default function DashboardShell({
                   ) : null}
 
                   {badges ? (
-                    <Stack direction="row" gap={0.75} flexWrap="wrap" sx={{ pt: 0.2 }}>
+                    <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ pt: 0.1 }}>
                       {badges}
                     </Stack>
                   ) : null}
@@ -618,7 +618,7 @@ export default function DashboardShell({
         ) : null}
 
         {summaryCards.length > 0 ? (
-          <Grid container spacing={1.5}>
+          <Grid container spacing={1}>
             {summaryCards.map((item) => (
               <Grid key={item.label} item xs={12} sm={6} lg={6} xl={3}>
                 <DashboardStatCard item={item} />
@@ -627,7 +627,7 @@ export default function DashboardShell({
           </Grid>
         ) : null}
 
-        <Stack spacing={2.25}>{children}</Stack>
+        <Stack spacing={1.75}>{children}</Stack>
       </Stack>
     </Box>
   )

@@ -40,6 +40,8 @@ const theme = createTheme({
     borderRadius: 18,
   },
   typography: {
+    htmlFontSize: 15,
+    fontSize: 13,
     fontFamily: '"Space Grotesk", system-ui, sans-serif',
     h1: {
       fontWeight: 800,
@@ -86,9 +88,9 @@ const theme = createTheme({
           textTransform: 'none',
           fontWeight: 600,
           borderRadius: 999,
-          paddingInline: 14,
-          minHeight: 38,
-          fontSize: '0.92rem',
+          paddingInline: 12,
+          minHeight: 34,
+          fontSize: '0.88rem',
         },
         contained: {
           boxShadow: '0 16px 30px rgba(15, 23, 42, 0.16)',
@@ -102,13 +104,13 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontWeight: 600,
-          height: 28,
+          height: 24,
           borderRadius: 999,
           backdropFilter: 'blur(10px)',
         },
         label: {
-          paddingInline: 10,
-          fontSize: '0.76rem',
+          paddingInline: 8,
+          fontSize: '0.72rem',
         },
       },
     },
@@ -117,9 +119,9 @@ const theme = createTheme({
         root: {
           backgroundImage: 'none',
           border: '1px solid rgba(15,23,42,0.08)',
-          borderRadius: 20,
+          borderRadius: 18,
           backgroundColor: alpha('#fffdf8', 0.9),
-          boxShadow: '0 14px 32px rgba(15, 23, 42, 0.08)',
+          boxShadow: '0 12px 26px rgba(15, 23, 42, 0.07)',
         },
       },
     },
@@ -136,6 +138,7 @@ const theme = createTheme({
           borderRadius: 16,
           backgroundColor: alpha('#ffffff', 0.72),
           backdropFilter: 'blur(10px)',
+          minHeight: 36,
           '& fieldset': {
             borderColor: alpha('#0f172a', 0.12),
           },
@@ -147,15 +150,15 @@ const theme = createTheme({
           },
         },
         inputSizeSmall: {
-          paddingTop: 10,
-          paddingBottom: 10,
+          paddingTop: 8,
+          paddingBottom: 8,
         },
       },
     },
     MuiTabs: {
       styleOverrides: {
         root: {
-          minHeight: 44,
+          minHeight: 40,
         },
         indicator: {
           height: 3,
@@ -166,9 +169,10 @@ const theme = createTheme({
     MuiTab: {
       styleOverrides: {
         root: {
-          minHeight: 44,
+          minHeight: 40,
           textTransform: 'none',
           fontWeight: 700,
+          fontSize: '0.88rem',
         },
       },
     },
@@ -187,6 +191,8 @@ const theme = createTheme({
           borderColor: alpha('#0f172a', 0.08),
           textTransform: 'none',
           fontWeight: 700,
+          fontSize: '0.82rem',
+          paddingBlock: 6,
         },
       },
     },
@@ -203,18 +209,18 @@ const theme = createTheme({
         head: {
           fontWeight: 700,
           color: '#334155',
-          paddingTop: 10,
-          paddingBottom: 10,
+          paddingTop: 8,
+          paddingBottom: 8,
           borderBottomColor: alpha('#0f172a', 0.08),
         },
         body: {
-          paddingTop: 10,
-          paddingBottom: 10,
+          paddingTop: 8,
+          paddingBottom: 8,
           borderBottomColor: alpha('#0f172a', 0.06),
         },
         sizeSmall: {
-          paddingTop: 8,
-          paddingBottom: 8,
+          paddingTop: 6,
+          paddingBottom: 6,
         },
       },
     },
