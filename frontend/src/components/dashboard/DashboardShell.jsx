@@ -182,15 +182,16 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
       component="aside"
       elevation={0}
       sx={{
-        display: { xs: 'none', md: 'flex' },
-        width: 104,
-        minWidth: 104,
+        display: { xs: 'none', lg: 'flex' },
+        width: { lg: 90, xl: 104 },
+        minWidth: { lg: 90, xl: 104 },
         p: 1.5,
         borderRadius: 5,
         position: 'sticky',
         top: 24,
         alignSelf: 'flex-start',
-        minHeight: 'calc(100vh - 48px)',
+        maxHeight: 'calc(100vh - 48px)',
+        overflowY: 'auto',
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
         background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.9)} 0%, ${alpha(
           theme.palette.background.paper,
@@ -304,7 +305,7 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
     <Paper
       elevation={0}
       sx={{
-        display: { xs: 'block', md: 'none' },
+        display: { xs: 'block', lg: 'none' },
         p: 1,
         borderRadius: 4,
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
@@ -379,7 +380,7 @@ export default function DashboardShell({
   const theme = useTheme()
 
   return (
-    <Box sx={{ display: 'flex', gap: { xs: 2, lg: 3 }, alignItems: 'flex-start' }}>
+    <Box sx={{ display: 'flex', width: '100%', gap: { xs: 2, lg: 2.5, xl: 3 }, alignItems: 'flex-start' }}>
       <DesktopNav
         brand={brand}
         brandShort={brandShort}
@@ -425,12 +426,12 @@ export default function DashboardShell({
           <Box sx={{ position: 'relative', zIndex: 1, p: { xs: 2.25, md: 3.25 } }}>
             <Stack spacing={3}>
               <Stack
-                direction={{ xs: 'column', xl: 'row' }}
+                direction={{ xs: 'column', lg: 'row' }}
                 spacing={2.5}
                 justifyContent="space-between"
-                alignItems={{ xl: 'flex-start' }}
+                alignItems={{ lg: 'flex-start' }}
               >
-                <Stack spacing={1.5} sx={{ maxWidth: 760 }}>
+                <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                     <Typography
                       variant="overline"
@@ -449,7 +450,7 @@ export default function DashboardShell({
                     />
                   </Stack>
 
-                  <Typography variant="h3" sx={{ maxWidth: 780 }}>
+                  <Typography variant="h3">
                     {title}
                   </Typography>
 
@@ -457,7 +458,7 @@ export default function DashboardShell({
                     <Typography
                       variant="body1"
                       color="text.secondary"
-                      sx={{ maxWidth: 760, fontSize: { xs: '0.98rem', md: '1.04rem' } }}
+                      sx={{ fontSize: { xs: '0.98rem', md: '1.04rem' } }}
                     >
                       {subtitle}
                     </Typography>
@@ -471,7 +472,9 @@ export default function DashboardShell({
                 </Stack>
 
                 {headerAside ? (
-                  <Box sx={{ width: { xs: '100%', xl: 360 }, flexShrink: 0 }}>{headerAside}</Box>
+                  <Box sx={{ width: { xs: '100%', lg: 320, xl: 360 }, flexShrink: 0 }}>
+                    {headerAside}
+                  </Box>
                 ) : null}
               </Stack>
             </Stack>
@@ -485,7 +488,7 @@ export default function DashboardShell({
         {summaryCards.length > 0 ? (
           <Grid container spacing={2}>
             {summaryCards.map((item) => (
-              <Grid key={item.label} item xs={12} sm={6} lg={3}>
+              <Grid key={item.label} item xs={12} sm={6} lg={6} xl={3}>
                 <DashboardStatCard item={item} />
               </Grid>
             ))}

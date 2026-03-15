@@ -52,7 +52,11 @@ export default function PublicLayout() {
         }}
       />
 
-      <Container maxWidth="xl" sx={{ position: 'relative' }}>
+      <Container
+        maxWidth={false}
+        disableGutters
+        sx={{ position: 'relative', px: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 4 } }}
+      >
         <Stack spacing={3}>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
