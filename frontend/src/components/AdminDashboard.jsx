@@ -2070,7 +2070,8 @@ export default function AdminDashboard({
     {
       label: t('dashboard.admin.overview.currentPena'),
       value: selectedPena?.name || '-',
-      helper: t('dashboard.admin.heroSubtitle'),
+      helper: activeAdminSectionLabel,
+      helperLabel: t('dashboard.common.summaryMeta.section'),
       tone: 'secondary',
     },
     {
@@ -2079,20 +2080,21 @@ export default function AdminDashboard({
         ? t('dashboard.admin.status.configured')
         : t('dashboard.admin.status.missing'),
       helper: activeSeasonLabel,
+      helperLabel: t('dashboard.common.summaryMeta.range'),
       tone: activeSeason ? 'success' : 'warning',
     },
     {
       label: t('dashboard.admin.overview.totalSeasons'),
       value: String(seasonList.length),
-      helper: latestSeasonEndDate
-        ? `${t('dashboard.admin.referenceSeason')}: ${selectedSeasonLabel}`
-        : t('dashboard.admin.status.noSeasonSelected'),
+      helper: latestSeasonEndDate ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
+      helperLabel: t('dashboard.common.summaryMeta.reference'),
       tone: 'primary',
     },
     {
       label: t('dashboard.admin.overview.seasonPlayers'),
       value: String(seasonRoster.length),
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
+      helperLabel: t('dashboard.common.summaryMeta.season'),
       tone: 'info',
     },
   ]

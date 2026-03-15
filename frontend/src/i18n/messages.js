@@ -84,6 +84,14 @@ export const messages = {
         identityTitle: 'Visual identity',
         identityHint: 'Reserved space for the pena or league crest.',
         identityPlaceholder: 'Crest',
+        summaryMeta: {
+          section: 'Section',
+          range: 'Range',
+          reference: 'Reference',
+          season: 'Season',
+          activePena: 'Active pena',
+          points: 'Points',
+        },
         matchDetail: {
           title: 'Match detail',
           subtitle: 'Review what happened: score, highlights and player-by-player breakdown.',
@@ -750,6 +758,14 @@ export const messages = {
         identityTitle: 'Identidad visual',
         identityHint: 'Espacio reservado para el escudo de la peña o de la liga.',
         identityPlaceholder: 'Escudo',
+        summaryMeta: {
+          section: 'Apartado',
+          range: 'Rango',
+          reference: 'Referencia',
+          season: 'Temporada',
+          activePena: 'Peña activa',
+          points: 'Puntos',
+        },
         matchDetail: {
           title: 'Detalle del partido',
           subtitle: 'Revisa qué pasó: marcador, destacados y desglose jugador a jugador.',

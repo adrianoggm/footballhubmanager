@@ -129,56 +129,173 @@ function NavigationIcon({ kind, active = false }) {
   )
 }
 
+function DashboardStatGlyph({ tone }) {
+  return (
+    <SvgIcon fontSize="small" viewBox="0 0 24 24">
+      {tone === 'secondary' && (
+        <>
+          <path d="M5 6h6v5H5V6Zm8 0h6v3h-6V6Z" fill="currentColor" opacity="0.9" />
+          <path d="M5 13h4v5H5v-5Zm6 0h8v5h-8v-5Z" fill="currentColor" opacity="0.55" />
+        </>
+      )}
+      {tone === 'success' && (
+        <>
+          <path d="M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z" fill="currentColor" opacity="0.16" />
+          <path d="m10.8 14.9-2.4-2.4 1.4-1.4 1 1 3.3-3.3 1.4 1.4-4.7 4.7Z" fill="currentColor" />
+        </>
+      )}
+      {tone === 'warning' && (
+        <>
+          <path d="M12 4.5A7.5 7.5 0 1 1 4.5 12 7.5 7.5 0 0 1 12 4.5Z" fill="currentColor" opacity="0.14" />
+          <path d="M11 8h2v5h-2V8Zm1 8a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 12 16Z" fill="currentColor" />
+        </>
+      )}
+      {tone === 'info' && (
+        <>
+          <path d="M6 6h12v3H6V6Zm0 5h8v3H6v-3Zm0 5h12v3H6v-3Z" fill="currentColor" opacity="0.92" />
+        </>
+      )}
+      {tone === 'error' && (
+        <>
+          <path d="M12 4 4 20h16L12 4Z" fill="currentColor" opacity="0.16" />
+          <path d="M11 10h2v4h-2v-4Zm0 5h2v2h-2v-2Z" fill="currentColor" />
+        </>
+      )}
+      {!['secondary', 'success', 'warning', 'info', 'error'].includes(tone) && (
+        <>
+          <path d="M5 6h14v4H5V6Zm0 6h9v2H5v-2Zm0 4h14v2H5v-2Z" fill="currentColor" opacity="0.88" />
+        </>
+      )}
+    </SvgIcon>
+  )
+}
+
 function DashboardStatCard({ item }) {
   const theme = useTheme()
   const tone = toneMap[item.tone] || toneMap.primary
   const accent = tone.includes('.') ? theme.palette[tone.split('.')[0]][tone.split('.')[1]] : tone
+  const valueText = String(item.value ?? '').trim() || '-'
+  const usesWideValue = valueText.length > 18
+  const usesMediumValue = valueText.length > 10
+  const usesNumericValue = /^[\d#\-+/.,\s]+$/.test(valueText)
+  const helperText = String(item.helper ?? '').trim()
+  const helperMeta = item.helperLabel ? `${item.helperLabel} · ${helperText}` : helperText
 
   return (
     <Paper
       elevation={0}
       sx={{
-        p: { xs: 1.75, xl: 1.5 },
         minHeight: '100%',
-        borderRadius: 3.5,
+        borderRadius: 3,
         position: 'relative',
         overflow: 'hidden',
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
-        background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.92)} 0%, ${alpha(
+        background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.96)} 0%, ${alpha(
           theme.palette.background.paper,
           0.92
         )} 100%)`,
-        boxShadow: '0 14px 28px rgba(15, 23, 42, 0.07)',
+        boxShadow: '0 10px 22px rgba(15, 23, 42, 0.06)',
         '&::before': {
           content: '""',
           position: 'absolute',
           inset: 0,
-          background: `linear-gradient(135deg, ${alpha(accent, 0.14)} 0%, transparent 62%)`,
+          background: `linear-gradient(155deg, ${alpha(accent, 0.08)} 0%, transparent 42%)`,
           pointerEvents: 'none',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: 4,
+          background: `linear-gradient(180deg, ${alpha(accent, 0.95)} 0%, ${alpha(
+            accent,
+            0.42
+          )} 100%)`,
         },
       }}
     >
-      <Stack spacing={0.9} sx={{ position: 'relative', zIndex: 1 }}>
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          minHeight: 84,
+          px: { xs: 1.15, xl: 1.05 },
+          py: 1,
+        }}
+      >
         <Box
           sx={{
-            width: 34,
-            height: 3,
-            borderRadius: 999,
-            bgcolor: alpha(accent, 0.82),
+            width: 30,
+            height: 30,
+            flexShrink: 0,
+            borderRadius: 2,
+            display: 'grid',
+            placeItems: 'center',
+            color: accent,
+            border: `1px solid ${alpha(accent, 0.18)}`,
+            background: `linear-gradient(180deg, ${alpha(accent, 0.14)} 0%, ${alpha(
+              theme.palette.common.white,
+              0.45
+            )} 100%)`,
+            boxShadow: `inset 0 1px 0 ${alpha(theme.palette.common.white, 0.7)}`,
           }}
-        />
-        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.05 }}>
-          {item.label}
-        </Typography>
-        <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.05, fontSize: '1.32rem' }}>
-          {item.value}
-        </Typography>
-        {item.helper ? (
-          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
-            {item.helper}
+        >
+          <DashboardStatGlyph tone={item.tone} />
+        </Box>
+
+        <Stack spacing={0.18} sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            variant="overline"
+            color="text.secondary"
+            sx={{ letterSpacing: 0.7, lineHeight: 1.05 }}
+          >
+            {item.label}
           </Typography>
-        ) : null}
-      </Stack>
+
+          {helperMeta ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                fontSize: '0.78rem',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {helperMeta}
+            </Typography>
+          ) : null}
+        </Stack>
+
+        <Typography
+          sx={{
+            flexShrink: 0,
+            maxWidth: '42%',
+            textAlign: 'right',
+            fontWeight: 800,
+            color: 'text.primary',
+            lineHeight: 1,
+            letterSpacing: usesNumericValue ? -0.45 : -0.2,
+            fontSize: usesWideValue
+              ? '0.96rem'
+              : usesMediumValue
+                ? '1.08rem'
+                : usesNumericValue
+                  ? '1.6rem'
+                  : '1.16rem',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {valueText}
+        </Typography>
+      </Box>
     </Paper>
   )
 }

@@ -618,12 +618,14 @@ export default function UserDashboard({
       label: t('dashboard.user.myPenasTitle'),
       value: String(penas.length),
       helper: selectedPena?.name || t('dashboard.user.noPenasLinked'),
+      helperLabel: t('dashboard.common.summaryMeta.activePena'),
       tone: 'secondary',
     },
     {
       label: t('dashboard.user.selectedSeason'),
       value: selectedSeason ? selectedSeasonLabel : '-',
       helper: selectedPena ? selectedPena.name : t('dashboard.user.noPenasLinked'),
+      helperLabel: t('dashboard.common.summaryMeta.activePena'),
       tone: 'primary',
     },
     {
@@ -632,12 +634,14 @@ export default function UserDashboard({
       helper: currentStanding
         ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
         : t('dashboard.user.notInStandingsYet'),
+      helperLabel: t('dashboard.common.summaryMeta.points'),
       tone: 'info',
     },
     {
       label: t('dashboard.user.matchesTitle'),
       value: String(orderedSeasonMatches.length),
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.user.noMatchesForSeason'),
+      helperLabel: t('dashboard.common.summaryMeta.season'),
       tone: 'warning',
     },
   ]
