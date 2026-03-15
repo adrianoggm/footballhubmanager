@@ -686,7 +686,7 @@ export default function UserDashboard({
         <Paper
           elevation={0}
           sx={{
-            p: { xs: 1.5, sm: 1.75 },
+            p: { xs: 1.25, sm: 1.4, xl: 1.25 },
             height: '100%',
             borderRadius: 4,
             border: '1px solid rgba(15,23,42,0.08)',
@@ -694,7 +694,7 @@ export default function UserDashboard({
             backdropFilter: 'blur(12px)',
           }}
         >
-          <Stack spacing={1.5}>
+          <Stack spacing={1.15}>
             <DashboardIdentitySlot
               title={t('dashboard.common.identityTitle')}
               name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
@@ -706,7 +706,7 @@ export default function UserDashboard({
 
             <Divider />
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
               <LanguageSwitcher />
               <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
                 {t('dashboard.user.openSettings')}
@@ -723,7 +723,7 @@ export default function UserDashboard({
               </Button>
             </Stack>
 
-            <Grid container spacing={1.25}>
+            <Grid container spacing={1}>
               <Grid item xs={12}>
                 <DashboardControlField label={t('dashboard.user.selectedPena')}>
                   <TextField

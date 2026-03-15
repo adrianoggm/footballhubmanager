@@ -138,9 +138,9 @@ function DashboardStatCard({ item }) {
     <Paper
       elevation={0}
       sx={{
-        p: 2.25,
+        p: { xs: 1.75, xl: 1.5 },
         minHeight: '100%',
-        borderRadius: 4,
+        borderRadius: 3.5,
         position: 'relative',
         overflow: 'hidden',
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
@@ -148,7 +148,7 @@ function DashboardStatCard({ item }) {
           theme.palette.background.paper,
           0.92
         )} 100%)`,
-        boxShadow: '0 18px 38px rgba(15, 23, 42, 0.08)',
+        boxShadow: '0 14px 28px rgba(15, 23, 42, 0.07)',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -158,23 +158,23 @@ function DashboardStatCard({ item }) {
         },
       }}
     >
-      <Stack spacing={1.1} sx={{ position: 'relative', zIndex: 1 }}>
+      <Stack spacing={0.9} sx={{ position: 'relative', zIndex: 1 }}>
         <Box
           sx={{
-            width: 42,
-            height: 4,
+            width: 34,
+            height: 3,
             borderRadius: 999,
             bgcolor: alpha(accent, 0.82),
           }}
         />
-        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.3 }}>
+        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.05 }}>
           {item.label}
         </Typography>
-        <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.05 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.05, fontSize: '1.32rem' }}>
           {item.value}
         </Typography>
         {item.helper ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
             {item.helper}
           </Typography>
         ) : null}
@@ -185,11 +185,11 @@ function DashboardStatCard({ item }) {
 
 export function DashboardControlField({ label, helper = '', children }) {
   return (
-    <Stack spacing={0.65}>
+    <Stack spacing={0.5}>
       <Typography
         variant="caption"
         color="text.secondary"
-        sx={{ fontWeight: 800, letterSpacing: 0.45, pl: 0.25 }}
+        sx={{ fontWeight: 800, letterSpacing: 0.3, pl: 0.25 }}
       >
         {label}
       </Typography>
@@ -217,16 +217,16 @@ export function DashboardIdentitySlot({
   return (
     <Stack
       direction={{ xs: 'column', sm: 'row' }}
-      spacing={1.35}
+      spacing={1.1}
       alignItems={{ xs: 'center', sm: 'center' }}
     >
       <Box
         sx={{
-          width: 88,
-          height: 88,
+          width: 74,
+          height: 74,
           flexShrink: 0,
           overflow: 'hidden',
-          borderRadius: 4,
+          borderRadius: 3,
           border: `1px dashed ${alpha(theme.palette.primary.dark, 0.16)}`,
           background: 'linear-gradient(145deg, rgba(27,39,64,0.08) 0%, rgba(15,118,110,0.10) 100%)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
@@ -249,29 +249,36 @@ export function DashboardIdentitySlot({
             <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>
               {placeholderLabel}
             </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1 }}>
               {initials}
             </Typography>
           </Stack>
         )}
       </Box>
 
-      <Stack spacing={0.35} sx={{ minWidth: 0, textAlign: { xs: 'center', sm: 'left' } }}>
+      <Stack spacing={0.2} sx={{ minWidth: 0, textAlign: { xs: 'center', sm: 'left' } }}>
         {title ? (
           <Typography
             variant="overline"
-            sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.1 }}
+            sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 0.95 }}
           >
             {title}
           </Typography>
         ) : null}
         {name ? (
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+          <Typography
+            variant="subtitle1"
+            sx={{ fontWeight: 700, fontSize: '0.98rem', overflowWrap: 'anywhere' }}
+          >
             {name}
           </Typography>
         ) : null}
         {subtitle ? (
-          <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontSize: '0.86rem', overflowWrap: 'anywhere' }}
+          >
             {subtitle}
           </Typography>
         ) : null}
@@ -289,14 +296,14 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
       elevation={0}
       sx={{
         display: { xs: 'none', xl: 'flex' },
-        width: 88,
-        minWidth: 88,
-        p: 1.25,
-        borderRadius: 5,
+        width: 76,
+        minWidth: 76,
+        p: 1,
+        borderRadius: 4,
         position: 'sticky',
-        top: 24,
+        top: 18,
         alignSelf: 'flex-start',
-        maxHeight: 'calc(100vh - 48px)',
+        maxHeight: 'calc(100vh - 36px)',
         overflowY: 'auto',
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
         background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.9)} 0%, ${alpha(
@@ -306,38 +313,38 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
         boxShadow: '0 24px 56px rgba(15, 23, 42, 0.12)',
       }}
     >
-      <Stack spacing={1.5} alignItems="center" sx={{ width: '100%' }}>
+      <Stack spacing={1.15} alignItems="center" sx={{ width: '100%' }}>
         <Tooltip title={railLabel || brand} placement="right">
           <Stack
-            spacing={0.85}
+            spacing={0.6}
             alignItems="center"
             sx={{
               width: '100%',
-              pb: 1.25,
+              pb: 1,
               borderBottom: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
             }}
           >
             <Box
               sx={{
-                width: 50,
-                height: 50,
-                borderRadius: 3.5,
+                width: 42,
+                height: 42,
+                borderRadius: 3,
                 display: 'grid',
                 placeItems: 'center',
                 color: 'common.white',
                 background: 'linear-gradient(160deg, rgba(21,33,55,1) 0%, rgba(22,84,84,1) 85%)',
-                boxShadow: '0 18px 36px rgba(15, 23, 42, 0.22)',
+                boxShadow: '0 12px 24px rgba(15, 23, 42, 0.2)',
               }}
             >
-              <BrandGlyph sx={{ fontSize: 24 }} />
+              <BrandGlyph sx={{ fontSize: 20 }} />
             </Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: 1.1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: 0.9 }}>
               {brandShort}
             </Typography>
           </Stack>
         </Tooltip>
 
-        <Stack spacing={0.85} sx={{ width: '100%' }}>
+        <Stack spacing={0.65} sx={{ width: '100%' }}>
           {navItems.map((item) => {
             const active = item.id === activeNavId
             return (
@@ -347,8 +354,8 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                   onClick={() => onNavChange(item.id)}
                   sx={{
                     width: '100%',
-                    minHeight: 52,
-                    borderRadius: 3,
+                    minHeight: 46,
+                    borderRadius: 2.5,
                     position: 'relative',
                     color: active ? 'primary.dark' : 'text.secondary',
                     border: `1px solid ${
@@ -375,8 +382,8 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                     sx={{
                       position: 'absolute',
                       left: 6,
-                      top: 10,
-                      bottom: 10,
+                      top: 8,
+                      bottom: 8,
                       width: 3,
                       borderRadius: 999,
                       bgcolor: active ? 'secondary.main' : 'transparent',
@@ -426,10 +433,10 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
               key={item.id}
               onClick={() => onNavChange(item.id)}
               sx={{
-                minWidth: 116,
+                minWidth: 104,
                 borderRadius: 3,
-                px: 1.5,
-                py: 1.15,
+                px: 1.25,
+                py: 0.95,
                 justifyContent: 'flex-start',
                 border: `1px solid ${
                   active
@@ -479,7 +486,7 @@ export default function DashboardShell({
       sx={{
         display: 'flex',
         width: '100%',
-        gap: { xs: 2, lg: 2.5, xl: 3 },
+        gap: { xs: 1.5, lg: 2, xl: 2.25 },
         alignItems: 'flex-start',
       }}
     >
@@ -492,21 +499,21 @@ export default function DashboardShell({
         railLabel={railLabel}
       />
 
-      <Stack flex={1} spacing={3} sx={{ minWidth: 0 }}>
-        <Grid container spacing={2.25} alignItems="stretch">
+      <Stack flex={1} spacing={2.25} sx={{ minWidth: 0 }}>
+        <Grid container spacing={1.75} alignItems="stretch">
           <Grid item xs={12} xl={headerAside ? 8 : 12}>
             <Paper
               elevation={0}
               sx={{
                 position: 'relative',
                 overflow: 'hidden',
-                minHeight: { xs: 220, md: 250 },
+                minHeight: { xs: 200, md: 208, xl: 196 },
                 height: '100%',
-                borderRadius: { xs: 4, md: 5 },
+                borderRadius: { xs: 4, md: 4.5 },
                 border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
                 background:
                   'linear-gradient(142deg, rgba(255,255,255,0.94) 0%, rgba(237,247,243,0.9) 54%, rgba(255,244,230,0.9) 100%)',
-                boxShadow: '0 24px 50px rgba(15, 23, 42, 0.12)',
+                boxShadow: '0 18px 38px rgba(15, 23, 42, 0.1)',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -534,19 +541,19 @@ export default function DashboardShell({
                   position: 'relative',
                   zIndex: 1,
                   height: '100%',
-                  p: { xs: 2.25, md: 3.25 },
+                  p: { xs: 2, md: 2.45, xl: 2.3 },
                   display: 'flex',
                   alignItems: 'center',
                 }}
               >
-                <Stack spacing={1.75} sx={{ maxWidth: 820, minWidth: 0 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Stack spacing={1.25} sx={{ maxWidth: 760, minWidth: 0 }}>
+                  <Stack direction="row" spacing={0.85} alignItems="center" flexWrap="wrap">
                     <Typography
                       variant="overline"
                       sx={{
                         color: 'secondary.dark',
                         fontWeight: 800,
-                        letterSpacing: 1.4,
+                        letterSpacing: 1.1,
                         overflowWrap: 'anywhere',
                       }}
                     >
@@ -554,11 +561,11 @@ export default function DashboardShell({
                     </Typography>
                     <Box
                       sx={{
-                        width: 8,
-                        height: 8,
+                        width: 7,
+                        height: 7,
                         borderRadius: '50%',
                         bgcolor: 'success.main',
-                        boxShadow: `0 0 0 6px ${alpha(theme.palette.success.main, 0.14)}`,
+                        boxShadow: `0 0 0 5px ${alpha(theme.palette.success.main, 0.14)}`,
                       }}
                     />
                   </Stack>
@@ -567,7 +574,7 @@ export default function DashboardShell({
                     variant="h3"
                     sx={{
                       maxWidth: { xs: '100%', lg: '20ch' },
-                      fontSize: { xs: '1.9rem', sm: '2.25rem', lg: '2.85rem' },
+                      fontSize: { xs: '1.68rem', sm: '1.95rem', lg: '2.28rem' },
                       lineHeight: 1,
                       overflowWrap: 'anywhere',
                     }}
@@ -581,7 +588,7 @@ export default function DashboardShell({
                       color="text.secondary"
                       sx={{
                         maxWidth: { xs: '100%', lg: '60ch' },
-                        fontSize: { xs: '0.98rem', md: '1.06rem' },
+                        fontSize: { xs: '0.92rem', md: '0.98rem' },
                         overflowWrap: 'anywhere',
                       }}
                     >
@@ -590,7 +597,7 @@ export default function DashboardShell({
                   ) : null}
 
                   {badges ? (
-                    <Stack direction="row" gap={1} flexWrap="wrap" sx={{ pt: 0.35 }}>
+                    <Stack direction="row" gap={0.75} flexWrap="wrap" sx={{ pt: 0.2 }}>
                       {badges}
                     </Stack>
                   ) : null}
@@ -611,7 +618,7 @@ export default function DashboardShell({
         ) : null}
 
         {summaryCards.length > 0 ? (
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
             {summaryCards.map((item) => (
               <Grid key={item.label} item xs={12} sm={6} lg={6} xl={3}>
                 <DashboardStatCard item={item} />
@@ -620,7 +627,7 @@ export default function DashboardShell({
           </Grid>
         ) : null}
 
-        <Stack spacing={3}>{children}</Stack>
+        <Stack spacing={2.25}>{children}</Stack>
       </Stack>
     </Box>
   )

@@ -2140,7 +2140,7 @@ export default function AdminDashboard({
         <Paper
           elevation={0}
           sx={{
-            p: { xs: 1.5, sm: 1.75 },
+            p: { xs: 1.25, sm: 1.4, xl: 1.25 },
             height: '100%',
             borderRadius: 4,
             border: '1px solid rgba(15,23,42,0.08)',
@@ -2148,7 +2148,7 @@ export default function AdminDashboard({
             backdropFilter: 'blur(12px)',
           }}
         >
-          <Stack spacing={1.5}>
+          <Stack spacing={1.15}>
             <DashboardIdentitySlot
               title={t('dashboard.common.identityTitle')}
               name={selectedPena?.name || t('dashboard.admin.panelTitle')}
@@ -2159,7 +2159,7 @@ export default function AdminDashboard({
 
             <Divider />
 
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
               <LanguageSwitcher />
               <Button
                 variant="outlined"
@@ -2173,7 +2173,7 @@ export default function AdminDashboard({
               </Button>
             </Stack>
 
-            <Grid container spacing={1.25}>
+            <Grid container spacing={1}>
               <Grid item xs={12}>
                 <DashboardControlField label={t('dashboard.admin.currentPena')}>
                   <TextField
