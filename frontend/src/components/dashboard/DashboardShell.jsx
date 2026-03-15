@@ -146,13 +146,24 @@ function DashboardStatGlyph({ tone }) {
       )}
       {tone === 'warning' && (
         <>
-          <path d="M12 4.5A7.5 7.5 0 1 1 4.5 12 7.5 7.5 0 0 1 12 4.5Z" fill="currentColor" opacity="0.14" />
-          <path d="M11 8h2v5h-2V8Zm1 8a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 12 16Z" fill="currentColor" />
+          <path
+            d="M12 4.5A7.5 7.5 0 1 1 4.5 12 7.5 7.5 0 0 1 12 4.5Z"
+            fill="currentColor"
+            opacity="0.14"
+          />
+          <path
+            d="M11 8h2v5h-2V8Zm1 8a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 12 16Z"
+            fill="currentColor"
+          />
         </>
       )}
       {tone === 'info' && (
         <>
-          <path d="M6 6h12v3H6V6Zm0 5h8v3H6v-3Zm0 5h12v3H6v-3Z" fill="currentColor" opacity="0.92" />
+          <path
+            d="M6 6h12v3H6V6Zm0 5h8v3H6v-3Zm0 5h12v3H6v-3Z"
+            fill="currentColor"
+            opacity="0.92"
+          />
         </>
       )}
       {tone === 'error' && (
@@ -163,7 +174,11 @@ function DashboardStatGlyph({ tone }) {
       )}
       {!['secondary', 'success', 'warning', 'info', 'error'].includes(tone) && (
         <>
-          <path d="M5 6h14v4H5V6Zm0 6h9v2H5v-2Zm0 4h14v2H5v-2Z" fill="currentColor" opacity="0.88" />
+          <path
+            d="M5 6h14v4H5V6Zm0 6h9v2H5v-2Zm0 4h14v2H5v-2Z"
+            fill="currentColor"
+            opacity="0.88"
+          />
         </>
       )}
     </SvgIcon>

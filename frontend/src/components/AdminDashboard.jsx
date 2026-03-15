@@ -2086,7 +2086,9 @@ export default function AdminDashboard({
     {
       label: t('dashboard.admin.overview.totalSeasons'),
       value: String(seasonList.length),
-      helper: latestSeasonEndDate ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
+      helper: latestSeasonEndDate
+        ? selectedSeasonLabel
+        : t('dashboard.admin.status.noSeasonSelected'),
       helperLabel: t('dashboard.common.summaryMeta.reference'),
       tone: 'primary',
     },
