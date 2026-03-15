@@ -35,7 +35,7 @@ export default function AuthLandingPage({ auth }) {
 
   return (
     <Grid container spacing={{ xs: 3, md: 4 }}>
-      <Grid item xs={12} lg={4.5}>
+      <Grid item xs={12} lg={5} xl={4}>
         <Box sx={{ position: { lg: 'sticky' }, top: { lg: 24 } }}>
           <Paper
             elevation={0}
@@ -73,7 +73,7 @@ export default function AuthLandingPage({ auth }) {
         </Box>
       </Grid>
 
-      <Grid item xs={12} lg={7.5}>
+      <Grid item xs={12} lg={7} xl={8}>
         <Stack spacing={2.5}>
           <Paper
             elevation={0}

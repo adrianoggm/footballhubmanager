@@ -665,7 +665,7 @@ export default function UserDashboard({
       }
       headerAside={
         <Stack spacing={1.5}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             <LanguageSwitcher />
             <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
               {t('dashboard.user.openSettings')}

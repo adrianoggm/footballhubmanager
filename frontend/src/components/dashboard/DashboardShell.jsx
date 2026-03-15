@@ -380,7 +380,14 @@ export default function DashboardShell({
   const theme = useTheme()
 
   return (
-    <Box sx={{ display: 'flex', width: '100%', gap: { xs: 2, lg: 2.5, xl: 3 }, alignItems: 'flex-start' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        width: '100%',
+        gap: { xs: 2, lg: 2.5, xl: 3 },
+        alignItems: 'flex-start',
+      }}
+    >
       <DesktopNav
         brand={brand}
         brandShort={brandShort}
@@ -450,9 +457,7 @@ export default function DashboardShell({
                     />
                   </Stack>
 
-                  <Typography variant="h3">
-                    {title}
-                  </Typography>
+                  <Typography variant="h3">{title}</Typography>
 
                   {subtitle ? (
                     <Typography
