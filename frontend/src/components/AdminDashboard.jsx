@@ -312,6 +312,15 @@ const normalizePlayerGuids = (value) => {
 
 const setUnionSize = (left, right) => new Set([...left, ...right]).size
 
+const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
+  overview: 'dashboard.admin.heroSections.overview',
+  seasons: 'dashboard.admin.heroSections.seasons',
+  accountability: 'dashboard.admin.heroSections.accountability',
+  players: 'dashboard.admin.heroSections.players',
+  matches: 'dashboard.admin.heroSections.matches',
+  standings: 'dashboard.admin.heroSections.standings',
+}
+
 const formatDate = (value) => {
   if (!value) {
     return '-'
@@ -2052,6 +2061,13 @@ export default function AdminDashboard({
     label: t(section.titleKey),
     icon: section.id,
   }))
+  const activeAdminSection = adminSections.find((section) => section.id === activeSection) || null
+  const activeAdminSectionLabel = activeAdminSection
+    ? t(activeAdminSection.titleKey)
+    : t('dashboard.admin.panelTitle')
+  const activeAdminHeroSubtitle = t(
+    ADMIN_HERO_SUBTITLE_KEY_BY_SECTION[activeSection] || 'dashboard.admin.heroSubtitle'
+  )
 
   const adminSummaryCards = [
     {
@@ -2101,10 +2117,11 @@ export default function AdminDashboard({
       navItems={adminNavItems}
       activeNavId={activeSection}
       onNavChange={handleSectionChange}
-      title={t('dashboard.admin.panelTitle')}
-      subtitle={t('dashboard.admin.heroSubtitle')}
+      title={activeAdminSectionLabel}
+      subtitle={activeAdminHeroSubtitle}
       badges={
         <>
+          <Chip size="small" color="default" label={activeAdminSectionLabel} />
           <Chip
             size="small"
             color="secondary"

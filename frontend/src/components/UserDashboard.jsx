@@ -100,6 +100,15 @@ const mapDashboardErrorMessage = (error, t) => {
   return error.message
 }
 
+const USER_HERO_SUBTITLE_KEY_BY_SECTION = {
+  join: 'dashboard.user.heroSections.join',
+  membership: 'dashboard.user.heroSections.membership',
+  accountability: 'dashboard.user.heroSections.accountability',
+  standings: 'dashboard.user.heroSections.standings',
+  matches: 'dashboard.user.heroSections.matches',
+  insights: 'dashboard.user.heroSections.insights',
+}
+
 export default function UserDashboard({
   session,
   onLogout,
@@ -596,6 +605,16 @@ export default function UserDashboard({
     label: t(section.titleKey),
     icon: section.id,
   }))
+  const activeUserSection =
+    userQuickNavSections.find((section) => section.id === activeNavSectionId) ||
+    userQuickNavSections[0] ||
+    null
+  const activeUserSectionLabel = activeUserSection
+    ? t(activeUserSection.titleKey)
+    : t('dashboard.user.panelTitle')
+  const activeUserHeroSubtitle = t(
+    USER_HERO_SUBTITLE_KEY_BY_SECTION[activeUserSection?.id] || 'dashboard.user.heroSubtitle'
+  )
 
   const userSummaryCards = [
     {
@@ -643,10 +662,11 @@ export default function UserDashboard({
       navItems={userNavItems}
       activeNavId={activeNavSectionId}
       onNavChange={handleNavigateToSection}
-      title={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-      subtitle={t('dashboard.user.heroSubtitle')}
+      title={activeUserSectionLabel}
+      subtitle={activeUserHeroSubtitle}
       badges={
         <>
+          <Chip size="small" color="default" label={activeUserSectionLabel} />
           <Chip
             size="small"
             color="secondary"
