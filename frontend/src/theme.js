@@ -109,7 +109,7 @@ const theme = createTheme({
   // CUSTOM TOKENS ====================================================
   custom: {
     radius: {
-      none: 0, sm: 5, lg: 20, full: 9999,
+      none: 0, sm: "5px", lg: "20px", full: 9999,
     },
     gradients: {
       cardDepth1: 'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.12) 0%, rgba(4, 4, 6, 0) 60%)',

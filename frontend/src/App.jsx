@@ -111,10 +111,10 @@ export default function App() {
                 <Paper
                   elevation={0}
                   sx={{
-                    borderRadius: 4,
+                    borderRadius: (theme) => theme.custom.radius.lg,
                     p: { xs: 2.5, md: 3.5 },
-                    border: '1px solid rgba(31,41,55,0.1)',
-                    backgroundColor: (theme) => theme.custom.gradients.cardDepth1,
+                    border: '1px solid rgba(15, 115, 255, 0.1)',
+                    backgroundcolor: (theme) => theme.custom.gradients.cardDepth1,
                   }}
                 >
                   <Stack spacing={1.5}>
@@ -136,7 +136,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)',
+                        backgroundcolor: (theme) => theme.custom.gradients.cardDepth1,
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -155,7 +155,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)',
+                        backgroundcolor: (theme) => theme.custom.gradients.cardDepth1,
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -174,7 +174,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)',
+                        backgroundcolor: (theme) => theme.custom.gradients.cardDepth1,
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -193,7 +193,7 @@ export default function App() {
                         borderRadius: 3,
                         minHeight: '100%',
                         border: '1px solid rgba(31,41,55,0.1)',
-                        bgcolor: 'rgba(255,253,247,0.86)',
+                        backgroundcolor: (theme) => theme.custom.gradients.cardDepth1,
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -212,7 +212,7 @@ export default function App() {
                     borderRadius: 4,
                     p: { xs: 2.5, md: 3 },
                     border: '1px dashed rgba(180,83,9,0.3)',
-                    bgcolor: 'rgba(255,246,230,0.72)',
+                    bgcolor: 'background.paper',
                   }}
                 >
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">

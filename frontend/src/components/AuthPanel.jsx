@@ -173,7 +173,7 @@ export default function AuthPanel({ auth }) {
         maxWidth: 460,
         width: '100%',
         borderRadius: 4,
-        bgcolor: 'rgba(255,253,248,0.93)',
+        bgcolor: 'background.paper',
         border: '1px solid rgba(31,41,55,0.1)',
         boxShadow: '0 22px 52px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 118, 110, 0.16)',
       }}
@@ -194,6 +194,8 @@ export default function AuthPanel({ auth }) {
             onChange={(_, value) => setMode(value)}
             variant="fullWidth"
             sx={{ minHeight: 40 }}
+            textColor="secondary"
+            indicatorColor="secondary"
           >
             <Tab value="login" label={t('auth.tabLogin')} sx={{ minHeight: 40 }} />
             <Tab value="register" label={t('auth.tabRegister')} sx={{ minHeight: 40 }} />
