@@ -2,74 +2,203 @@ import { createTheme } from '@mui/material/styles'
 
 const theme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: {
-      main: '#1f2937',
-      light: '#334155',
-      dark: '#0f172a',
-      contrastText: '#f8fafc',
+      main: '#101820',
+      light: '#435363', 
+      dark: '#0A0E13',  
+      contrastText: '#F5F5F5', 
     },
     secondary: {
-      main: '#0f766e',
-      light: '#14b8a6',
-      dark: '#115e59',
-      contrastText: '#f0fdfa',
+      main: '#da4416',
+      light: '#F7A77F',
+      dark: '#914119',
+      contrastText: '#101820',
     },
+    //To use this color => sx={{ bgcolor: 'alternate.main' }}
+    alternate: {
+      main: '#0A3039',
+      light: '#3A727F',
+      dark: '#061D22',
+      contrastText: '#F5F5F5',
+    },
+    // Semantic colors
     info: {
-      main: '#0ea5a3',
+      main: '#00ACC1',
     },
     success: {
-      main: '#15803d',
+      main: '#00C10D',
     },
     warning: {
-      main: '#b45309',
+      main: '#FFC107',
     },
     error: {
-      main: '#b91c1c',
+      main: '#C10000',
     },
+    // + support semantical colors
+    brandExtras: {
+      purple: '#6700C1',
+      pink: '#ED2AB2',
+      navyBlue: '#0020C1'
+    },
+    // reading colors
     background: {
-      default: '#f7f3e8',
-      paper: '#fffdf7',
+      default: '#040406',
+      paper: '#1A1C24',
     },
     text: {
-      primary: '#0f172a',
-      secondary: '#475569',
+      primary: '#F5F5F5',
+      secondary: '#BABABA',
     },
   },
+  // p: X will have a spacing based in 8
+  spacing: 8,
+
   shape: {
     borderRadius: 14,
   },
+
   typography: {
-    fontFamily: '"Space Grotesk", system-ui, sans-serif',
-    h3: {
-      fontWeight: 700,
-      letterSpacing: -0.5,
-    },
+  fontFamily: '"Lexend Deca", system-ui, sans-serif',
+
+  // GLOBAL TOKENS
+  fontWeightLight: 100,
+  fontWeightRegular: 300, 
+  fontWeightMedium: 500,
+  fontWeightBold: 700,
+
+  // Body and tags
+  body1: {
+    fontSize: '1rem',
+    lineHeight: 1.6,
+    letterSpacing: '0.01em',
   },
+  caption: {
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.15em',
+    fontSize: '0.75rem',
+  },
+  h3: {
+    fontWeight: 600,
+    lineHeight: 1.2,
+    letterSpacing: '-0.02em', 
+    fontSize: '1.25rem',
+  },
+  h2: {
+    fontWeight: 700,
+    lineHeight: 1.2,
+    letterSpacing: '-0.02em', 
+    fontSize: '1.5rem',
+  },
+  h1: {
+    fontWeight: 700,
+    fontSize: '2rem',
+    lineHeight: 1.1,
+    letterSpacing: '-0.03em',
+  },
+  // This is DISPLAY, Material UI doesn't support it, so i'm using an empty one
+  h7: {
+    fontWeight: 900,
+    fontSize: '3rem',
+    lineHeight: 1,
+    letterSpacing: '-0.03em',
+  }, 
+},
+
+  // CUSTOM TOKENS ====================================================
+  custom: {
+    radius: {
+      none: 0, sm: 5, md: 10, lg: 20, full: 9999,
+    },
+    gradients: {
+      cardDepth1: 'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.12) 0%, rgba(4, 4, 6, 0) 60%)',
+      cardDepthBig: 'radial-gradient(ellipse 200% 150% at 50% 0%, rgba(238, 238, 238, 0.1) 0%, rgba(4, 4, 6, 0) 30%)',
+    },
+    shadows: {
+      none: 'none',
+      xs: '0 1px 2px rgba(0, 0, 0, 0.05)',
+      sm: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+      md: '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+      lg: '0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
+      xl: '0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)',
+      // To use gradient1 => sx={{ boxShadow: (theme) => theme.custom.shadows.gradient1 }}
+      gradient1: 'inset -8px 6px 15px 0 rgba(234, 95, 20, 0.5), inset -80px 80px 80px -102px rgba(234, 95, 20, 0.75)',
+    },
+    transitions: {
+      fast: 'all 150ms ease-out',
+      base: 'all 250ms ease-out',
+      slow: 'all 350ms ease-out',
+    }
+  },
+  // ===================================================================
+
   components: {
-    MuiButton: {
+    // Reset CSS
+    MuiCssBaseline: {
       styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 600,
+        html: { scrollBehavior: 'smooth' },
+        body: {
+          margin: 0,
+          padding: 0,
+          fontFamily: '"Lexend Deca", system-ui, sans-serif',
+          fontWeight: 300,
+          '-webkit-font-smoothing': 'antialiased',
+          '-moz-osx-font-smoothing': 'grayscale',
         },
+        '#root': {
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          width: '100%',
+        },
+        a: { textDecoration: 'none', color: 'inherit' }
       },
     },
-    MuiChip: {
+
+    // DEFAULT COMPONENTS
+    MuiButton: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
+          textTransform: 'none',
           fontWeight: 600,
-        },
+          boxShadow: 'none',
+          background: `linear-gradient(to left, ${theme.palette.secondary.main} 50%, ${theme.palette.secondary.light} 50%) right`,
+          backgroundSize: '220% 100%',
+          transition: 'background-position 300ms ease-out, box-shadow 250ms ease-out',
+          '&:hover': {
+            backgroundPosition: 'left',
+            boxShadow: theme.custom.shadows.md,
+          },
+        }),
+        contained: ({ theme }) => ({
+          '&:hover': {
+            boxShadow: theme.custom.shadows.lg,
+          },
+        }),
       },
     },
     MuiCard: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           backgroundImage: 'none',
-        },
+          transition: theme.custom.transitions.base,
+          boxShadow: theme.custom.shadows.sm,
+          border: `2px solid ${theme.palette.secondary.main}`,
+        }),
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundImage: theme.custom.gradients.cardDepthBig,
+          padding: "16px",
+          margin: 0,
+        }),
       },
     },
   },
-})
+});
+
 
 export default theme

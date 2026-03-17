@@ -356,7 +356,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   }))
 
   return (
-    <Stack spacing={2.25}>
+    <Stack spacing={2.25} sx={{ width: '100%' }}>
       <Stack
         direction={{ xs: 'column', lg: 'row' }}
         spacing={1.5}

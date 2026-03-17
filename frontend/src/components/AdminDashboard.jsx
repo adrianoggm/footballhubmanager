@@ -2037,9 +2037,10 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ width: '100%' }}>
       <Card
         sx={{
+          width: '100%',
           border: '1px solid rgba(15, 23, 42, 0.08)',
           background:
             'linear-gradient(135deg, rgba(255,255,250,0.95) 0%, rgba(230,245,239,0.72) 70%, rgba(255,238,217,0.62) 100%)',
@@ -2155,7 +2156,7 @@ export default function AdminDashboard({ session, onLogout }) {
       {!selectedPenaGuid && <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>}
 
       {selectedPenaGuid && activeSection === 'overview' && (
-        <Grid container spacing={2.5}>
+        <Grid container spacing={2.5} sx={{ width: '100%' }}>
           <Grid item xs={12} sm={6} md={3}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
@@ -2527,7 +2528,7 @@ export default function AdminDashboard({ session, onLogout }) {
       )}
 
       {selectedPenaGuid && activeSection === 'standings' && (
-        <Card>
+        <Card sx={{ width: '100%' }}>
           <CardContent>
             <Stack spacing={2}>
               <Stack

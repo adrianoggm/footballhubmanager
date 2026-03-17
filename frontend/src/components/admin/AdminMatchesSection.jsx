@@ -59,7 +59,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   } = actions
 
   return (
-    <Grid container spacing={2.5}>
+    <Grid container spacing={2.5} sx={{ width: '100%' }}>
       <Grid item xs={12}>
         <Card>
           <CardContent>
