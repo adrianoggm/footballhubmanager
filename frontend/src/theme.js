@@ -43,8 +43,8 @@ const theme = createTheme({
     },
     // reading colors
     background: {
-      default: '#040406',
-      paper: '#1A1C24',
+      default: '#0F0F0F',
+      paper: '#151515',
     },
     text: {
       primary: '#F5F5F5',
@@ -55,7 +55,7 @@ const theme = createTheme({
   spacing: 8,
 
   shape: {
-    borderRadius: 14,
+    borderRadius: 10,
   },
 
   typography: {
@@ -109,7 +109,7 @@ const theme = createTheme({
   // CUSTOM TOKENS ====================================================
   custom: {
     radius: {
-      none: 0, sm: 5, md: 10, lg: 20, full: 9999,
+      none: 0, sm: 5, lg: 20, full: 9999,
     },
     gradients: {
       cardDepth1: 'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.12) 0%, rgba(4, 4, 6, 0) 60%)',
@@ -182,9 +182,10 @@ const theme = createTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           backgroundImage: 'none',
-          transition: theme.custom.transitions.base,
+          transition: theme.custom.transitions.fast,
           boxShadow: theme.custom.shadows.sm,
           border: `2px solid ${theme.palette.secondary.main}`,
+          
         }),
       },
     },
@@ -194,6 +195,45 @@ const theme = createTheme({
           backgroundImage: theme.custom.gradients.cardDepthBig,
           padding: "16px",
           margin: 0,
+        }),
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          color: theme.palette.primary.secondary,
+          '&.Mui-focused': {
+            color: theme.palette.text.primary,
+          },
+        }),
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': {
+              borderColor: theme.palette.primary.light,
+              transition: theme.custom.transitions.base,
+            },
+            '&:hover fieldset': {
+              borderColor: theme.palette.text.primary,
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: theme.palette.text.primary,
+              borderWidth: 2,
+            },
+          },
+          '& .MuiOutlinedInput-input': {
+            color: theme.palette.text.primary,
+            '&:focus': {
+              color: theme.palette.text.primary,
+            },
+          },
+          '& input[type="color"]': {
+            cursor: 'pointer',
+            padding: '2px 8px',
+          },
         }),
       },
     },

@@ -114,8 +114,7 @@ export default function App() {
                     borderRadius: 4,
                     p: { xs: 2.5, md: 3.5 },
                     border: '1px solid rgba(31,41,55,0.1)',
-                    background:
-                      'linear-gradient(145deg, rgba(255,255,252,0.95) 0%, rgba(227,245,240,0.8) 56%, rgba(255,241,225,0.74) 100%)',
+                    backgroundColor: (theme) => theme.custom.gradients.cardDepth1,
                   }}
                 >
                   <Stack spacing={1.5}>

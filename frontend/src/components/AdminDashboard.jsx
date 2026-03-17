@@ -2040,14 +2040,11 @@ export default function AdminDashboard({ session, onLogout }) {
     <Stack spacing={3} sx={{ width: '100%' }}>
       <Card
         sx={{
-          width: '100%',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
-          background:
-            'linear-gradient(135deg, rgba(255,255,250,0.95) 0%, rgba(230,245,239,0.72) 70%, rgba(255,238,217,0.62) 100%)',
         }}
       >
         <CardContent>
-          <Stack spacing={2.5}>
+          {/* esto provoca la desalineación, solucionar bug */}
+          <Stack spacing={2.5}> 
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={2}
@@ -2138,6 +2135,8 @@ export default function AdminDashboard({ session, onLogout }) {
               onChange={(_, value) => setActiveSection(value)}
               variant="scrollable"
               scrollButtons="auto"
+              textColor="secondary"           // Color del texto
+              indicatorColor="secondary"
             >
               <Tab value="overview" label={t('dashboard.admin.tabs.overview')} />
               <Tab value="seasons" label={t('dashboard.admin.tabs.seasons')} />
@@ -2158,7 +2157,7 @@ export default function AdminDashboard({ session, onLogout }) {
       {selectedPenaGuid && activeSection === 'overview' && (
         <Grid container spacing={2.5} sx={{ width: '100%' }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1}}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
                   {t('dashboard.admin.overview.currentPena')}
@@ -2168,7 +2167,7 @@ export default function AdminDashboard({ session, onLogout }) {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1 }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
                   {t('dashboard.admin.overview.activeSeason')}
@@ -2182,7 +2181,7 @@ export default function AdminDashboard({ session, onLogout }) {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1 }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
                   {t('dashboard.admin.overview.totalSeasons')}
@@ -2192,7 +2191,7 @@ export default function AdminDashboard({ session, onLogout }) {
             </Card>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1 }}>
               <CardContent>
                 <Typography variant="overline" color="text.secondary">
                   {t('dashboard.admin.overview.seasonPlayers')}
