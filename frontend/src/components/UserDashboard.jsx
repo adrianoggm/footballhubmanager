@@ -9,11 +9,9 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   Grid,
   LinearProgress,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -667,7 +665,6 @@ export default function UserDashboard({
       subtitle={activeUserHeroSubtitle}
       badges={
         <>
-          <Chip size="small" color="default" label={activeUserSectionLabel} />
           <Chip
             size="small"
             color="secondary"
@@ -687,18 +684,13 @@ export default function UserDashboard({
         </>
       }
       headerAside={
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 1.25, sm: 1.4, xl: 1.25 },
-            height: '100%',
-            borderRadius: 4,
-            border: '1px solid rgba(15,23,42,0.08)',
-            bgcolor: 'rgba(255,255,255,0.56)',
-            backdropFilter: 'blur(12px)',
-          }}
-        >
-          <Stack spacing={1.15}>
+        <Stack spacing={0.95}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={0.9}
+            alignItems={{ sm: 'center' }}
+            justifyContent="space-between"
+          >
             <DashboardIdentitySlot
               title={t('dashboard.common.identityTitle')}
               name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
@@ -708,9 +700,13 @@ export default function UserDashboard({
               imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
             />
 
-            <Divider />
-
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            <Stack
+              direction="row"
+              spacing={0.6}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ sm: 'flex-end' }}
+            >
               <LanguageSwitcher />
               <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
                 {t('dashboard.user.openSettings')}
@@ -726,48 +722,48 @@ export default function UserDashboard({
                 {t('dashboard.common.logout')}
               </Button>
             </Stack>
-
-            <Grid container spacing={1}>
-              <Grid item xs={12}>
-                <DashboardControlField label={t('dashboard.user.selectedPena')}>
-                  <TextField
-                    select
-                    size="small"
-                    value={selectedPenaGuid}
-                    onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                    inputProps={{ 'aria-label': t('dashboard.user.selectedPena') }}
-                    fullWidth
-                  >
-                    {penas.map((pena) => (
-                      <MenuItem key={pena.guid} value={pena.guid}>
-                        {pena.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </DashboardControlField>
-              </Grid>
-              <Grid item xs={12}>
-                <DashboardControlField label={t('dashboard.user.selectedSeason')}>
-                  <TextField
-                    select
-                    size="small"
-                    value={selectedSeasonGuid}
-                    onChange={(event) => setSelectedSeasonGuid(event.target.value)}
-                    disabled={!selectedPenaGuid || !seasonList.length || loading}
-                    inputProps={{ 'aria-label': t('dashboard.user.selectedSeason') }}
-                    fullWidth
-                  >
-                    {seasonList.map((season) => (
-                      <MenuItem key={season.guid} value={season.guid}>
-                        {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </DashboardControlField>
-              </Grid>
-            </Grid>
           </Stack>
-        </Paper>
+
+          <Grid container spacing={0.85}>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.user.selectedPena')}>
+                <TextField
+                  select
+                  size="small"
+                  value={selectedPenaGuid}
+                  onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                  inputProps={{ 'aria-label': t('dashboard.user.selectedPena') }}
+                  fullWidth
+                >
+                  {penas.map((pena) => (
+                    <MenuItem key={pena.guid} value={pena.guid}>
+                      {pena.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </DashboardControlField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.user.selectedSeason')}>
+                <TextField
+                  select
+                  size="small"
+                  value={selectedSeasonGuid}
+                  onChange={(event) => setSelectedSeasonGuid(event.target.value)}
+                  disabled={!selectedPenaGuid || !seasonList.length || loading}
+                  inputProps={{ 'aria-label': t('dashboard.user.selectedSeason') }}
+                  fullWidth
+                >
+                  {seasonList.map((season) => (
+                    <MenuItem key={season.guid} value={season.guid}>
+                      {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </DashboardControlField>
+            </Grid>
+          </Grid>
+        </Stack>
       }
       summaryCards={userSummaryCards}
     >

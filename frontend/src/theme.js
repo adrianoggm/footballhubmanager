@@ -37,7 +37,7 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: 14,
   },
   typography: {
     htmlFontSize: 15,
@@ -87,7 +87,7 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 600,
-          borderRadius: 999,
+          borderRadius: 10,
           paddingInline: 12,
           minHeight: 34,
           fontSize: '0.88rem',
@@ -105,7 +105,7 @@ const theme = createTheme({
         root: {
           fontWeight: 600,
           height: 24,
-          borderRadius: 999,
+          borderRadius: 10,
           backdropFilter: 'blur(10px)',
         },
         label: {
@@ -119,7 +119,7 @@ const theme = createTheme({
         root: {
           backgroundImage: 'none',
           border: '1px solid rgba(15,23,42,0.08)',
-          borderRadius: 18,
+          borderRadius: 14,
           backgroundColor: alpha('#fffdf8', 0.9),
           boxShadow: '0 12px 26px rgba(15, 23, 42, 0.07)',
         },
@@ -135,7 +135,7 @@ const theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 16,
+          borderRadius: 12,
           backgroundColor: alpha('#ffffff', 0.72),
           backdropFilter: 'blur(10px)',
           minHeight: 36,
@@ -162,7 +162,7 @@ const theme = createTheme({
         },
         indicator: {
           height: 3,
-          borderRadius: 999,
+          borderRadius: 3,
         },
       },
     },
@@ -179,7 +179,7 @@ const theme = createTheme({
     MuiToggleButtonGroup: {
       styleOverrides: {
         root: {
-          borderRadius: 16,
+          borderRadius: 10,
           backgroundColor: alpha('#ffffff', 0.7),
         },
       },
@@ -187,7 +187,7 @@ const theme = createTheme({
     MuiToggleButton: {
       styleOverrides: {
         root: {
-          borderRadius: 14,
+          borderRadius: 8,
           borderColor: alpha('#0f172a', 0.08),
           textTransform: 'none',
           fontWeight: 700,
@@ -199,7 +199,7 @@ const theme = createTheme({
     MuiAlert: {
       styleOverrides: {
         root: {
-          borderRadius: 18,
+          borderRadius: 12,
           border: '1px solid rgba(15,23,42,0.08)',
         },
       },
@@ -227,7 +227,7 @@ const theme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: 24,
+          borderRadius: 18,
           backgroundColor: alpha('#fffdf8', 0.95),
           backdropFilter: 'blur(18px)',
           boxShadow: '0 28px 72px rgba(15, 23, 42, 0.2)',
