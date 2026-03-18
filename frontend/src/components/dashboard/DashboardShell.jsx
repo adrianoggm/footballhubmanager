@@ -10,6 +10,11 @@ const toneMap = {
   error: 'error.main',
 }
 
+const SURFACE_RADIUS = '14px'
+const SURFACE_RADIUS_TIGHT = '12px'
+const CONTROL_RADIUS = '10px'
+const BADGE_RADIUS = '8px'
+
 const getInitials = (value = '') =>
   String(value || '')
     .trim()
@@ -201,7 +206,7 @@ function DashboardStatCard({ item }) {
       elevation={0}
       sx={{
         minHeight: '100%',
-        borderRadius: 2.5,
+        borderRadius: SURFACE_RADIUS,
         position: 'relative',
         overflow: 'hidden',
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
@@ -243,7 +248,7 @@ function DashboardStatCard({ item }) {
                 width: 22,
                 height: 22,
                 flexShrink: 0,
-                borderRadius: 1.5,
+                borderRadius: BADGE_RADIUS,
                 display: 'grid',
                 placeItems: 'center',
                 color: accent,
@@ -340,7 +345,7 @@ export function DashboardIdentitySlot({
           height: 66,
           flexShrink: 0,
           overflow: 'hidden',
-          borderRadius: 2.5,
+          borderRadius: SURFACE_RADIUS_TIGHT,
           border: `1px dashed ${alpha(theme.palette.primary.dark, 0.16)}`,
           background: 'linear-gradient(145deg, rgba(27,39,64,0.08) 0%, rgba(15,118,110,0.10) 100%)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
@@ -413,7 +418,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
         width: 72,
         minWidth: 72,
         p: 0.9,
-        borderRadius: 3,
+        borderRadius: SURFACE_RADIUS,
         position: 'sticky',
         top: 18,
         alignSelf: 'flex-start',
@@ -442,7 +447,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
               sx={{
                 width: 38,
                 height: 38,
-                borderRadius: 2,
+                borderRadius: CONTROL_RADIUS,
                 display: 'grid',
                 placeItems: 'center',
                 color: 'common.white',
@@ -469,7 +474,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                   sx={{
                     width: '100%',
                     minHeight: 42,
-                    borderRadius: 2,
+                    borderRadius: CONTROL_RADIUS,
                     position: 'relative',
                     color: active ? 'primary.dark' : 'text.secondary',
                     border: `1px solid ${
@@ -523,7 +528,7 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
       sx={{
         display: { xs: 'block', xl: 'none' },
         p: 0.9,
-        borderRadius: 3,
+        borderRadius: SURFACE_RADIUS,
         border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
         background: alpha(theme.palette.common.white, 0.8),
         backdropFilter: 'blur(14px)',
@@ -548,7 +553,7 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
               onClick={() => onNavChange(item.id)}
               sx={{
                 minWidth: 104,
-                borderRadius: 2,
+                borderRadius: CONTROL_RADIUS,
                 px: 1.25,
                 py: 0.95,
                 justifyContent: 'flex-start',
@@ -619,7 +624,7 @@ export default function DashboardShell({
           sx={{
             position: 'relative',
             overflow: 'hidden',
-            borderRadius: { xs: 3, md: 3.5 },
+            borderRadius: SURFACE_RADIUS,
             border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
             background:
               'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,248,246,0.95) 100%)',
