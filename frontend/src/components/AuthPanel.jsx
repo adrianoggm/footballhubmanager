@@ -172,10 +172,10 @@ export default function AuthPanel({ auth }) {
     <Card
       sx={{
         width: '100%',
-        borderRadius: 4.5,
-        bgcolor: alpha('#fffdf8', 0.92),
-        border: `1px solid ${alpha('#0f172a', 0.08)}`,
-        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.12), 0 8px 20px rgba(15, 118, 110, 0.1)',
+        borderRadius: 4,
+        bgcolor: 'background.paper',
+        border: '1px solid rgba(31,41,55,0.1)',
+        boxShadow: '0 22px 52px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 118, 110, 0.16)',
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
@@ -200,6 +200,8 @@ export default function AuthPanel({ auth }) {
             onChange={(_, value) => setMode(value)}
             variant="fullWidth"
             sx={{ minHeight: 40 }}
+            textColor="secondary"
+            indicatorColor="secondary"
           >
             <Tab value="login" label={t('auth.tabLogin')} sx={{ minHeight: 40 }} />
             <Tab value="register" label={t('auth.tabRegister')} sx={{ minHeight: 40 }} />

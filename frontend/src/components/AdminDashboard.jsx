@@ -2110,50 +2110,14 @@ export default function AdminDashboard({
   }
 
   return (
-    <DashboardShell
-      brand={t('app.brand')}
-      brandShort="FH"
-      railLabel={t('dashboard.admin.panelTitle')}
-      navItems={adminNavItems}
-      activeNavId={activeSection}
-      onNavChange={handleSectionChange}
-      title={activeAdminSectionLabel}
-      subtitle={activeAdminHeroSubtitle}
-      badges={
-        <>
-          <Chip
-            size="small"
-            color="secondary"
-            label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
-          />
-          <Chip
-            size="small"
-            color={activeSeason ? 'success' : 'warning'}
-            label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
-          />
-          <Chip
-            size="small"
-            color="primary"
-            label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
-          />
-        </>
-      }
-      headerAside={
-        <Stack spacing={0.95}>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={0.9}
-            alignItems={{ sm: 'center' }}
-            justifyContent="space-between"
-          >
-            <DashboardIdentitySlot
-              title={t('dashboard.common.identityTitle')}
-              name={selectedPena?.name || t('dashboard.admin.panelTitle')}
-              placeholderLabel={t('dashboard.common.identityPlaceholder')}
-              imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
-              imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
-            />
-
+    <Stack spacing={3} sx={{ width: '100%' }}>
+      <Card
+        sx={{
+        }}
+      >
+        <CardContent>
+          {/* esto provoca la desalineación, solucionar bug */}
+          <Stack spacing={2.5}> 
             <Stack
               direction="row"
               spacing={0.6}
@@ -2216,11 +2180,43 @@ export default function AdminDashboard({
                 </TextField>
               </DashboardControlField>
             </Grid>
-          </Grid>
-        </Stack>
-      }
-      summaryCards={adminSummaryCards}
-    >
+
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Chip
+                size="small"
+                color="secondary"
+                label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
+              />
+              <Chip
+                size="small"
+                color={activeSeason ? 'success' : 'warning'}
+                label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
+              />
+              <Chip
+                size="small"
+                color="primary"
+                label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
+              />
+            </Stack>
+
+            <Tabs
+              value={activeSection}
+              onChange={(_, value) => setActiveSection(value)}
+              variant="scrollable"
+              scrollButtons="auto"
+              textColor="secondary"           // Color del texto
+              indicatorColor="secondary"
+            >
+              <Tab value="overview" label={t('dashboard.admin.tabs.overview')} />
+              <Tab value="seasons" label={t('dashboard.admin.tabs.seasons')} />
+              <Tab value="players" label={t('dashboard.admin.tabs.players')} />
+              <Tab value="matches" label={t('dashboard.admin.tabs.matches')} />
+              <Tab value="standings" label={t('dashboard.admin.tabs.standings')} />
+            </Tabs>
+          </Stack>
+        </CardContent>
+      </Card>
+
       {loading && <LinearProgress />}
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
@@ -2228,8 +2224,53 @@ export default function AdminDashboard({
       {!selectedPenaGuid && <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>}
 
       {selectedPenaGuid && activeSection === 'overview' && (
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} xl={5} sx={{ minWidth: 0 }}>
+        <Grid container spacing={2.5} sx={{ width: '100%' }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1}}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  {t('dashboard.admin.overview.currentPena')}
+                </Typography>
+                <Typography variant="h6">{selectedPena?.name || '-'}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1 }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  {t('dashboard.admin.overview.activeSeason')}
+                </Typography>
+                <Typography variant="h6">
+                  {activeSeason
+                    ? t('dashboard.admin.status.configured')
+                    : t('dashboard.admin.status.missing')}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1 }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  {t('dashboard.admin.overview.totalSeasons')}
+                </Typography>
+                <Typography variant="h6">{seasonList.length}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ height: '100%', boxShadow: (theme) => theme.custom.shadows.gradient1 }}>
+              <CardContent>
+                <Typography variant="overline" color="text.secondary">
+                  {t('dashboard.admin.overview.seasonPlayers')}
+                </Typography>
+                <Typography variant="h6">{seasonRoster.length}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={5}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2570,7 +2611,7 @@ export default function AdminDashboard({
       )}
 
       {selectedPenaGuid && activeSection === 'standings' && (
-        <Card>
+        <Card sx={{ width: '100%' }}>
           <CardContent>
             <Stack spacing={2}>
               <Stack
