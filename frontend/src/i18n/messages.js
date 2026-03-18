@@ -674,6 +674,16 @@ export const messages = {
       light: 'Light',
       system: 'Auto',
       dark: 'Dark',
+      lightPreset: 'Light preset',
+      darkPreset: 'Dark preset',
+      presets: {
+        sand: 'Sand',
+        paper: 'Paper',
+        coast: 'Coast',
+        midnight: 'Midnight',
+        forest: 'Forest',
+        ember: 'Ember',
+      },
     },
   },
   es: {
@@ -1370,6 +1380,16 @@ export const messages = {
       light: 'Claro',
       system: 'Auto',
       dark: 'Oscuro',
+      lightPreset: 'Preset claro',
+      darkPreset: 'Preset oscuro',
+      presets: {
+        sand: 'Arena',
+        paper: 'Papel',
+        coast: 'Costa',
+        midnight: 'Medianoche',
+        forest: 'Bosque',
+        ember: 'Ascua',
+      },
     },
   },
 }

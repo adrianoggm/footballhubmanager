@@ -1,13 +1,24 @@
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import { createContext, useEffect, useMemo, useState } from 'react'
-import { createAppTheme } from '../theme.js'
+import {
+  createAppTheme,
+  DARK_THEME_PRESET_IDS,
+  DEFAULT_DARK_THEME_PRESET_ID,
+  DEFAULT_LIGHT_THEME_PRESET_ID,
+  LIGHT_THEME_PRESET_IDS,
+  resolveThemePresetId,
+  THEME_PRESETS,
+} from '../theme.js'
 
 const THEME_MODE_STORAGE_KEY = 'footballhubmanager.theme-mode'
+const LIGHT_THEME_PRESET_STORAGE_KEY = 'footballhubmanager.theme-preset-light'
+const DARK_THEME_PRESET_STORAGE_KEY = 'footballhubmanager.theme-preset-dark'
 const THEME_MODE_OPTIONS = ['light', 'dark', 'system']
 
 const ThemeModeContext = createContext(null)
 
 const isThemeMode = (value) => THEME_MODE_OPTIONS.includes(value)
+const isThemePreset = (value) => Boolean(value && THEME_PRESETS[value])
 
 const getSystemThemeMode = () => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -33,9 +44,33 @@ const getInitialThemeMode = () => {
   return 'light'
 }
 
+const getInitialThemePreset = (mode) => {
+  if (typeof window === 'undefined') {
+    return mode === 'dark' ? DEFAULT_DARK_THEME_PRESET_ID : DEFAULT_LIGHT_THEME_PRESET_ID
+  }
+
+  const storageKey =
+    mode === 'dark' ? DARK_THEME_PRESET_STORAGE_KEY : LIGHT_THEME_PRESET_STORAGE_KEY
+  const fallbackPreset =
+    mode === 'dark' ? DEFAULT_DARK_THEME_PRESET_ID : DEFAULT_LIGHT_THEME_PRESET_ID
+
+  try {
+    const stored = window.localStorage.getItem(storageKey)
+    if (isThemePreset(stored) && THEME_PRESETS[stored].palette.mode === mode) {
+      return resolveThemePresetId(stored)
+    }
+  } catch {
+    // ignore storage access errors
+  }
+
+  return fallbackPreset
+}
+
 export function ThemeModeProvider({ children }) {
   const [themeMode, setThemeModeState] = useState(getInitialThemeMode)
   const [systemThemeMode, setSystemThemeMode] = useState(getSystemThemeMode)
+  const [lightThemePresetId, setLightThemePresetId] = useState(() => getInitialThemePreset('light'))
+  const [darkThemePresetId, setDarkThemePresetId] = useState(() => getInitialThemePreset('dark'))
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -66,28 +101,65 @@ export function ThemeModeProvider({ children }) {
   }
 
   const resolvedThemeMode = themeMode === 'system' ? systemThemeMode : themeMode
+  const resolvedThemePresetId =
+    resolvedThemeMode === 'dark' ? darkThemePresetId : lightThemePresetId
+  const theme = useMemo(() => createAppTheme(resolvedThemePresetId), [resolvedThemePresetId])
+
+  const setThemePreset = (nextPresetId) => {
+    if (!isThemePreset(nextPresetId)) {
+      return
+    }
+
+    if (THEME_PRESETS[nextPresetId].palette.mode === 'dark') {
+      setDarkThemePresetId(resolveThemePresetId(nextPresetId))
+      return
+    }
+
+    setLightThemePresetId(resolveThemePresetId(nextPresetId))
+  }
 
   useEffect(() => {
     try {
       window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode)
+      window.localStorage.setItem(LIGHT_THEME_PRESET_STORAGE_KEY, lightThemePresetId)
+      window.localStorage.setItem(DARK_THEME_PRESET_STORAGE_KEY, darkThemePresetId)
     } catch {
       // ignore storage access errors
     }
 
     document.documentElement.dataset.themeMode = resolvedThemeMode
+    document.documentElement.dataset.themePreset = resolvedThemePresetId
     document.documentElement.style.colorScheme = resolvedThemeMode
-  }, [resolvedThemeMode, themeMode])
 
-  const theme = useMemo(() => createAppTheme(resolvedThemeMode), [resolvedThemeMode])
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]')
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme.palette.background.default)
+    }
+  }, [
+    darkThemePresetId,
+    lightThemePresetId,
+    resolvedThemeMode,
+    resolvedThemePresetId,
+    theme,
+    themeMode,
+  ])
 
   const value = useMemo(
     () => ({
       themeMode,
       resolvedThemeMode,
+      resolvedThemePresetId,
+      lightThemePresetId,
+      darkThemePresetId,
       setThemeMode,
+      setThemePreset,
       supportedThemeModes: THEME_MODE_OPTIONS,
+      lightThemePresetIds: LIGHT_THEME_PRESET_IDS,
+      darkThemePresetIds: DARK_THEME_PRESET_IDS,
+      availableThemePresetIds:
+        resolvedThemeMode === 'dark' ? DARK_THEME_PRESET_IDS : LIGHT_THEME_PRESET_IDS,
     }),
-    [resolvedThemeMode, themeMode]
+    [darkThemePresetId, lightThemePresetId, resolvedThemeMode, resolvedThemePresetId, themeMode]
   )
 
   return (

@@ -10,10 +10,24 @@ const toneMap = {
   error: 'error.main',
 }
 
-const SURFACE_RADIUS = '14px'
-const SURFACE_RADIUS_TIGHT = '12px'
-const CONTROL_RADIUS = '10px'
-const BADGE_RADIUS = '8px'
+const getDashboardGeometry = (theme) => ({
+  surfaceRadius: theme.custom?.dashboard?.radius?.surface || '14px',
+  surfaceRadiusTight: theme.custom?.dashboard?.radius?.surfaceTight || '12px',
+  controlRadius: theme.custom?.dashboard?.radius?.control || '10px',
+  badgeRadius: theme.custom?.dashboard?.radius?.badge || '8px',
+  subtleBorderAlpha:
+    theme.custom?.dashboard?.borderOpacity?.subtle ?? (theme.palette.mode === 'dark' ? 0.12 : 0.08),
+  cardShadow:
+    theme.custom?.dashboard?.shadows?.card ||
+    (theme.palette.mode === 'dark'
+      ? '0 14px 28px rgba(0, 0, 0, 0.22)'
+      : '0 10px 22px rgba(15, 23, 42, 0.05)'),
+  panelShadow:
+    theme.custom?.dashboard?.shadows?.panel ||
+    (theme.palette.mode === 'dark'
+      ? '0 14px 30px rgba(0, 0, 0, 0.3)'
+      : '0 14px 30px rgba(15, 23, 42, 0.08)'),
+})
 
 const getInitials = (value = '') =>
   String(value || '')
@@ -193,6 +207,7 @@ function DashboardStatGlyph({ tone }) {
 function DashboardStatCard({ item }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
   const tone = toneMap[item.tone] || toneMap.primary
   const accent = tone.includes('.') ? theme.palette[tone.split('.')[0]][tone.split('.')[1]] : tone
   const valueText = String(item.value ?? '').trim() || '-'
@@ -207,17 +222,15 @@ function DashboardStatCard({ item }) {
       elevation={0}
       sx={{
         minHeight: '100%',
-        borderRadius: SURFACE_RADIUS,
+        borderRadius: geometry.surfaceRadius,
         position: 'relative',
         overflow: 'hidden',
-        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        border: `1px solid ${alpha(theme.palette.text.primary, geometry.subtleBorderAlpha)}`,
         background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.98 : 0.98)} 0%, ${alpha(
           theme.palette.background.default,
           isDark ? 0.72 : 0.7
         )} 100%)`,
-        boxShadow: isDark
-          ? '0 14px 28px rgba(0, 0, 0, 0.22)'
-          : '0 10px 22px rgba(15, 23, 42, 0.05)',
+        boxShadow: geometry.cardShadow,
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -251,7 +264,7 @@ function DashboardStatCard({ item }) {
                 width: 22,
                 height: 22,
                 flexShrink: 0,
-                borderRadius: BADGE_RADIUS,
+                borderRadius: geometry.badgeRadius,
                 display: 'grid',
                 placeItems: 'center',
                 color: accent,
@@ -335,6 +348,7 @@ export function DashboardIdentitySlot({
 }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
   const initials = getInitials(name)
 
   return (
@@ -349,7 +363,7 @@ export function DashboardIdentitySlot({
           height: 66,
           flexShrink: 0,
           overflow: 'hidden',
-          borderRadius: SURFACE_RADIUS_TIGHT,
+          borderRadius: geometry.surfaceRadiusTight,
           border: `1px dashed ${alpha(theme.palette.text.primary, isDark ? 0.16 : 0.14)}`,
           background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, isDark ? 0.14 : 0.08)} 0%, ${alpha(
             theme.palette.secondary.main,
@@ -418,6 +432,7 @@ export function DashboardIdentitySlot({
 function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, railLabel }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
 
   return (
     <Paper
@@ -428,13 +443,13 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
         width: 72,
         minWidth: 72,
         p: 0.9,
-        borderRadius: SURFACE_RADIUS,
+        borderRadius: geometry.surfaceRadius,
         position: 'sticky',
         top: 18,
         alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 36px)',
         overflowY: 'auto',
-        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        border: `1px solid ${alpha(theme.palette.text.primary, geometry.subtleBorderAlpha)}`,
         background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.96 : 0.92)} 0%, ${alpha(
           theme.palette.background.default,
           isDark ? 0.7 : 0.72
@@ -457,7 +472,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
               sx={{
                 width: 38,
                 height: 38,
-                borderRadius: CONTROL_RADIUS,
+                borderRadius: geometry.controlRadius,
                 display: 'grid',
                 placeItems: 'center',
                 color: 'common.white',
@@ -484,7 +499,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                   sx={{
                     width: '100%',
                     minHeight: 42,
-                    borderRadius: CONTROL_RADIUS,
+                    borderRadius: geometry.controlRadius,
                     position: 'relative',
                     color: active ? 'secondary.main' : 'text.secondary',
                     border: `1px solid ${
@@ -538,6 +553,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
 function MobileNav({ navItems, activeNavId, onNavChange }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
 
   return (
     <Paper
@@ -545,8 +561,8 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
       sx={{
         display: { xs: 'block', xl: 'none' },
         p: 0.9,
-        borderRadius: SURFACE_RADIUS,
-        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        borderRadius: geometry.surfaceRadius,
+        border: `1px solid ${alpha(theme.palette.text.primary, geometry.subtleBorderAlpha)}`,
         background: alpha(theme.palette.background.paper, isDark ? 0.82 : 0.8),
         backdropFilter: 'blur(14px)',
       }}
@@ -570,7 +586,7 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
               onClick={() => onNavChange(item.id)}
               sx={{
                 minWidth: 104,
-                borderRadius: CONTROL_RADIUS,
+                borderRadius: geometry.controlRadius,
                 px: 1.25,
                 py: 0.95,
                 justifyContent: 'flex-start',
@@ -617,6 +633,7 @@ export default function DashboardShell({
 }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
 
   return (
     <Box
@@ -642,15 +659,13 @@ export default function DashboardShell({
           sx={{
             position: 'relative',
             overflow: 'hidden',
-            borderRadius: SURFACE_RADIUS,
-            border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+            borderRadius: geometry.surfaceRadius,
+            border: `1px solid ${alpha(theme.palette.text.primary, geometry.subtleBorderAlpha)}`,
             background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.98 : 0.98)} 0%, ${alpha(
               theme.palette.background.default,
               isDark ? 0.82 : 0.72
             )} 100%)`,
-            boxShadow: isDark
-              ? '0 14px 30px rgba(0, 0, 0, 0.3)'
-              : '0 14px 30px rgba(15, 23, 42, 0.08)',
+            boxShadow: geometry.panelShadow,
             '&::before': {
               content: '""',
               position: 'absolute',
