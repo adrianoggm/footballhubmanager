@@ -3,9 +3,15 @@
 
 /* Mantenemos la animación aquí porque los keyframes en JS a veces son verbosos */
 @keyframes floatOrb {
-  0% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, 26px, 0); }
-  100% { transform: translate3d(0, 0, 0); }
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, 26px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /* Y ya está. Nada más. Adiós utilidades. */

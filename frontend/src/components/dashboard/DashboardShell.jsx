@@ -192,6 +192,7 @@ function DashboardStatGlyph({ tone }) {
 
 function DashboardStatCard({ item }) {
   const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const tone = toneMap[item.tone] || toneMap.primary
   const accent = tone.includes('.') ? theme.palette[tone.split('.')[0]][tone.split('.')[1]] : tone
   const valueText = String(item.value ?? '').trim() || '-'
@@ -209,12 +210,14 @@ function DashboardStatCard({ item }) {
         borderRadius: SURFACE_RADIUS,
         position: 'relative',
         overflow: 'hidden',
-        border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
-        background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.98)} 0%, ${alpha(
-          theme.palette.background.paper,
-          0.96
+        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.98 : 0.98)} 0%, ${alpha(
+          theme.palette.background.default,
+          isDark ? 0.72 : 0.7
         )} 100%)`,
-        boxShadow: '0 10px 22px rgba(15, 23, 42, 0.05)',
+        boxShadow: isDark
+          ? '0 14px 28px rgba(0, 0, 0, 0.22)'
+          : '0 10px 22px rgba(15, 23, 42, 0.05)',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -331,6 +334,7 @@ export function DashboardIdentitySlot({
   placeholderLabel = '',
 }) {
   const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const initials = getInitials(name)
 
   return (
@@ -346,9 +350,14 @@ export function DashboardIdentitySlot({
           flexShrink: 0,
           overflow: 'hidden',
           borderRadius: SURFACE_RADIUS_TIGHT,
-          border: `1px dashed ${alpha(theme.palette.primary.dark, 0.16)}`,
-          background: 'linear-gradient(145deg, rgba(27,39,64,0.08) 0%, rgba(15,118,110,0.10) 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55)',
+          border: `1px dashed ${alpha(theme.palette.text.primary, isDark ? 0.16 : 0.14)}`,
+          background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, isDark ? 0.14 : 0.08)} 0%, ${alpha(
+            theme.palette.secondary.main,
+            isDark ? 0.18 : 0.1
+          )} 100%)`,
+          boxShadow: isDark
+            ? 'inset 0 1px 0 rgba(255,255,255,0.04)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.55)',
         }}
       >
         {imageUrl ? (
@@ -408,6 +417,7 @@ export function DashboardIdentitySlot({
 
 function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, railLabel }) {
   const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
 
   return (
     <Paper
@@ -424,12 +434,12 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
         alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 36px)',
         overflowY: 'auto',
-        border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
-        background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.9)} 0%, ${alpha(
-          theme.palette.background.paper,
-          0.9
+        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.96 : 0.92)} 0%, ${alpha(
+          theme.palette.background.default,
+          isDark ? 0.7 : 0.72
         )} 100%)`,
-        boxShadow: '0 24px 56px rgba(15, 23, 42, 0.12)',
+        boxShadow: isDark ? '0 24px 56px rgba(0, 0, 0, 0.3)' : '0 24px 56px rgba(15, 23, 42, 0.12)',
       }}
     >
       <Stack spacing={1} alignItems="center" sx={{ width: '100%' }}>
@@ -440,7 +450,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
             sx={{
               width: '100%',
               pb: 0.9,
-              borderBottom: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
+              borderBottom: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
             }}
           >
             <Box
@@ -476,24 +486,30 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                     minHeight: 42,
                     borderRadius: CONTROL_RADIUS,
                     position: 'relative',
-                    color: active ? 'primary.dark' : 'text.secondary',
+                    color: active ? 'secondary.main' : 'text.secondary',
                     border: `1px solid ${
                       active
                         ? alpha(theme.palette.secondary.main, 0.22)
-                        : alpha(theme.palette.primary.dark, 0.08)
+                        : alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)
                     }`,
                     background: active
                       ? `linear-gradient(135deg, ${alpha(
                           theme.palette.secondary.light,
-                          0.22
+                          isDark ? 0.16 : 0.22
                         )} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
-                      : alpha(theme.palette.common.white, 0.58),
-                    boxShadow: active ? '0 10px 22px rgba(15, 23, 42, 0.1)' : 'none',
+                      : alpha(theme.palette.background.paper, isDark ? 0.72 : 0.62),
+                    boxShadow: active
+                      ? isDark
+                        ? '0 10px 22px rgba(0, 0, 0, 0.24)'
+                        : '0 10px 22px rgba(15, 23, 42, 0.1)'
+                      : 'none',
                     transition:
                       'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
                     '&:hover': {
                       transform: 'translateY(-1px)',
-                      boxShadow: '0 10px 22px rgba(15, 23, 42, 0.08)',
+                      boxShadow: isDark
+                        ? '0 10px 22px rgba(0, 0, 0, 0.2)'
+                        : '0 10px 22px rgba(15, 23, 42, 0.08)',
                     },
                   }}
                 >
@@ -521,6 +537,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
 
 function MobileNav({ navItems, activeNavId, onNavChange }) {
   const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
 
   return (
     <Paper
@@ -529,8 +546,8 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
         display: { xs: 'block', xl: 'none' },
         p: 0.9,
         borderRadius: SURFACE_RADIUS,
-        border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
-        background: alpha(theme.palette.common.white, 0.8),
+        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        background: alpha(theme.palette.background.paper, isDark ? 0.82 : 0.8),
         backdropFilter: 'blur(14px)',
       }}
     >
@@ -560,14 +577,14 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
                 border: `1px solid ${
                   active
                     ? alpha(theme.palette.secondary.main, 0.22)
-                    : alpha(theme.palette.primary.dark, 0.08)
+                    : alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)
                 }`,
                 background: active
                   ? `linear-gradient(135deg, ${alpha(theme.palette.secondary.light, 0.2)} 0%, ${alpha(
                       theme.palette.background.paper,
                       0.98
                     )} 100%)`
-                  : alpha(theme.palette.common.white, 0.62),
+                  : alpha(theme.palette.background.paper, isDark ? 0.72 : 0.62),
               }}
             >
               <Stack direction="row" spacing={1} alignItems="center">
@@ -599,6 +616,7 @@ export default function DashboardShell({
   children,
 }) {
   const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
 
   return (
     <Box
@@ -625,16 +643,22 @@ export default function DashboardShell({
             position: 'relative',
             overflow: 'hidden',
             borderRadius: SURFACE_RADIUS,
-            border: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
-            background:
-              'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,248,246,0.95) 100%)',
-            boxShadow: '0 14px 30px rgba(15, 23, 42, 0.08)',
+            border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+            background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.98 : 0.98)} 0%, ${alpha(
+              theme.palette.background.default,
+              isDark ? 0.82 : 0.72
+            )} 100%)`,
+            boxShadow: isDark
+              ? '0 14px 30px rgba(0, 0, 0, 0.3)'
+              : '0 14px 30px rgba(15, 23, 42, 0.08)',
             '&::before': {
               content: '""',
               position: 'absolute',
               inset: 0,
-              background:
-                'linear-gradient(90deg, rgba(15,118,110,0.05) 0%, rgba(15,118,110,0) 44%)',
+              background: `linear-gradient(90deg, ${alpha(theme.palette.secondary.main, isDark ? 0.09 : 0.05)} 0%, ${alpha(
+                theme.palette.secondary.main,
+                0
+              )} 44%)`,
               pointerEvents: 'none',
             },
           }}
@@ -720,11 +744,13 @@ export default function DashboardShell({
                     height: '100%',
                     p: { xs: 1.1, md: 1.25, xl: 1.2 },
                     borderTop: {
-                      xs: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
+                      xs: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
                       xl: 0,
                     },
-                    borderLeft: { xl: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}` },
-                    background: { xl: alpha(theme.palette.common.white, 0.36) },
+                    borderLeft: {
+                      xl: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+                    },
+                    background: { xl: alpha(theme.palette.background.paper, isDark ? 0.34 : 0.36) },
                   }}
                 >
                   {headerAside}

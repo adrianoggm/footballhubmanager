@@ -25,6 +25,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
+import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
@@ -708,6 +709,7 @@ export default function UserDashboard({
               justifyContent={{ sm: 'flex-end' }}
             >
               <LanguageSwitcher />
+              <ThemeModeSwitcher />
               <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
                 {t('dashboard.user.openSettings')}
               </Button>

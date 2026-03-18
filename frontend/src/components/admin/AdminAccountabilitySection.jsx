@@ -586,13 +586,16 @@ export default function AdminAccountabilitySection({
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {memberAccounts.map((entry) => {
+                      {memberAccounts.map((entry, index) => {
                         const playerLabel =
                           playerNamesByGuid.get(entry.player_guid) ||
                           entry.player_name ||
                           entry.player_guid
+                        const memberRowKey =
+                          entry.player_guid ||
+                          `${entry.player_name || 'member'}-${entry.updated_at || 'unknown'}-${index}`
                         return (
-                          <TableRow key={entry.player_guid}>
+                          <TableRow key={memberRowKey}>
                             <TableCell>
                               <Stack
                                 direction="row"
@@ -734,8 +737,12 @@ export default function AdminAccountabilitySection({
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {expenses.map((entry) => (
-                        <TableRow key={entry.id}>
+                      {expenses.map((entry, index) => {
+                        const expenseRowKey =
+                          entry.guid ||
+                          `${entry.title || 'expense'}-${entry.occurred_on || 'unknown'}-${index}`
+                        return (
+                        <TableRow key={expenseRowKey}>
                           <TableCell>{entry.title}</TableCell>
                           <TableCell>{entry.category || '-'}</TableCell>
                           <TableCell>{entry.occurred_on}</TableCell>
@@ -746,13 +753,14 @@ export default function AdminAccountabilitySection({
                               size="small"
                               color="error"
                               variant="text"
-                              onClick={() => handleDeleteExpense(entry.id)}
+                              onClick={() => handleDeleteExpense(entry.guid)}
                             >
                               {t('dashboard.admin.accountability.delete')}
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>

@@ -669,6 +669,12 @@ export const messages = {
       en: 'EN',
       es: 'ES',
     },
+    theme: {
+      label: 'Theme',
+      light: 'Light',
+      system: 'Auto',
+      dark: 'Dark',
+    },
   },
   es: {
     app: {
@@ -1358,6 +1364,12 @@ export const messages = {
       label: 'Idioma',
       en: 'EN',
       es: 'ES',
+    },
+    theme: {
+      label: 'Tema',
+      light: 'Claro',
+      system: 'Auto',
+      dark: 'Oscuro',
     },
   },
 }

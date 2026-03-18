@@ -1,9 +1,12 @@
 import { Box, Chip, Grid, Paper, Stack, Typography } from '@mui/material'
-import { alpha } from '@mui/material/styles'
+import { alpha, useTheme } from '@mui/material/styles'
 import AuthPanel from '../components/AuthPanel.jsx'
 import { useI18n } from '../i18n/useI18n.js'
 
 function OverviewStatCard({ title, body, accent }) {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
+
   return (
     <Paper
       elevation={0}
@@ -11,10 +14,10 @@ function OverviewStatCard({ title, body, accent }) {
         p: 2.5,
         minHeight: '100%',
         borderRadius: 4,
-        border: `1px solid ${alpha('#0f172a', 0.08)}`,
-        background: `linear-gradient(180deg, ${alpha('#ffffff', 0.88)} 0%, ${alpha(
+        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+        background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.94 : 0.88)} 0%, ${alpha(
           accent,
-          0.08
+          isDark ? 0.14 : 0.08
         )} 100%)`,
       }}
     >
@@ -31,6 +34,8 @@ function OverviewStatCard({ title, body, accent }) {
 }
 
 export default function AuthLandingPage({ auth }) {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const { t } = useI18n()
 
   return (
@@ -42,10 +47,14 @@ export default function AuthLandingPage({ auth }) {
             sx={{
               p: { xs: 2.5, md: 3 },
               borderRadius: 5,
-              border: `1px solid ${alpha('#0f172a', 0.08)}`,
-              background:
-                'linear-gradient(160deg, rgba(255,255,255,0.86) 0%, rgba(231,244,240,0.78) 54%, rgba(255,244,229,0.82) 100%)',
-              boxShadow: '0 24px 56px rgba(15, 23, 42, 0.12)',
+              border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+              background: `linear-gradient(160deg, ${alpha(theme.palette.background.paper, isDark ? 0.94 : 0.86)} 0%, ${alpha(
+                theme.palette.secondary.main,
+                isDark ? 0.12 : 0.08
+              )} 54%, ${alpha(theme.palette.warning.main, isDark ? 0.12 : 0.08)} 100%)`,
+              boxShadow: isDark
+                ? '0 24px 56px rgba(0, 0, 0, 0.28)'
+                : '0 24px 56px rgba(15, 23, 42, 0.12)',
             }}
           >
             <Stack spacing={2.5}>
@@ -80,10 +89,14 @@ export default function AuthLandingPage({ auth }) {
             sx={{
               p: { xs: 2.5, md: 3.5 },
               borderRadius: 5,
-              border: `1px solid ${alpha('#0f172a', 0.08)}`,
-              background:
-                'linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(230,245,239,0.82) 52%, rgba(255,241,225,0.86) 100%)',
-              boxShadow: '0 24px 56px rgba(15, 23, 42, 0.12)',
+              border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+              background: `linear-gradient(145deg, ${alpha(theme.palette.background.paper, isDark ? 0.96 : 0.92)} 0%, ${alpha(
+                theme.palette.secondary.main,
+                isDark ? 0.12 : 0.08
+              )} 52%, ${alpha(theme.palette.warning.main, isDark ? 0.12 : 0.08)} 100%)`,
+              boxShadow: isDark
+                ? '0 24px 56px rgba(0, 0, 0, 0.28)'
+                : '0 24px 56px rgba(15, 23, 42, 0.12)',
             }}
           >
             <Stack spacing={2.25}>
@@ -113,9 +126,11 @@ export default function AuthLandingPage({ auth }) {
                   borderRadius: 4,
                   position: 'relative',
                   overflow: 'hidden',
-                  border: `1px solid ${alpha('#0f172a', 0.08)}`,
-                  background:
-                    'linear-gradient(140deg, rgba(27,39,64,0.96) 0%, rgba(17,94,89,0.94) 100%)',
+                  border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
+                  background: `linear-gradient(140deg, ${alpha(theme.palette.primary.main, isDark ? 0.42 : 0.96)} 0%, ${alpha(
+                    theme.palette.secondary.dark,
+                    isDark ? 0.56 : 0.94
+                  )} 100%)`,
                   color: 'common.white',
                 }}
               >
@@ -167,8 +182,11 @@ export default function AuthLandingPage({ auth }) {
             sx={{
               p: { xs: 2.5, md: 3 },
               borderRadius: 5,
-              border: `1px dashed ${alpha('#b7791f', 0.44)}`,
-              backgroundColor: alpha('#fff4e5', 0.78),
+              border: `1px dashed ${alpha(theme.palette.warning.main, 0.44)}`,
+              backgroundColor: alpha(
+                isDark ? theme.palette.warning.main : '#fff4e5',
+                isDark ? 0.12 : 0.78
+              ),
             }}
           >
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">

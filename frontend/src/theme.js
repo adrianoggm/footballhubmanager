@@ -1,244 +1,372 @@
 import { alpha, createTheme } from '@mui/material/styles'
 
-const theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#101820',
-      light: '#435363', 
-      dark: '#0A0E13',  
-      contrastText: '#F5F5F5', 
-    },
-    secondary: {
-      main: '#da4416',
-      light: '#F7A77F',
-      dark: '#914119',
-      contrastText: '#101820',
-    },
-    //To use this color => sx={{ bgcolor: 'alternate.main' }}
-    alternate: {
-      main: '#0A3039',
-      light: '#3A727F',
-      dark: '#061D22',
-      contrastText: '#F5F5F5',
-    },
-    // Semantic colors
-    info: {
-      main: '#00ACC1',
-    },
-    success: {
-      main: '#00C10D',
-    },
-    warning: {
-      main: '#FFC107',
-    },
-    error: {
-      main: '#C10000',
-    },
-    // + support semantical colors
-    brandExtras: {
-      purple: '#6700C1',
-      pink: '#ED2AB2',
-      navyBlue: '#0020C1'
-    },
-    // reading colors
-    background: {
-      default: '#0F0F0F',
-      paper: '#151515',
-    },
-    text: {
-      primary: '#F5F5F5',
-      secondary: '#BABABA',
-    },
+const lightPalette = {
+  mode: 'light',
+  primary: {
+    main: '#1b2740',
+    light: '#30466f',
+    dark: '#0f172a',
+    contrastText: '#f8fafc',
   },
-  // p: X will have a spacing based in 8
-  spacing: 8,
-
-  shape: {
-    borderRadius: 10,
+  secondary: {
+    main: '#0f766e',
+    light: '#35b9ab',
+    dark: '#115e59',
+    contrastText: '#f0fdfa',
   },
-
-  typography: {
-  fontFamily: '"Lexend Deca", system-ui, sans-serif',
-
-  // GLOBAL TOKENS
-  fontWeightLight: 100,
-  fontWeightRegular: 300, 
-  fontWeightMedium: 500,
-  fontWeightBold: 700,
-
-  // Body and tags
-  body1: {
-    fontSize: '1rem',
-    lineHeight: 1.6,
-    letterSpacing: '0.01em',
+  info: {
+    main: '#0284c7',
   },
-  caption: {
-    fontWeight: 500,
-    textTransform: 'uppercase',
-    letterSpacing: '0.15em',
-    fontSize: '0.75rem',
+  success: {
+    main: '#15803d',
   },
-  h3: {
-    fontWeight: 600,
-    lineHeight: 1.2,
-    letterSpacing: '-0.02em', 
-    fontSize: '1.25rem',
+  warning: {
+    main: '#b7791f',
+  },
+  error: {
+    main: '#b91c1c',
+  },
+  background: {
+    default: '#f3f0e6',
+    paper: '#fffdf8',
+  },
+  text: {
+    primary: '#0f172a',
+    secondary: '#526073',
+  },
+  divider: alpha('#0f172a', 0.08),
+}
+
+const darkPalette = {
+  mode: 'dark',
+  primary: {
+    main: '#dbe7ff',
+    light: '#f5f8ff',
+    dark: '#9fb5d1',
+    contrastText: '#0f172a',
+  },
+  secondary: {
+    main: '#35b9ab',
+    light: '#79ddd2',
+    dark: '#1d8479',
+    contrastText: '#061311',
+  },
+  info: {
+    main: '#38bdf8',
+  },
+  success: {
+    main: '#22c55e',
+  },
+  warning: {
+    main: '#f59e0b',
+  },
+  error: {
+    main: '#ef4444',
+  },
+  background: {
+    default: '#0b1118',
+    paper: '#121922',
+  },
+  text: {
+    primary: '#eef2f7',
+    secondary: '#9ca9ba',
+  },
+  divider: alpha('#eef2f7', 0.1),
+}
+
+const getCustomTokens = (mode) => ({
+  radius: {
+    none: 0,
+    sm: '6px',
+    lg: '20px',
+    full: 9999,
+  },
+  gradients: {
+    cardDepth1:
+      mode === 'dark'
+        ? 'radial-gradient(ellipse 680px 420px at 18% 0%, rgba(53, 185, 171, 0.12) 0%, rgba(53, 185, 171, 0) 58%)'
+        : 'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.08) 0%, rgba(4, 4, 6, 0) 60%)',
+    cardDepthBig:
+      mode === 'dark'
+        ? 'radial-gradient(ellipse 180% 140% at 50% 0%, rgba(255, 255, 255, 0.06) 0%, rgba(4, 4, 6, 0) 34%)'
+        : 'radial-gradient(ellipse 200% 150% at 50% 0%, rgba(238, 238, 238, 0.1) 0%, rgba(4, 4, 6, 0) 30%)',
+  },
+  shadows: {
+    none: 'none',
+    xs: mode === 'dark' ? '0 1px 2px rgba(0, 0, 0, 0.22)' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+    sm:
+      mode === 'dark'
+        ? '0 6px 16px rgba(0, 0, 0, 0.24)'
+        : '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+    md:
+      mode === 'dark'
+        ? '0 10px 24px rgba(0, 0, 0, 0.3)'
+        : '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+    lg:
+      mode === 'dark'
+        ? '0 18px 36px rgba(0, 0, 0, 0.34)'
+        : '0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
+    xl:
+      mode === 'dark'
+        ? '0 24px 48px rgba(0, 0, 0, 0.4)'
+        : '0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)',
+    gradient1:
+      mode === 'dark'
+        ? 'inset 0 1px 0 rgba(255,255,255,0.04), inset -80px 80px 90px -120px rgba(53, 185, 171, 0.2)'
+        : 'inset -8px 6px 15px 0 rgba(234, 95, 20, 0.2), inset -80px 80px 80px -102px rgba(234, 95, 20, 0.3)',
+  },
+  transitions: {
+    fast: 'all 150ms ease-out',
+    base: 'all 250ms ease-out',
+    slow: 'all 350ms ease-out',
+  },
+})
+
+const typography = {
+  htmlFontSize: 15,
+  fontSize: 13,
+  fontFamily: '"Space Grotesk", system-ui, sans-serif',
+  h1: {
+    fontWeight: 800,
+    letterSpacing: -2.2,
   },
   h2: {
+    fontWeight: 800,
+    letterSpacing: -1.6,
+  },
+  h3: {
+    fontWeight: 800,
+    letterSpacing: -1.1,
+    lineHeight: 1.05,
+  },
+  h4: {
     fontWeight: 700,
-    lineHeight: 1.2,
-    letterSpacing: '-0.02em', 
-    fontSize: '1.5rem',
+    letterSpacing: -0.8,
   },
-  h1: {
+  h5: {
     fontWeight: 700,
-    fontSize: '2rem',
-    lineHeight: 1.1,
-    letterSpacing: '-0.03em',
+    letterSpacing: -0.6,
   },
-  // This is DISPLAY, Material UI doesn't support it, so i'm using an empty one
-  h7: {
-    fontWeight: 900,
-    fontSize: '3rem',
-    lineHeight: 1,
-    letterSpacing: '-0.03em',
-  }, 
-},
-
-  // CUSTOM TOKENS ====================================================
-  custom: {
-    radius: {
-      none: 0, sm: "5px", lg: "20px", full: 9999,
-    },
-    gradients: {
-      cardDepth1: 'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.12) 0%, rgba(4, 4, 6, 0) 60%)',
-      cardDepthBig: 'radial-gradient(ellipse 200% 150% at 50% 0%, rgba(238, 238, 238, 0.1) 0%, rgba(4, 4, 6, 0) 30%)',
-    },
-    shadows: {
-      none: 'none',
-      xs: '0 1px 2px rgba(0, 0, 0, 0.05)',
-      sm: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-      md: '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
-      lg: '0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
-      xl: '0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)',
-      // To use gradient1 => sx={{ boxShadow: (theme) => theme.custom.shadows.gradient1 }}
-      gradient1: 'inset -8px 6px 15px 0 rgba(234, 95, 20, 0.5), inset -80px 80px 80px -102px rgba(234, 95, 20, 0.75)',
-    },
-    transitions: {
-      fast: 'all 150ms ease-out',
-      base: 'all 250ms ease-out',
-      slow: 'all 350ms ease-out',
-    }
+  h6: {
+    fontWeight: 700,
+    letterSpacing: -0.3,
   },
-  // ===================================================================
+  overline: {
+    fontWeight: 800,
+    letterSpacing: 1.2,
+  },
+}
 
-  components: {
-    // Reset CSS
-    MuiCssBaseline: {
-      styleOverrides: {
-        html: { scrollBehavior: 'smooth' },
-        body: {
-          margin: 0,
-          padding: 0,
-          fontFamily: '"Lexend Deca", system-ui, sans-serif',
-          fontWeight: 300,
-          '-webkit-font-smoothing': 'antialiased',
-          '-moz-osx-font-smoothing': 'grayscale',
-        },
-        '#root': {
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-          width: '100%',
-        },
-        a: { textDecoration: 'none', color: 'inherit' }
-      },
-    },
+export function createAppTheme(mode = 'light') {
+  const palette = mode === 'dark' ? darkPalette : lightPalette
+  const custom = getCustomTokens(mode)
 
-    // DEFAULT COMPONENTS
-    MuiButton: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          textTransform: 'none',
-          fontWeight: 600,
-          boxShadow: 'none',
-          background: `linear-gradient(to left, ${theme.palette.secondary.main} 50%, ${theme.palette.secondary.light} 50%) right`,
-          backgroundSize: '220% 100%',
-          transition: 'background-position 300ms ease-out, box-shadow 250ms ease-out',
-          '&:hover': {
-            backgroundPosition: 'left',
-            boxShadow: theme.custom.shadows.md,
+  return createTheme({
+    palette,
+    spacing: 8,
+    shape: {
+      borderRadius: 14,
+    },
+    typography,
+    custom,
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          html: {
+            scrollBehavior: 'smooth',
+            colorScheme: mode,
           },
-        }),
-        contained: ({ theme }) => ({
-          '&:hover': {
-            boxShadow: theme.custom.shadows.lg,
+          body: {
+            margin: 0,
+            background:
+              mode === 'dark'
+                ? 'radial-gradient(960px 560px at 92% 6%, rgba(53, 185, 171, 0.14) 0%, rgba(53, 185, 171, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 52%), linear-gradient(180deg, #0c121a 0%, #0a1017 100%)'
+                : 'radial-gradient(960px 560px at 92% 6%, rgba(19, 132, 119, 0.14) 0%, rgba(19, 132, 119, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(183, 121, 31, 0.14) 0%, rgba(183, 121, 31, 0) 52%), linear-gradient(180deg, #f4f1e8 0%, #f1eee5 100%)',
+            color: palette.text.primary,
+            fontFamily: '"Space Grotesk", system-ui, sans-serif',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
           },
-        }),
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          backgroundImage: 'none',
-          transition: theme.custom.transitions.fast,
-          boxShadow: theme.custom.shadows.sm,
-          border: `2px solid ${theme.palette.secondary.main}`,
-          
-        }),
-      },
-    },
-    MuiCardContent: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          backgroundImage: theme.custom.gradients.cardDepthBig,
-          padding: "16px",
-          margin: 0,
-        }),
-      },
-    },
-    MuiInputLabel: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          color: theme.palette.primary.secondary,
-          '&.Mui-focused': {
-            color: theme.palette.text.primary,
+          '#root': {
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '100vh',
+            width: '100%',
           },
-        }),
+          a: {
+            textDecoration: 'none',
+            color: 'inherit',
+          },
+        },
       },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: ({ theme }) => ({
-          '& .MuiOutlinedInput-root': {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: 10,
+            paddingInline: 12,
+            minHeight: 34,
+            fontSize: '0.88rem',
+          },
+          contained: {
+            boxShadow:
+              mode === 'dark'
+                ? '0 16px 28px rgba(0, 0, 0, 0.28)'
+                : '0 16px 30px rgba(15, 23, 42, 0.16)',
+          },
+          outlined: {
+            borderColor: alpha(palette.text.primary, mode === 'dark' ? 0.16 : 0.12),
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            fontWeight: 600,
+            height: 24,
+            borderRadius: 10,
+            backdropFilter: 'blur(10px)',
+          },
+          label: {
+            paddingInline: 8,
+            fontSize: '0.72rem',
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            border: `1px solid ${alpha(palette.text.primary, mode === 'dark' ? 0.14 : 0.08)}`,
+            borderRadius: 14,
+            backgroundColor: alpha(palette.background.paper, mode === 'dark' ? 0.94 : 0.9),
+            boxShadow: mode === 'dark' ? custom.shadows.md : '0 12px 26px rgba(15, 23, 42, 0.07)',
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            backgroundColor: alpha(
+              mode === 'dark' ? palette.background.default : '#ffffff',
+              mode === 'dark' ? 0.7 : 0.72
+            ),
+            backdropFilter: 'blur(10px)',
+            minHeight: 36,
             '& fieldset': {
-              borderColor: theme.palette.primary.light,
-              transition: theme.custom.transitions.base,
+              borderColor: alpha(palette.text.primary, mode === 'dark' ? 0.16 : 0.12),
             },
             '&:hover fieldset': {
-              borderColor: theme.palette.text.primary,
+              borderColor: alpha(palette.text.primary, mode === 'dark' ? 0.24 : 0.18),
             },
             '&.Mui-focused fieldset': {
-              borderColor: theme.palette.text.primary,
-              borderWidth: 2,
+              borderWidth: 1,
             },
           },
-          '& .MuiOutlinedInput-input': {
-            color: theme.palette.text.primary,
-            '&:focus': {
-              color: theme.palette.text.primary,
-            },
+          inputSizeSmall: {
+            paddingTop: 8,
+            paddingBottom: 8,
           },
-          '& input[type="color"]': {
-            cursor: 'pointer',
-            padding: '2px 8px',
+        },
+      },
+      MuiTabs: {
+        styleOverrides: {
+          root: {
+            minHeight: 40,
           },
-        }),
+          indicator: {
+            height: 3,
+            borderRadius: 3,
+          },
+        },
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: {
+            minHeight: 40,
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: '0.88rem',
+          },
+        },
+      },
+      MuiToggleButtonGroup: {
+        styleOverrides: {
+          root: {
+            borderRadius: 10,
+            backgroundColor: alpha(
+              mode === 'dark' ? palette.background.default : '#ffffff',
+              mode === 'dark' ? 0.66 : 0.7
+            ),
+          },
+        },
+      },
+      MuiToggleButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            borderColor: alpha(palette.text.primary, mode === 'dark' ? 0.12 : 0.08),
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            paddingBlock: 6,
+          },
+        },
+      },
+      MuiAlert: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            border: `1px solid ${alpha(palette.text.primary, mode === 'dark' ? 0.12 : 0.08)}`,
+          },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          head: {
+            fontWeight: 700,
+            color: palette.text.secondary,
+            paddingTop: 8,
+            paddingBottom: 8,
+            borderBottomColor: alpha(palette.text.primary, mode === 'dark' ? 0.12 : 0.08),
+          },
+          body: {
+            paddingTop: 8,
+            paddingBottom: 8,
+            borderBottomColor: alpha(palette.text.primary, mode === 'dark' ? 0.08 : 0.06),
+          },
+          sizeSmall: {
+            paddingTop: 6,
+            paddingBottom: 6,
+          },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 18,
+            backgroundColor: alpha(palette.background.paper, mode === 'dark' ? 0.96 : 0.95),
+            backdropFilter: 'blur(18px)',
+            boxShadow:
+              mode === 'dark'
+                ? '0 28px 72px rgba(0, 0, 0, 0.4)'
+                : '0 28px 72px rgba(15, 23, 42, 0.2)',
+          },
+        },
       },
     },
-  },
-});
+  })
+}
 
+const theme = createAppTheme('light')
 
 export default theme
