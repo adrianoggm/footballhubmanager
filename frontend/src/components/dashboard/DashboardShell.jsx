@@ -359,12 +359,12 @@ export function DashboardIdentitySlot({
             sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
-        <Stack
-          alignItems="center"
-          justifyContent="center"
-          spacing={0.35}
-          sx={{ width: '100%', height: '100%', p: 1, textAlign: 'center' }}
-        >
+          <Stack
+            alignItems="center"
+            justifyContent="center"
+            spacing={0.35}
+            sx={{ width: '100%', height: '100%', p: 1, textAlign: 'center' }}
+          >
             <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>
               {placeholderLabel}
             </Typography>
@@ -719,7 +719,10 @@ export default function DashboardShell({
                     zIndex: 1,
                     height: '100%',
                     p: { xs: 1.1, md: 1.25, xl: 1.2 },
-                    borderTop: { xs: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`, xl: 0 },
+                    borderTop: {
+                      xs: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}`,
+                      xl: 0,
+                    },
                     borderLeft: { xl: `1px solid ${alpha(theme.palette.primary.dark, 0.08)}` },
                     background: { xl: alpha(theme.palette.common.white, 0.36) },
                   }}

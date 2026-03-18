@@ -2208,7 +2208,9 @@ export default function AdminDashboard({
                   {seasonList.map((season) => (
                     <MenuItem key={season.guid} value={season.guid}>
                       {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                      {activeSeason?.guid === season.guid ? t('dashboard.admin.seasonActiveSuffix') : ''}
+                      {activeSeason?.guid === season.guid
+                        ? t('dashboard.admin.seasonActiveSuffix')
+                        : ''}
                     </MenuItem>
                   ))}
                 </TextField>
