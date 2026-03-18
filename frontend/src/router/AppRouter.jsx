@@ -5,10 +5,12 @@ import UserLayout from '../layouts/UserLayout.jsx'
 import AuthLandingPage from '../pages/AuthLandingPage.jsx'
 import SessionIncompletePage from '../pages/SessionIncompletePage.jsx'
 import AdminMatchesPage from '../pages/admin/AdminMatchesPage.jsx'
+import AdminAccountabilityPage from '../pages/admin/AdminAccountabilityPage.jsx'
 import AdminOverviewPage from '../pages/admin/AdminOverviewPage.jsx'
 import AdminPlayersPage from '../pages/admin/AdminPlayersPage.jsx'
 import AdminSeasonsPage from '../pages/admin/AdminSeasonsPage.jsx'
 import AdminStandingsPage from '../pages/admin/AdminStandingsPage.jsx'
+import UserAccountabilityPage from '../pages/user/UserAccountabilityPage.jsx'
 import UserInsightsPage from '../pages/user/UserInsightsPage.jsx'
 import UserJoinPage from '../pages/user/UserJoinPage.jsx'
 import UserMatchesPage from '../pages/user/UserMatchesPage.jsx'
@@ -75,6 +77,10 @@ export default function AppRouter({ auth, onLogout }) {
                 element={<AdminSeasonsPage session={auth.session} onLogout={onLogout} />}
               />
               <Route
+                path="accountability"
+                element={<AdminAccountabilityPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
                 path="players"
                 element={<AdminPlayersPage session={auth.session} onLogout={onLogout} />}
               />
@@ -100,6 +106,10 @@ export default function AppRouter({ auth, onLogout }) {
               <Route
                 path="membership"
                 element={<UserMembershipPage session={auth.session} onLogout={onLogout} />}
+              />
+              <Route
+                path="accountability"
+                element={<UserAccountabilityPage session={auth.session} onLogout={onLogout} />}
               />
               <Route
                 path="standings"

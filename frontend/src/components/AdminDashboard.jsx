@@ -15,8 +15,6 @@ import {
   LinearProgress,
   MenuItem,
   Stack,
-  Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -36,11 +34,16 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
+import AdminAccountabilitySection from './admin/AdminAccountabilitySection.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
 import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
 import AdminSeasonsSection from './admin/AdminSeasonsSection.jsx'
+import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
+import DashboardShell from './dashboard/DashboardShell.jsx'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
@@ -304,6 +307,15 @@ const normalizePlayerGuids = (value) => {
 }
 
 const setUnionSize = (left, right) => new Set([...left, ...right]).size
+
+const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
+  overview: 'dashboard.admin.heroSections.overview',
+  seasons: 'dashboard.admin.heroSections.seasons',
+  accountability: 'dashboard.admin.heroSections.accountability',
+  players: 'dashboard.admin.heroSections.players',
+  matches: 'dashboard.admin.heroSections.matches',
+  standings: 'dashboard.admin.heroSections.standings',
+}
 
 const formatDate = (value) => {
   if (!value) {
@@ -2040,6 +2052,54 @@ export default function AdminDashboard({
     },
   })
 
+  const adminNavItems = adminSections.map((section) => ({
+    id: section.id,
+    label: t(section.titleKey),
+    icon: section.id,
+  }))
+  const activeAdminSection = adminSections.find((section) => section.id === activeSection) || null
+  const activeAdminSectionLabel = activeAdminSection
+    ? t(activeAdminSection.titleKey)
+    : t('dashboard.admin.panelTitle')
+  const activeAdminHeroSubtitle = t(
+    ADMIN_HERO_SUBTITLE_KEY_BY_SECTION[activeSection] || 'dashboard.admin.heroSubtitle'
+  )
+
+  const adminSummaryCards = [
+    {
+      label: t('dashboard.admin.overview.currentPena'),
+      value: selectedPena?.name || '-',
+      helper: activeAdminSectionLabel,
+      helperLabel: t('dashboard.common.summaryMeta.section'),
+      tone: 'secondary',
+    },
+    {
+      label: t('dashboard.admin.overview.activeSeason'),
+      value: activeSeason
+        ? t('dashboard.admin.status.configured')
+        : t('dashboard.admin.status.missing'),
+      helper: activeSeasonLabel,
+      helperLabel: t('dashboard.common.summaryMeta.range'),
+      tone: activeSeason ? 'success' : 'warning',
+    },
+    {
+      label: t('dashboard.admin.overview.totalSeasons'),
+      value: String(seasonList.length),
+      helper: latestSeasonEndDate
+        ? selectedSeasonLabel
+        : t('dashboard.admin.status.noSeasonSelected'),
+      helperLabel: t('dashboard.common.summaryMeta.reference'),
+      tone: 'primary',
+    },
+    {
+      label: t('dashboard.admin.overview.seasonPlayers'),
+      value: String(seasonRoster.length),
+      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
+      helperLabel: t('dashboard.common.summaryMeta.season'),
+      tone: 'info',
+    },
+  ]
+
   if (initializing) {
     return (
       <Stack spacing={2}>
@@ -2050,52 +2110,80 @@ export default function AdminDashboard({
   }
 
   return (
-    <Stack spacing={3}>
-      <Card
-        sx={{
-          border: '1px solid rgba(15, 23, 42, 0.08)',
-          background:
-            'linear-gradient(135deg, rgba(255,255,250,0.95) 0%, rgba(230,245,239,0.72) 70%, rgba(255,238,217,0.62) 100%)',
-        }}
-      >
-        <CardContent>
-          <Stack spacing={2.5}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={2}
-              alignItems={{ md: 'center' }}
-              justifyContent="space-between"
-            >
-              <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {t('dashboard.admin.panelTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.common.loggedAs')} <strong>{session?.user_guid || '-'}</strong>
-                </Typography>
-              </Box>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                <Button
-                  variant="outlined"
-                  onClick={() => runAction(loadDashboard, '')}
-                  disabled={loading}
-                >
-                  {t('dashboard.common.refreshData')}
-                </Button>
-                <Button variant="text" onClick={onLogout} disabled={loading}>
-                  {t('dashboard.common.logout')}
-                </Button>
-              </Stack>
-            </Stack>
+    <DashboardShell
+      brand={t('app.brand')}
+      brandShort="FH"
+      railLabel={t('dashboard.admin.panelTitle')}
+      navItems={adminNavItems}
+      activeNavId={activeSection}
+      onNavChange={handleSectionChange}
+      title={activeAdminSectionLabel}
+      subtitle={activeAdminHeroSubtitle}
+      badges={
+        <>
+          <Chip
+            size="small"
+            color="secondary"
+            label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
+          />
+          <Chip
+            size="small"
+            color={activeSeason ? 'success' : 'warning'}
+            label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
+          />
+          <Chip
+            size="small"
+            color="primary"
+            label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
+          />
+        </>
+      }
+      headerAside={
+        <Stack spacing={0.95}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={0.9}
+            alignItems={{ sm: 'center' }}
+            justifyContent="space-between"
+          >
+            <DashboardIdentitySlot
+              title={t('dashboard.common.identityTitle')}
+              name={selectedPena?.name || t('dashboard.admin.panelTitle')}
+              placeholderLabel={t('dashboard.common.identityPlaceholder')}
+              imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
+              imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
+            />
 
-            <Grid container spacing={1.5}>
-              <Grid item xs={12} md={6}>
+            <Stack
+              direction="row"
+              spacing={0.6}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ sm: 'flex-end' }}
+            >
+              <LanguageSwitcher />
+              <Button
+                variant="outlined"
+                onClick={() => runAction(loadDashboard, '')}
+                disabled={loading}
+              >
+                {t('dashboard.common.refreshData')}
+              </Button>
+              <Button variant="text" onClick={onLogout} disabled={loading}>
+                {t('dashboard.common.logout')}
+              </Button>
+            </Stack>
+          </Stack>
+
+          <Grid container spacing={0.85}>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.admin.currentPena')}>
                 <TextField
                   select
                   size="small"
-                  label={t('dashboard.admin.currentPena')}
                   value={selectedPenaGuid}
                   onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                  inputProps={{ 'aria-label': t('dashboard.admin.currentPena') }}
                   fullWidth
                 >
                   {penas.map((pena) => (
@@ -2104,15 +2192,17 @@ export default function AdminDashboard({
                     </MenuItem>
                   ))}
                 </TextField>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </DashboardControlField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.admin.referenceSeason')}>
                 <TextField
                   select
                   size="small"
-                  label={t('dashboard.admin.referenceSeason')}
                   value={selectedSeasonGuid}
                   onChange={handleSeasonSelection}
                   disabled={!seasonList.length}
+                  inputProps={{ 'aria-label': t('dashboard.admin.referenceSeason') }}
                   fullWidth
                 >
                   {seasonList.map((season) => (
@@ -2124,41 +2214,13 @@ export default function AdminDashboard({
                     </MenuItem>
                   ))}
                 </TextField>
-              </Grid>
+              </DashboardControlField>
             </Grid>
-
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-              <Chip
-                size="small"
-                color="secondary"
-                label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
-              />
-              <Chip
-                size="small"
-                color={activeSeason ? 'success' : 'warning'}
-                label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
-              />
-              <Chip
-                size="small"
-                color="primary"
-                label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
-              />
-            </Stack>
-
-            <Tabs
-              value={activeSection}
-              onChange={(_, value) => handleSectionChange(value)}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              {adminSections.map((section) => (
-                <Tab key={section.id} value={section.id} label={t(section.titleKey)} />
-              ))}
-            </Tabs>
-          </Stack>
-        </CardContent>
-      </Card>
-
+          </Grid>
+        </Stack>
+      }
+      summaryCards={adminSummaryCards}
+    >
       {loading && <LinearProgress />}
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
@@ -2167,52 +2229,7 @@ export default function AdminDashboard({
 
       {selectedPenaGuid && activeSection === 'overview' && (
         <Grid container spacing={2.5}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="overline" color="text.secondary">
-                  {t('dashboard.admin.overview.currentPena')}
-                </Typography>
-                <Typography variant="h6">{selectedPena?.name || '-'}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="overline" color="text.secondary">
-                  {t('dashboard.admin.overview.activeSeason')}
-                </Typography>
-                <Typography variant="h6">
-                  {activeSeason
-                    ? t('dashboard.admin.status.configured')
-                    : t('dashboard.admin.status.missing')}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="overline" color="text.secondary">
-                  {t('dashboard.admin.overview.totalSeasons')}
-                </Typography>
-                <Typography variant="h6">{seasonList.length}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="overline" color="text.secondary">
-                  {t('dashboard.admin.overview.seasonPlayers')}
-                </Typography>
-                <Typography variant="h6">{seasonRoster.length}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} xl={5} sx={{ minWidth: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2245,7 +2262,7 @@ export default function AdminDashboard({
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={7}>
+          <Grid item xs={12} xl={7} sx={{ minWidth: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2255,12 +2272,18 @@ export default function AdminDashboard({
                   <Typography variant="body2" color="text.secondary">
                     {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                     <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
                       {t('dashboard.admin.overview.manageSeasons')}
                     </Button>
                     <Button variant="outlined" onClick={() => handleSectionChange('players')}>
                       {t('dashboard.admin.overview.managePlayers')}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleSectionChange('accountability')}
+                    >
+                      {t('dashboard.admin.overview.manageAccountability')}
                     </Button>
                     <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
@@ -2518,6 +2541,15 @@ export default function AdminDashboard({
             t,
             formatDate,
           }}
+        />
+      )}
+
+      {selectedPenaGuid && activeSection === 'accountability' && (
+        <AdminAccountabilitySection
+          penaGuid={selectedPenaGuid}
+          players={historicalPlayers}
+          t={t}
+          formatPlayerDisplayName={formatPlayerDisplayName}
         />
       )}
 
@@ -3046,6 +3078,6 @@ export default function AdminDashboard({
           </Button>
         </DialogActions>
       </Dialog>
-    </Stack>
+    </DashboardShell>
   )
 }

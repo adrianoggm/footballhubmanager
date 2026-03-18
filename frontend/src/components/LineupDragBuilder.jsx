@@ -247,7 +247,14 @@ export default function LineupDragBuilder({
         {zones.map((zone) => {
           const isActive = dropTarget === zone.key
           return (
-            <Grid key={zone.key} item xs={12} sm={zone.key === 'available' ? 12 : 6} md={4}>
+            <Grid
+              key={zone.key}
+              item
+              xs={12}
+              sm={zone.key === 'available' ? 12 : 6}
+              lg={4}
+              sx={{ minWidth: 0 }}
+            >
               <Box
                 onDragOver={(event) => onDragOverZone(event, zone.key)}
                 onDrop={(event) => onDropZone(event, zone.key)}

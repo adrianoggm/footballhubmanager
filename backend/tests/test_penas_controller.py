@@ -1,8 +1,14 @@
 from dataclasses import dataclass
+from datetime import date, datetime
 
 import pytest
 from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import penas_controller
+from api.interface.controller.v1.model.request.pena_accountability_request import (
+    CreatePenaExpenseRequest,
+    UpdatePenaAccountabilityRequest,
+    UpsertPenaMemberAccountRequest,
+)
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
 from auth.dependencies import require_user
@@ -17,6 +23,18 @@ from persistence.application.use_cases.link_user_to_pena_usecase import (
     InvalidLinkTokenError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
+)
+from persistence.application.use_cases.manage_pena_accountability_usecase import (
+    InvalidPenaAccountabilityDataError,
+    PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityExpenseCreate,
+    PenaAccountabilityExpenseInfo,
+    PenaAccountabilityExpenseNotFoundError,
+    PenaAccountabilityInfo,
+    PenaAccountabilityMemberAccountInfo,
+    PenaAccountabilityMemberAccountUpsert,
+    PenaAccountabilityMemberNotFoundError,
+    PenaAccountabilityPenaNotFoundError,
 )
 from persistence.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
@@ -51,6 +69,45 @@ def _labels_info() -> PenaLabelsInfo:
         position_labels=["POR", "DEF"],
         role_colors={"Capitan": "#FF0000", "Titular": "#00FF00"},
         position_colors={"POR": "#111111", "DEF": "#222222"},
+    )
+
+
+def _accountability_info() -> PenaAccountabilityInfo:
+    return PenaAccountabilityInfo(
+        currency="EUR",
+        balance_cents=20_000,
+        reserve_cents=4_000,
+        budget_visibility="summary",
+        expenses_visibility="full",
+        member_accounts=[
+            PenaAccountabilityMemberAccountInfo(
+                player_guid="player-1",
+                player_name="Ana",
+                debt_cents=1200,
+                contribution_cents=800,
+                note=None,
+                updated_at=datetime(2026, 3, 1, 10, 0, 0),
+            )
+        ],
+        expenses=[
+            PenaAccountabilityExpenseInfo(
+                guid="expense-1",
+                title="Balls",
+                category="equipment",
+                amount_cents=2500,
+                occurred_on=date(2026, 3, 1),
+                note=None,
+                created_at=datetime(2026, 3, 1, 8, 0, 0),
+                updated_at=datetime(2026, 3, 1, 9, 0, 0),
+            )
+        ],
+        updated_at=datetime(2026, 3, 1, 11, 0, 0),
+        total_debt_cents=1200,
+        total_contribution_cents=800,
+        total_expenses_cents=2500,
+        current_cash_cents=18300,
+        projected_balance_cents=19500,
+        expense_entries=1,
     )
 
 
@@ -459,3 +516,241 @@ def test_get_pena_labels_use_case_builds_expected_dependencies(monkeypatch):
     assert isinstance(use_case, _UseCase)
     assert captured["db"] == "db-session"
     assert captured["repo_type"] is _Repo
+
+
+def test_get_pena_accountability_use_case_builds_expected_dependencies(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    class _UseCase:
+        def __init__(self, repo):
+            captured["repo_type"] = type(repo)
+            self.repo = repo
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaAccountabilityRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "ManagePenaAccountabilityUseCase", _UseCase)
+
+    use_case = penas_controller.get_pena_accountability_use_case(db="db-session")
+    assert isinstance(use_case, _UseCase)
+    assert captured["db"] == "db-session"
+    assert captured["repo_type"] is _Repo
+
+
+def test_get_pena_accountability_for_admin_returns_full_payload():
+    class _UseCase:
+        def get_for_pena(self, *, pena_guid: str):
+            assert pena_guid == "pena-1"
+            return _accountability_info()
+
+        def get_player_guid_for_account(self, *, account_id: int):
+            raise AssertionError("must not be called for admin")
+
+    response = penas_controller.get_pena_accountability(
+        "pena-1",
+        session=_session(user_type="admin", user_id=7),
+        use_case=_UseCase(),
+    )
+
+    assert response.balance_cents == 20_000
+    assert len(response.member_accounts) == 1
+    assert len(response.expenses) == 1
+    assert response.my_account is None
+
+
+def test_get_pena_accountability_for_user_hides_data_by_transparency():
+    info = _accountability_info()
+    info = PenaAccountabilityInfo(
+        **{
+            **info.__dict__,
+            "budget_visibility": "private",
+            "expenses_visibility": "summary",
+        }
+    )
+
+    class _UseCase:
+        def get_for_pena(self, *, pena_guid: str):
+            assert pena_guid == "pena-1"
+            return info
+
+        def get_player_guid_for_account(self, *, account_id: int):
+            assert account_id == 9
+            return "player-1"
+
+    response = penas_controller.get_pena_accountability(
+        "pena-1",
+        session=_session(user_type="user", user_id=9),
+        use_case=_UseCase(),
+    )
+
+    assert response.balance_cents is None
+    assert response.total_debt_cents is None
+    assert response.member_accounts == []
+    assert response.expenses == []
+    assert response.total_expenses_cents == 2500
+    assert response.my_account is not None
+    assert response.my_account.player_guid == "player-1"
+
+
+def test_get_pena_accountability_maps_not_found_error():
+    class _UseCase:
+        def get_for_pena(self, **_kwargs):
+            raise PenaAccountabilityPenaNotFoundError()
+
+        def get_player_guid_for_account(self, **_kwargs):
+            return None
+
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.get_pena_accountability(
+            "pena-missing",
+            session=_session(user_type="admin", user_id=1),
+            use_case=_UseCase(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "Pena not found"
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidPenaAccountabilityDataError(), 400, "Invalid accountability data"),
+        (PenaAccountabilityPenaNotFoundError(), 404, "Pena not found"),
+        (PenaAccountabilityAccessDeniedError(), 403, "Admin does not manage this pena"),
+    ],
+)
+def test_update_pena_accountability_maps_errors(error, status_code, detail):
+    class _UseCase:
+        def update_settings_for_admin(self, **_kwargs):
+            raise error
+
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.update_pena_accountability(
+            "pena-1",
+            payload=UpdatePenaAccountabilityRequest(balance_cents=0),
+            admin_session=_session(user_type="admin", user_id=3),
+            use_case=_UseCase(),
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+def test_upsert_member_accountability_success_builds_use_case_payload():
+    class _UseCase:
+        def __init__(self):
+            self.last_call = None
+
+        def upsert_member_account_for_admin(self, **kwargs):
+            self.last_call = kwargs
+            return _accountability_info()
+
+    use_case = _UseCase()
+    response = penas_controller.upsert_member_accountability(
+        "pena-1",
+        "player-1",
+        payload=UpsertPenaMemberAccountRequest(debt_cents=400, contribution_cents=100, note="x"),
+        admin_session=_session(user_type="admin", user_id=3),
+        use_case=use_case,
+    )
+
+    assert response.member_accounts[0].player_guid == "player-1"
+    assert use_case.last_call is not None
+    data = use_case.last_call["data"]
+    assert isinstance(data, PenaAccountabilityMemberAccountUpsert)
+    assert data.player_guid == "player-1"
+    assert data.debt_cents == 400
+    assert data.contribution_cents == 100
+    assert data.note == "x"
+
+
+def test_create_pena_expense_success_builds_use_case_payload():
+    class _UseCase:
+        def __init__(self):
+            self.last_call = None
+
+        def create_expense_for_admin(self, **kwargs):
+            self.last_call = kwargs
+            return _accountability_info()
+
+    use_case = _UseCase()
+    response = penas_controller.create_pena_expense(
+        "pena-1",
+        payload=CreatePenaExpenseRequest(
+            title="Travel",
+            category="transport",
+            amount_cents=2000,
+            occurred_on=date(2026, 3, 2),
+            note="bus",
+        ),
+        admin_session=_session(user_type="admin", user_id=3),
+        use_case=use_case,
+    )
+
+    assert response.expenses[0].guid == "expense-1"
+    data = use_case.last_call["data"]
+    assert isinstance(data, PenaAccountabilityExpenseCreate)
+    assert data.title == "Travel"
+    assert data.category == "transport"
+    assert data.amount_cents == 2000
+    assert data.occurred_on == date(2026, 3, 2)
+    assert data.note == "bus"
+
+
+@pytest.mark.parametrize(
+    ("fn_name", "error", "status_code", "detail"),
+    [
+        (
+            "upsert_member_accountability",
+            PenaAccountabilityMemberNotFoundError(),
+            404,
+            "Member not found",
+        ),
+        (
+            "delete_member_accountability",
+            PenaAccountabilityMemberNotFoundError(),
+            404,
+            "Member not found",
+        ),
+        ("delete_pena_expense", PenaAccountabilityExpenseNotFoundError(), 404, "Expense not found"),
+    ],
+)
+def test_accountability_mutations_map_not_found_errors(fn_name, error, status_code, detail):
+    class _UseCase:
+        def upsert_member_account_for_admin(self, **_kwargs):
+            raise error
+
+        def remove_member_account_for_admin(self, **_kwargs):
+            raise error
+
+        def remove_expense_for_admin(self, **_kwargs):
+            raise error
+
+    with pytest.raises(HTTPException) as exc:
+        if fn_name == "upsert_member_accountability":
+            penas_controller.upsert_member_accountability(
+                "pena-1",
+                "player-1",
+                payload=UpsertPenaMemberAccountRequest(debt_cents=0, contribution_cents=0),
+                admin_session=_session(user_type="admin", user_id=1),
+                use_case=_UseCase(),
+            )
+        elif fn_name == "delete_member_accountability":
+            penas_controller.delete_member_accountability(
+                "pena-1",
+                "player-1",
+                admin_session=_session(user_type="admin", user_id=1),
+                use_case=_UseCase(),
+            )
+        else:
+            penas_controller.delete_pena_expense(
+                "pena-1",
+                "expense-1",
+                admin_session=_session(user_type="admin", user_id=1),
+                use_case=_UseCase(),
+            )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail

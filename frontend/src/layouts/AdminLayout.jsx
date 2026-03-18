@@ -1,26 +1,16 @@
-import { Box, Container, Stack, Typography } from '@mui/material'
+import { Box, Container } from '@mui/material'
 import { Outlet } from 'react-router-dom'
-import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
-import { useI18n } from '../i18n/useI18n.js'
 
 export default function AdminLayout() {
-  const { t } = useI18n()
-
   return (
-    <Container maxWidth="lg" sx={{ py: 6 }}>
-      <Stack spacing={4}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={2}>
-          <Box>
-            <Typography variant="h3">{t('app.brand')}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t('dashboard.admin.panelTitle')}
-            </Typography>
-          </Box>
-          <LanguageSwitcher />
-        </Stack>
-
+    <Box sx={{ minHeight: '100vh', py: { xs: 1.25, md: 1.75, xl: 1.25 } }}>
+      <Container
+        maxWidth={false}
+        disableGutters
+        sx={{ px: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }}
+      >
         <Outlet />
-      </Stack>
-    </Container>
+      </Container>
+    </Box>
   )
 }
