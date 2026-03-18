@@ -22,11 +22,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
-import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
@@ -37,6 +36,8 @@ import { useI18n } from '../i18n/useI18n.js'
 import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { userService } from '../services/userService.js'
+
+const AdminInsightsSection = lazy(() => import('./admin/AdminInsightsSection.jsx'))
 
 const defaultProfileForm = () => ({
   name: '',
@@ -1158,26 +1159,28 @@ export default function UserDashboard({
 
                     {selectedSeasonGuid && (
                       <Box id={USER_DASHBOARD_ANCHORS.insights} data-sitemap-anchor>
-                        <AdminInsightsSection
-                          state={{
-                            selectedSeasonGuid,
-                            insightsScope,
-                            insightsLoading,
-                            insightsReport,
-                            insightsComparisonReport,
-                            insightsComparison,
-                          }}
-                          actions={{
-                            onInsightsScopeChange: setInsightsScope,
-                            onRefreshInsights: handleRefreshInsights,
-                          }}
-                          helpers={{
-                            t,
-                            formatDecimal,
-                            formatSignedDecimal,
-                            formatPercent,
-                          }}
-                        />
+                        <Suspense fallback={<LinearProgress />}>
+                          <AdminInsightsSection
+                            state={{
+                              selectedSeasonGuid,
+                              insightsScope,
+                              insightsLoading,
+                              insightsReport,
+                              insightsComparisonReport,
+                              insightsComparison,
+                            }}
+                            actions={{
+                              onInsightsScopeChange: setInsightsScope,
+                              onRefreshInsights: handleRefreshInsights,
+                            }}
+                            helpers={{
+                              t,
+                              formatDecimal,
+                              formatSignedDecimal,
+                              formatPercent,
+                            }}
+                          />
+                        </Suspense>
                       </Box>
                     )}
                   </Stack>
