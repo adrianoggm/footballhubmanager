@@ -742,23 +742,23 @@ export default function AdminAccountabilitySection({
                           entry.guid ||
                           `${entry.title || 'expense'}-${entry.occurred_on || 'unknown'}-${index}`
                         return (
-                        <TableRow key={expenseRowKey}>
-                          <TableCell>{entry.title}</TableCell>
-                          <TableCell>{entry.category || '-'}</TableCell>
-                          <TableCell>{entry.occurred_on}</TableCell>
-                          <TableCell align="right">{formatMoney(entry.amount_cents)}</TableCell>
-                          <TableCell>{entry.note || '-'}</TableCell>
-                          <TableCell>
-                            <Button
-                              size="small"
-                              color="error"
-                              variant="text"
-                              onClick={() => handleDeleteExpense(entry.guid)}
-                            >
-                              {t('dashboard.admin.accountability.delete')}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                          <TableRow key={expenseRowKey}>
+                            <TableCell>{entry.title}</TableCell>
+                            <TableCell>{entry.category || '-'}</TableCell>
+                            <TableCell>{entry.occurred_on}</TableCell>
+                            <TableCell align="right">{formatMoney(entry.amount_cents)}</TableCell>
+                            <TableCell>{entry.note || '-'}</TableCell>
+                            <TableCell>
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="text"
+                                onClick={() => handleDeleteExpense(entry.guid)}
+                              >
+                                {t('dashboard.admin.accountability.delete')}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
                         )
                       })}
                     </TableBody>
