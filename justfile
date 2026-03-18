@@ -44,6 +44,10 @@ frontend-check:
     @just frontend-lint
     npm --prefix frontend run build
 
+frontend-fix:
+    npm --prefix frontend run lint:fix
+    npm --prefix frontend run format
+
 test-unit:
     {{venv_python}} -m pytest backend/tests --ignore=backend/tests/integration -q
 
@@ -77,8 +81,17 @@ check:
     @just lint
     @just test-unit
 
+backend-fix:
+    {{venv_python}} -m ruff check --fix backend/src backend/tests
+    {{venv_python}} -m ruff format backend/src backend/tests
+
 quality-all:
     @just format-check
     @just lint
     @just frontend-format-check
     @just frontend-lint
+
+quality-fix-all:
+    @just backend-fix
+    @just frontend-fix
+    @just quality-all
