@@ -1,5 +1,11 @@
 import logging
 
+from api.dependencies.use_cases import (
+    get_login_admin_use_case,
+    get_login_user_use_case,
+    get_register_admin_use_case,
+    get_register_user_use_case,
+)
 from api.interface.controller.v1.model.request.auth_request import (
     LoginRequest,
     RegisterAdminRequest,
@@ -13,9 +19,6 @@ from auth.application.use_cases.login import (
     LoginUserUseCase,
 )
 from auth.dependencies import get_current_session
-from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
-    SqlAlchemyAuthAccountRepository,
-)
 from auth.session import create_session, invalidate_session
 from fastapi import APIRouter, Depends, HTTPException, status
 from persistence.application.use_cases import (
@@ -29,34 +32,11 @@ from persistence.application.use_cases import (
     UserRegistration,
     UserUsernameExistsError,
 )
-from persistence.infrastructure.repository.db.registration_repository import (
-    SqlAlchemyRegistrationRepository,
-)
 from persistence.module import get_db
 from sqlalchemy.orm import Session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def get_login_user_use_case(db: Session = Depends(get_db)) -> LoginUserUseCase:
-    repo = SqlAlchemyAuthAccountRepository(db)
-    return LoginUserUseCase(repo)
-
-
-def get_login_admin_use_case(db: Session = Depends(get_db)) -> LoginAdminUseCase:
-    repo = SqlAlchemyAuthAccountRepository(db)
-    return LoginAdminUseCase(repo)
-
-
-def get_register_user_use_case(db: Session = Depends(get_db)) -> RegisterUserUseCase:
-    repository = SqlAlchemyRegistrationRepository(db)
-    return RegisterUserUseCase(repository)
-
-
-def get_register_admin_use_case(db: Session = Depends(get_db)) -> RegisterAdminUseCase:
-    repository = SqlAlchemyRegistrationRepository(db)
-    return RegisterAdminUseCase(repository)
 
 
 @router.post("/auth/login", response_model=LoginResponse)
@@ -141,12 +121,16 @@ def register_user(
     except UserInvalidNationalityError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
 
-    session = create_session(
-        db,
-        user_id=registered.account_id,
-        user_guid=registered.account_guid,
-        user_type="user",
-    )
+    try:
+        session = create_session(
+            db,
+            user_id=registered.account_id,
+            user_guid=registered.account_guid,
+            user_type="user",
+        )
+    except Exception:
+        db.rollback()
+        raise
     logger.info("User register ok: %s", registered.account_guid)
     return LoginResponse(
         token=session.token,
@@ -180,12 +164,16 @@ def register_admin(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid admin registration data"
         )
 
-    session = create_session(
-        db,
-        user_id=registered.admin_id,
-        user_guid=registered.admin_guid,
-        user_type="admin",
-    )
+    try:
+        session = create_session(
+            db,
+            user_id=registered.admin_id,
+            user_guid=registered.admin_guid,
+            user_type="admin",
+        )
+    except Exception:
+        db.rollback()
+        raise
     logger.info("Admin register ok: %s", registered.admin_guid)
     return LoginResponse(
         token=session.token,

@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import season_competition_controller as controller
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
@@ -20,9 +21,12 @@ from api.interface.controller.v1.model.request.season_competition_request import
 )
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.ports.season_competition_repository import SeasonPlayerFilters
-from persistence.application.use_cases.manage_season_competition import (
+from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonInsightsDataError,
+    InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerBatchDataError,
+    InvalidSeasonPlayerUpdateDataError,
+    PenaSeasonAccessDeniedError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
     SeasonMatchDetailInfo,
@@ -31,11 +35,17 @@ from persistence.application.use_cases.manage_season_competition import (
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
+    SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsInfo,
+    SeasonMatchStatsMismatchError,
     SeasonMatchSummaryInfo,
     SeasonMatchTeamInfo,
     SeasonPlayerAlreadyRegisteredError,
     SeasonPlayerInfo,
+    SeasonPlayerInMatchError,
+    SeasonPlayerNotFoundError,
+    SeasonPlayerNotInPenaError,
+    SeasonPlayersFilters,
     SeasonPlayersPage,
 )
 
@@ -158,6 +168,40 @@ def _matches_page(total: int, page: int = 1, page_size: int = 20) -> SeasonMatch
     return SeasonMatchesPage(items=[summary], page=page, page_size=page_size, total=total)
 
 
+def _match_payload() -> CreateSeasonMatchRequest:
+    return CreateSeasonMatchRequest(
+        home_player_guid="p1",
+        away_player_guid="p2",
+        match_date=date(2025, 1, 10),
+    )
+
+
+def _match_detail_payload() -> CreateSeasonMatchDetailedRequest:
+    return CreateSeasonMatchDetailedRequest(
+        match_date=date(2025, 1, 10),
+        home_team=MatchTeamCreateRequest(team_name="Home", player_guids=["p1"]),
+        away_team=MatchTeamCreateRequest(team_name="Away", player_guids=["p2"]),
+    )
+
+
+def _match_stats_payload() -> UpdateSeasonMatchStatsRequest:
+    return UpdateSeasonMatchStatsRequest(
+        home_team=MatchTeamStatsRequest(
+            players=[MatchPlayerStatsRequest(player_guid="p1", goals=2, assists=1, saves=0)]
+        ),
+        away_team=MatchTeamStatsRequest(
+            players=[MatchPlayerStatsRequest(player_guid="p2", goals=1, assists=0, saves=0)]
+        ),
+    )
+
+
+def _lineups_payload() -> UpdateSeasonMatchLineupsRequest:
+    return UpdateSeasonMatchLineupsRequest(
+        home_team=MatchTeamLineupsRequest(player_guids=["p1"]),
+        away_team=MatchTeamLineupsRequest(player_guids=["p2"]),
+    )
+
+
 class _UseCaseStub:
     def __init__(self):
         self.last_call: tuple[str, dict] | None = None
@@ -239,6 +283,33 @@ def test_helper_clean_and_page_response():
     page = controller._page_response(_players_page(total=21, page=2, page_size=20))
     assert page.total_pages == 2
     assert page.page == 2
+
+
+def test_helper_clean_many_removes_invalid_values_and_duplicates():
+    assert controller._clean_many(None) == ()
+    assert controller._clean_many("MID") == ()
+    assert controller._clean_many(["  MID ", "mid", "", "GK", None]) == ("MID", "GK")
+
+
+def test_get_season_competition_use_case_builds_expected_dependencies(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    class _UseCase:
+        def __init__(self, repo):
+            captured["repo_type"] = type(repo)
+            self.repo = repo
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonCompetitionRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "ManageSeasonCompetitionUseCase", _UseCase)
+
+    use_case = controller.get_season_competition_use_case(db="db-session")
+    assert isinstance(use_case, _UseCase)
+    assert captured["db"] == "db-session"
+    assert captured["repo_type"] is _Repo
 
 
 def test_helper_match_detail_response_serializes_nested_data():
@@ -353,7 +424,7 @@ def test_list_season_players_success_and_filter_cleaning():
     method, payload = use_case.last_call
     assert method == "list_season_players"
     filters = payload["filters"]
-    assert isinstance(filters, SeasonPlayerFilters)
+    assert isinstance(filters, SeasonPlayersFilters)
     assert filters.name == "Ana"
     assert filters.surname1 is None
     assert filters.search == "text"
@@ -612,13 +683,514 @@ def test_create_season_match_maps_invalid_players_error():
         controller.create_season_match(
             "pena-1",
             "season-1",
-            payload=CreateSeasonMatchRequest(
-                home_player_guid="p1",
-                away_player_guid="p2",
-                match_date=date(2025, 1, 10),
-            ),
+            payload=_match_payload(),
             admin_session=_admin_session(),
             use_case=use_case,
         )
     assert exc.value.status_code == 400
     assert exc.value.detail == "A match requires two different players"
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonPlayerNotFoundError(), 404, "Player not found"),
+        (SeasonPlayerNotInPenaError(), 409, "Player is not linked to this pena"),
+    ],
+)
+def test_register_player_in_season_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["register_player_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.register_player_in_season(
+            "pena-1",
+            "season-1",
+            payload=RegisterSeasonPlayerRequest(player_guid="player-7"),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonPlayerBatchDataError(), 400, "Invalid bulk player registration data"),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonPlayerNotFoundError(), 404, "Player not found"),
+        (SeasonPlayerNotInPenaError(), 409, "Player is not linked to this pena"),
+        (SeasonPlayerAlreadyRegisteredError(), 409, "Player is already registered in this season"),
+    ],
+)
+def test_register_players_in_season_bulk_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["register_players_bulk_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.register_players_in_season_bulk(
+            "pena-1",
+            "season-1",
+            payload=RegisterSeasonPlayersBulkRequest(player_guids=["player-1"]),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonPlayerUpdateDataError(), 400, "Invalid season player update data"),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonPlayerNotFoundError(), 404, "Player is not registered in this season"),
+    ],
+)
+def test_update_season_player_stats_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["update_player_stats_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.update_season_player_stats(
+            "pena-1",
+            "season-1",
+            "player-1",
+            payload=UpdateSeasonPlayerStatsRequest(wins=2),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonPlayerNotFoundError(), 404, "Player is not registered in this season"),
+        (SeasonPlayerInMatchError(), 409, "Player already has matches in this season"),
+    ],
+)
+def test_unregister_player_from_season_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["unregister_player_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.unregister_player_from_season(
+            "pena-1",
+            "season-1",
+            "player-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+def test_list_season_players_sets_role_and_position_filters_for_single_values():
+    use_case = _UseCaseStub()
+    controller.list_season_players(
+        "pena-1",
+        "season-1",
+        page=1,
+        page_size=20,
+        name=None,
+        surname1=None,
+        surname2=None,
+        nationality=None,
+        nickname=None,
+        role=[" MID ", "mid"],
+        position=[" GK "],
+        search=None,
+        order_by="quality_level",
+        order_dir="desc",
+        use_case=use_case,
+        _session=object(),
+    )
+
+    method, payload = use_case.last_call
+    assert method == "list_season_players"
+    filters = payload["filters"]
+    assert filters.role == "MID"
+    assert filters.roles == ("MID",)
+    assert filters.position == "GK"
+    assert filters.positions == ("GK",)
+
+
+def test_list_season_players_maps_pena_not_found():
+    use_case = _UseCaseStub()
+    use_case.error_by_method["list_season_players"] = PenaSeasonPenaNotFoundError()
+
+    with pytest.raises(HTTPException) as exc:
+        controller.list_season_players(
+            "pena-1",
+            "season-1",
+            page=1,
+            page_size=20,
+            name=None,
+            surname1=None,
+            surname2=None,
+            nationality=None,
+            nickname=None,
+            role=None,
+            position=None,
+            search=None,
+            order_by="quality_level",
+            order_dir="desc",
+            use_case=use_case,
+            _session=object(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "Pena not found"
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (
+            SeasonMatchPlayersNotInSeasonError(),
+            409,
+            "Both players must be registered in this season",
+        ),
+        (SeasonPlayerNotFoundError(), 404, "Player not found"),
+    ],
+)
+def test_create_season_match_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["create_match_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.create_season_match(
+            "pena-1",
+            "season-1",
+            payload=_match_payload(),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonPlayerUpdateDataError(), 400, "Invalid match result data"),
+        (
+            InvalidSeasonMatchDataError(),
+            400,
+            "Manual match result updates are disabled. Use match stats endpoint",
+        ),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonMatchNotFoundError(), 404, "Match not found"),
+    ],
+)
+def test_update_season_match_result_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["update_match_result_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.update_season_match_result(
+            "pena-1",
+            "season-1",
+            "match-1",
+            payload=UpdateSeasonMatchResultRequest(home_score=2, away_score=1),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonMatchDataError(), 400, "Invalid match update data"),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonMatchNotFoundError(), 404, "Match not found"),
+    ],
+)
+def test_update_season_match_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["update_match_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.update_season_match(
+            "pena-1",
+            "season-1",
+            "match-1",
+            payload=UpdateSeasonMatchRequest(home_team_name="Titans"),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonMatchDataError(), 400, "Invalid match data"),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonMatchInvalidPlayersError(), 400, "A match cannot repeat players across lineups"),
+        (
+            SeasonMatchPlayersNotInSeasonError(),
+            409,
+            "All called-up players must be registered in this season",
+        ),
+        (SeasonPlayerNotFoundError(), 404, "Player not found"),
+    ],
+)
+def test_create_season_match_with_lineups_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["create_match_with_lineups_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.create_season_match_with_lineups(
+            "pena-1",
+            "season-1",
+            payload=_match_detail_payload(),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonMatchDataError(), 400, "Invalid match stats data"),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonMatchNotFoundError(), 404, "Match not found"),
+        (SeasonMatchStatsMismatchError(), 409, "Stats payload must match the exact match lineup"),
+    ],
+)
+def test_update_season_match_stats_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["update_match_stats_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.update_season_match_stats(
+            "pena-1",
+            "season-1",
+            "match-1",
+            payload=_match_stats_payload(),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonMatchDataError(), 400, "Invalid lineup update data"),
+        (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonMatchNotFoundError(), 404, "Match not found"),
+        (SeasonMatchInvalidPlayersError(), 400, "A match cannot repeat players across lineups"),
+        (
+            SeasonMatchPlayersNotInSeasonError(),
+            409,
+            "All called-up players must be registered in this season",
+        ),
+        (SeasonPlayerNotFoundError(), 404, "Player not found"),
+    ],
+)
+def test_update_season_match_lineups_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["update_match_lineups_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.update_season_match_lineups(
+            "pena-1",
+            "season-1",
+            "match-1",
+            payload=_lineups_payload(),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), "Pena not found"),
+        (PenaSeasonNotFoundError(), "Season not found"),
+    ],
+)
+def test_list_season_matches_maps_not_found_errors(error, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["list_season_matches"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.list_season_matches(
+            "pena-1",
+            "season-1",
+            page=1,
+            page_size=20,
+            use_case=use_case,
+            _session=object(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), "Pena not found"),
+        (PenaSeasonNotFoundError(), "Season not found"),
+    ],
+)
+def test_get_season_match_detail_maps_pena_and_season_not_found(error, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["get_match_detail"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.get_season_match_detail(
+            "pena-1",
+            "season-1",
+            "match-1",
+            use_case=use_case,
+            _session=object(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), "Pena not found"),
+        (PenaSeasonNotFoundError(), "Season not found"),
+    ],
+)
+def test_get_match_insights_maps_not_found_errors(error, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["get_match_insights"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.get_match_insights(
+            "pena-1",
+            payload=MatchInsightsRequest(season_guids=["season-1"]),
+            use_case=use_case,
+            _session=object(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidSeasonMatchDataError(), 400, "Invalid match operation"),
+        (PenaSeasonNotFoundError(), 404, "Season not found"),
+        (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (SeasonMatchNotFoundError(), 404, "Match not found"),
+    ],
+)
+def test_delete_season_match_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["delete_match_for_admin"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.delete_season_match(
+            "pena-1",
+            "season-1",
+            "match-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+def test_get_season_standings_passes_cleaned_filters():
+    use_case = _UseCaseStub()
+    controller.get_season_standings(
+        "pena-1",
+        "season-1",
+        page=1,
+        page_size=20,
+        role=[" ATA ", "ata"],
+        position=[" GK "],
+        use_case=use_case,
+        _session=object(),
+    )
+
+    method, payload = use_case.last_call
+    assert method == "get_standings"
+    filters = payload["filters"]
+    assert filters.role == "ATA"
+    assert filters.roles == ("ATA",)
+    assert filters.position == "GK"
+    assert filters.positions == ("GK",)
+
+
+@pytest.mark.parametrize(
+    ("error", "detail"),
+    [
+        (PenaSeasonPenaNotFoundError(), "Pena not found"),
+        (PenaSeasonNotFoundError(), "Season not found"),
+    ],
+)
+def test_get_season_standings_maps_not_found_errors(error, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["get_standings"] = error
+
+    with pytest.raises(HTTPException) as exc:
+        controller.get_season_standings(
+            "pena-1",
+            "season-1",
+            page=1,
+            page_size=20,
+            role=None,
+            position=None,
+            use_case=use_case,
+            _session=object(),
+        )
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == detail

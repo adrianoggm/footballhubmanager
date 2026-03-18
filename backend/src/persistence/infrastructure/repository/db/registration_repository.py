@@ -1,10 +1,10 @@
-from persistence.application.ports.registration_repository import (
-    AdminRegistrationRepository,
+from persistence.application.ports.registration_port import (
+    AdminRegistrationPort,
     DuplicateUsernameError,
     InvalidNationalityError,
     RegisteredAdminResult,
     RegisteredUserResult,
-    UserRegistrationRepository,
+    UserRegistrationPort,
 )
 from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
 from persistence.domain.label_config import (
@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistrationRepository):
+class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPort):
     def __init__(self, session: Session):
         self.session = session
 
@@ -51,7 +51,7 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
                 id_player_account=account.id,
             )
             self.session.add(player)
-            self.session.commit()
+            self.session.flush()
             self.session.refresh(account)
             self.session.refresh(player)
             return RegisteredUserResult(
@@ -108,7 +108,7 @@ class SqlAlchemyRegistrationRepository(UserRegistrationRepository, AdminRegistra
                     )
                 )
 
-            self.session.commit()
+            self.session.flush()
             self.session.refresh(admin)
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
         except IntegrityError as exc:

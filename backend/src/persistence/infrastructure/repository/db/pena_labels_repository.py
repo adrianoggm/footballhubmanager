@@ -1,5 +1,5 @@
-from persistence.application.ports.pena_labels_repository import (
-    PenaLabelsRepository,
+from persistence.application.ports.pena_labels_port import (
+    PenaLabelsPort,
     PenaLabelsResult,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
@@ -22,7 +22,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPenaLabelsRepository(PenaLabelsRepository):
+class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
     def __init__(self, session: Session):
         self.session = session
 

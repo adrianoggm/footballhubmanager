@@ -2,6 +2,7 @@ import math
 from dataclasses import asdict
 from datetime import date
 
+from api.dependencies.use_cases import get_manage_pena_seasons_use_case
 from api.interface.controller.v1.model.request.pena_seasons_request import (
     CreatePenaSeasonRequest,
     UpdatePenaSeasonRequest,
@@ -12,7 +13,7 @@ from api.interface.controller.v1.model.response.pena_seasons_response import (
 )
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from persistence.application.use_cases.manage_pena_seasons import (
+from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
     PenaSeasonAccessDeniedError,
@@ -22,20 +23,8 @@ from persistence.application.use_cases.manage_pena_seasons import (
     PenaSeasonPenaNotFoundError,
     PenaSeasonUpdate,
 )
-from persistence.infrastructure.repository.db.pena_season_repository import (
-    SqlAlchemyPenaSeasonRepository,
-)
-from persistence.module import get_db
-from sqlalchemy.orm import Session
 
 router = APIRouter()
-
-
-def get_manage_pena_seasons_use_case(
-    db: Session = Depends(get_db),
-) -> ManagePenaSeasonsUseCase:
-    repository = SqlAlchemyPenaSeasonRepository(db)
-    return ManagePenaSeasonsUseCase(repository)
 
 
 @router.get("/penas/{pena_guid}/seasons", response_model=PenaSeasonsPageResponse)

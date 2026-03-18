@@ -1,5 +1,5 @@
-from persistence.application.ports.pena_query_repository import PenasPageResult, PenaSummary
-from persistence.application.use_cases.get_penas import GetPenasUseCase
+from persistence.application.ports.pena_query_port import PenasPageResult, PenaSummary
+from persistence.application.use_cases.get_penas_usecase import GetPenasUseCase
 
 
 class _Repo:

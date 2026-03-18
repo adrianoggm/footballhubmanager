@@ -1,8 +1,8 @@
-from persistence.application.ports.pena_membership_repository import (
+from persistence.application.ports.pena_membership_port import (
     InvalidNationalityError,
     InvalidRoleLabelError,
     PenaMembershipNotFoundError,
-    PenaMembershipRepository,
+    PenaMembershipPort,
     PenaMembershipResult,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPenaMembershipRepository(PenaMembershipRepository):
+class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
     def __init__(self, session: Session):
         self.session = session
 

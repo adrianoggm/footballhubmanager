@@ -215,7 +215,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Stack direction="row" spacing={1}>
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                 <Button
                                   variant={selectedMatchGuid === match.guid ? 'contained' : 'text'}
                                   size="small"
@@ -279,7 +279,13 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                           </Typography>
                         </Box>
 
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          flexWrap="wrap"
+                          useFlexGap
+                        >
                           <Typography variant="body2" color="text.secondary">
                             {t('dashboard.admin.matches.status')}:
                           </Typography>
@@ -339,7 +345,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                             { key: 'home_team', team: selectedMatchDetail.home_team },
                             { key: 'away_team', team: selectedMatchDetail.away_team },
                           ].map(({ key, team }) => (
-                            <Grid key={key} item xs={12} md={6}>
+                            <Grid key={key} item xs={12} lg={6} sx={{ minWidth: 0 }}>
                               <Typography variant="subtitle2" sx={{ mb: 1 }}>
                                 {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
                               </Typography>

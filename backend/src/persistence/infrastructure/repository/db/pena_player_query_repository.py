@@ -1,6 +1,6 @@
-from persistence.application.ports.pena_player_query_repository import (
+from persistence.application.ports.pena_player_query_port import (
     PenaPlayerInfoResult,
-    PenaPlayerQueryRepository,
+    PenaPlayerQueryPort,
     PenaPlayersPageResult,
 )
 from persistence.domain.entity import Pena, PenaPlayer, PenaRole, Player
@@ -8,7 +8,7 @@ from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryRepository):
+class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryPort):
     def __init__(self, session: Session):
         self.session = session
 

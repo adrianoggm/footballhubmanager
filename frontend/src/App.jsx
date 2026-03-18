@@ -1,17 +1,8 @@
-import { Alert, Box, Chip, Container, Grid, Paper, Stack, Typography } from '@mui/material'
-import AuthPanel from './components/AuthPanel.jsx'
-import AdminDashboard from './components/AdminDashboard.jsx'
-import LanguageSwitcher from './components/LanguageSwitcher.jsx'
-import UserDashboard from './components/UserDashboard.jsx'
 import { useAuth } from './hooks/useAuth.js'
-import { useI18n } from './i18n/useI18n.js'
+import AppRouter from './router/AppRouter.jsx'
 
 export default function App() {
   const auth = useAuth()
-  const { t } = useI18n()
-  const isAuthenticated = Boolean(auth.token)
-  const isAdmin = auth.session?.user_type === 'admin'
-  const isUser = auth.session?.user_type === 'user'
 
   const handleLogout = async () => {
     try {
@@ -21,6 +12,8 @@ export default function App() {
     }
   }
 
+
+  
   if (!isAuthenticated) {
     return (
       <Box

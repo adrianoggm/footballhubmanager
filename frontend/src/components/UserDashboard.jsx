@@ -23,9 +23,17 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
+import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
+import DashboardShell from './dashboard/DashboardShell.jsx'
+import UserAccountabilitySection from './user/UserAccountabilitySection.jsx'
+import { useInsightsReport } from '../hooks/useInsightsReport.js'
+import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { userService } from '../services/userService.js'
 
@@ -87,7 +95,21 @@ const mapDashboardErrorMessage = (error, t) => {
   return error.message
 }
 
-export default function UserDashboard({ session, onLogout }) {
+const USER_HERO_SUBTITLE_KEY_BY_SECTION = {
+  join: 'dashboard.user.heroSections.join',
+  membership: 'dashboard.user.heroSections.membership',
+  accountability: 'dashboard.user.heroSections.accountability',
+  standings: 'dashboard.user.heroSections.standings',
+  matches: 'dashboard.user.heroSections.matches',
+  insights: 'dashboard.user.heroSections.insights',
+}
+
+export default function UserDashboard({
+  session,
+  onLogout,
+  routeSectionId = '',
+  onSectionChange = null,
+}) {
   const { t } = useI18n()
   const [initializing, setInitializing] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -110,16 +132,8 @@ export default function UserDashboard({ session, onLogout }) {
   const [seasonMatches, setSeasonMatches] = useState([])
   const [seasonDataLoading, setSeasonDataLoading] = useState(false)
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [insightsReport, setInsightsReport] = useState(null)
-  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
-  const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
-  const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
-  const [matchDetailLoading, setMatchDetailLoading] = useState(false)
   const seasonListRequestIdRef = useRef(0)
   const seasonDataRequestIdRef = useRef(0)
-  const matchDetailRequestIdRef = useRef(0)
-  const insightsRequestIdRef = useRef(0)
 
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
@@ -131,7 +145,53 @@ export default function UserDashboard({ session, onLogout }) {
     [seasonList, selectedSeasonGuid]
   )
 
+  const {
+    loading: insightsLoading,
+    report: insightsReport,
+    comparisonReport: insightsComparisonReport,
+    refresh: refreshInsightsReport,
+    reset: resetInsightsReport,
+  } = useInsightsReport({
+    fetchInsights: ({ scope, seasonGuids }) =>
+      userService.getMatchInsights(selectedPenaGuid, {
+        scope,
+        season_guids: seasonGuids,
+      }),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
+
+  const {
+    matchGuid: selectedMatchGuid,
+    matchDetail: selectedMatchDetail,
+    isLoading: matchDetailLoading,
+    open: openMatchDetailDialog,
+    close: closeMatchDetailDialog,
+    reset: resetMatchDetailDialog,
+  } = useMatchDetailDialog({
+    fetchDetail: (matchGuid) =>
+      userService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
+
   const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
+  const userQuickNavSections = useMemo(
+    () =>
+      resolveUserDashboardSections({
+        hasSelectedPena: Boolean(selectedPenaGuid),
+        hasSelectedSeason: Boolean(selectedSeasonGuid),
+      }),
+    [selectedPenaGuid, selectedSeasonGuid]
+  )
+  const activeNavSectionId = useMemo(() => {
+    if (!routeSectionId) {
+      return ''
+    }
+    return userQuickNavSections.some((section) => section.id === routeSectionId)
+      ? routeSectionId
+      : ''
+  }, [routeSectionId, userQuickNavSections])
   const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
   const currentStanding = useMemo(() => {
     if (!currentPlayerGuid || standings.length === 0) {
@@ -159,6 +219,25 @@ export default function UserDashboard({ session, onLogout }) {
     () => compareMatchInsightSummaries(insightsReport, insightsComparisonReport),
     [insightsReport, insightsComparisonReport]
   )
+
+  useEffect(() => {
+    if (!activeNavSectionId) {
+      return
+    }
+    const targetSection = userQuickNavSections.find((section) => section.id === activeNavSectionId)
+    if (!targetSection?.anchor) {
+      return
+    }
+
+    const rafId = window.requestAnimationFrame(() => {
+      const node = document.getElementById(targetSection.anchor)
+      if (node) {
+        node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    })
+
+    return () => window.cancelAnimationFrame(rafId)
+  }, [activeNavSectionId, userQuickNavSections])
 
   const runAction = async (action, successMessage = '') => {
     setLoading(true)
@@ -251,8 +330,7 @@ export default function UserDashboard({ session, onLogout }) {
       }
       setStandings([])
       setSeasonMatches([])
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
+      resetMatchDetailDialog()
       return
     }
 
@@ -325,8 +403,7 @@ export default function UserDashboard({ session, onLogout }) {
         setSelectedSeasonGuid('')
         setStandings([])
         setSeasonMatches([])
-        setSelectedMatchGuid('')
-        setSelectedMatchDetail(null)
+        resetMatchDetailDialog()
       }
       return
     }
@@ -374,18 +451,12 @@ export default function UserDashboard({ session, onLogout }) {
   }, [selectedPenaGuid, selectedSeasonGuid, initializing])
 
   useEffect(() => {
-    matchDetailRequestIdRef.current += 1
-    setSelectedMatchGuid('')
-    setSelectedMatchDetail(null)
-    setMatchDetailLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid])
+    resetMatchDetailDialog()
+  }, [resetMatchDetailDialog, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    insightsRequestIdRef.current += 1
-    setInsightsReport(null)
-    setInsightsComparisonReport(null)
-    setInsightsLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
+    resetInsightsReport()
+  }, [resetInsightsReport, selectedPenaGuid, selectedSeasonGuid, insightsScope])
 
   const onProfileField = (name) => (event) => {
     setProfileForm((prev) => ({ ...prev, [name]: event.target.value }))
@@ -479,100 +550,99 @@ export default function UserDashboard({ session, onLogout }) {
     }, t('dashboard.user.noticeLeftPena'))
   }
 
-  const loadScopeInsightReport = async (penaGuid, scope) => {
-    const seasonGuids =
-      scope === 'all_seasons'
-        ? seasonList.map((season) => season.guid).filter(Boolean)
-        : [selectedSeasonGuid].filter(Boolean)
-
-    if (!seasonGuids.length) {
-      return null
-    }
-
-    return userService.getMatchInsights(penaGuid, {
-      scope,
-      season_guids: seasonGuids,
-    })
-  }
-
   const handleRefreshInsights = async () => {
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
 
-    const requestId = insightsRequestIdRef.current + 1
-    insightsRequestIdRef.current = requestId
-
-    setInsightsLoading(true)
     setError(null)
-
-    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
-    try {
-      const [primaryReport, comparisonReport] = await Promise.all([
-        loadScopeInsightReport(selectedPenaGuid, insightsScope),
-        seasonList.length > 1 || comparisonScope === 'selected_season'
-          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
-          : Promise.resolve(null),
-      ])
-      if (requestId !== insightsRequestIdRef.current) {
-        return
-      }
-      setInsightsReport(primaryReport)
-      setInsightsComparisonReport(comparisonReport)
-    } catch (requestError) {
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === insightsRequestIdRef.current) {
-        setInsightsLoading(false)
-      }
-    }
+    await refreshInsightsReport({
+      scope: insightsScope,
+      selectedSeasonGuid,
+      seasonList,
+    })
   }
 
   const handleOpenMatchDetail = async (matchGuid) => {
     if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
       return
     }
-    const requestId = matchDetailRequestIdRef.current + 1
-    matchDetailRequestIdRef.current = requestId
-    setSelectedMatchGuid(matchGuid)
-    setMatchDetailLoading(true)
     setError(null)
-    try {
-      const detail = await userService.getMatchDetail(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        matchGuid
-      )
-      if (requestId !== matchDetailRequestIdRef.current) {
-        return
-      }
-      setSelectedMatchDetail(detail)
-    } catch (requestError) {
-      if (requestId !== matchDetailRequestIdRef.current) {
-        return
-      }
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === matchDetailRequestIdRef.current) {
-        setMatchDetailLoading(false)
-      }
-    }
+    await openMatchDetailDialog(matchGuid)
   }
 
   const handleCloseMatchDetail = () => {
-    matchDetailRequestIdRef.current += 1
-    setSelectedMatchGuid('')
-    setSelectedMatchDetail(null)
-    setMatchDetailLoading(false)
+    closeMatchDetailDialog()
   }
+
+  const handleNavigateToSection = (sectionId) => {
+    if (onSectionChange) {
+      onSectionChange(sectionId)
+      return
+    }
+    const targetSection = userQuickNavSections.find((section) => section.id === sectionId)
+    const node = targetSection?.anchor ? document.getElementById(targetSection.anchor) : null
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  const selectedSeasonLabel = selectedSeason
+    ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
+    : t('dashboard.user.noSeasonsAvailable')
+
+  const profileDisplayName = [profile?.name, profile?.surname1, profile?.surname2]
+    .filter(Boolean)
+    .join(' ')
+
+  const userNavItems = userQuickNavSections.map((section) => ({
+    id: section.id,
+    label: t(section.titleKey),
+    icon: section.id,
+  }))
+  const activeUserSection =
+    userQuickNavSections.find((section) => section.id === activeNavSectionId) ||
+    userQuickNavSections[0] ||
+    null
+  const activeUserSectionLabel = activeUserSection
+    ? t(activeUserSection.titleKey)
+    : t('dashboard.user.panelTitle')
+  const activeUserHeroSubtitle = t(
+    USER_HERO_SUBTITLE_KEY_BY_SECTION[activeUserSection?.id] || 'dashboard.user.heroSubtitle'
+  )
+
+  const userSummaryCards = [
+    {
+      label: t('dashboard.user.myPenasTitle'),
+      value: String(penas.length),
+      helper: selectedPena?.name || t('dashboard.user.noPenasLinked'),
+      helperLabel: t('dashboard.common.summaryMeta.activePena'),
+      tone: 'secondary',
+    },
+    {
+      label: t('dashboard.user.selectedSeason'),
+      value: selectedSeason ? selectedSeasonLabel : '-',
+      helper: selectedPena ? selectedPena.name : t('dashboard.user.noPenasLinked'),
+      helperLabel: t('dashboard.common.summaryMeta.activePena'),
+      tone: 'primary',
+    },
+    {
+      label: t('dashboard.user.standingsTitle'),
+      value: currentStanding ? `#${currentStanding.rank}` : '-',
+      helper: currentStanding
+        ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
+        : t('dashboard.user.notInStandingsYet'),
+      helperLabel: t('dashboard.common.summaryMeta.points'),
+      tone: 'info',
+    },
+    {
+      label: t('dashboard.user.matchesTitle'),
+      value: String(orderedSeasonMatches.length),
+      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.user.noMatchesForSeason'),
+      helperLabel: t('dashboard.common.summaryMeta.season'),
+      tone: 'warning',
+    },
+  ]
 
   if (initializing) {
     return (
@@ -584,17 +654,60 @@ export default function UserDashboard({ session, onLogout }) {
   }
 
   return (
-    <Stack spacing={3}>
-      <Card>
-        <CardContent>
-          <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h4">{t('dashboard.user.panelTitle')}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.common.loggedAs')} <strong>{session?.user_guid || '-'}</strong>
-              </Typography>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+    <DashboardShell
+      brand={t('app.brand')}
+      brandShort="FH"
+      railLabel={t('dashboard.user.panelTitle')}
+      navItems={userNavItems}
+      activeNavId={activeNavSectionId}
+      onNavChange={handleNavigateToSection}
+      title={activeUserSectionLabel}
+      subtitle={activeUserHeroSubtitle}
+      badges={
+        <>
+          <Chip
+            size="small"
+            color="secondary"
+            label={selectedPena?.name || t('dashboard.user.noPenasLinked')}
+          />
+          <Chip size="small" color="primary" label={selectedSeason ? selectedSeasonLabel : '-'} />
+          {membership?.role ? (
+            <Chip size="small" label={membership.role} sx={labelChipSx(membership.role_color)} />
+          ) : null}
+          {currentStanding ? (
+            <Chip
+              size="small"
+              color="info"
+              label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
+            />
+          ) : null}
+        </>
+      }
+      headerAside={
+        <Stack spacing={0.95}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={0.9}
+            alignItems={{ sm: 'center' }}
+            justifyContent="space-between"
+          >
+            <DashboardIdentitySlot
+              title={t('dashboard.common.identityTitle')}
+              name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+              subtitle={profileDisplayName || ''}
+              placeholderLabel={t('dashboard.common.identityPlaceholder')}
+              imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
+              imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+            />
+
+            <Stack
+              direction="row"
+              spacing={0.6}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ sm: 'flex-end' }}
+            >
+              <LanguageSwitcher />
               <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
                 {t('dashboard.user.openSettings')}
               </Button>
@@ -610,14 +723,55 @@ export default function UserDashboard({ session, onLogout }) {
               </Button>
             </Stack>
           </Stack>
-        </CardContent>
-      </Card>
 
+          <Grid container spacing={0.85}>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.user.selectedPena')}>
+                <TextField
+                  select
+                  size="small"
+                  value={selectedPenaGuid}
+                  onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                  inputProps={{ 'aria-label': t('dashboard.user.selectedPena') }}
+                  fullWidth
+                >
+                  {penas.map((pena) => (
+                    <MenuItem key={pena.guid} value={pena.guid}>
+                      {pena.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </DashboardControlField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.user.selectedSeason')}>
+                <TextField
+                  select
+                  size="small"
+                  value={selectedSeasonGuid}
+                  onChange={(event) => setSelectedSeasonGuid(event.target.value)}
+                  disabled={!selectedPenaGuid || !seasonList.length || loading}
+                  inputProps={{ 'aria-label': t('dashboard.user.selectedSeason') }}
+                  fullWidth
+                >
+                  {seasonList.map((season) => (
+                    <MenuItem key={season.guid} value={season.guid}>
+                      {formatDate(season.start_date)} - {formatDate(season.end_date)}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </DashboardControlField>
+            </Grid>
+          </Grid>
+        </Stack>
+      }
+      summaryCards={userSummaryCards}
+    >
       {loading && <LinearProgress />}
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity="success">{notice}</Alert>}
 
-      <Card>
+      <Card id={USER_DASHBOARD_ANCHORS.join} data-sitemap-anchor>
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="h6">{t('dashboard.user.joinTitle')}</Typography>
@@ -644,38 +798,18 @@ export default function UserDashboard({ session, onLogout }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id={USER_DASHBOARD_ANCHORS.membership} data-sitemap-anchor>
         <CardContent>
           <Stack spacing={2.5}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={1.5}
-              alignItems={{ md: 'center' }}
-            >
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="h6">{t('dashboard.user.myPenasTitle')}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.user.linkedCount', {
-                    count: penas.length,
-                    suffix: penas.length === 1 ? '' : 's',
-                  })}
-                </Typography>
-              </Box>
-              <TextField
-                select
-                size="small"
-                label={t('dashboard.user.selectedPena')}
-                value={selectedPenaGuid}
-                onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                sx={{ minWidth: 280 }}
-              >
-                {penas.map((pena) => (
-                  <MenuItem key={pena.guid} value={pena.guid}>
-                    {pena.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
+            <Box>
+              <Typography variant="h6">{t('dashboard.user.myPenasTitle')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.user.linkedCount', {
+                  count: penas.length,
+                  suffix: penas.length === 1 ? '' : 's',
+                })}
+              </Typography>
+            </Box>
 
             <Stack direction="row" flexWrap="wrap" gap={1}>
               {penas.map((pena) => (
@@ -732,32 +866,24 @@ export default function UserDashboard({ session, onLogout }) {
                       {t('dashboard.user.leaveHint')}
                     </Typography>
 
-                    <TextField
-                      select
-                      size="small"
-                      label={t('dashboard.user.selectedSeason')}
-                      value={selectedSeasonGuid}
-                      onChange={(event) => setSelectedSeasonGuid(event.target.value)}
-                      disabled={!seasonList.length || loading}
-                      fullWidth
-                    >
-                      {seasonList.map((season) => (
-                        <MenuItem key={season.guid} value={season.guid}>
-                          {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
                     {!seasonList.length && (
                       <Typography variant="body2" color="text.secondary">
                         {t('dashboard.user.noSeasonsAvailable')}
                       </Typography>
                     )}
 
+                    <Box id={USER_DASHBOARD_ANCHORS.accountability} data-sitemap-anchor>
+                      <UserAccountabilitySection
+                        penaGuid={selectedPenaGuid}
+                        currentPlayerGuid={currentPlayerGuid}
+                        t={t}
+                      />
+                    </Box>
+
                     {selectedSeason && (
                       <Typography variant="body2" color="text.secondary">
                         {t('dashboard.user.statsReadOnlyHint', {
-                          season: `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`,
+                          season: selectedSeasonLabel,
                         })}
                       </Typography>
                     )}
@@ -766,7 +892,13 @@ export default function UserDashboard({ session, onLogout }) {
 
                     {selectedSeasonGuid && !seasonDataLoading && (
                       <Grid container spacing={2}>
-                        <Grid item xs={12} md={12}>
+                        <Grid
+                          item
+                          xs={12}
+                          md={12}
+                          id={USER_DASHBOARD_ANCHORS.standings}
+                          data-sitemap-anchor
+                        >
                           <Card variant="outlined">
                             <CardContent>
                               <Stack spacing={1.5}>
@@ -954,7 +1086,13 @@ export default function UserDashboard({ session, onLogout }) {
                           </Card>
                         </Grid>
 
-                        <Grid item xs={12} md={12}>
+                        <Grid
+                          item
+                          xs={12}
+                          md={12}
+                          id={USER_DASHBOARD_ANCHORS.matches}
+                          data-sitemap-anchor
+                        >
                           <Card variant="outlined">
                             <CardContent>
                               <Stack spacing={1.5}>
@@ -1017,26 +1155,28 @@ export default function UserDashboard({ session, onLogout }) {
                     )}
 
                     {selectedSeasonGuid && (
-                      <AdminInsightsSection
-                        state={{
-                          selectedSeasonGuid,
-                          insightsScope,
-                          insightsLoading,
-                          insightsReport,
-                          insightsComparisonReport,
-                          insightsComparison,
-                        }}
-                        actions={{
-                          onInsightsScopeChange: setInsightsScope,
-                          onRefreshInsights: handleRefreshInsights,
-                        }}
-                        helpers={{
-                          t,
-                          formatDecimal,
-                          formatSignedDecimal,
-                          formatPercent,
-                        }}
-                      />
+                      <Box id={USER_DASHBOARD_ANCHORS.insights} data-sitemap-anchor>
+                        <AdminInsightsSection
+                          state={{
+                            selectedSeasonGuid,
+                            insightsScope,
+                            insightsLoading,
+                            insightsReport,
+                            insightsComparisonReport,
+                            insightsComparison,
+                          }}
+                          actions={{
+                            onInsightsScopeChange: setInsightsScope,
+                            onRefreshInsights: handleRefreshInsights,
+                          }}
+                          helpers={{
+                            t,
+                            formatDecimal,
+                            formatSignedDecimal,
+                            formatPercent,
+                          }}
+                        />
+                      </Box>
                     )}
                   </Stack>
                 </CardContent>
@@ -1112,11 +1252,6 @@ export default function UserDashboard({ session, onLogout }) {
                 </MenuItem>
               ))}
             </TextField>
-            {profile?.guid && (
-              <Typography variant="caption" color="text.secondary">
-                {t('dashboard.user.playerGuid', { guid: profile.guid })}
-              </Typography>
-            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1128,6 +1263,6 @@ export default function UserDashboard({ session, onLogout }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </Stack>
+    </DashboardShell>
   )
 }

@@ -1,4 +1,4 @@
-from persistence.application.use_cases.get_nationalities import GetNationalitiesUseCase
+from persistence.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 
 
 class _Repo:

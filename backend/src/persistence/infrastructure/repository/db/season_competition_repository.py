@@ -1,6 +1,6 @@
 from datetime import date
 
-from persistence.application.ports.season_competition_repository import (
+from persistence.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonDateRangeError,
     InvalidSeasonPlayerStatsError,
@@ -20,7 +20,7 @@ from persistence.application.ports.season_competition_repository import (
     PlayerNotFoundError,
     PlayerNotInPenaError,
     SamePlayerMatchError,
-    SeasonCompetitionRepository,
+    SeasonCompetitionPort,
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
     SeasonPlayerAlreadyRegisteredError,
@@ -53,7 +53,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionRepository):
+class SqlAlchemySeasonCompetitionRepository(SeasonCompetitionPort):
     def __init__(self, session: Session):
         self.session = session
 

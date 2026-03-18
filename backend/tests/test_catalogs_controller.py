@@ -1,3 +1,4 @@
+from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import catalogs_controller
 
 
@@ -13,8 +14,8 @@ def test_get_nationalities_use_case_builds_expected_dependencies(monkeypatch):
             captured["repo_type"] = type(repo)
             self.repo = repo
 
-    monkeypatch.setattr(catalogs_controller, "SqlAlchemyNationalityQueryRepository", _Repo)
-    monkeypatch.setattr(catalogs_controller, "GetNationalitiesUseCase", _UseCase)
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyNationalityQueryRepository", _Repo)
+    monkeypatch.setattr(use_case_dependencies, "GetNationalitiesUseCase", _UseCase)
 
     use_case = catalogs_controller.get_nationalities_use_case(db="db-session")
     assert isinstance(use_case, _UseCase)

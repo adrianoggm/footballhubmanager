@@ -15,8 +15,6 @@ import {
   LinearProgress,
   MenuItem,
   Stack,
-  Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -30,14 +28,22 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
+import { useInsightsReport } from '../hooks/useInsightsReport.js'
+import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
+import AdminAccountabilitySection from './admin/AdminAccountabilitySection.jsx'
 import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
 import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
 import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
 import AdminSeasonsSection from './admin/AdminSeasonsSection.jsx'
+import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
+import DashboardShell from './dashboard/DashboardShell.jsx'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
@@ -302,6 +308,15 @@ const normalizePlayerGuids = (value) => {
 
 const setUnionSize = (left, right) => new Set([...left, ...right]).size
 
+const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
+  overview: 'dashboard.admin.heroSections.overview',
+  seasons: 'dashboard.admin.heroSections.seasons',
+  accountability: 'dashboard.admin.heroSections.accountability',
+  players: 'dashboard.admin.heroSections.players',
+  matches: 'dashboard.admin.heroSections.matches',
+  standings: 'dashboard.admin.heroSections.standings',
+}
+
 const formatDate = (value) => {
   if (!value) {
     return '-'
@@ -422,26 +437,51 @@ const buildMatchLineupsDraft = (detail) => ({
   away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
 })
 
-const collectPagedItems = async (fetchPage) => {
-  const items = []
-  let page = 1
-  while (true) {
-    const response = await fetchPage(page)
-    const pageItems = response.items || []
-    items.push(...pageItems)
-    const totalPages = Number(response.total_pages || 0)
-    if (totalPages && page >= totalPages) {
-      break
+const collectPagedItems = async (fetchPage, { maxConcurrent = 3 } = {}) => {
+  const firstResponse = await fetchPage(1)
+  const firstItems = firstResponse.items || []
+  const totalPages = Number(firstResponse.total_pages || 0)
+  const items = [...firstItems]
+
+  if (!totalPages) {
+    let page = 2
+    while (true) {
+      const response = await fetchPage(page)
+      const pageItems = response.items || []
+      if (!pageItems.length) {
+        break
+      }
+      items.push(...pageItems)
+      page += 1
     }
-    if (!totalPages && !pageItems.length) {
-      break
-    }
-    page += 1
+    return items
   }
+
+  if (totalPages <= 1) {
+    return items
+  }
+
+  for (let startPage = 2; startPage <= totalPages; startPage += maxConcurrent) {
+    const endPage = Math.min(totalPages, startPage + maxConcurrent - 1)
+    const batchPages = Array.from(
+      { length: endPage - startPage + 1 },
+      (_, index) => startPage + index
+    )
+    const batchResponses = await Promise.all(batchPages.map((page) => fetchPage(page)))
+    batchResponses.forEach((response) => {
+      items.push(...(response.items || []))
+    })
+  }
+
   return items
 }
 
-export default function AdminDashboard({ session, onLogout }) {
+export default function AdminDashboard({
+  session,
+  onLogout,
+  routeSectionId = '',
+  onSectionChange = null,
+}) {
   const { language, t } = useI18n()
   const seasonMatchesRequestIdRef = useRef(0)
   const penaDataRequestIdRef = useRef(0)
@@ -454,7 +494,7 @@ export default function AdminDashboard({ session, onLogout }) {
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
-  const [activeSection, setActiveSection] = useState('overview')
+  const [activeSection, setActiveSection] = useState(routeSectionId || 'overview')
 
   const [activeSeason, setActiveSeason] = useState(null)
   const [seasonList, setSeasonList] = useState([])
@@ -472,18 +512,10 @@ export default function AdminDashboard({ session, onLogout }) {
   const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
   const [matchStatsDraft, setMatchStatsDraft] = useState(null)
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
-  const [overviewMatchGuid, setOverviewMatchGuid] = useState('')
-  const [overviewMatchDetail, setOverviewMatchDetail] = useState(null)
-  const [overviewMatchLoading, setOverviewMatchLoading] = useState(false)
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [insightsLoading, setInsightsLoading] = useState(false)
-  const [insightsReport, setInsightsReport] = useState(null)
-  const [insightsComparisonReport, setInsightsComparisonReport] = useState(null)
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
-  const overviewMatchRequestIdRef = useRef(0)
-  const insightsRequestIdRef = useRef(0)
 
   const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
@@ -504,11 +536,13 @@ export default function AdminDashboard({ session, onLogout }) {
   const [pendingRemoveMembershipPlayer, setPendingRemoveMembershipPlayer] = useState(null)
 
   const historySeasons = useMemo(() => {
-    if (!activeSeason) {
-      return seasonList
-    }
-    return seasonList.filter((item) => item.guid !== activeSeason.guid)
-  }, [activeSeason, seasonList])
+    return [...seasonList].sort((left, right) => {
+      if (left.end_date === right.end_date) {
+        return String(right.start_date || '').localeCompare(String(left.start_date || ''))
+      }
+      return String(right.end_date || '').localeCompare(String(left.end_date || ''))
+    })
+  }, [seasonList])
 
   const latestSeasonEndDate = useMemo(() => getLatestSeasonEndDate(seasonList), [seasonList])
 
@@ -521,6 +555,36 @@ export default function AdminDashboard({ session, onLogout }) {
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
     [penas, selectedPenaGuid]
   )
+
+  const {
+    matchGuid: overviewMatchGuid,
+    matchDetail: overviewMatchDetail,
+    isLoading: overviewMatchLoading,
+    open: openOverviewMatchDetailDialog,
+    close: closeOverviewMatchDetailDialog,
+    reset: resetOverviewMatchDetailDialog,
+  } = useMatchDetailDialog({
+    fetchDetail: (matchGuid) =>
+      adminService.getMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
+
+  const {
+    loading: insightsLoading,
+    report: insightsReport,
+    comparisonReport: insightsComparisonReport,
+    refresh: refreshInsightsReport,
+    reset: resetInsightsReport,
+  } = useInsightsReport({
+    fetchInsights: ({ scope, seasonGuids }) =>
+      adminService.getMatchInsights(selectedPenaGuid, {
+        scope,
+        season_guids: seasonGuids,
+      }),
+    onUnauthorized: onLogout,
+    onError: setError,
+  })
 
   const draftRoleLabels = useMemo(
     () => normalizeLabelList(labelsDraft.role_labels || ''),
@@ -561,6 +625,37 @@ export default function AdminDashboard({ session, onLogout }) {
   )
 
   const errorMessage = useMemo(() => (error ? mapDashboardErrorMessage(error, t) : ''), [error, t])
+  const adminSections = useMemo(() => ADMIN_DASHBOARD_SITEMAP, [])
+  const adminSectionIds = useMemo(
+    () => adminSections.map((section) => section.id).filter(Boolean),
+    [adminSections]
+  )
+
+  useEffect(() => {
+    if (
+      routeSectionId &&
+      adminSectionIds.includes(routeSectionId) &&
+      routeSectionId !== activeSection
+    ) {
+      setActiveSection(routeSectionId)
+    }
+  }, [activeSection, adminSectionIds, routeSectionId])
+
+  useEffect(() => {
+    if (!adminSectionIds.includes(activeSection)) {
+      setActiveSection(adminSectionIds[0] || 'overview')
+    }
+  }, [activeSection, adminSectionIds])
+
+  const handleSectionChange = (nextSectionId) => {
+    const resolvedSectionId = adminSectionIds.includes(nextSectionId)
+      ? nextSectionId
+      : adminSectionIds[0] || 'overview'
+    setActiveSection(resolvedSectionId)
+    if (onSectionChange) {
+      onSectionChange(resolvedSectionId)
+    }
+  }
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -1092,20 +1187,19 @@ export default function AdminDashboard({ session, onLogout }) {
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
 
   useEffect(() => {
-    overviewMatchRequestIdRef.current += 1
-    setOverviewMatchGuid('')
-    setOverviewMatchDetail(null)
-    setOverviewMatchLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid])
+    resetOverviewMatchDetailDialog()
+  }, [resetOverviewMatchDetailDialog, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    insightsRequestIdRef.current += 1
-    setInsightsReport(null)
-    setInsightsComparisonReport(null)
-    setInsightsLoading(false)
-  }, [selectedPenaGuid, selectedSeasonGuid, insightsScope])
+    resetInsightsReport()
+  }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
+    const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
+    if (!shouldLoadSeasonMatches) {
+      setSeasonMatchesLoading(false)
+      return
+    }
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
       setSeasonMatches([])
       setSelectedMatchGuid('')
@@ -1150,7 +1244,7 @@ export default function AdminDashboard({ session, onLogout }) {
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
 
   useEffect(() => {
     const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
@@ -1420,7 +1514,7 @@ export default function AdminDashboard({ session, onLogout }) {
   }
 
   const handleSelectSeasonFromHistory = (seasonGuid) => {
-    selectSeason(seasonGuid)
+    selectSeason(selectedSeasonGuid === seasonGuid ? '' : seasonGuid)
   }
 
   const handleSelectHistoricalPlayers = (event) => {
@@ -1637,57 +1731,12 @@ export default function AdminDashboard({ session, onLogout }) {
     if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
       return
     }
-    const requestId = overviewMatchRequestIdRef.current + 1
-    overviewMatchRequestIdRef.current = requestId
-    setOverviewMatchGuid(matchGuid)
-    setOverviewMatchLoading(true)
     setError(null)
-    try {
-      const detail = await adminService.getMatchDetail(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        matchGuid
-      )
-      if (requestId !== overviewMatchRequestIdRef.current) {
-        return
-      }
-      setOverviewMatchDetail(detail)
-    } catch (requestError) {
-      if (requestId !== overviewMatchRequestIdRef.current) {
-        return
-      }
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === overviewMatchRequestIdRef.current) {
-        setOverviewMatchLoading(false)
-      }
-    }
+    await openOverviewMatchDetailDialog(matchGuid)
   }
 
   const handleCloseOverviewMatchDetail = () => {
-    overviewMatchRequestIdRef.current += 1
-    setOverviewMatchGuid('')
-    setOverviewMatchDetail(null)
-    setOverviewMatchLoading(false)
-  }
-
-  const loadScopeInsightReport = async (penaGuid, scope) => {
-    const seasonGuids =
-      scope === 'all_seasons'
-        ? seasonList.map((season) => season.guid).filter(Boolean)
-        : [selectedSeasonGuid].filter(Boolean)
-
-    if (!seasonGuids.length) {
-      return null
-    }
-    return adminService.getMatchInsights(penaGuid, {
-      scope,
-      season_guids: seasonGuids,
-    })
+    closeOverviewMatchDetailDialog()
   }
 
   const handleRefreshInsights = async () => {
@@ -1695,36 +1744,12 @@ export default function AdminDashboard({ session, onLogout }) {
       return
     }
 
-    const requestId = insightsRequestIdRef.current + 1
-    insightsRequestIdRef.current = requestId
-
-    setInsightsLoading(true)
     setError(null)
-
-    const comparisonScope = insightsScope === 'selected_season' ? 'all_seasons' : 'selected_season'
-    try {
-      const [primaryReport, comparisonReport] = await Promise.all([
-        loadScopeInsightReport(selectedPenaGuid, insightsScope),
-        seasonList.length > 1 || comparisonScope === 'selected_season'
-          ? loadScopeInsightReport(selectedPenaGuid, comparisonScope)
-          : Promise.resolve(null),
-      ])
-      if (requestId !== insightsRequestIdRef.current) {
-        return
-      }
-      setInsightsReport(primaryReport)
-      setInsightsComparisonReport(comparisonReport)
-    } catch (requestError) {
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      if (requestId === insightsRequestIdRef.current) {
-        setInsightsLoading(false)
-      }
-    }
+    await refreshInsightsReport({
+      scope: insightsScope,
+      selectedSeasonGuid,
+      seasonList,
+    })
   }
 
   const handleRequestDeleteSeasonMatch = (match) => {
@@ -2027,6 +2052,54 @@ export default function AdminDashboard({ session, onLogout }) {
     },
   })
 
+  const adminNavItems = adminSections.map((section) => ({
+    id: section.id,
+    label: t(section.titleKey),
+    icon: section.id,
+  }))
+  const activeAdminSection = adminSections.find((section) => section.id === activeSection) || null
+  const activeAdminSectionLabel = activeAdminSection
+    ? t(activeAdminSection.titleKey)
+    : t('dashboard.admin.panelTitle')
+  const activeAdminHeroSubtitle = t(
+    ADMIN_HERO_SUBTITLE_KEY_BY_SECTION[activeSection] || 'dashboard.admin.heroSubtitle'
+  )
+
+  const adminSummaryCards = [
+    {
+      label: t('dashboard.admin.overview.currentPena'),
+      value: selectedPena?.name || '-',
+      helper: activeAdminSectionLabel,
+      helperLabel: t('dashboard.common.summaryMeta.section'),
+      tone: 'secondary',
+    },
+    {
+      label: t('dashboard.admin.overview.activeSeason'),
+      value: activeSeason
+        ? t('dashboard.admin.status.configured')
+        : t('dashboard.admin.status.missing'),
+      helper: activeSeasonLabel,
+      helperLabel: t('dashboard.common.summaryMeta.range'),
+      tone: activeSeason ? 'success' : 'warning',
+    },
+    {
+      label: t('dashboard.admin.overview.totalSeasons'),
+      value: String(seasonList.length),
+      helper: latestSeasonEndDate
+        ? selectedSeasonLabel
+        : t('dashboard.admin.status.noSeasonSelected'),
+      helperLabel: t('dashboard.common.summaryMeta.reference'),
+      tone: 'primary',
+    },
+    {
+      label: t('dashboard.admin.overview.seasonPlayers'),
+      value: String(seasonRoster.length),
+      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
+      helperLabel: t('dashboard.common.summaryMeta.season'),
+      tone: 'info',
+    },
+  ]
+
   if (initializing) {
     return (
       <Stack spacing={2}>
@@ -2046,41 +2119,35 @@ export default function AdminDashboard({ session, onLogout }) {
           {/* esto provoca la desalineación, solucionar bug */}
           <Stack spacing={2.5}> 
             <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={2}
-              alignItems={{ md: 'center' }}
-              justifyContent="space-between"
+              direction="row"
+              spacing={0.6}
+              flexWrap="wrap"
+              useFlexGap
+              justifyContent={{ sm: 'flex-end' }}
             >
-              <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {t('dashboard.admin.panelTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.common.loggedAs')} <strong>{session?.user_guid || '-'}</strong>
-                </Typography>
-              </Box>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                <Button
-                  variant="outlined"
-                  onClick={() => runAction(loadDashboard, '')}
-                  disabled={loading}
-                >
-                  {t('dashboard.common.refreshData')}
-                </Button>
-                <Button variant="text" onClick={onLogout} disabled={loading}>
-                  {t('dashboard.common.logout')}
-                </Button>
-              </Stack>
+              <LanguageSwitcher />
+              <Button
+                variant="outlined"
+                onClick={() => runAction(loadDashboard, '')}
+                disabled={loading}
+              >
+                {t('dashboard.common.refreshData')}
+              </Button>
+              <Button variant="text" onClick={onLogout} disabled={loading}>
+                {t('dashboard.common.logout')}
+              </Button>
             </Stack>
+          </Stack>
 
-            <Grid container spacing={1.5}>
-              <Grid item xs={12} md={6}>
+          <Grid container spacing={0.85}>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.admin.currentPena')}>
                 <TextField
                   select
                   size="small"
-                  label={t('dashboard.admin.currentPena')}
                   value={selectedPenaGuid}
                   onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                  inputProps={{ 'aria-label': t('dashboard.admin.currentPena') }}
                   fullWidth
                 >
                   {penas.map((pena) => (
@@ -2089,15 +2156,17 @@ export default function AdminDashboard({ session, onLogout }) {
                     </MenuItem>
                   ))}
                 </TextField>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </DashboardControlField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <DashboardControlField label={t('dashboard.admin.referenceSeason')}>
                 <TextField
                   select
                   size="small"
-                  label={t('dashboard.admin.referenceSeason')}
                   value={selectedSeasonGuid}
                   onChange={handleSeasonSelection}
                   disabled={!seasonList.length}
+                  inputProps={{ 'aria-label': t('dashboard.admin.referenceSeason') }}
                   fullWidth
                 >
                   {seasonList.map((season) => (
@@ -2109,7 +2178,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     </MenuItem>
                   ))}
                 </TextField>
-              </Grid>
+              </DashboardControlField>
             </Grid>
 
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
@@ -2234,7 +2303,7 @@ export default function AdminDashboard({ session, onLogout }) {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={7}>
+          <Grid item xs={12} xl={7} sx={{ minWidth: 0 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2244,17 +2313,23 @@ export default function AdminDashboard({ session, onLogout }) {
                   <Typography variant="body2" color="text.secondary">
                     {t('dashboard.admin.overview.quickActionsDescription')}
                   </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                    <Button variant="outlined" onClick={() => setActiveSection('seasons')}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
                       {t('dashboard.admin.overview.manageSeasons')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('players')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('players')}>
                       {t('dashboard.admin.overview.managePlayers')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('matches')}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleSectionChange('accountability')}
+                    >
+                      {t('dashboard.admin.overview.manageAccountability')}
+                    </Button>
+                    <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
-                    <Button variant="outlined" onClick={() => setActiveSection('standings')}>
+                    <Button variant="outlined" onClick={() => handleSectionChange('standings')}>
                       {t('dashboard.admin.overview.viewStandings')}
                     </Button>
                   </Stack>
@@ -2369,7 +2444,7 @@ export default function AdminDashboard({ session, onLogout }) {
                         {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
                       </Typography>
                     </Box>
-                    <Button variant="text" onClick={() => setActiveSection('matches')}>
+                    <Button variant="text" onClick={() => handleSectionChange('matches')}>
                       {t('dashboard.admin.overview.createMatch')}
                     </Button>
                   </Stack>
@@ -2507,6 +2582,15 @@ export default function AdminDashboard({ session, onLogout }) {
             t,
             formatDate,
           }}
+        />
+      )}
+
+      {selectedPenaGuid && activeSection === 'accountability' && (
+        <AdminAccountabilitySection
+          penaGuid={selectedPenaGuid}
+          players={historicalPlayers}
+          t={t}
+          formatPlayerDisplayName={formatPlayerDisplayName}
         />
       )}
 
@@ -3035,6 +3119,6 @@ export default function AdminDashboard({ session, onLogout }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </Stack>
+    </DashboardShell>
   )
 }

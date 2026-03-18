@@ -9,7 +9,7 @@ from api.interface.controller.v1.model.request.pena_seasons_request import (
 )
 from auth.session import SessionData
 from fastapi import HTTPException
-from persistence.application.use_cases.manage_pena_seasons import (
+from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     PenaSeasonAccessDeniedError,
     PenaSeasonCreate,

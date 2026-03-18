@@ -1,17 +1,8 @@
+from api.dependencies.use_cases import get_nationalities_use_case
 from fastapi import APIRouter, Depends
-from persistence.application.use_cases.get_nationalities import GetNationalitiesUseCase
-from persistence.infrastructure.repository.db.nationality_query_repository import (
-    SqlAlchemyNationalityQueryRepository,
-)
-from persistence.module import get_db
-from sqlalchemy.orm import Session
+from persistence.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 
 router = APIRouter()
-
-
-def get_nationalities_use_case(db: Session = Depends(get_db)) -> GetNationalitiesUseCase:
-    repository = SqlAlchemyNationalityQueryRepository(db)
-    return GetNationalitiesUseCase(repository)
 
 
 @router.get("/catalogs/nationalities", response_model=list[str])
