@@ -2372,7 +2372,7 @@ export default function AdminDashboard({
 
       {selectedPenaGuid && activeSection === 'overview' && (
         <Grid container spacing={2.5} sx={{ width: '100%' }}>
-          <Grid item xs={12} md={5} xl={4}>
+          <Grid item xs={12}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2399,53 +2399,6 @@ export default function AdminDashboard({
                         {formatEpochSeconds(tokenPayload.expires_at)}
                       </Typography>
                     </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={7} xl={8} sx={{ minWidth: 0 }}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">
-                    {t('dashboard.admin.overview.quickActionsTitle')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.overview.quickActionsDescription')}
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
-                      {t('dashboard.admin.overview.manageSeasons')}
-                    </Button>
-                    <Button variant="outlined" onClick={() => handleSectionChange('players')}>
-                      {t('dashboard.admin.overview.managePlayers')}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleSectionChange('accountability')}
-                    >
-                      {t('dashboard.admin.overview.manageAccountability')}
-                    </Button>
-                    <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
-                      {t('dashboard.admin.overview.createMatch')}
-                    </Button>
-                    <Button variant="outlined" onClick={() => handleSectionChange('standings')}>
-                      {t('dashboard.admin.overview.viewStandings')}
-                    </Button>
-                  </Stack>
-                  {lastCreatedMatch ? (
-                    <Alert severity="success">
-                      {t('dashboard.admin.overview.lastMatchCreated', {
-                        guid: lastCreatedMatch.guid,
-                        date: formatDate(lastCreatedMatch.match_date),
-                      })}
-                    </Alert>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.overview.noDetailedMatch')}
-                    </Typography>
                   )}
                 </Stack>
               </CardContent>
