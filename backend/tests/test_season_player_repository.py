@@ -5,8 +5,8 @@ import pytest
 from persistence.application.ports.season_competition_port import (
     SeasonPlayerAlreadyRegisteredError,
 )
-from persistence.infrastructure.repository.db.season_competition_repository import (
-    SqlAlchemySeasonCompetitionRepository,
+from persistence.infrastructure.repository.db.season_player_repository import (
+    SqlAlchemySeasonPlayerRepository,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -28,7 +28,7 @@ def test_register_player_for_admin_maps_commit_integrity_error_to_conflict():
     session.execute.side_effect = [no_existing_row, role_names_row]
     session.commit.side_effect = _integrity_error()
 
-    repo = SqlAlchemySeasonCompetitionRepository(session)
+    repo = SqlAlchemySeasonPlayerRepository(session)
 
     pena = SimpleNamespace(id=11, id_admin=7)
     season = SimpleNamespace(id=22, points_win=3, points_draw=1, points_loss=0)
@@ -89,7 +89,7 @@ def test_register_players_bulk_maps_commit_integrity_error_to_conflict():
     session.execute.side_effect = [players_result, links_result, existing_result, role_names_result]
     session.commit.side_effect = _integrity_error()
 
-    repo = SqlAlchemySeasonCompetitionRepository(session)
+    repo = SqlAlchemySeasonPlayerRepository(session)
     pena = SimpleNamespace(id=11, id_admin=7)
     season = SimpleNamespace(id=22, points_win=3, points_draw=1, points_loss=0)
     repo._get_pena = lambda _pena_guid: pena
