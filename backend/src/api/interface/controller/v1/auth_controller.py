@@ -14,6 +14,7 @@ from api.interface.controller.v1.model.request.auth_request import (
 from api.interface.controller.v1.model.response.auth_response import LoginResponse
 from api.middleware.exception_mapper import map_exceptions
 from auth.application.use_cases.login import (
+    InvalidCredentialsError,
     LoginAdminUseCase,
     LoginPayload,
     LoginUserUseCase,
@@ -42,7 +43,11 @@ def login_user(
     db: Session = Depends(get_db),
 ):
     logger.info("User login attempt")
-    user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    try:
+        user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    except InvalidCredentialsError:
+        logger.warning("User login failed: invalid credentials")
+        raise
     session = create_session(db, user_id=user.id, user_guid=user.guid, user_type="user")
     logger.info("User login ok: %s", user.guid)
     return LoginResponse(
@@ -62,7 +67,11 @@ def login_admin(
     db: Session = Depends(get_db),
 ):
     logger.info("Admin login attempt")
-    admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    try:
+        admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
+    except InvalidCredentialsError:
+        logger.warning("Admin login failed: invalid credentials")
+        raise
     session = create_session(db, user_id=admin.id, user_guid=admin.guid, user_type="admin")
     logger.info("Admin login ok: %s", admin.guid)
     return LoginResponse(

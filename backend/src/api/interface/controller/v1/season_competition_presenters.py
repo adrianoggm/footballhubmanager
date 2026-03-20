@@ -101,10 +101,7 @@ def to_season_match_player_response(
 
 def to_season_match_team_response(item: SeasonMatchTeamInfo) -> SeasonMatchTeamResponse:
     payload = asdict(item)
-    payload["players"] = [
-        to_season_match_player_response(player)
-        for player in item.players
-    ]
+    payload["players"] = [to_season_match_player_response(player) for player in item.players]
     return SeasonMatchTeamResponse(**payload)
 
 

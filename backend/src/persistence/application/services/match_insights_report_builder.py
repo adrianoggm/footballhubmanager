@@ -37,8 +37,7 @@ class MatchInsightsReportBuilder:
 
         players = cls._build_players(state.player_stats)
         player_labels = {
-            guid: str(player.get("label") or guid)
-            for guid, player in state.player_stats.items()
+            guid: str(player.get("label") or guid) for guid, player in state.player_stats.items()
         }
         pair_rows = cls._build_pair_rows(state.pair_stats, player_labels)
         top_teammates_by_player = cls._build_top_teammates(
@@ -473,9 +472,7 @@ class MatchInsightsReportBuilder:
         key = MatchInsightsReportBuilder._pair_key(left_guid, right_guid)
         if key not in state.pair_stats:
             left, right = (
-                (left_guid, right_guid)
-                if left_guid < right_guid
-                else (right_guid, left_guid)
+                (left_guid, right_guid) if left_guid < right_guid else (right_guid, left_guid)
             )
             state.pair_stats[key] = {
                 "leftGuid": left,
@@ -541,9 +538,7 @@ class MatchInsightsReportBuilder:
     @staticmethod
     def _pair_key(left_guid: str, right_guid: str) -> str:
         return (
-            f"{left_guid}__{right_guid}"
-            if left_guid < right_guid
-            else f"{right_guid}__{left_guid}"
+            f"{left_guid}__{right_guid}" if left_guid < right_guid else f"{right_guid}__{left_guid}"
         )
 
     @staticmethod
