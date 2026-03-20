@@ -1,0 +1,210 @@
+from dataclasses import dataclass, field
+from datetime import date
+
+
+@dataclass(frozen=True)
+class SeasonInfo:
+    guid: str
+    start_date: date
+    end_date: date
+    points_win: int
+    points_draw: int
+    points_loss: int
+
+
+@dataclass(frozen=True)
+class SeasonPlayerInfo:
+    player_guid: str
+    name: str
+    surname1: str
+    surname2: str | None
+    nationality: str
+    nickname: str | None
+    role: str | None = field(default=None, kw_only=True)
+    role_color: str | None = field(default=None, kw_only=True)
+    position: str | None
+    position_color: str | None = field(default=None, kw_only=True)
+    played: int
+    goals: int
+    assists: int
+    wins: int
+    losses: int
+    draws: int
+    quality_level: float
+    points: int
+
+
+@dataclass(frozen=True)
+class SeasonPlayersPage:
+    items: list[SeasonPlayerInfo]
+    page: int
+    page_size: int
+    total: int
+
+
+@dataclass(frozen=True)
+class SeasonPlayersFilters:
+    name: str | None = None
+    surname1: str | None = None
+    surname2: str | None = None
+    nationality: str | None = None
+    nickname: str | None = None
+    role: str | None = None
+    roles: tuple[str, ...] = ()
+    position: str | None = None
+    positions: tuple[str, ...] = ()
+    search: str | None = None
+
+
+@dataclass(frozen=True)
+class SeasonCreate:
+    start_date: date
+    end_date: date
+    points_win: int = 3
+    points_draw: int = 1
+    points_loss: int = 0
+
+
+@dataclass(frozen=True)
+class SeasonPlayerStatsUpdate:
+    wins: int | None = None
+    losses: int | None = None
+    draws: int | None = None
+    quality_level: float | None = None
+    role: str | None = None
+    position: str | None = None
+    wins_provided: bool = False
+    losses_provided: bool = False
+    draws_provided: bool = False
+    quality_level_provided: bool = False
+    role_provided: bool = False
+    position_provided: bool = False
+
+
+@dataclass(frozen=True)
+class SeasonMatchCreate:
+    home_player_guid: str
+    away_player_guid: str
+    match_date: date
+
+
+@dataclass(frozen=True)
+class SeasonMatchTeamCreate:
+    player_guids: list[str]
+    team_name: str | None = None
+
+
+@dataclass(frozen=True)
+class SeasonMatchCreateDetailed:
+    match_date: date
+    home_team: SeasonMatchTeamCreate
+    away_team: SeasonMatchTeamCreate
+
+
+@dataclass(frozen=True)
+class SeasonMatchUpdate:
+    match_date: date | None = None
+    home_team_name: str | None = None
+    away_team_name: str | None = None
+    match_date_provided: bool = False
+    home_team_name_provided: bool = False
+    away_team_name_provided: bool = False
+
+
+@dataclass(frozen=True)
+class SeasonMatchResultUpdate:
+    home_score: int
+    away_score: int
+    update_standings: bool = True
+
+
+@dataclass(frozen=True)
+class SeasonMatchPlayerStatsUpdate:
+    player_guid: str
+    goals: int = 0
+    assists: int = 0
+    saves: int = 0
+    rating: float = 0.0
+
+
+@dataclass(frozen=True)
+class SeasonMatchStatsUpdate:
+    home_players: list[SeasonMatchPlayerStatsUpdate]
+    away_players: list[SeasonMatchPlayerStatsUpdate]
+
+
+@dataclass(frozen=True)
+class SeasonMatchLineupsUpdate:
+    home_player_guids: list[str]
+    away_player_guids: list[str]
+
+
+@dataclass(frozen=True)
+class SeasonMatchInfo:
+    guid: str
+    season_guid: str
+    match_date: date
+    home_player_guid: str
+    away_player_guid: str
+    home_player_name: str
+    away_player_name: str
+    status: str
+    home_score: int
+    away_score: int
+
+
+@dataclass(frozen=True)
+class SeasonMatchPlayerStatsInfo:
+    player_guid: str
+    name: str
+    surname1: str
+    surname2: str | None
+    nickname: str | None
+    position: str | None
+    goals: int
+    assists: int
+    saves: int
+    rating: float
+
+
+@dataclass(frozen=True)
+class SeasonMatchTeamInfo:
+    team_guid: str
+    team_name: str
+    score: int
+    total_assists: int
+    total_saves: int
+    average_rating: float
+    players: list[SeasonMatchPlayerStatsInfo]
+
+
+@dataclass(frozen=True)
+class SeasonMatchDetailInfo:
+    guid: str
+    season_guid: str
+    match_date: date
+    status: str
+    home_team: SeasonMatchTeamInfo
+    away_team: SeasonMatchTeamInfo
+
+
+@dataclass(frozen=True)
+class SeasonMatchSummaryInfo:
+    guid: str
+    season_guid: str
+    match_date: date
+    status: str
+    home_team_name: str
+    away_team_name: str
+    home_score: int
+    away_score: int
+    home_players: int
+    away_players: int
+
+
+@dataclass(frozen=True)
+class SeasonMatchesPage:
+    items: list[SeasonMatchSummaryInfo]
+    page: int
+    page_size: int
+    total: int
