@@ -88,6 +88,18 @@ def test_require_admin_rejects_non_admin_session():
     assert exc.value.detail == "Admin access required"
 
 
+def test_require_user_allows_user_session():
+    session = _session(user_type="user")
+    assert dependencies.require_user(session) == session
+
+
+def test_require_user_rejects_non_user_session():
+    with pytest.raises(HTTPException) as exc:
+        dependencies.require_user(_session(user_type="admin"))
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "User access required"
+
+
 def test_authorize_pena_access_returns_session_on_success(monkeypatch):
     calls: dict[str, object] = {}
 

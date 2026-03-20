@@ -141,6 +141,14 @@ def test_get_for_pena_computes_totals():
     assert result.expense_entries == 1
 
 
+def test_get_player_guid_for_account_returns_none_for_non_positive_ids():
+    use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
+
+    assert use_case.get_player_guid_for_account(account_id=0) is None
+    assert use_case.get_player_guid_for_account(account_id=-3) is None
+    assert use_case.get_player_guid_for_account(account_id=77) == "player-1"
+
+
 def test_update_settings_for_admin_normalizes_currency_and_visibility():
     repo = _FakeRepo()
     use_case = ManagePenaAccountabilityUseCase(repo)
@@ -164,6 +172,28 @@ def test_update_settings_for_admin_normalizes_currency_and_visibility():
     assert repo.last_call["balance_cents"] == 777
 
 
+def test_update_settings_for_admin_uses_current_values_as_fallbacks():
+    repo = _FakeRepo()
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    use_case.update_settings_for_admin(
+        pena_guid="pena-guid",
+        admin_id=3,
+        update=PenaAccountabilitySettingsUpdate(
+            currency=" ",
+            budget_visibility=" ",
+            expenses_visibility=None,
+        ),
+    )
+
+    assert repo.last_call is not None
+    assert repo.last_call["currency"] == "EUR"
+    assert repo.last_call["budget_visibility"] == "summary"
+    assert repo.last_call["expenses_visibility"] == "full"
+    assert repo.last_call["balance_cents"] == 10_000
+    assert repo.last_call["reserve_cents"] == 5_000
+
+
 def test_upsert_member_account_for_admin_rejects_negative_amounts():
     use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
 
@@ -177,6 +207,54 @@ def test_upsert_member_account_for_admin_rejects_negative_amounts():
                 contribution_cents=0,
             ),
         )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_not_found=True), PenaAccountabilityPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaAccountabilityAccessDeniedError),
+        (_FakeRepo(should_raise_member_not_found=True), PenaAccountabilityMemberNotFoundError),
+    ],
+)
+def test_upsert_member_account_for_admin_maps_expected_errors(repo, expected_error):
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.upsert_member_account_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            data=PenaAccountabilityMemberAccountUpsert(
+                player_guid="player-1",
+                debt_cents=0,
+                contribution_cents=0,
+            ),
+        )
+
+
+def test_upsert_member_account_for_admin_normalizes_payload():
+    repo = _FakeRepo()
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    use_case.upsert_member_account_for_admin(
+        pena_guid="pena-guid",
+        admin_id=1,
+        data=PenaAccountabilityMemberAccountUpsert(
+            player_guid=" player-1 ",
+            debt_cents=10,
+            contribution_cents=20,
+            note="  monthly payment  ",
+        ),
+    )
+
+    assert repo.last_call == {
+        "pena_guid": "pena-guid",
+        "admin_id": 1,
+        "player_guid": "player-1",
+        "debt_cents": 10,
+        "contribution_cents": 20,
+        "note": "monthly payment",
+    }
 
 
 def test_create_expense_for_admin_rejects_blank_title():
@@ -194,6 +272,74 @@ def test_create_expense_for_admin_rejects_blank_title():
                 note=None,
             ),
         )
+
+
+def test_create_expense_for_admin_rejects_non_date_occurred_on():
+    use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
+
+    with pytest.raises(InvalidPenaAccountabilityDataError):
+        use_case.create_expense_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            data=PenaAccountabilityExpenseCreate(
+                title="Balls",
+                category="misc",
+                amount_cents=100,
+                occurred_on="2026-01-01",  # type: ignore[arg-type]
+                note=None,
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_not_found=True), PenaAccountabilityPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaAccountabilityAccessDeniedError),
+    ],
+)
+def test_create_expense_for_admin_maps_expected_errors(repo, expected_error):
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.create_expense_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            data=PenaAccountabilityExpenseCreate(
+                title="Balls",
+                category=" equipment ",
+                amount_cents=100,
+                occurred_on=date(2026, 1, 1),
+                note=" note ",
+            ),
+        )
+
+
+def test_create_expense_for_admin_normalizes_payload():
+    repo = _FakeRepo()
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    use_case.create_expense_for_admin(
+        pena_guid="pena-guid",
+        admin_id=1,
+        data=PenaAccountabilityExpenseCreate(
+            title="  Balls  ",
+            category=" equipment ",
+            amount_cents=100,
+            occurred_on=date(2026, 1, 1),
+            note=" note ",
+        ),
+    )
+
+    assert repo.last_call == {
+        "pena_guid": "pena-guid",
+        "admin_id": 1,
+        "title": "Balls",
+        "category": "equipment",
+        "amount_cents": 100,
+        "occurred_on": date(2026, 1, 1),
+        "note": "note",
+    }
 
 
 def test_update_settings_for_admin_maps_not_found_and_denied():
@@ -233,4 +379,62 @@ def test_remove_members_and_expenses_map_not_found_errors():
             pena_guid="pena-guid",
             admin_id=1,
             expense_guid="exp-x",
+        )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_not_found=True), PenaAccountabilityPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaAccountabilityAccessDeniedError),
+    ],
+)
+def test_remove_member_account_for_admin_maps_pena_and_access_errors(repo, expected_error):
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.remove_member_account_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            player_guid="player-1",
+        )
+
+
+def test_remove_member_account_for_admin_rejects_blank_player_guid():
+    use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
+
+    with pytest.raises(InvalidPenaAccountabilityDataError):
+        use_case.remove_member_account_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            player_guid=" ",
+        )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_not_found=True), PenaAccountabilityPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaAccountabilityAccessDeniedError),
+    ],
+)
+def test_remove_expense_for_admin_maps_pena_and_access_errors(repo, expected_error):
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.remove_expense_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            expense_guid="exp-1",
+        )
+
+
+def test_remove_expense_for_admin_rejects_blank_expense_guid():
+    use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
+
+    with pytest.raises(InvalidPenaAccountabilityDataError):
+        use_case.remove_expense_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            expense_guid=" ",
         )

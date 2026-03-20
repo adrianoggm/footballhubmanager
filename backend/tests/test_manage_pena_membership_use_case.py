@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import pytest
 from persistence.application.ports.pena_membership_port import (
     InvalidNationalityError,
+    InvalidRoleLabelError,
     PenaMembershipNotFoundError,
     PenaMembershipResult,
     PenaNotFoundError,
@@ -35,6 +36,7 @@ class _FakeRepo:
     should_raise_player_not_found: bool = False
     should_raise_user_player_not_found: bool = False
     should_raise_invalid_nationality: bool = False
+    should_raise_invalid_role_label: bool = False
     last_payload: dict | None = None
 
     @staticmethod
@@ -75,6 +77,8 @@ class _FakeRepo:
             raise PenaMembershipNotFoundError()
         if self.should_raise_user_player_not_found:
             raise UserPlayerNotFoundError()
+        if self.should_raise_invalid_role_label:
+            raise InvalidRoleLabelError()
         self.last_payload = {"pena_guid": pena_guid, "account_id": account_id}
         return self._sample_result()
 
@@ -96,6 +100,8 @@ class _FakeRepo:
             raise PenaMembershipNotFoundError()
         if self.should_raise_user_player_not_found:
             raise UserPlayerNotFoundError()
+        if self.should_raise_invalid_role_label:
+            raise InvalidRoleLabelError()
         self.last_payload = {
             "pena_guid": pena_guid,
             "account_id": account_id,
@@ -131,6 +137,8 @@ class _FakeRepo:
         position,
     ):
         self._raise_maybe()
+        if self.should_raise_invalid_role_label:
+            raise InvalidRoleLabelError()
         self.last_payload = {
             "pena_guid": pena_guid,
             "admin_id": admin_id,
@@ -171,6 +179,8 @@ class _FakeRepo:
             raise PenaNotManagedByAdminError()
         if self.should_raise_invalid_nationality:
             raise InvalidNationalityError()
+        if self.should_raise_invalid_role_label:
+            raise InvalidRoleLabelError()
         self.last_payload = {
             "pena_guid": pena_guid,
             "admin_id": admin_id,
@@ -234,6 +244,14 @@ def test_get_for_user_maps_missing_membership_to_access_denied():
         use_case.get_for_user(pena_guid="pena-guid", account_id=12)
 
 
+def test_get_for_user_maps_invalid_role_label_to_invalid_update_error():
+    repo = _FakeRepo(should_raise_invalid_role_label=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(InvalidPenaMembershipUpdateDataError):
+        use_case.get_for_user(pena_guid="pena-guid", account_id=12)
+
+
 def test_update_for_admin_maps_not_managed_to_access_denied():
     repo = _FakeRepo(should_raise_pena_access_denied=True)
     use_case = ManagePenaMembershipUseCase(repo)
@@ -270,12 +288,98 @@ def test_get_for_player_maps_pena_and_player_not_found():
         use_case_player.get_for_player(pena_guid="pena-guid", player_guid="player-guid")
 
 
+def test_get_for_player_maps_membership_not_found():
+    repo = _FakeRepo(should_raise_membership_not_found=True)
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(UseCasePenaMembershipNotFoundError):
+        use_case.get_for_player(pena_guid="pena-guid", player_guid="player-guid")
+
+
 def test_remove_for_user_maps_user_profile_not_found():
     repo = _FakeRepo(should_raise_user_player_not_found=True)
     use_case = ManagePenaMembershipUseCase(repo)
 
     with pytest.raises(PenaMembershipUserProfileNotFoundError):
         use_case.remove_for_user(pena_guid="pena-guid", account_id=12)
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_pena_not_found=True), PenaMembershipPenaNotFoundError),
+        (
+            _FakeRepo(should_raise_user_player_not_found=True),
+            PenaMembershipUserProfileNotFoundError,
+        ),
+        (_FakeRepo(should_raise_membership_not_found=True), PenaMembershipAccessDeniedError),
+    ],
+)
+def test_update_for_user_maps_expected_errors(repo, expected_error):
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.update_for_user(
+            pena_guid="pena-guid",
+            account_id=12,
+            update=PenaMembershipUpdate(nickname="Nick", nickname_provided=True),
+        )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_player_not_found=True), PenaMembershipPlayerNotFoundError),
+        (_FakeRepo(should_raise_invalid_role_label=True), InvalidPenaMembershipUpdateDataError),
+    ],
+)
+def test_update_for_admin_maps_player_and_role_validation_errors(repo, expected_error):
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.update_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            player_guid="player-guid",
+            update=PenaMembershipUpdate(role="captain", role_provided=True),
+        )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_pena_not_found=True), PenaMembershipPenaNotFoundError),
+        (_FakeRepo(should_raise_pena_access_denied=True), PenaMembershipAccessDeniedError),
+        (_FakeRepo(should_raise_player_not_found=True), PenaMembershipPlayerNotFoundError),
+        (_FakeRepo(should_raise_membership_not_found=True), UseCasePenaMembershipNotFoundError),
+    ],
+)
+def test_remove_for_admin_maps_expected_errors(repo, expected_error):
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.remove_for_admin(
+            pena_guid="pena-guid",
+            admin_id=1,
+            player_guid="player-guid",
+        )
+
+
+def test_remove_for_admin_forwards_payload():
+    repo = _FakeRepo()
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    use_case.remove_for_admin(
+        pena_guid="pena-guid",
+        admin_id=1,
+        player_guid="player-guid",
+    )
+
+    assert repo.last_payload == {
+        "pena_guid": "pena-guid",
+        "admin_id": 1,
+        "player_guid": "player-guid",
+    }
 
 
 def test_create_guest_for_admin_positive_normalizes_blank_to_none():
@@ -338,5 +442,28 @@ def test_create_guest_for_admin_maps_invalid_nationality():
                 name="Guest",
                 surname1="Player",
                 nationality="WrongCountry",
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_pena_access_denied=True), PenaMembershipAccessDeniedError),
+        (_FakeRepo(should_raise_invalid_role_label=True), InvalidPenaGuestPlayerDataError),
+    ],
+)
+def test_create_guest_for_admin_maps_access_denied_and_invalid_role_label(repo, expected_error):
+    use_case = ManagePenaMembershipUseCase(repo)
+
+    with pytest.raises(expected_error):
+        use_case.create_guest_for_admin(
+            pena_guid="pena-guid",
+            admin_id=7,
+            data=PenaGuestPlayerCreate(
+                name="Guest",
+                surname1="Player",
+                nationality="Spain",
+                role="captain",
             ),
         )
