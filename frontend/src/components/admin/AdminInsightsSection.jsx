@@ -19,6 +19,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { alpha, useTheme } from '@mui/material/styles'
 import {
   Bar,
   BarChart,
@@ -65,6 +66,86 @@ const INSIGHT_ACCENTS = {
   },
 }
 
+const getDashboardGeometry = (theme) => ({
+  surfaceRadius: theme.custom?.dashboard?.radius?.surface || '14px',
+  surfaceRadiusTight: theme.custom?.dashboard?.radius?.surfaceTight || '12px',
+  controlRadius: theme.custom?.dashboard?.radius?.control || '10px',
+  badgeRadius: theme.custom?.dashboard?.radius?.badge || '8px',
+  subtleBorderAlpha:
+    theme.custom?.dashboard?.borderOpacity?.subtle ?? (theme.palette.mode === 'dark' ? 0.12 : 0.08),
+  cardShadow:
+    theme.custom?.dashboard?.shadows?.card ||
+    (theme.palette.mode === 'dark'
+      ? '0 14px 28px rgba(0, 0, 0, 0.22)'
+      : '0 10px 22px rgba(15, 23, 42, 0.05)'),
+})
+
+const buildInsightSurfaceSx = (theme, accent, options = {}) => {
+  const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
+  const accentColor = accent?.main || theme.palette.secondary.main
+  const { dashed = false } = options
+
+  return {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: geometry.surfaceRadius,
+    border: `1px ${dashed ? 'dashed' : 'solid'} ${alpha(
+      theme.palette.text.primary,
+      geometry.subtleBorderAlpha
+    )}`,
+    background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, isDark ? 0.97 : 0.96)} 0%, ${alpha(
+      theme.palette.background.default,
+      isDark ? 0.8 : 0.72
+    )} 100%)`,
+    boxShadow: geometry.cardShadow,
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      inset: 0,
+      background: `linear-gradient(145deg, ${alpha(accentColor, isDark ? 0.12 : 0.07)} 0%, transparent 42%)`,
+      pointerEvents: 'none',
+    },
+  }
+}
+
+const buildInsightContentSx = {
+  position: 'relative',
+  zIndex: 1,
+  p: { xs: 1.2, md: 1.35 },
+  '&:last-child': {
+    pb: { xs: 1.2, md: 1.35 },
+  },
+}
+
+const buildInsightInsetSx = (theme, accent) => {
+  const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
+  const accentColor = accent?.main || theme.palette.secondary.main
+
+  return {
+    borderRadius: geometry.surfaceRadiusTight,
+    border: `1px solid ${alpha(theme.palette.text.primary, geometry.subtleBorderAlpha)}`,
+    backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.72 : 0.78),
+    boxShadow: `inset 0 1px 0 ${alpha(
+      accentColor,
+      isDark ? 0.08 : 0.04
+    )}, inset 0 1px 0 ${alpha(theme.palette.common.white, isDark ? 0.02 : 0.38)}`,
+  }
+}
+
+const buildInsightChartFrameSx = (theme, accent, height) => ({
+  ...buildInsightInsetSx(theme, accent),
+  width: '100%',
+  height,
+  p: { xs: 0.6, md: 0.85 },
+})
+
+const buildInsightTableContainerSx = (theme, accent) => ({
+  ...buildInsightInsetSx(theme, accent),
+  overflow: 'auto',
+})
+
 const getRateColor = (rate) => {
   if (rate >= 0.6) {
     return 'success'
@@ -74,12 +155,6 @@ const getRateColor = (rate) => {
   }
   return 'error'
 }
-
-const metricCardStyles = (accent) => ({
-  borderRadius: 3,
-  borderColor: accent.border,
-  background: `linear-gradient(140deg, ${accent.soft} 0%, rgba(255,255,255,0.95) 100%)`,
-})
 
 const buildMatrixCellSx = (cell, maxSharedMatches) => {
   if (cell.same_player) {
@@ -130,32 +205,58 @@ const buildMetricDeltaChipSx = (accent) => ({
 })
 
 function InsightMetricCard({ label, value, accent = INSIGHT_ACCENTS.matches }) {
+  const theme = useTheme()
+  const geometry = getDashboardGeometry(theme)
+
   return (
     <Card
       variant="outlined"
       sx={{
-        ...metricCardStyles(accent),
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
+        ...buildInsightSurfaceSx(theme, accent),
+        '&::after': {
           content: '""',
           position: 'absolute',
           left: 0,
           top: 0,
           bottom: 0,
-          width: 4,
+          width: 3,
           backgroundColor: accent.main,
         },
       }}
     >
-      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+      <CardContent
+        sx={{
+          ...buildInsightContentSx,
+          py: 1.05,
+          '&:last-child': { pb: 1.05 },
+        }}
+      >
         <Stack spacing={0.35}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="overline"
+            color="text.secondary"
+            sx={{ letterSpacing: 0.5, lineHeight: 1.05 }}
+          >
             {label}
           </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.15 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+              lineHeight: 1.05,
+              fontSize: '1.08rem',
+            }}
+          >
             {value}
           </Typography>
+          <Box
+            sx={{
+              width: 26,
+              height: 2,
+              borderRadius: geometry.badgeRadius,
+              bgcolor: alpha(accent.main, 0.7),
+            }}
+          />
         </Stack>
       </CardContent>
     </Card>
@@ -169,16 +270,11 @@ function InsightRankingPanel({
   t,
   matchLabelKey = 'dashboard.admin.table.played',
 }) {
+  const theme = useTheme()
+
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderRadius: 3,
-        background:
-          'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(243,248,255,0.92) 100%)',
-      }}
-    >
-      <CardContent>
+    <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.matches)}>
+      <CardContent sx={buildInsightContentSx}>
         <Stack spacing={1.25}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
             {title}
@@ -194,9 +290,7 @@ function InsightRankingPanel({
               spacing={0.8}
               sx={{
                 p: 1.1,
-                borderRadius: 2,
-                border: '1px solid rgba(15, 23, 42, 0.08)',
-                backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                ...buildInsightInsetSx(theme, INSIGHT_ACCENTS.matches),
               }}
             >
               <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
@@ -232,7 +326,11 @@ function InsightRankingPanel({
                 variant="determinate"
                 value={Math.max(0, Math.min(100, Math.round(row.rate * 100)))}
                 color={getRateColor(row.rate)}
-                sx={{ borderRadius: 999, height: 8 }}
+                sx={{
+                  borderRadius: getDashboardGeometry(theme).badgeRadius,
+                  height: 8,
+                  backgroundColor: alpha(theme.palette.text.primary, 0.08),
+                }}
               />
             </Stack>
           ))}
@@ -243,16 +341,11 @@ function InsightRankingPanel({
 }
 
 function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, emptyText }) {
+  const theme = useTheme()
+
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderRadius: 3,
-        background:
-          'linear-gradient(160deg, rgba(255,255,255,0.98) 0%, rgba(244,250,246,0.92) 100%)',
-      }}
-    >
-      <CardContent>
+    <Card variant="outlined" sx={buildInsightSurfaceSx(theme, metricAccent)}>
+      <CardContent sx={buildInsightContentSx}>
         <Stack spacing={1}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
             {title}
@@ -272,7 +365,12 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
               sx={{
                 py: 0.45,
                 borderBottom:
-                  index === items.length - 1 ? 'none' : '1px solid rgba(15, 23, 42, 0.08)',
+                  index === items.length - 1
+                    ? 'none'
+                    : `1px solid ${alpha(
+                        theme.palette.text.primary,
+                        getDashboardGeometry(theme).subtleBorderAlpha
+                      )}`,
               }}
             >
               <Typography
@@ -306,6 +404,9 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
 }
 
 export default function AdminInsightsSection({ state, actions, helpers }) {
+  const theme = useTheme()
+  const geometry = getDashboardGeometry(theme)
+  const isDark = theme.palette.mode === 'dark'
   const {
     selectedSeasonGuid,
     insightsScope,
@@ -356,7 +457,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   }))
 
   return (
-    <Stack spacing={2.25}>
+    <Stack spacing={2.25} sx={{ width: '100%' }}>
       <Stack
         direction={{ xs: 'column', lg: 'row' }}
         spacing={1.5}
@@ -400,14 +501,9 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
       {!insightsLoading && !insightsReport && (
         <Card
           variant="outlined"
-          sx={{
-            borderStyle: 'dashed',
-            borderRadius: 3,
-            background:
-              'linear-gradient(140deg, rgba(247,252,255,0.95) 0%, rgba(255,255,255,0.92) 100%)',
-          }}
+          sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.matches, { dashed: true })}
         >
-          <CardContent>
+          <CardContent sx={buildInsightContentSx}>
             <Stack spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }}>
               <Typography variant="body2" color="text.secondary">
                 {t('dashboard.admin.standings.insightsEmpty')}
@@ -472,17 +568,18 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
           </Grid>
 
           {insightsComparisonReport && insightsComparison && (
-            <Card
-              variant="outlined"
-              sx={{
-                borderRadius: 3,
-                background:
-                  'linear-gradient(140deg, rgba(245,251,255,0.98) 0%, rgba(255,255,255,0.95) 100%)',
-              }}
-            >
-              <CardContent>
+            <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.assists)}>
+              <CardContent sx={buildInsightContentSx}>
                 <Stack spacing={1.2}>
-                  <Alert severity="info" sx={{ mb: 0, py: 0.6 }}>
+                  <Alert
+                    severity="info"
+                    sx={{
+                      mb: 0,
+                      py: 0.45,
+                      borderRadius: geometry.surfaceRadiusTight,
+                      backgroundColor: alpha(theme.palette.info.main, isDark ? 0.12 : 0.08),
+                    }}
+                  >
                     {t('dashboard.admin.standings.insightsComparisonSummary', {
                       scope:
                         insightsScope === 'selected_season'
@@ -520,15 +617,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
 
           <Grid container spacing={2}>
             <Grid item xs={12} lg={8}>
-              <Card
-                variant="outlined"
-                sx={{
-                  borderRadius: 3,
-                  background:
-                    'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(247,253,255,0.94) 100%)',
-                }}
-              >
-                <CardContent>
+              <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.assists)}>
+                <CardContent sx={buildInsightContentSx}>
                   <Stack spacing={1.25}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                       {t('dashboard.admin.standings.chartTrendByMatchTitle')}
@@ -542,12 +632,34 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                       </Typography>
                     )}
                     {timelineMatchData.length > 0 && (
-                      <Box sx={{ width: '100%', height: 280 }}>
+                      <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.assists, 280)}>
                         <ResponsiveContainer>
                           <LineChart data={timelineMatchData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="x_label" minTickGap={28} />
-                            <YAxis allowDecimals={false} />
+                            <CartesianGrid
+                              stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                              strokeDasharray="3 3"
+                            />
+                            <XAxis
+                              dataKey="x_label"
+                              minTickGap={28}
+                              tickLine={false}
+                              axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                              tick={{
+                                fill: theme.palette.text.secondary,
+                                fontSize: 11,
+                                fontFamily: theme.typography.fontFamily,
+                              }}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{
+                                fill: theme.palette.text.secondary,
+                                fontSize: 11,
+                                fontFamily: theme.typography.fontFamily,
+                              }}
+                            />
                             <RechartsTooltip
                               formatter={(value, name) => [`${value}`, name]}
                               labelFormatter={(label, payload) => {
@@ -590,15 +702,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             </Grid>
 
             <Grid item xs={12} lg={4}>
-              <Card
-                variant="outlined"
-                sx={{
-                  borderRadius: 3,
-                  background:
-                    'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(250,255,250,0.93) 100%)',
-                }}
-              >
-                <CardContent>
+              <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.goals)}>
+                <CardContent sx={buildInsightContentSx}>
                   <Stack spacing={1.25}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                       {t('dashboard.admin.standings.chartRunningAveragesTitle')}
@@ -612,12 +717,33 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                       </Typography>
                     )}
                     {timelineMatchData.length > 0 && (
-                      <Box sx={{ width: '100%', height: 280 }}>
+                      <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.goals, 280)}>
                         <ResponsiveContainer>
                           <LineChart data={timelineMatchData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="x_label" minTickGap={30} />
-                            <YAxis />
+                            <CartesianGrid
+                              stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                              strokeDasharray="3 3"
+                            />
+                            <XAxis
+                              dataKey="x_label"
+                              minTickGap={30}
+                              tickLine={false}
+                              axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                              tick={{
+                                fill: theme.palette.text.secondary,
+                                fontSize: 11,
+                                fontFamily: theme.typography.fontFamily,
+                              }}
+                            />
+                            <YAxis
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{
+                                fill: theme.palette.text.secondary,
+                                fontSize: 11,
+                                fontFamily: theme.typography.fontFamily,
+                              }}
+                            />
                             <RechartsTooltip
                               formatter={(value, name) => [formatDecimal(value), name]}
                               labelFormatter={(label, payload) => {
@@ -663,15 +789,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             </Grid>
           </Grid>
 
-          <Card
-            variant="outlined"
-            sx={{
-              borderRadius: 3,
-              background:
-                'linear-gradient(155deg, rgba(255,255,255,0.98) 0%, rgba(255,252,246,0.93) 100%)',
-            }}
-          >
-            <CardContent>
+          <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.saves)}>
+            <CardContent sx={buildInsightContentSx}>
               <Stack spacing={1.25}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                   {t('dashboard.admin.standings.chartSeasonComparisonTitle')}
@@ -685,12 +804,32 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                   </Typography>
                 )}
                 {timelineSeasonData.length > 0 && (
-                  <Box sx={{ width: '100%', height: 300 }}>
+                  <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.saves, 300)}>
                     <ResponsiveContainer>
                       <BarChart data={timelineSeasonData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x_label" />
-                        <YAxis />
+                        <CartesianGrid
+                          stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis
+                          dataKey="x_label"
+                          tickLine={false}
+                          axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                          tick={{
+                            fill: theme.palette.text.secondary,
+                            fontSize: 11,
+                            fontFamily: theme.typography.fontFamily,
+                          }}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{
+                            fill: theme.palette.text.secondary,
+                            fontSize: 11,
+                            fontFamily: theme.typography.fontFamily,
+                          }}
+                        />
                         <RechartsTooltip
                           formatter={(value, name, payload) => [formatDecimal(value), name]}
                           labelFormatter={(label, payload) => {
@@ -703,19 +842,19 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                           dataKey="goals_per_match"
                           name={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
                           fill={INSIGHT_ACCENTS.goals.main}
-                          radius={[6, 6, 0, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="assists_per_match"
                           name={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
                           fill={INSIGHT_ACCENTS.assists.main}
-                          radius={[6, 6, 0, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                         <Bar
                           dataKey="saves_per_match"
                           name={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
                           fill={INSIGHT_ACCENTS.saves.main}
-                          radius={[6, 6, 0, 0]}
+                          radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -744,15 +883,8 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             </Grid>
           </Grid>
 
-          <Card
-            variant="outlined"
-            sx={{
-              borderRadius: 3,
-              background:
-                'linear-gradient(150deg, rgba(255,255,255,0.98) 0%, rgba(250,253,255,0.93) 100%)',
-            }}
-          >
-            <CardContent>
+          <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.players)}>
+            <CardContent sx={buildInsightContentSx}>
               <Stack spacing={1.2}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                   {t('dashboard.admin.standings.correlationMatrixTitle')}
@@ -788,7 +920,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 )}
 
                 {insightsReport.matrix_players.length > 0 && (
-                  <TableContainer>
+                  <TableContainer sx={buildInsightTableContainerSx(theme, INSIGHT_ACCENTS.players)}>
                     <Table size="small">
                       <TableHead>
                         <TableRow>

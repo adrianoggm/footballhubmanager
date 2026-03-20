@@ -153,8 +153,117 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
   }, [filteredHistoricalPlayers.length, membersPage, membersRowsPerPage])
 
   return (
-    <Grid container spacing={2.5}>
-      <Grid item xs={12} xl={8} sx={{ minWidth: 0 }}>
+    <Grid container spacing={2.5} sx={{ width: '100%' }}>
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Typography variant="h6">{t('dashboard.admin.labels.title')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.admin.labels.description')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('dashboard.admin.labels.colorHelper')}
+              </Typography>
+              <Grid container spacing={1.5}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label={t('dashboard.admin.labels.roleLabels')}
+                    value={labelsDraft.role_labels}
+                    onChange={onLabelsDraftField('role_labels')}
+                    helperText={t('dashboard.admin.labels.inputHelper')}
+                    multiline
+                    minRows={2}
+                    fullWidth
+                  />
+                  {draftRoleLabels.length > 0 && (
+                    <Stack spacing={1} sx={{ mt: 1 }}>
+                      {draftRoleLabels.map((roleLabel) => (
+                        <Stack
+                          key={roleLabel}
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          justifyContent="space-between"
+                        >
+                          <Chip
+                            size="small"
+                            label={roleLabel}
+                            sx={labelChipSx(draftRoleColors[roleLabel])}
+                          />
+                          <TextField
+                            type="color"
+                            size="small"
+                            value={draftRoleColors[roleLabel]}
+                            onChange={onLabelColorDraftChange('role_colors', roleLabel)}
+                            sx={{ width: 72 }}
+                            inputProps={{
+                              'aria-label': `${roleLabel} color`,
+                            }}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label={t('dashboard.admin.labels.positionLabels')}
+                    value={labelsDraft.position_labels}
+                    onChange={onLabelsDraftField('position_labels')}
+                    helperText={t('dashboard.admin.labels.inputHelper')}
+                    multiline
+                    minRows={2}
+                    fullWidth
+                  />
+                  {draftPositionLabels.length > 0 && (
+                    <Stack spacing={1} sx={{ mt: 1 }}>
+                      {draftPositionLabels.map((positionLabel) => (
+                        <Stack
+                          key={positionLabel}
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          justifyContent="space-between"
+                        >
+                          <Chip
+                            size="small"
+                            label={positionLabel}
+                            sx={labelChipSx(draftPositionColors[positionLabel])}
+                          />
+                          <TextField
+                            type="color"
+                            size="small"
+                            value={draftPositionColors[positionLabel]}
+                            onChange={onLabelColorDraftChange('position_colors', positionLabel)}
+                            sx={{ width: 72 }}
+                            inputProps={{
+                              'aria-label': `${positionLabel} color`,
+                            }}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
+                </Grid>
+              </Grid>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button variant="contained" onClick={handleSavePenaLabels} disabled={loading}>
+                  {t('dashboard.admin.labels.save')}
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  {t('dashboard.admin.labels.currentCounts', {
+                    roles: penaLabels.role_labels.length,
+                    positions: penaLabels.position_labels.length,
+                  })}
+                </Typography>
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={8}>
         <Stack spacing={2.5}>
           <Card>
             <CardContent>

@@ -2,6 +2,7 @@ import { Box, Container, Stack, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { Outlet } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
+import ThemeModeSwitcher from '../components/ThemeModeSwitcher.jsx'
 import { useI18n } from '../i18n/useI18n.js'
 
 export default function PublicLayout() {
@@ -20,8 +21,8 @@ export default function PublicLayout() {
         sx={{
           position: 'absolute',
           inset: 0,
-          backgroundImage:
-            'linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)',
+          backgroundImage: (theme) =>
+            `linear-gradient(${alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.06 : 0.04)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.06 : 0.04)} 1px, transparent 1px)`,
           backgroundSize: '32px 32px',
           maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.8), transparent)',
           pointerEvents: 'none',
@@ -83,12 +84,21 @@ export default function PublicLayout() {
               sx={{
                 p: 0.5,
                 borderRadius: 999,
-                border: `1px solid ${alpha('#0f172a', 0.08)}`,
-                bgcolor: alpha('#ffffff', 0.62),
+                border: (theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+                bgcolor: (theme) =>
+                  alpha(
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.background.default
+                      : theme.palette.background.paper,
+                    theme.palette.mode === 'dark' ? 0.74 : 0.62
+                  ),
                 backdropFilter: 'blur(12px)',
               }}
             >
-              <LanguageSwitcher />
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                <LanguageSwitcher />
+                <ThemeModeSwitcher />
+              </Stack>
             </Box>
           </Stack>
 

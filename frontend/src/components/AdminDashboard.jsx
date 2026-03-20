@@ -24,7 +24,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
@@ -36,14 +36,16 @@ import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
-import AdminAccountabilitySection from './admin/AdminAccountabilitySection.jsx'
-import AdminInsightsSection from './admin/AdminInsightsSection.jsx'
-import AdminMatchesSection from './admin/AdminMatchesSection.jsx'
-import AdminPlayersSection from './admin/AdminPlayersSection.jsx'
-import AdminSeasonsSection from './admin/AdminSeasonsSection.jsx'
+import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
 import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
+
+const AdminSeasonsSection = lazy(() => import('./admin/AdminSeasonsSection.jsx'))
+const AdminAccountabilitySection = lazy(() => import('./admin/AdminAccountabilitySection.jsx'))
+const AdminPlayersSection = lazy(() => import('./admin/AdminPlayersSection.jsx'))
+const AdminMatchesSection = lazy(() => import('./admin/AdminMatchesSection.jsx'))
+const AdminInsightsSection = lazy(() => import('./admin/AdminInsightsSection.jsx'))
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
@@ -388,6 +390,16 @@ const mapDashboardErrorMessage = (error, t) => {
   return error.message
 }
 
+function SectionLoader() {
+  return (
+    <Card sx={{ width: '100%' }}>
+      <CardContent>
+        <LinearProgress />
+      </CardContent>
+    </Card>
+  )
+}
+
 const formatPlayerDisplayName = (player) => {
   const fullName = [player.name, player.surname1, player.surname2].filter(Boolean).join(' ')
   if (player.nickname && fullName) {
@@ -656,6 +668,13 @@ export default function AdminDashboard({
       onSectionChange(resolvedSectionId)
     }
   }
+
+  const shouldLoadHistoricalPlayers =
+    activeSection === 'players' || activeSection === 'accountability'
+  const shouldLoadPenaLabels = activeSection === 'players' || activeSection === 'standings'
+  const shouldLoadSeasonRoster = activeSection === 'players' || activeSection === 'matches'
+  const shouldLoadStandings = activeSection === 'overview' || activeSection === 'standings'
+  const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -952,6 +971,13 @@ export default function AdminDashboard({
   const loadHistoricalPlayers = async (penaGuid) =>
     collectPagedItems((page) => adminService.listPenaPlayers(penaGuid, { page, pageSize: 100 }))
 
+  const loadHistoricalPlayersForPena = async (penaGuid) => loadHistoricalPlayers(penaGuid)
+
+  const loadPenaLabelsForPena = async (penaGuid) => {
+    const labelsRaw = await adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
+    return sanitizePenaLabels(labelsRaw)
+  }
+
   const loadSeasonRoster = async (penaGuid, seasonGuid) => {
     if (!seasonGuid) {
       return []
@@ -1014,7 +1040,7 @@ export default function AdminDashboard({
     const isStale = () => requestId !== penaDataRequestIdRef.current
 
     try {
-      const [active, seasonsPage, penaPlayers, labelsRaw] = await Promise.all([
+      const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
         adminService.getActiveSeason(penaGuid).catch((requestError) => {
           if (requestError.status === 404) {
             return null
@@ -1022,22 +1048,42 @@ export default function AdminDashboard({
           throw requestError
         }),
         adminService.listSeasons(penaGuid, { pageSize: 100 }),
-        loadHistoricalPlayers(penaGuid),
-        adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels()),
+        shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
+        shouldLoadPenaLabels
+          ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
+          : Promise.resolve(null),
       ])
       if (isStale()) {
         return
       }
-      const labels = sanitizePenaLabels(labelsRaw)
 
       const seasonItems = seasonsPage.items || []
+      const nextLabels = shouldLoadPenaLabels ? sanitizePenaLabels(labels) : penaLabels
       setActiveSeason(active)
       setSeasonList(seasonItems)
-      setHistoricalPlayers(penaPlayers)
-      setPenaLabels(labels)
-      setLabelsDraft(defaultLabelsDraft(labels))
       setMemberFilters(defaultLabelFilters())
       setStandingsFilters(defaultLabelFilters())
+
+      if (shouldLoadHistoricalPlayers) {
+        setHistoricalPlayers(penaPlayers || [])
+      }
+
+      if (shouldLoadPenaLabels) {
+        setPenaLabels(nextLabels)
+        setLabelsDraft(defaultLabelsDraft(nextLabels))
+        setGuestForm((prev) => ({
+          ...prev,
+          role: hasLabel(nextLabels.role_labels, prev.role)
+            ? prev.role
+            : pickPreferredLabel(nextLabels.role_labels, 'guest'),
+          position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
+        }))
+        setMembershipDraft((prev) => ({
+          ...prev,
+          role: hasLabel(nextLabels.role_labels, prev.role) ? prev.role : '',
+          position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
+        }))
+      }
 
       const nextRange = buildNextSeasonDateRange(seasonItems)
       const pointsReference = active || seasonItems[0]
@@ -1060,22 +1106,10 @@ export default function AdminDashboard({
       setPendingRemoveMembershipPlayer(null)
       setGuestForm((prev) => ({
         ...prev,
-        role: hasLabel(labels.role_labels, prev.role)
+        role: hasLabel(nextLabels.role_labels, prev.role)
           ? prev.role
-          : pickPreferredLabel(labels.role_labels, 'guest'),
+          : pickPreferredLabel(nextLabels.role_labels, 'guest'),
       }))
-
-      if (resolvedSeasonGuid) {
-        const standingsPage = await adminService.listStandings(penaGuid, resolvedSeasonGuid, {
-          pageSize: 10,
-        })
-        if (isStale()) {
-          return
-        }
-        setStandings(standingsPage.items || [])
-      } else {
-        setStandings([])
-      }
     } catch (requestError) {
       if (isStale()) {
         return
@@ -1144,6 +1178,114 @@ export default function AdminDashboard({
   }, [selectedPenaGuid])
 
   useEffect(() => {
+    if (!selectedPenaGuid || initializing) {
+      return
+    }
+    if (!shouldLoadHistoricalPlayers && !shouldLoadPenaLabels) {
+      return
+    }
+
+    let activeRequest = true
+    ;(async () => {
+      try {
+        const [players, labels] = await Promise.all([
+          shouldLoadHistoricalPlayers
+            ? loadHistoricalPlayersForPena(selectedPenaGuid)
+            : Promise.resolve(null),
+          shouldLoadPenaLabels ? loadPenaLabelsForPena(selectedPenaGuid) : Promise.resolve(null),
+        ])
+        if (!activeRequest) {
+          return
+        }
+
+        if (shouldLoadHistoricalPlayers) {
+          setHistoricalPlayers(players || [])
+        }
+
+        if (shouldLoadPenaLabels && labels) {
+          setPenaLabels(labels)
+          setLabelsDraft(defaultLabelsDraft(labels))
+          setGuestForm((prev) => ({
+            ...prev,
+            role: hasLabel(labels.role_labels, prev.role)
+              ? prev.role
+              : pickPreferredLabel(labels.role_labels, 'guest'),
+            position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
+          }))
+          setMembershipDraft((prev) => ({
+            ...prev,
+            role: hasLabel(labels.role_labels, prev.role) ? prev.role : '',
+            position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
+          }))
+          setMemberFilters((prev) => ({
+            role: pruneFilterValues(prev.role, labels.role_labels),
+            position: pruneFilterValues(prev.position, labels.position_labels),
+          }))
+          setStandingsFilters((prev) => ({
+            role: pruneFilterValues(prev.role, labels.role_labels),
+            position: pruneFilterValues(prev.position, labels.position_labels),
+          }))
+        }
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
+        }
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      }
+    })()
+
+    return () => {
+      activeRequest = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection])
+
+  useEffect(() => {
+    if (!shouldLoadStandings) {
+      setStandings([])
+      return
+    }
+    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+      setStandings([])
+      return
+    }
+    if (!seasonList.some((season) => season.guid === selectedSeasonGuid)) {
+      setStandings([])
+      return
+    }
+
+    let activeRequest = true
+    ;(async () => {
+      try {
+        await loadStandings(selectedPenaGuid, selectedSeasonGuid, standingsFilters)
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
+        }
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      }
+    })()
+
+    return () => {
+      activeRequest = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
+
+  useEffect(() => {
+    if (!shouldLoadSeasonRoster) {
+      setSeasonRoster([])
+      setSeasonRosterLoading(false)
+      return
+    }
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
       setSeasonRoster([])
       setSeasonRosterLoading(false)
@@ -1184,7 +1326,7 @@ export default function AdminDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
 
   useEffect(() => {
     resetOverviewMatchDetailDialog()
@@ -1195,8 +1337,8 @@ export default function AdminDashboard({
   }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
     if (!shouldLoadSeasonMatches) {
+      setSeasonMatches([])
       setSeasonMatchesLoading(false)
       return
     }
@@ -2093,7 +2235,7 @@ export default function AdminDashboard({
     },
     {
       label: t('dashboard.admin.overview.seasonPlayers'),
-      value: String(seasonRoster.length),
+      value: shouldLoadSeasonRoster ? String(seasonRoster.length) : '-',
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
       helperLabel: t('dashboard.common.summaryMeta.season'),
       tone: 'info',
@@ -2162,6 +2304,7 @@ export default function AdminDashboard({
               justifyContent={{ sm: 'flex-end' }}
             >
               <LanguageSwitcher />
+              <ThemeModeSwitcher />
               <Button
                 variant="outlined"
                 onClick={() => runAction(loadDashboard, '')}
@@ -2228,8 +2371,8 @@ export default function AdminDashboard({
       {!selectedPenaGuid && <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>}
 
       {selectedPenaGuid && activeSection === 'overview' && (
-        <Grid container spacing={2.5}>
-          <Grid item xs={12} xl={5} sx={{ minWidth: 0 }}>
+        <Grid container spacing={2.5} sx={{ width: '100%' }}>
+          <Grid item xs={12}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -2256,53 +2399,6 @@ export default function AdminDashboard({
                         {formatEpochSeconds(tokenPayload.expires_at)}
                       </Typography>
                     </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} xl={7} sx={{ minWidth: 0 }}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">
-                    {t('dashboard.admin.overview.quickActionsTitle')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.overview.quickActionsDescription')}
-                  </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Button variant="outlined" onClick={() => handleSectionChange('seasons')}>
-                      {t('dashboard.admin.overview.manageSeasons')}
-                    </Button>
-                    <Button variant="outlined" onClick={() => handleSectionChange('players')}>
-                      {t('dashboard.admin.overview.managePlayers')}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleSectionChange('accountability')}
-                    >
-                      {t('dashboard.admin.overview.manageAccountability')}
-                    </Button>
-                    <Button variant="outlined" onClick={() => handleSectionChange('matches')}>
-                      {t('dashboard.admin.overview.createMatch')}
-                    </Button>
-                    <Button variant="outlined" onClick={() => handleSectionChange('standings')}>
-                      {t('dashboard.admin.overview.viewStandings')}
-                    </Button>
-                  </Stack>
-                  {lastCreatedMatch ? (
-                    <Alert severity="success">
-                      {t('dashboard.admin.overview.lastMatchCreated', {
-                        guid: lastCreatedMatch.guid,
-                        date: formatDate(lastCreatedMatch.match_date),
-                      })}
-                    </Alert>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.overview.noDetailedMatch')}
-                    </Typography>
                   )}
                 </Stack>
               </CardContent>
@@ -2509,68 +2605,76 @@ export default function AdminDashboard({
       )}
 
       {selectedPenaGuid && activeSection === 'seasons' && (
-        <AdminSeasonsSection
-          state={{
-            activeSeason,
-            selectedSeason,
-            activeSeasonLabel,
-            selectedSeasonLabel,
-            latestSeasonEndDate,
-            seasonForm,
-            importPreviousSeasonRoster,
-            importSourceSeasonGuid,
-            seasonImportCandidates,
-            loading,
-            historySeasons,
-            selectedSeasonGuid,
-            selectedSeasonForm,
-            selectedSeasonDateErrors,
-          }}
-          actions={{
-            onSeasonField,
-            handlePrefillNextSeason,
-            onImportPreviousSeasonRosterChange,
-            onImportSourceSeasonGuidChange,
-            handleCreateSeason,
-            onSelectedSeasonField,
-            handleUpdateSelectedSeason,
-            handleRequestDeleteSelectedSeason,
-            handleSelectSeasonFromHistory,
-          }}
-          helpers={{
-            t,
-            formatDate,
-          }}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <AdminSeasonsSection
+            state={{
+              activeSeason,
+              selectedSeason,
+              activeSeasonLabel,
+              selectedSeasonLabel,
+              latestSeasonEndDate,
+              seasonForm,
+              importPreviousSeasonRoster,
+              importSourceSeasonGuid,
+              seasonImportCandidates,
+              loading,
+              historySeasons,
+              selectedSeasonGuid,
+              selectedSeasonForm,
+              selectedSeasonDateErrors,
+            }}
+            actions={{
+              onSeasonField,
+              handlePrefillNextSeason,
+              onImportPreviousSeasonRosterChange,
+              onImportSourceSeasonGuidChange,
+              handleCreateSeason,
+              onSelectedSeasonField,
+              handleUpdateSelectedSeason,
+              handleRequestDeleteSelectedSeason,
+              handleSelectSeasonFromHistory,
+            }}
+            helpers={{
+              t,
+              formatDate,
+            }}
+          />
+        </Suspense>
       )}
 
       {selectedPenaGuid && activeSection === 'accountability' && (
-        <AdminAccountabilitySection
-          penaGuid={selectedPenaGuid}
-          players={historicalPlayers}
-          t={t}
-          formatPlayerDisplayName={formatPlayerDisplayName}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <AdminAccountabilitySection
+            penaGuid={selectedPenaGuid}
+            players={historicalPlayers}
+            t={t}
+            formatPlayerDisplayName={formatPlayerDisplayName}
+          />
+        </Suspense>
       )}
 
       {selectedPenaGuid && activeSection === 'players' && (
-        <AdminPlayersSection
-          state={playersSection.state}
-          actions={playersSection.actions}
-          helpers={playersSection.helpers}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <AdminPlayersSection
+            state={playersSection.state}
+            actions={playersSection.actions}
+            helpers={playersSection.helpers}
+          />
+        </Suspense>
       )}
 
       {selectedPenaGuid && activeSection === 'matches' && (
-        <AdminMatchesSection
-          state={matchesSection.state}
-          actions={matchesSection.actions}
-          helpers={matchesSection.helpers}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <AdminMatchesSection
+            state={matchesSection.state}
+            actions={matchesSection.actions}
+            helpers={matchesSection.helpers}
+          />
+        </Suspense>
       )}
 
       {selectedPenaGuid && activeSection === 'standings' && (
-        <Card>
+        <Card sx={{ width: '100%' }}>
           <CardContent>
             <Stack spacing={2}>
               <Stack
@@ -2720,26 +2824,28 @@ export default function AdminDashboard({
               )}
 
               <Divider />
-              <AdminInsightsSection
-                state={{
-                  selectedSeasonGuid,
-                  insightsScope,
-                  insightsLoading,
-                  insightsReport,
-                  insightsComparisonReport,
-                  insightsComparison,
-                }}
-                actions={{
-                  onInsightsScopeChange: setInsightsScope,
-                  onRefreshInsights: handleRefreshInsights,
-                }}
-                helpers={{
-                  t,
-                  formatDecimal,
-                  formatSignedDecimal,
-                  formatPercent,
-                }}
-              />
+              <Suspense fallback={<LinearProgress />}>
+                <AdminInsightsSection
+                  state={{
+                    selectedSeasonGuid,
+                    insightsScope,
+                    insightsLoading,
+                    insightsReport,
+                    insightsComparisonReport,
+                    insightsComparison,
+                  }}
+                  actions={{
+                    onInsightsScopeChange: setInsightsScope,
+                    onRefreshInsights: handleRefreshInsights,
+                  }}
+                  helpers={{
+                    t,
+                    formatDecimal,
+                    formatSignedDecimal,
+                    formatPercent,
+                  }}
+                />
+              </Suspense>
             </Stack>
           </CardContent>
         </Card>
