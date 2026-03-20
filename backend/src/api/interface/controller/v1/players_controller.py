@@ -8,12 +8,11 @@ from api.interface.controller.v1.model.request.players_request import PlayerUpda
 from api.interface.controller.v1.model.response.players_response import (
     PlayerProfileResponse,
 )
+from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_player_access, require_user
 from fastapi import APIRouter, Depends, HTTPException, status
 from persistence.application.use_cases import (
     GetPlayerProfileUseCase,
-    InvalidPlayerUpdateDataError,
-    PlayerInvalidNationalityError,
     PlayerProfile,
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
@@ -38,6 +37,7 @@ def get_me(
 
 
 @router.put("/players/me", response_model=PlayerProfileResponse)
+@map_exceptions
 def update_me(
     payload: PlayerUpdateRequest,
     session=Depends(require_user),
@@ -49,14 +49,7 @@ def update_me(
         surname2=payload.surname2,
         nationality=payload.nationality,
     )
-    try:
-        profile = _profile_or_404(use_case.execute_by_account_id(session.user_id, update))
-    except PlayerInvalidNationalityError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
-    except InvalidPlayerUpdateDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid player update data"
-        )
+    profile = _profile_or_404(use_case.execute_by_account_id(session.user_id, update))
     return PlayerProfileResponse(**asdict(profile))
 
 

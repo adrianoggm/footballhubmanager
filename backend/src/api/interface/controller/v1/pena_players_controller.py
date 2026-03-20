@@ -14,21 +14,16 @@ from api.interface.controller.v1.model.response.pena_players_response import (
     PenaPlayerResponse,
     PenaPlayersPageResponse,
 )
+from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin, require_user
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from persistence.application.use_cases import (
     GetPenaPlayersUseCase,
-    InvalidPenaGuestPlayerDataError,
-    InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
     PenaGuestPlayerCreate,
     PenaMembershipAccessDeniedError,
-    PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
-    PenaMembershipPenaNotFoundError,
-    PenaMembershipPlayerNotFoundError,
     PenaMembershipUpdate,
-    PenaMembershipUserProfileNotFoundError,
     PenaPlayerFilters,
 )
 
@@ -46,45 +41,51 @@ def _to_membership_response(data) -> PenaMembershipResponse:
     return PenaMembershipResponse(**asdict(data))
 
 
+ADMIN_PENA_MEMBERSHIP_OVERRIDES = {
+    PenaMembershipAccessDeniedError: (
+        status.HTTP_403_FORBIDDEN,
+        "Admin does not manage this pena",
+    ),
+    PenaMembershipNotFoundError: (
+        status.HTTP_409_CONFLICT,
+        "Player is not linked to this pena",
+    ),
+}
+
+
+USER_PENA_MEMBERSHIP_OVERRIDES = {
+    PenaMembershipAccessDeniedError: (
+        status.HTTP_403_FORBIDDEN,
+        "User does not belong to this pena",
+    ),
+}
+
+
 @router.post(
     "/penas/{pena_guid}/players",
     response_model=PenaMembershipResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@map_exceptions(overrides=ADMIN_PENA_MEMBERSHIP_OVERRIDES)
 def create_guest_player_for_admin(
     pena_guid: str,
     payload: CreateGuestPlayerRequest,
     admin_session=Depends(require_admin),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    try:
-        created = use_case.create_guest_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            data=PenaGuestPlayerCreate(
-                name=payload.name,
-                surname1=payload.surname1,
-                surname2=payload.surname2,
-                nationality=payload.nationality,
-                nickname=payload.nickname,
-                role=payload.role,
-                position=payload.position,
-            ),
-        )
-    except InvalidPenaGuestPlayerDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid guest player data",
-        )
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaMembershipInvalidNationalityError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
+    created = use_case.create_guest_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        data=PenaGuestPlayerCreate(
+            name=payload.name,
+            surname1=payload.surname1,
+            surname2=payload.surname2,
+            nationality=payload.nationality,
+            nickname=payload.nickname,
+            role=payload.role,
+            position=payload.position,
+        ),
+    )
     return _to_membership_response(created)
 
 
@@ -127,50 +128,30 @@ def get_pena_players(
 
 
 @router.get("/penas/{pena_guid}/players/{player_guid}", response_model=PenaMembershipResponse)
+@map_exceptions
 def get_pena_player_membership(
     pena_guid: str,
     player_guid: str,
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    try:
-        membership = use_case.get_for_player(pena_guid=pena_guid, player_guid=player_guid)
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipPlayerNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found")
-    except PenaMembershipNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Player is not linked to this pena",
-        )
+    membership = use_case.get_for_player(pena_guid=pena_guid, player_guid=player_guid)
     return _to_membership_response(membership)
 
 
 @router.get("/players/me/penas/{pena_guid}", response_model=PenaMembershipResponse)
+@map_exceptions(overrides=USER_PENA_MEMBERSHIP_OVERRIDES)
 def get_my_pena_membership(
     pena_guid: str,
     session=Depends(require_user),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    try:
-        membership = use_case.get_for_user(pena_guid=pena_guid, account_id=session.user_id)
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipUserProfileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User player profile not found",
-        )
-    except PenaMembershipAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not belong to this pena",
-        )
+    membership = use_case.get_for_user(pena_guid=pena_guid, account_id=session.user_id)
     return _to_membership_response(membership)
 
 
 @router.patch("/penas/{pena_guid}/players/me", response_model=PenaMembershipResponse)
+@map_exceptions(overrides=USER_PENA_MEMBERSHIP_OVERRIDES)
 def update_my_pena_membership(
     pena_guid: str,
     payload: UpdatePenaMembershipRequest,
@@ -184,56 +165,27 @@ def update_my_pena_membership(
         position=payload.position,
         position_provided="position" in payload.model_fields_set,
     )
-    try:
-        membership = use_case.update_for_user(
-            pena_guid=pena_guid,
-            account_id=session.user_id,
-            update=update,
-        )
-    except InvalidPenaMembershipUpdateDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid membership update data",
-        )
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipUserProfileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User player profile not found",
-        )
-    except PenaMembershipAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not belong to this pena",
-        )
+    membership = use_case.update_for_user(
+        pena_guid=pena_guid,
+        account_id=session.user_id,
+        update=update,
+    )
     return _to_membership_response(membership)
 
 
 @router.delete("/penas/{pena_guid}/players/me", status_code=status.HTTP_204_NO_CONTENT)
+@map_exceptions(overrides=USER_PENA_MEMBERSHIP_OVERRIDES)
 def remove_my_pena_membership(
     pena_guid: str,
     session=Depends(require_user),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    try:
-        use_case.remove_for_user(pena_guid=pena_guid, account_id=session.user_id)
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipUserProfileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User player profile not found",
-        )
-    except PenaMembershipAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not belong to this pena",
-        )
+    use_case.remove_for_user(pena_guid=pena_guid, account_id=session.user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/penas/{pena_guid}/players/{player_guid}", response_model=PenaMembershipResponse)
+@map_exceptions(overrides=ADMIN_PENA_MEMBERSHIP_OVERRIDES)
 def update_pena_player_membership_as_admin(
     pena_guid: str,
     player_guid: str,
@@ -249,60 +201,26 @@ def update_pena_player_membership_as_admin(
         role_provided="role" in payload.model_fields_set,
         position_provided="position" in payload.model_fields_set,
     )
-    try:
-        membership = use_case.update_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            player_guid=player_guid,
-            update=update,
-        )
-    except InvalidPenaMembershipUpdateDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid membership update data",
-        )
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaMembershipPlayerNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found")
-    except PenaMembershipNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Player is not linked to this pena",
-        )
+    membership = use_case.update_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        player_guid=player_guid,
+        update=update,
+    )
     return _to_membership_response(membership)
 
 
 @router.delete("/penas/{pena_guid}/players/{player_guid}", status_code=status.HTTP_204_NO_CONTENT)
+@map_exceptions(overrides=ADMIN_PENA_MEMBERSHIP_OVERRIDES)
 def remove_pena_player_membership_as_admin(
     pena_guid: str,
     player_guid: str,
     admin_session=Depends(require_admin),
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
-    try:
-        use_case.remove_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            player_guid=player_guid,
-        )
-    except PenaMembershipPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaMembershipAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaMembershipPlayerNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Player not found")
-    except PenaMembershipNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Player is not linked to this pena",
-        )
+    use_case.remove_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        player_guid=player_guid,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -55,6 +55,14 @@ def test_authorize_pena_access_negative_admin_denied():
         use_case.execute(pena_guid="pena-guid", session=_session("admin"))
 
 
+def test_authorize_pena_access_negative_user_denied_message():
+    repo = _FakeAccessRepo(user_belongs_to_pena_result=False)
+    use_case = AuthorizePenaAccessUseCase(repo)
+
+    with pytest.raises(AccessDeniedError, match="User does not belong to this pena"):
+        use_case.execute(pena_guid="pena-guid", session=_session("user"))
+
+
 def test_authorize_pena_access_edge_invalid_session_type():
     repo = _FakeAccessRepo()
     use_case = AuthorizePenaAccessUseCase(repo)
@@ -83,6 +91,14 @@ def test_authorize_player_access_negative_user_denied():
 
     with pytest.raises(AccessDeniedError):
         use_case.execute(player_guid="player-guid", session=_session("user"))
+
+
+def test_authorize_player_access_negative_admin_denied_message():
+    repo = _FakeAccessRepo(admin_manages_player_result=False)
+    use_case = AuthorizePlayerAccessUseCase(repo)
+
+    with pytest.raises(AccessDeniedError, match="Admin cannot access this player"):
+        use_case.execute(player_guid="player-guid", session=_session("admin"))
 
 
 def test_authorize_player_access_edge_admin_managed():
