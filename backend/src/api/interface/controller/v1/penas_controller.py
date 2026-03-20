@@ -26,6 +26,7 @@ from api.interface.controller.v1.model.response.penas_response import (
     PenaResponse,
     PenasPageResponse,
 )
+from api.middleware.exception_mapper import map_exceptions
 from app.config import config as app_config
 from auth.dependencies import (
     authorize_pena_access,
@@ -37,29 +38,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.use_cases import (
     GeneratePenaLinkTokenUseCase,
     GetPenasUseCase,
-    InvalidLinkTokenError,
-    InvalidPenaAccountabilityDataError,
-    InvalidPenaLabelsDataError,
     LinkUserToPenaUseCase,
     ManagePenaAccountabilityUseCase,
     ManagePenaLabelsUseCase,
-    PenaAccessDeniedError,
-    PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,
-    PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
     PenaAccountabilityMemberAccountUpsert,
-    PenaAccountabilityMemberNotFoundError,
-    PenaAccountabilityPenaNotFoundError,
     PenaAccountabilitySettingsUpdate,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsPenaNotFoundError,
     PenaLabelsUpdate,
     PenasPage,
-    UserAlreadyLinkedError,
-    UserProfileNotFoundError,
 )
 
 router = APIRouter()
@@ -187,15 +176,13 @@ def get_pena(
 
 
 @router.get("/penas/{pena_guid}/labels", response_model=PenaLabelsResponse)
+@map_exceptions
 def get_pena_labels(
     pena_guid: str,
     _session=Depends(authorize_pena_access),
     use_case: ManagePenaLabelsUseCase = Depends(get_pena_labels_use_case),
 ):
-    try:
-        labels = use_case.get_for_pena(pena_guid=pena_guid)
-    except PenaLabelsPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    labels = use_case.get_for_pena(pena_guid=pena_guid)
     return PenaLabelsResponse(
         role_labels=labels.role_labels,
         position_labels=labels.position_labels,
@@ -205,35 +192,23 @@ def get_pena_labels(
 
 
 @router.put("/penas/{pena_guid}/labels", response_model=PenaLabelsResponse)
+@map_exceptions
 def update_pena_labels(
     pena_guid: str,
     payload: UpdatePenaLabelsRequest,
     admin_session=Depends(require_admin),
     use_case: ManagePenaLabelsUseCase = Depends(get_pena_labels_use_case),
 ):
-    try:
-        labels = use_case.update_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            update=PenaLabelsUpdate(
-                role_labels=payload.role_labels,
-                position_labels=payload.position_labels,
-                role_colors=payload.role_colors,
-                position_colors=payload.position_colors,
-            ),
-        )
-    except InvalidPenaLabelsDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid pena labels data",
-        )
-    except PenaLabelsPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaLabelsAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
+    labels = use_case.update_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        update=PenaLabelsUpdate(
+            role_labels=payload.role_labels,
+            position_labels=payload.position_labels,
+            role_colors=payload.role_colors,
+            position_colors=payload.position_colors,
+        ),
+    )
     return PenaLabelsResponse(
         role_labels=labels.role_labels,
         position_labels=labels.position_labels,
@@ -243,37 +218,30 @@ def update_pena_labels(
 
 
 @router.post("/penas/{pena_guid}/link-tokens", response_model=LinkTokenResponse)
+@map_exceptions
 def create_link_token(
     pena_guid: str,
     admin_session=Depends(require_admin),
     use_case: GeneratePenaLinkTokenUseCase = Depends(get_generate_pena_link_token_use_case),
 ):
-    try:
-        created = use_case.execute(
-            admin_id=admin_session.user_id,
-            pena_guid=pena_guid,
-            ttl_seconds=app_config.LINK_TOKEN_TTL_SECONDS,
-        )
-    except PenaAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
+    created = use_case.execute(
+        admin_id=admin_session.user_id,
+        pena_guid=pena_guid,
+        ttl_seconds=app_config.LINK_TOKEN_TTL_SECONDS,
+    )
     return LinkTokenResponse(
         token=created.token, pena_guid=created.pena_guid, expires_at=created.expires_at
     )
 
 
 @router.get("/penas/{pena_guid}/accountability", response_model=PenaAccountabilityResponse)
+@map_exceptions
 def get_pena_accountability(
     pena_guid: str,
     session=Depends(authorize_pena_access),
     use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
 ):
-    try:
-        info = use_case.get_for_pena(pena_guid=pena_guid)
-    except PenaAccountabilityPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    info = use_case.get_for_pena(pena_guid=pena_guid)
 
     current_player_guid = None
     if session.user_type == "user":
@@ -287,36 +255,24 @@ def get_pena_accountability(
 
 
 @router.put("/penas/{pena_guid}/accountability", response_model=PenaAccountabilityResponse)
+@map_exceptions
 def update_pena_accountability(
     pena_guid: str,
     payload: UpdatePenaAccountabilityRequest,
     admin_session=Depends(require_admin),
     use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
 ):
-    try:
-        info = use_case.update_settings_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            update=PenaAccountabilitySettingsUpdate(
-                currency=payload.currency,
-                balance_cents=payload.balance_cents,
-                reserve_cents=payload.reserve_cents,
-                budget_visibility=payload.budget_visibility,
-                expenses_visibility=payload.expenses_visibility,
-            ),
-        )
-    except InvalidPenaAccountabilityDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid accountability data",
-        )
-    except PenaAccountabilityPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaAccountabilityAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
+    info = use_case.update_settings_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        update=PenaAccountabilitySettingsUpdate(
+            currency=payload.currency,
+            balance_cents=payload.balance_cents,
+            reserve_cents=payload.reserve_cents,
+            budget_visibility=payload.budget_visibility,
+            expenses_visibility=payload.expenses_visibility,
+        ),
+    )
     return _accountability_response(
         info=info,
         session=admin_session,
@@ -328,6 +284,7 @@ def update_pena_accountability(
     "/penas/{pena_guid}/accountability/members/{player_guid}",
     response_model=PenaAccountabilityResponse,
 )
+@map_exceptions
 def upsert_member_accountability(
     pena_guid: str,
     player_guid: str,
@@ -335,31 +292,16 @@ def upsert_member_accountability(
     admin_session=Depends(require_admin),
     use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
 ):
-    try:
-        info = use_case.upsert_member_account_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            data=PenaAccountabilityMemberAccountUpsert(
-                player_guid=player_guid,
-                debt_cents=payload.debt_cents,
-                contribution_cents=payload.contribution_cents,
-                note=payload.note,
-            ),
-        )
-    except InvalidPenaAccountabilityDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid accountability data",
-        )
-    except PenaAccountabilityPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaAccountabilityAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaAccountabilityMemberNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    info = use_case.upsert_member_account_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        data=PenaAccountabilityMemberAccountUpsert(
+            player_guid=player_guid,
+            debt_cents=payload.debt_cents,
+            contribution_cents=payload.contribution_cents,
+            note=payload.note,
+        ),
+    )
     return _accountability_response(
         info=info,
         session=admin_session,
@@ -371,32 +313,18 @@ def upsert_member_accountability(
     "/penas/{pena_guid}/accountability/members/{player_guid}",
     response_model=PenaAccountabilityResponse,
 )
+@map_exceptions
 def delete_member_accountability(
     pena_guid: str,
     player_guid: str,
     admin_session=Depends(require_admin),
     use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
 ):
-    try:
-        info = use_case.remove_member_account_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            player_guid=player_guid,
-        )
-    except InvalidPenaAccountabilityDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid accountability data",
-        )
-    except PenaAccountabilityPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaAccountabilityAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaAccountabilityMemberNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    info = use_case.remove_member_account_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        player_guid=player_guid,
+    )
     return _accountability_response(
         info=info,
         session=admin_session,
@@ -408,36 +336,24 @@ def delete_member_accountability(
     "/penas/{pena_guid}/accountability/expenses",
     response_model=PenaAccountabilityResponse,
 )
+@map_exceptions
 def create_pena_expense(
     pena_guid: str,
     payload: CreatePenaExpenseRequest,
     admin_session=Depends(require_admin),
     use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
 ):
-    try:
-        info = use_case.create_expense_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            data=PenaAccountabilityExpenseCreate(
-                title=payload.title,
-                category=payload.category,
-                amount_cents=payload.amount_cents,
-                occurred_on=payload.occurred_on,
-                note=payload.note,
-            ),
-        )
-    except InvalidPenaAccountabilityDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid accountability data",
-        )
-    except PenaAccountabilityPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaAccountabilityAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
+    info = use_case.create_expense_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        data=PenaAccountabilityExpenseCreate(
+            title=payload.title,
+            category=payload.category,
+            amount_cents=payload.amount_cents,
+            occurred_on=payload.occurred_on,
+            note=payload.note,
+        ),
+    )
     return _accountability_response(
         info=info,
         session=admin_session,
@@ -449,32 +365,18 @@ def create_pena_expense(
     "/penas/{pena_guid}/accountability/expenses/{expense_guid}",
     response_model=PenaAccountabilityResponse,
 )
+@map_exceptions
 def delete_pena_expense(
     pena_guid: str,
     expense_guid: str,
     admin_session=Depends(require_admin),
     use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
 ):
-    try:
-        info = use_case.remove_expense_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            expense_guid=expense_guid,
-        )
-    except InvalidPenaAccountabilityDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid accountability data",
-        )
-    except PenaAccountabilityPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaAccountabilityAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaAccountabilityExpenseNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
+    info = use_case.remove_expense_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        expense_guid=expense_guid,
+    )
     return _accountability_response(
         info=info,
         session=admin_session,
@@ -483,31 +385,16 @@ def delete_pena_expense(
 
 
 @router.post("/penas/link/consume")
+@map_exceptions
 def consume_link_token(
     payload: ConsumeLinkTokenRequest,
     session=Depends(require_user),
     use_case: LinkUserToPenaUseCase = Depends(get_link_user_to_pena_use_case),
 ):
-    try:
-        use_case.execute(
-            token=payload.token,
-            account_id=session.user_id,
-            nickname=payload.nickname,
-            position=payload.position,
-        )
-    except InvalidLinkTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired link token",
-        )
-    except UserAlreadyLinkedError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User is already linked to this pena",
-        )
-    except UserProfileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User player profile not found",
-        )
+    use_case.execute(
+        token=payload.token,
+        account_id=session.user_id,
+        nickname=payload.nickname,
+        position=payload.position,
+    )
     return {"status": "ok"}

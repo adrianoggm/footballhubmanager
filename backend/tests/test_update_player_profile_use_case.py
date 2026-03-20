@@ -21,9 +21,10 @@ class _FakeRepo:
     should_raise_invalid_nationality: bool = False
     updated_payload: dict | None = None
     profile: PlayerProfileResult | None = None
+    populate_default_profile: bool = True
 
     def __post_init__(self):
-        if self.profile is None:
+        if self.profile is None and self.populate_default_profile:
             self.profile = PlayerProfileResult(
                 guid="p-guid",
                 name="Name",
@@ -99,6 +100,17 @@ def test_update_profile_negative_invalid_nationality_from_repository():
         )
 
 
+def test_update_profile_by_guid_negative_invalid_nationality_from_repository():
+    repo = _FakeRepo(should_raise_invalid_nationality=True)
+    use_case = UpdatePlayerProfileUseCase(repo)
+
+    with pytest.raises(InvalidNationalityError):
+        use_case.execute_by_guid(
+            "player-guid",
+            PlayerUpdate(name="Adriano", surname1="Garcia", nationality="Atlantis"),
+        )
+
+
 def test_update_profile_edge_empty_required_value_raises():
     repo = _FakeRepo()
     use_case = UpdatePlayerProfileUseCase(repo)
@@ -107,6 +119,17 @@ def test_update_profile_edge_empty_required_value_raises():
         use_case.execute_by_account_id(
             10,
             PlayerUpdate(name="   "),
+        )
+
+
+def test_update_profile_by_guid_rejects_blank_required_fields():
+    repo = _FakeRepo()
+    use_case = UpdatePlayerProfileUseCase(repo)
+
+    with pytest.raises(InvalidPlayerUpdateDataError):
+        use_case.execute_by_guid(
+            "player-guid",
+            PlayerUpdate(surname1="   "),
         )
 
 
@@ -121,3 +144,27 @@ def test_update_profile_edge_empty_optional_surname2_becomes_none():
 
     assert repo.updated_payload is not None
     assert repo.updated_payload["surname2"] is None
+
+
+def test_update_profile_by_guid_returns_none_when_repository_does_not_update():
+    repo = _FakeRepo(profile=None, populate_default_profile=False)
+    use_case = UpdatePlayerProfileUseCase(repo)
+
+    result = use_case.execute_by_guid(
+        "player-guid",
+        PlayerUpdate(name="Adriano"),
+    )
+
+    assert result is None
+
+
+def test_update_profile_by_account_id_returns_none_when_repository_does_not_update():
+    repo = _FakeRepo(profile=None, populate_default_profile=False)
+    use_case = UpdatePlayerProfileUseCase(repo)
+
+    result = use_case.execute_by_account_id(
+        10,
+        PlayerUpdate(name="Adriano"),
+    )
+
+    assert result is None

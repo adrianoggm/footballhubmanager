@@ -12,6 +12,9 @@ from persistence.application.use_cases.get_penas_usecase import GetPenasUseCase
 from persistence.application.use_cases.get_player_profile_usecase import (
     GetPlayerProfileUseCase,
 )
+from persistence.application.use_cases.get_season_match_insights_usecase import (
+    GetSeasonMatchInsightsUseCase,
+)
 from persistence.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from persistence.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
@@ -27,6 +30,15 @@ from persistence.application.use_cases.manage_pena_seasons_usecase import (
 )
 from persistence.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
+)
+from persistence.application.use_cases.manage_season_lifecycle_usecase import (
+    ManageSeasonLifecycleUseCase,
+)
+from persistence.application.use_cases.manage_season_matches_usecase import (
+    ManageSeasonMatchesUseCase,
+)
+from persistence.application.use_cases.manage_season_players_usecase import (
+    ManageSeasonPlayersUseCase,
 )
 from persistence.application.use_cases.register_admin_usecase import RegisterAdminUseCase
 from persistence.application.use_cases.register_user_usecase import RegisterUserUseCase
@@ -65,6 +77,15 @@ from persistence.infrastructure.repository.db.registration_repository import (
 )
 from persistence.infrastructure.repository.db.season_competition_repository import (
     SqlAlchemySeasonCompetitionRepository,
+)
+from persistence.infrastructure.repository.db.season_match_insights_repository import (
+    SqlAlchemySeasonMatchInsightsRepository,
+)
+from persistence.infrastructure.repository.db.season_match_repository import (
+    SqlAlchemySeasonMatchRepository,
+)
+from persistence.infrastructure.repository.db.season_player_repository import (
+    SqlAlchemySeasonPlayerRepository,
 )
 from persistence.module import get_db
 from sqlalchemy.orm import Session
@@ -141,4 +162,32 @@ def get_update_player_profile_use_case(db: Session = Depends(get_db)) -> UpdateP
 def get_season_competition_use_case(
     db: Session = Depends(get_db),
 ) -> ManageSeasonCompetitionUseCase:
-    return ManageSeasonCompetitionUseCase(SqlAlchemySeasonCompetitionRepository(db))
+    return ManageSeasonCompetitionUseCase(
+        SqlAlchemySeasonCompetitionRepository(db),
+        player_repository=SqlAlchemySeasonPlayerRepository(db),
+        match_repository=SqlAlchemySeasonMatchRepository(db),
+    )
+
+
+def get_manage_season_lifecycle_use_case(
+    db: Session = Depends(get_db),
+) -> ManageSeasonLifecycleUseCase:
+    return ManageSeasonLifecycleUseCase(SqlAlchemySeasonCompetitionRepository(db))
+
+
+def get_manage_season_players_use_case(
+    db: Session = Depends(get_db),
+) -> ManageSeasonPlayersUseCase:
+    return ManageSeasonPlayersUseCase(SqlAlchemySeasonPlayerRepository(db))
+
+
+def get_manage_season_matches_use_case(
+    db: Session = Depends(get_db),
+) -> ManageSeasonMatchesUseCase:
+    return ManageSeasonMatchesUseCase(SqlAlchemySeasonMatchRepository(db))
+
+
+def get_season_match_insights_use_case(
+    db: Session = Depends(get_db),
+) -> GetSeasonMatchInsightsUseCase:
+    return GetSeasonMatchInsightsUseCase(SqlAlchemySeasonMatchInsightsRepository(db))
