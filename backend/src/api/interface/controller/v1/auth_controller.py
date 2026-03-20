@@ -12,25 +12,20 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterUserRequest,
 )
 from api.interface.controller.v1.model.response.auth_response import LoginResponse
+from api.middleware.exception_mapper import map_exceptions
 from auth.application.use_cases.login import (
-    InvalidCredentialsError,
     LoginAdminUseCase,
     LoginPayload,
     LoginUserUseCase,
 )
 from auth.dependencies import get_current_session
 from auth.session import create_session, invalidate_session
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from persistence.application.use_cases import (
     AdminRegistration,
-    AdminUsernameExistsError,
-    InvalidAdminRegistrationDataError,
-    InvalidRegistrationDataError,
     RegisterAdminUseCase,
     RegisterUserUseCase,
-    UserInvalidNationalityError,
     UserRegistration,
-    UserUsernameExistsError,
 )
 from persistence.module import get_db
 from sqlalchemy.orm import Session
@@ -40,21 +35,14 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/auth/login", response_model=LoginResponse)
+@map_exceptions
 def login_user(
     payload: LoginRequest,
     use_case: LoginUserUseCase = Depends(get_login_user_use_case),
     db: Session = Depends(get_db),
 ):
     logger.info("User login attempt")
-    try:
-        user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
-    except InvalidCredentialsError:
-        logger.warning("User login failed: invalid credentials")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
+    user = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
     session = create_session(db, user_id=user.id, user_guid=user.guid, user_type="user")
     logger.info("User login ok: %s", user.guid)
     return LoginResponse(
@@ -67,21 +55,14 @@ def login_user(
 
 
 @router.post("/auth/admin/login", response_model=LoginResponse)
+@map_exceptions
 def login_admin(
     payload: LoginRequest,
     use_case: LoginAdminUseCase = Depends(get_login_admin_use_case),
     db: Session = Depends(get_db),
 ):
     logger.info("Admin login attempt")
-    try:
-        admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
-    except InvalidCredentialsError:
-        logger.warning("Admin login failed: invalid credentials")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
+    admin = use_case.execute(LoginPayload(username=payload.username, password=payload.password))
     session = create_session(db, user_id=admin.id, user_guid=admin.guid, user_type="admin")
     logger.info("Admin login ok: %s", admin.guid)
     return LoginResponse(
@@ -94,33 +75,23 @@ def login_admin(
 
 
 @router.post("/auth/register", response_model=LoginResponse)
+@map_exceptions
 def register_user(
     payload: RegisterUserRequest,
     use_case: RegisterUserUseCase = Depends(get_register_user_use_case),
     db: Session = Depends(get_db),
 ):
     logger.info("User register attempt: %s", payload.username)
-    try:
-        registered = use_case.execute(
-            UserRegistration(
-                username=payload.username,
-                password=payload.password,
-                name=payload.name,
-                surname1=payload.surname1,
-                surname2=payload.surname2,
-                nationality=payload.nationality,
-            )
+    registered = use_case.execute(
+        UserRegistration(
+            username=payload.username,
+            password=payload.password,
+            name=payload.name,
+            surname1=payload.surname1,
+            surname2=payload.surname2,
+            nationality=payload.nationality,
         )
-    except UserUsernameExistsError:
-        logger.warning("User register exists: %s", payload.username)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
-    except InvalidRegistrationDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user registration data"
-        )
-    except UserInvalidNationalityError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid nationality")
-
+    )
     try:
         session = create_session(
             db,
@@ -142,28 +113,20 @@ def register_user(
 
 
 @router.post("/auth/admin/register", response_model=LoginResponse)
+@map_exceptions
 def register_admin(
     payload: RegisterAdminRequest,
     use_case: RegisterAdminUseCase = Depends(get_register_admin_use_case),
     db: Session = Depends(get_db),
 ):
     logger.info("Admin register attempt: %s", payload.username)
-    try:
-        registered = use_case.execute(
-            AdminRegistration(
-                username=payload.username,
-                password=payload.password,
-                name=payload.name,
-            )
+    registered = use_case.execute(
+        AdminRegistration(
+            username=payload.username,
+            password=payload.password,
+            name=payload.name,
         )
-    except AdminUsernameExistsError:
-        logger.warning("Admin register exists: %s", payload.username)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
-    except InvalidAdminRegistrationDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid admin registration data"
-        )
-
+    )
     try:
         session = create_session(
             db,

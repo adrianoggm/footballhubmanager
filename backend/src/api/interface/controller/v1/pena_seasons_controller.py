@@ -11,23 +11,37 @@ from api.interface.controller.v1.model.response.pena_seasons_response import (
     PenaSeasonResponse,
     PenaSeasonsPageResponse,
 )
+from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
-    PenaSeasonAccessDeniedError,
     PenaSeasonCreate,
-    PenaSeasonDateOverlapError,
     PenaSeasonNotFoundError,
-    PenaSeasonPenaNotFoundError,
     PenaSeasonUpdate,
 )
 
 router = APIRouter()
 
 
+ACTIVE_PENA_SEASON_OVERRIDES = {
+    PenaSeasonNotFoundError: (status.HTTP_404_NOT_FOUND, "Active season not found"),
+}
+
+
+CREATE_PENA_SEASON_OVERRIDES = {
+    InvalidPenaSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season date range"),
+}
+
+
+UPDATE_PENA_SEASON_OVERRIDES = {
+    InvalidPenaSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season update data"),
+}
+
+
 @router.get("/penas/{pena_guid}/seasons", response_model=PenaSeasonsPageResponse)
+@map_exceptions
 def list_pena_seasons(
     pena_guid: str,
     page: int = Query(1, ge=1),
@@ -35,10 +49,7 @@ def list_pena_seasons(
     use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    try:
-        result = use_case.list_for_pena(pena_guid=pena_guid, page=page, page_size=page_size)
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    result = use_case.list_for_pena(pena_guid=pena_guid, page=page, page_size=page_size)
 
     total_pages = math.ceil(result.total / result.page_size) if result.total else 0
     return PenaSeasonsPageResponse(
@@ -51,34 +62,26 @@ def list_pena_seasons(
 
 
 @router.get("/penas/{pena_guid}/seasons/active", response_model=PenaSeasonResponse)
+@map_exceptions(overrides=ACTIVE_PENA_SEASON_OVERRIDES)
 def get_active_pena_season(
     pena_guid: str,
     at_date: date | None = Query(default=None),
     use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    try:
-        season = use_case.get_active_for_pena(pena_guid=pena_guid, reference_date=at_date)
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Active season not found")
+    season = use_case.get_active_for_pena(pena_guid=pena_guid, reference_date=at_date)
     return PenaSeasonResponse(**asdict(season))
 
 
 @router.get("/penas/{pena_guid}/seasons/{season_guid}", response_model=PenaSeasonResponse)
+@map_exceptions
 def get_pena_season(
     pena_guid: str,
     season_guid: str,
     use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
     _session=Depends(authorize_pena_access),
 ):
-    try:
-        season = use_case.get_by_guid(pena_guid=pena_guid, season_guid=season_guid)
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
+    season = use_case.get_by_guid(pena_guid=pena_guid, season_guid=season_guid)
     return PenaSeasonResponse(**asdict(season))
 
 
@@ -87,45 +90,29 @@ def get_pena_season(
     response_model=PenaSeasonResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@map_exceptions(overrides=CREATE_PENA_SEASON_OVERRIDES)
 def create_pena_season(
     pena_guid: str,
     payload: CreatePenaSeasonRequest,
     admin_session=Depends(require_admin),
     use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
 ):
-    try:
-        created = use_case.create_for_admin(
-            pena_guid=pena_guid,
-            admin_id=admin_session.user_id,
-            data=PenaSeasonCreate(
-                start_date=payload.start_date,
-                end_date=payload.end_date,
-                points_win=payload.points_win,
-                points_draw=payload.points_draw,
-                points_loss=payload.points_loss,
-            ),
-        )
-    except InvalidPenaSeasonDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid season date range",
-        )
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaSeasonDateOverlapError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Season range overlaps an existing season",
-        )
+    created = use_case.create_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        data=PenaSeasonCreate(
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            points_win=payload.points_win,
+            points_draw=payload.points_draw,
+            points_loss=payload.points_loss,
+        ),
+    )
     return PenaSeasonResponse(**asdict(created))
 
 
 @router.patch("/penas/{pena_guid}/seasons/{season_guid}", response_model=PenaSeasonResponse)
+@map_exceptions(overrides=UPDATE_PENA_SEASON_OVERRIDES)
 def update_pena_season(
     pena_guid: str,
     season_guid: str,
@@ -133,66 +120,37 @@ def update_pena_season(
     admin_session=Depends(require_admin),
     use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
 ):
-    try:
-        updated = use_case.update_for_admin(
-            pena_guid=pena_guid,
-            season_guid=season_guid,
-            admin_id=admin_session.user_id,
-            update=PenaSeasonUpdate(
-                start_date=payload.start_date,
-                end_date=payload.end_date,
-                points_win=payload.points_win,
-                points_draw=payload.points_draw,
-                points_loss=payload.points_loss,
-                start_date_provided="start_date" in payload.model_fields_set,
-                end_date_provided="end_date" in payload.model_fields_set,
-                points_win_provided="points_win" in payload.model_fields_set,
-                points_draw_provided="points_draw" in payload.model_fields_set,
-                points_loss_provided="points_loss" in payload.model_fields_set,
-            ),
-        )
-    except InvalidPenaSeasonDataError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid season update data",
-        )
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
-    except PenaSeasonAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
-    except PenaSeasonDateOverlapError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Season range overlaps an existing season",
-        )
+    updated = use_case.update_for_admin(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        admin_id=admin_session.user_id,
+        update=PenaSeasonUpdate(
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            points_win=payload.points_win,
+            points_draw=payload.points_draw,
+            points_loss=payload.points_loss,
+            start_date_provided="start_date" in payload.model_fields_set,
+            end_date_provided="end_date" in payload.model_fields_set,
+            points_win_provided="points_win" in payload.model_fields_set,
+            points_draw_provided="points_draw" in payload.model_fields_set,
+            points_loss_provided="points_loss" in payload.model_fields_set,
+        ),
+    )
     return PenaSeasonResponse(**asdict(updated))
 
 
 @router.delete("/penas/{pena_guid}/seasons/{season_guid}", status_code=status.HTTP_204_NO_CONTENT)
+@map_exceptions
 def delete_pena_season(
     pena_guid: str,
     season_guid: str,
     admin_session=Depends(require_admin),
     use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
 ):
-    try:
-        use_case.delete_for_admin(
-            pena_guid=pena_guid,
-            season_guid=season_guid,
-            admin_id=admin_session.user_id,
-        )
-    except PenaSeasonPenaNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
-    except PenaSeasonNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Season not found")
-    except PenaSeasonAccessDeniedError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin does not manage this pena",
-        )
+    use_case.delete_for_admin(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        admin_id=admin_session.user_id,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
