@@ -595,35 +595,82 @@ const buildComponentOverrides = (palette, custom, preset) => {
     },
     MuiButton: {
       styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 600,
-          borderRadius: Math.max((preset.shape.borderRadius || 12) - 4, 8),
-          paddingInline: 12,
-          minHeight: 34,
-          fontSize: '0.88rem',
-          boxShadow: 'none',
-          transition: 'background-position 300ms ease-out, box-shadow 250ms ease-out',
+        root: ({ ownerState }) => {
+          const usesDefaultButtonColor =
+            ownerState.color === undefined || ownerState.color === 'primary'
+          const shouldUseTextColor =
+            usesDefaultButtonColor && ownerState.variant !== 'contained'
+
+          return {
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: Math.max((preset.shape.borderRadius || 12) - 4, 8),
+            paddingInline: 12,
+            minHeight: 34,
+            fontSize: '0.88rem',
+            boxShadow: 'none',
+            transition: 'background-position 300ms ease-out, box-shadow 250ms ease-out',
+            ...(shouldUseTextColor ? { color: palette.text.primary } : {}),
+          }
         },
-        contained: {
-          ...(isAccentedProfile
+        contained: ({ ownerState }) => {
+          const usesDefaultButtonColor =
+            ownerState.color === undefined || ownerState.color === 'primary'
+
+          return {
+            ...(isAccentedProfile
+              ? {
+                  ...(usesDefaultButtonColor
+                    ? {
+                        color: palette.secondary.contrastText,
+                        backgroundImage: `linear-gradient(135deg, ${palette.secondary.main} 0%, ${palette.secondary.light || palette.secondary.main} 100%)`,
+                        '&:hover': {
+                          boxShadow: custom.shadows.lg,
+                          backgroundImage: `linear-gradient(135deg, ${palette.secondary.dark || palette.secondary.main} 0%, ${palette.secondary.main} 100%)`,
+                        },
+                      }
+                    : {
+                        '&:hover': {
+                          boxShadow: custom.shadows.lg,
+                        },
+                      }),
+                  boxShadow: custom.shadows.md,
+                }
+              : {
+                  boxShadow: isDark
+                    ? '0 16px 28px rgba(0, 0, 0, 0.28)'
+                    : '0 16px 30px rgba(15, 23, 42, 0.16)',
+                }),
+          }
+        },
+        text: ({ ownerState }) => {
+          const usesDefaultButtonColor =
+            ownerState.color === undefined || ownerState.color === 'primary'
+
+          return usesDefaultButtonColor
             ? {
-                color: palette.secondary.contrastText,
-                backgroundImage: `linear-gradient(135deg, ${palette.secondary.main} 0%, ${palette.secondary.light || palette.secondary.main} 100%)`,
-                boxShadow: custom.shadows.md,
                 '&:hover': {
-                  boxShadow: custom.shadows.lg,
-                  backgroundImage: `linear-gradient(135deg, ${palette.secondary.dark || palette.secondary.main} 0%, ${palette.secondary.main} 100%)`,
+                  backgroundColor: alpha(palette.text.primary, isDark ? 0.08 : 0.04),
                 },
               }
-            : {
-                boxShadow: isDark
-                  ? '0 16px 28px rgba(0, 0, 0, 0.28)'
-                  : '0 16px 30px rgba(15, 23, 42, 0.16)',
-              }),
+            : {}
         },
-        outlined: {
-          borderColor: alpha(palette.text.primary, isDark ? 0.16 : 0.12),
+        outlined: ({ ownerState }) => {
+          const usesDefaultButtonColor =
+            ownerState.color === undefined || ownerState.color === 'primary'
+
+          return {
+            borderColor: alpha(palette.text.primary, isDark ? 0.16 : 0.12),
+            ...(usesDefaultButtonColor
+              ? {
+                  color: palette.text.primary,
+                  '&:hover': {
+                    borderColor: alpha(palette.text.primary, isDark ? 0.24 : 0.18),
+                    backgroundColor: alpha(palette.text.primary, isDark ? 0.08 : 0.04),
+                  },
+                }
+              : {}),
+          }
         },
       },
     },
