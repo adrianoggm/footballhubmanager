@@ -146,6 +146,29 @@ const buildInsightTableContainerSx = (theme, accent) => ({
   overflow: 'auto',
 })
 
+const buildInsightTooltipProps = (theme) => {
+  const isDark = theme.palette.mode === 'dark'
+  const geometry = getDashboardGeometry(theme)
+
+  return {
+    contentStyle: {
+      backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.96 : 0.98),
+      border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.16 : 0.1)}`,
+      borderRadius: geometry.controlRadius,
+      boxShadow: isDark ? '0 16px 32px rgba(0, 0, 0, 0.28)' : '0 14px 28px rgba(15, 23, 42, 0.12)',
+      color: theme.palette.text.primary,
+    },
+    labelStyle: {
+      color: theme.palette.text.primary,
+      fontWeight: 700,
+      marginBottom: 6,
+    },
+    itemStyle: {
+      color: theme.palette.text.primary,
+    },
+  }
+}
+
 const getRateColor = (rate) => {
   if (rate >= 0.6) {
     return 'success'
@@ -411,6 +434,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   const theme = useTheme()
   const geometry = getDashboardGeometry(theme)
   const isDark = theme.palette.mode === 'dark'
+  const chartTooltipProps = buildInsightTooltipProps(theme)
   const {
     selectedSeasonGuid,
     insightsScope,
@@ -665,6 +689,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               }}
                             />
                             <RechartsTooltip
+                              {...chartTooltipProps}
                               formatter={(value, name) => [`${value}`, name]}
                               labelFormatter={(label, payload) => {
                                 const point = payload?.[0]?.payload
@@ -749,6 +774,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                               }}
                             />
                             <RechartsTooltip
+                              {...chartTooltipProps}
                               formatter={(value, name) => [formatDecimal(value), name]}
                               labelFormatter={(label, payload) => {
                                 const point = payload?.[0]?.payload
@@ -835,6 +861,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                           }}
                         />
                         <RechartsTooltip
+                          {...chartTooltipProps}
                           formatter={(value, name, payload) => [formatDecimal(value), name]}
                           labelFormatter={(label, payload) => {
                             const point = payload?.[0]?.payload
