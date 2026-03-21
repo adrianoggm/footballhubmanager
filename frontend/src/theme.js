@@ -598,8 +598,7 @@ const buildComponentOverrides = (palette, custom, preset) => {
         root: ({ ownerState }) => {
           const usesDefaultButtonColor =
             ownerState.color === undefined || ownerState.color === 'primary'
-          const shouldUseTextColor =
-            usesDefaultButtonColor && ownerState.variant !== 'contained'
+          const shouldUseTextColor = usesDefaultButtonColor && ownerState.variant !== 'contained'
 
           return {
             textTransform: 'none',
