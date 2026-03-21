@@ -156,6 +156,9 @@ const getRateColor = (rate) => {
   return 'error'
 }
 
+const MATRIX_CELL_TEXT_COLOR = '#101820'
+const MATRIX_CELL_SUBTEXT_COLOR = alpha(MATRIX_CELL_TEXT_COLOR, 0.72)
+
 const buildMatrixCellSx = (cell, maxSharedMatches) => {
   if (cell.same_player) {
     return {
@@ -180,6 +183,7 @@ const buildMatrixCellSx = (cell, maxSharedMatches) => {
   return {
     backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)`,
     border: '1px solid rgba(15, 23, 42, 0.08)',
+    color: MATRIX_CELL_TEXT_COLOR,
   }
 }
 
@@ -987,18 +991,26 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                                   sx={buildMatrixCellSx(cell, maxSharedMatches)}
                                 >
                                   {cell.same_player ? (
-                                    <Typography variant="caption">—</Typography>
+                                    <Typography variant="caption" sx={{ color: 'inherit' }}>
+                                      —
+                                    </Typography>
                                   ) : cell.matches ? (
                                     <Stack spacing={0.2}>
-                                      <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                                      <Typography
+                                        variant="caption"
+                                        sx={{ color: 'inherit', fontWeight: 700 }}
+                                      >
                                         {formatPercent(cell.win_rate)}
                                       </Typography>
-                                      <Typography variant="caption" color="text.secondary">
+                                      <Typography
+                                        variant="caption"
+                                        sx={{ color: MATRIX_CELL_SUBTEXT_COLOR }}
+                                      >
                                         {cell.matches}
                                       </Typography>
                                     </Stack>
                                   ) : (
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" sx={{ color: 'inherit' }}>
                                       -
                                     </Typography>
                                   )}
