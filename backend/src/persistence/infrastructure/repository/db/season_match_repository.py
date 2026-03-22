@@ -1,8 +1,15 @@
+import time
 from datetime import date
 
 from persistence.application.ports.season_competition_port import (
     InvalidMatchDataError,
+    MatchClockAlreadyStartedError,
+    MatchClockNotRunningError,
     MatchDetailResult,
+    MatchEventCreateData,
+    MatchEventNotFoundError,
+    MatchEventPlayerNotInMatchError,
+    MatchEventResult,
     MatchesPageResult,
     MatchNotFoundError,
     MatchPlayersNotInSeasonError,
@@ -22,6 +29,7 @@ from persistence.application.ports.season_competition_port import (
 from persistence.application.ports.season_match_port import SeasonMatchPort
 from persistence.domain.entity import (
     FootballMatch,
+    FootballMatchEvent,
     Pena,
     PenaPlayer,
     Player,
@@ -258,6 +266,12 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             admin_id=admin_id,
             for_update=True,
         )
+        if football_match.started_at_epoch is not None or self._match_has_events(
+            football_match.id,
+            for_update=True,
+        ):
+            self.session.rollback()
+            raise MatchLineupLockedError()
         home_team_players, away_team_players = self._load_required_team_players(
             home_team_id=home_team.id,
             away_team_id=away_team.id,
@@ -289,6 +303,168 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_players=away_players,
         )
 
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def start_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        if football_match.started_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockAlreadyStartedError()
+        if self._match_has_events(football_match.id, for_update=True):
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        football_match.started_at_epoch = self._now_epoch()
+        football_match.ended_at_epoch = None
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def stop_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        if (
+            football_match.started_at_epoch is None
+            or football_match.ended_at_epoch is not None
+        ):
+            self.session.rollback()
+            raise MatchClockNotRunningError()
+
+        football_match.ended_at_epoch = self._now_epoch()
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def create_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        event: MatchEventCreateData,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        home_team_players, away_team_players = self._load_required_team_players(
+            home_team_id=home_team.id,
+            away_team_id=away_team.id,
+            for_update=True,
+        )
+        roster_by_team = {
+            "home": self._team_player_guid_map(home_team_players),
+            "away": self._team_player_guid_map(away_team_players),
+        }
+        players_by_guid = {
+            **roster_by_team["home"],
+            **roster_by_team["away"],
+        }
+
+        primary_player = self._resolve_event_player(
+            player_guid=event.player_guid,
+            team_side=event.team_side,
+            players_by_guid=players_by_guid,
+            roster_by_team=roster_by_team,
+        )
+        related_player = self._resolve_related_event_player(
+            player_guid=event.related_player_guid,
+            players_by_guid=players_by_guid,
+        )
+
+        elapsed_seconds = self._resolve_event_elapsed_seconds(football_match, event.elapsed_seconds)
+        match_event = FootballMatchEvent(
+            id_match=football_match.id,
+            event_type=event.event_type,
+            team_side=event.team_side,
+            elapsed_seconds=elapsed_seconds,
+            id_player=primary_player.id if primary_player else None,
+            id_related_player=related_player.id if related_player else None,
+            note=event.note,
+            recorded_at_epoch=self._now_epoch(),
+        )
+        self.session.add(match_event)
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def delete_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        event_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        event = self._get_match_event(
+            match_id=football_match.id,
+            event_guid=event_guid,
+            for_update=True,
+        )
+        if not event:
+            self.session.rollback()
+            raise MatchEventNotFoundError()
+
+        self.session.delete(event)
         self.session.commit()
         return self._build_match_detail_result(
             pena_id=pena.id,
@@ -416,6 +592,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         }
         teams_by_id = self._get_teams_by_ids(team_ids, for_update=False)
         team_stats = self._get_team_match_summary_stats(team_ids)
+        current_epoch = self._now_epoch()
 
         items: list[MatchSummaryResult] = []
         for football_match in matches:
@@ -435,6 +612,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
                     away_score=away_score,
                     home_players=home_players,
                     away_players=away_players,
+                    tracking_status=self._match_tracking_status(football_match),
+                    started_at_epoch=football_match.started_at_epoch,
+                    ended_at_epoch=football_match.ended_at_epoch,
+                    elapsed_seconds=self._match_elapsed_seconds(
+                        football_match,
+                        current_epoch=current_epoch,
+                    ),
                 )
             )
 
@@ -855,6 +1039,94 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             result[player.guid] = team_player
         return result
 
+    @staticmethod
+    def _now_epoch() -> int:
+        return int(time.time())
+
+    def _match_has_events(self, match_id: int, *, for_update: bool) -> bool:
+        stmt = select(FootballMatchEvent.id).where(FootballMatchEvent.id_match == match_id).limit(1)
+        if for_update:
+            stmt = stmt.with_for_update()
+        return self.session.execute(stmt).scalar_one_or_none() is not None
+
+    def _get_match_event(
+        self,
+        *,
+        match_id: int,
+        event_guid: str,
+        for_update: bool,
+    ) -> FootballMatchEvent | None:
+        stmt = select(FootballMatchEvent).where(
+            FootballMatchEvent.id_match == match_id,
+            FootballMatchEvent.guid == event_guid,
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def _list_match_events(
+        self,
+        *,
+        match_id: int,
+        for_update: bool,
+    ) -> list[FootballMatchEvent]:
+        stmt = (
+            select(FootballMatchEvent)
+            .where(FootballMatchEvent.id_match == match_id)
+            .order_by(FootballMatchEvent.elapsed_seconds.asc(), FootballMatchEvent.id.asc())
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return list(self.session.execute(stmt).scalars())
+
+    def _resolve_event_player(
+        self,
+        *,
+        player_guid: str | None,
+        team_side: str,
+        players_by_guid: dict[str, TeamPlayer],
+        roster_by_team: dict[str, dict[str, TeamPlayer]],
+    ) -> TeamPlayer | None:
+        if not player_guid:
+            return None
+        team_player = players_by_guid.get(player_guid)
+        if not team_player:
+            self.session.rollback()
+            raise MatchEventPlayerNotInMatchError()
+        if team_side in {"home", "away"} and player_guid not in roster_by_team[team_side]:
+            self.session.rollback()
+            raise MatchEventPlayerNotInMatchError()
+        return team_player
+
+    def _resolve_related_event_player(
+        self,
+        *,
+        player_guid: str | None,
+        players_by_guid: dict[str, TeamPlayer],
+    ) -> TeamPlayer | None:
+        if not player_guid:
+            return None
+        team_player = players_by_guid.get(player_guid)
+        if not team_player:
+            self.session.rollback()
+            raise MatchEventPlayerNotInMatchError()
+        return team_player
+
+    def _resolve_event_elapsed_seconds(
+        self,
+        football_match: FootballMatch,
+        provided_elapsed_seconds: int | None,
+    ) -> int:
+        if provided_elapsed_seconds is not None:
+            return int(provided_elapsed_seconds)
+        if (
+            football_match.started_at_epoch is None
+            or football_match.ended_at_epoch is not None
+        ):
+            self.session.rollback()
+            raise MatchClockNotRunningError()
+        return max(self._now_epoch() - int(football_match.started_at_epoch), 0)
+
     def _team_season_players(
         self,
         *,
@@ -959,6 +1231,30 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         )
 
     @staticmethod
+    def _match_tracking_status(football_match: FootballMatch) -> str:
+        if football_match.started_at_epoch is None:
+            return "not_started"
+        if football_match.ended_at_epoch is None:
+            return "in_progress"
+        return "finished"
+
+    @classmethod
+    def _match_elapsed_seconds(
+        cls,
+        football_match: FootballMatch,
+        *,
+        current_epoch: int | None = None,
+    ) -> int:
+        if football_match.started_at_epoch is None:
+            return 0
+        end_epoch = (
+            football_match.ended_at_epoch
+            if football_match.ended_at_epoch is not None
+            else current_epoch if current_epoch is not None else cls._now_epoch()
+        )
+        return max(int(end_epoch) - int(football_match.started_at_epoch), 0)
+
+    @staticmethod
     def _apply_team_outcome_delta(
         *,
         home_team_stats: list[SeasonPlayer],
@@ -1013,7 +1309,19 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         )
         home_players = team_players_by_id.get(home_team.id, [])
         away_players = team_players_by_id.get(away_team.id, [])
-        player_ids = {team_player.id_player for team_player in home_players + away_players}
+        events = self._list_match_events(match_id=football_match.id, for_update=False)
+        player_ids = {
+            team_player.id_player for team_player in home_players + away_players
+        }.union(
+            {
+                player_id
+                for player_id in [
+                    *(event.id_player for event in events),
+                    *(event.id_related_player for event in events),
+                ]
+                if player_id is not None
+            }
+        )
         players_by_id = self._get_players_by_ids(player_ids)
         links_by_player_id = self._get_pena_player_links_by_player_ids(
             pena_id=pena_id,
@@ -1030,6 +1338,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             season_guid=season_guid,
             match_date=football_match.match_date,
             status=self._match_status_from_players(home_players, away_players),
+            tracking_status=self._match_tracking_status(football_match),
+            started_at_epoch=football_match.started_at_epoch,
+            ended_at_epoch=football_match.ended_at_epoch,
+            elapsed_seconds=self._match_elapsed_seconds(football_match),
             home_team=self._build_match_team_result(
                 team=home_team,
                 team_players=home_players,
@@ -1043,6 +1355,11 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
                 players_by_id=players_by_id,
                 links_by_player_id=links_by_player_id,
                 positions_by_player_id=positions_by_player_id,
+            ),
+            events=self._build_match_event_results(
+                events=events,
+                players_by_id=players_by_id,
+                links_by_player_id=links_by_player_id,
             ),
         )
 
@@ -1096,6 +1413,59 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             total_saves=total_saves,
             average_rating=round(average_rating, 2),
             players=players,
+        )
+
+    def _build_match_event_results(
+        self,
+        *,
+        events: list[FootballMatchEvent],
+        players_by_id: dict[int, Player],
+        links_by_player_id: dict[int, PenaPlayer],
+    ) -> list[MatchEventResult]:
+        return [
+            self._build_match_event_result(
+                event=event,
+                players_by_id=players_by_id,
+                links_by_player_id=links_by_player_id,
+            )
+            for event in events
+        ]
+
+    def _build_match_event_result(
+        self,
+        *,
+        event: FootballMatchEvent,
+        players_by_id: dict[int, Player],
+        links_by_player_id: dict[int, PenaPlayer],
+    ) -> MatchEventResult:
+        primary_player = players_by_id.get(event.id_player) if event.id_player is not None else None
+        related_player = (
+            players_by_id.get(event.id_related_player) if event.id_related_player is not None else None
+        )
+        primary_link = (
+            links_by_player_id.get(primary_player.id) if primary_player is not None else None
+        )
+        related_link = (
+            links_by_player_id.get(related_player.id) if related_player is not None else None
+        )
+
+        return MatchEventResult(
+            guid=event.guid,
+            event_type=event.event_type,
+            team_side=event.team_side,
+            elapsed_seconds=int(event.elapsed_seconds),
+            player_guid=primary_player.guid if primary_player else None,
+            player_name=primary_player.name if primary_player else None,
+            player_surname1=primary_player.surname1 if primary_player else None,
+            player_surname2=primary_player.surname2 if primary_player else None,
+            player_nickname=primary_link.nickname if primary_link else None,
+            related_player_guid=related_player.guid if related_player else None,
+            related_player_name=related_player.name if related_player else None,
+            related_player_surname1=related_player.surname1 if related_player else None,
+            related_player_surname2=related_player.surname2 if related_player else None,
+            related_player_nickname=related_link.nickname if related_link else None,
+            note=event.note,
+            recorded_at_epoch=int(event.recorded_at_epoch),
         )
 
     def _get_players_by_ids(self, player_ids: set[int]) -> dict[int, Player]:

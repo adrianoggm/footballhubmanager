@@ -62,6 +62,22 @@ class SeasonMatchLineupLockedError(Exception):
     pass
 
 
+class SeasonMatchAlreadyStartedError(Exception):
+    pass
+
+
+class SeasonMatchClockNotRunningError(Exception):
+    pass
+
+
+class SeasonMatchEventNotFoundError(Exception):
+    pass
+
+
+class SeasonMatchEventPlayerNotInMatchError(Exception):
+    pass
+
+
 class SeasonPlayerInMatchError(Exception):
     pass
 

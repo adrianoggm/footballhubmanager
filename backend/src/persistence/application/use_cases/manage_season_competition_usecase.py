@@ -17,6 +17,10 @@ PenaSeasonAccessDeniedError = _errors.PenaSeasonAccessDeniedError
 PenaSeasonDateOverlapError = _errors.PenaSeasonDateOverlapError
 PenaSeasonNotFoundError = _errors.PenaSeasonNotFoundError
 PenaSeasonPenaNotFoundError = _errors.PenaSeasonPenaNotFoundError
+SeasonMatchAlreadyStartedError = _errors.SeasonMatchAlreadyStartedError
+SeasonMatchClockNotRunningError = _errors.SeasonMatchClockNotRunningError
+SeasonMatchEventNotFoundError = _errors.SeasonMatchEventNotFoundError
+SeasonMatchEventPlayerNotInMatchError = _errors.SeasonMatchEventPlayerNotInMatchError
 SeasonMatchInvalidPlayersError = _errors.SeasonMatchInvalidPlayersError
 SeasonMatchLineupLockedError = _errors.SeasonMatchLineupLockedError
 SeasonMatchNotFoundError = _errors.SeasonMatchNotFoundError
@@ -32,6 +36,7 @@ SeasonInfo = _models.SeasonInfo
 SeasonMatchCreate = _models.SeasonMatchCreate
 SeasonMatchCreateDetailed = _models.SeasonMatchCreateDetailed
 SeasonMatchDetailInfo = _models.SeasonMatchDetailInfo
+SeasonMatchEventCreate = _models.SeasonMatchEventCreate
 SeasonMatchesPage = _models.SeasonMatchesPage
 SeasonMatchInfo = _models.SeasonMatchInfo
 SeasonMatchLineupsUpdate = _models.SeasonMatchLineupsUpdate
@@ -59,11 +64,16 @@ __all__ = [
     "PenaSeasonDateOverlapError",
     "PenaSeasonNotFoundError",
     "PenaSeasonPenaNotFoundError",
+    "SeasonMatchAlreadyStartedError",
+    "SeasonMatchClockNotRunningError",
     "SeasonCreate",
     "SeasonInfo",
     "SeasonMatchCreate",
     "SeasonMatchCreateDetailed",
     "SeasonMatchDetailInfo",
+    "SeasonMatchEventCreate",
+    "SeasonMatchEventNotFoundError",
+    "SeasonMatchEventPlayerNotInMatchError",
     "SeasonMatchInfo",
     "SeasonMatchInvalidPlayersError",
     "SeasonMatchLineupLockedError",
@@ -143,6 +153,18 @@ class ManageSeasonCompetitionUseCase:
 
     def update_match_lineups_for_admin(self, **kwargs) -> SeasonMatchDetailInfo:
         return self.match_use_case.update_match_lineups_for_admin(**kwargs)
+
+    def start_match_for_admin(self, **kwargs) -> SeasonMatchDetailInfo:
+        return self.match_use_case.start_match_for_admin(**kwargs)
+
+    def stop_match_for_admin(self, **kwargs) -> SeasonMatchDetailInfo:
+        return self.match_use_case.stop_match_for_admin(**kwargs)
+
+    def create_match_event_for_admin(self, **kwargs) -> SeasonMatchDetailInfo:
+        return self.match_use_case.create_match_event_for_admin(**kwargs)
+
+    def delete_match_event_for_admin(self, **kwargs) -> SeasonMatchDetailInfo:
+        return self.match_use_case.delete_match_event_for_admin(**kwargs)
 
     def delete_match_for_admin(self, **kwargs) -> None:
         self.match_use_case.delete_match_for_admin(**kwargs)

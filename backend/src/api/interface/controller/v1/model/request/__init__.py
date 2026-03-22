@@ -21,6 +21,7 @@ from api.interface.controller.v1.model.request.penas_request import ConsumeLinkT
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
+    CreateSeasonMatchEventRequest,
     CreateSeasonMatchRequest,
     MatchInsightsRequest,
     MatchPlayerStatsRequest,
@@ -40,6 +41,7 @@ __all__ = [
     "ConsumeLinkTokenRequest",
     "CreatePenaExpenseRequest",
     "CreateSeasonMatchDetailedRequest",
+    "CreateSeasonMatchEventRequest",
     "CreateSeasonMatchRequest",
     "CreateGuestPlayerRequest",
     "CreatePenaSeasonRequest",
