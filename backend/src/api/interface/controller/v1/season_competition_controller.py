@@ -629,6 +629,7 @@ def create_season_match_event(
             related_player_guid=payload.related_player_guid,
             note=payload.note,
             elapsed_seconds=payload.elapsed_seconds,
+            value_delta=payload.value_delta,
         ),
     )
     return to_season_match_detail_response(updated)

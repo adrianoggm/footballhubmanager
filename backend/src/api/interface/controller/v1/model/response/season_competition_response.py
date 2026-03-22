@@ -180,6 +180,7 @@ class SeasonMatchEventResponse(BaseModel):
     event_type: str
     team_side: str
     elapsed_seconds: int
+    value_delta: int
     player_guid: str | None
     player_name: str | None
     player_surname1: str | None

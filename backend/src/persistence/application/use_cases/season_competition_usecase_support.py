@@ -143,6 +143,7 @@ def normalize_match_event(data: SeasonMatchEventCreate) -> MatchEventCreateData:
     team_side = str(data.team_side or "").strip().lower()
     player_guid = clean_name(data.player_guid)
     related_player_guid = clean_name(data.related_player_guid)
+    value_delta = int(data.value_delta)
     note = normalize_optional_text(
         data.note,
         max_length=255,
@@ -157,6 +158,8 @@ def normalize_match_event(data: SeasonMatchEventCreate) -> MatchEventCreateData:
         raise InvalidSeasonMatchDataError()
     if data.elapsed_seconds is not None and data.elapsed_seconds < 0:
         raise InvalidSeasonMatchDataError()
+    if value_delta not in {-1, 1}:
+        raise InvalidSeasonMatchDataError()
     if player_guid and related_player_guid and player_guid == related_player_guid:
         raise InvalidSeasonMatchDataError()
 
@@ -167,6 +170,7 @@ def normalize_match_event(data: SeasonMatchEventCreate) -> MatchEventCreateData:
         related_player_guid=related_player_guid,
         note=note,
         elapsed_seconds=data.elapsed_seconds,
+        value_delta=value_delta,
     )
 
 
@@ -264,6 +268,7 @@ def to_match_event(item: MatchEventResult) -> SeasonMatchEventInfo:
         event_type=item.event_type,
         team_side=item.team_side,
         elapsed_seconds=item.elapsed_seconds,
+        value_delta=item.value_delta,
         player_guid=item.player_guid,
         player_name=item.player_name,
         player_surname1=item.player_surname1,

@@ -367,6 +367,34 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise MatchClockNotRunningError()
 
+        home_team_players, away_team_players = self._load_required_team_players(
+            home_team_id=home_team.id,
+            away_team_id=away_team.id,
+            for_update=True,
+        )
+        standings_applied = self._match_standings_applied(home_team_players, away_team_players)
+        if not standings_applied:
+            events = self._list_match_events(match_id=football_match.id, for_update=True)
+            if events:
+                self._apply_tracked_events_to_team_players(
+                    home_team_players=home_team_players,
+                    away_team_players=away_team_players,
+                    events=events,
+                )
+                home_season_players, away_season_players = self._load_match_season_players(
+                    pena_id=pena.id,
+                    season_id=season.id,
+                    home_team_players=home_team_players,
+                    away_team_players=away_team_players,
+                )
+                self._apply_team_outcome_delta(
+                    home_team_stats=home_season_players,
+                    away_team_stats=away_season_players,
+                    home_score=sum(player.goals for player in home_team_players),
+                    away_score=sum(player.goals for player in away_team_players),
+                    delta=1,
+                )
+
         football_match.ended_at_epoch = self._now_epoch()
         self.session.commit()
         return self._build_match_detail_result(
@@ -424,8 +452,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             event_type=event.event_type,
             team_side=event.team_side,
             elapsed_seconds=elapsed_seconds,
-            id_player=primary_player.id if primary_player else None,
-            id_related_player=related_player.id if related_player else None,
+            value_delta=event.value_delta,
+            id_player=primary_player.id_player if primary_player else None,
+            id_related_player=related_player.id_player if related_player else None,
             note=event.note,
             recorded_at_epoch=self._now_epoch(),
         )
@@ -542,6 +571,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_score=new_away_score,
             delta=1,
         )
+
+        # Saving final stats ends live tracking when the match had been started.
+        if football_match.started_at_epoch is not None and football_match.ended_at_epoch is None:
+            football_match.ended_at_epoch = self._now_epoch()
 
         self.session.commit()
         return self._build_match_detail_result(
@@ -1210,6 +1243,35 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         self._add_team_players(team_id=away_team_id, players=away_players)
 
     @staticmethod
+    def _apply_tracked_events_to_team_players(
+        *,
+        home_team_players: list[TeamPlayer],
+        away_team_players: list[TeamPlayer],
+        events: list[FootballMatchEvent],
+    ) -> None:
+        tracked_event_types = {"goal", "assist", "save"}
+        counts_by_player_id: dict[int, dict[str, int]] = {}
+
+        for event in events:
+            player_id = getattr(event, "id_player", None)
+            event_type = str(getattr(event, "event_type", "") or "").strip().lower()
+            if player_id is None or event_type not in tracked_event_types:
+                continue
+            current = counts_by_player_id.setdefault(
+                int(player_id),
+                {"goal": 0, "assist": 0, "save": 0},
+            )
+            current[event_type] += int(getattr(event, "value_delta", 1) or 1)
+
+        for team_player in home_team_players + away_team_players:
+            player_counts = counts_by_player_id.get(int(team_player.id_player), {})
+            team_player.goals = max(0, int(player_counts.get("goal", 0)))
+            team_player.assists = max(0, int(player_counts.get("assist", 0)))
+            team_player.saves = max(0, int(player_counts.get("save", 0)))
+            if float(team_player.rating) < 0:
+                team_player.rating = 0.0
+
+    @staticmethod
     def _match_standings_applied(
         home_team_players: list[TeamPlayer],
         away_team_players: list[TeamPlayer],
@@ -1235,7 +1297,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         if football_match.started_at_epoch is None:
             return "not_started"
         if football_match.ended_at_epoch is None:
-            return "in_progress"
+            return "live"
         return "finished"
 
     @classmethod
@@ -1454,6 +1516,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             event_type=event.event_type,
             team_side=event.team_side,
             elapsed_seconds=int(event.elapsed_seconds),
+            value_delta=int(event.value_delta),
             player_guid=primary_player.guid if primary_player else None,
             player_name=primary_player.name if primary_player else None,
             player_surname1=primary_player.surname1 if primary_player else None,

@@ -93,6 +93,7 @@ class CreateSeasonMatchEventRequest(BaseModel):
     related_player_guid: str | None = None
     note: str | None = None
     elapsed_seconds: int | None = Field(default=None, ge=0)
+    value_delta: int = Field(default=1, ge=-1, le=1)
 
 
 class MatchInsightsRequest(BaseModel):

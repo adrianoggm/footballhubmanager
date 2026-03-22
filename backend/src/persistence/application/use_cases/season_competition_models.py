@@ -147,6 +147,7 @@ class SeasonMatchEventCreate:
     related_player_guid: str | None = None
     note: str | None = None
     elapsed_seconds: int | None = None
+    value_delta: int = 1
 
 
 @dataclass(frozen=True)
@@ -183,6 +184,7 @@ class SeasonMatchEventInfo:
     event_type: str
     team_side: str
     elapsed_seconds: int
+    value_delta: int
     player_guid: str | None
     player_name: str | None
     player_surname1: str | None

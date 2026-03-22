@@ -12,6 +12,7 @@ class FootballMatchEvent(GuidMixin, Base):
     event_type: Mapped[str] = mapped_column()
     team_side: Mapped[str] = mapped_column()
     elapsed_seconds: Mapped[int] = mapped_column()
+    value_delta: Mapped[int] = mapped_column(default=1)
     id_player: Mapped[int | None] = mapped_column(ForeignKey("player.id"), nullable=True)
     id_related_player: Mapped[int | None] = mapped_column(
         ForeignKey("player.id"),
