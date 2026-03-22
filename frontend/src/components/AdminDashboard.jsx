@@ -65,6 +65,17 @@ const defaultMatchForm = () => ({
   away_player_guids: [],
 })
 
+const defaultMatchEventDraft = () => ({
+  event_type: 'goal',
+  team_side: 'home',
+  player_guid: '',
+  related_player_guid: '',
+  note: '',
+  minute: '',
+  second: '',
+  value_delta: '1',
+})
+
 const defaultGuestForm = () => ({
   name: '',
   surname1: '',
@@ -344,6 +355,19 @@ const formatSignedDecimal = (value, digits = 2) => {
 
 const formatPercent = (value) => `${Math.round(Number(value || 0) * 100)}%`
 
+const formatElapsedDuration = (value) => {
+  const totalSeconds = Math.max(0, Number(value || 0))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(
+      seconds
+    ).padStart(2, '0')}`
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
 const addDaysIso = (isoDate, days) => {
   const [year, month, day] = isoDate.split('-').map(Number)
   const date = new Date(Date.UTC(year, month - 1, day))
@@ -449,6 +473,47 @@ const buildMatchLineupsDraft = (detail) => ({
   away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
 })
 
+const parseMatchEventElapsedDraft = (draft) => {
+  const minuteValue = String(draft?.minute ?? '').trim()
+  const secondValue = String(draft?.second ?? '').trim()
+  if (!minuteValue && !secondValue) {
+    return { isValid: true, hasValue: false, value: null }
+  }
+
+  const minutes = Number(minuteValue || 0)
+  const seconds = Number(secondValue || 0)
+  if (
+    !Number.isInteger(minutes) ||
+    minutes < 0 ||
+    !Number.isInteger(seconds) ||
+    seconds < 0 ||
+    seconds > 59
+  ) {
+    return { isValid: false, hasValue: true, value: null }
+  }
+
+  return {
+    isValid: true,
+    hasValue: true,
+    value: minutes * 60 + seconds,
+  }
+}
+
+const MATCH_EVENT_TYPES_REQUIRING_PLAYER = new Set([
+  'goal',
+  'assist',
+  'save',
+  'foul',
+  'yellow_card',
+  'red_card',
+  'sanction',
+])
+
+const isLiveTrackingStatus = (value) => {
+  const normalized = String(value || '').trim().toLowerCase()
+  return normalized === 'live' || normalized === 'in_progress'
+}
+
 const collectPagedItems = async (fetchPage, { maxConcurrent = 3 } = {}) => {
   const firstResponse = await fetchPage(1)
   const firstItems = firstResponse.items || []
@@ -523,7 +588,9 @@ export default function AdminDashboard({
   const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
   const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
   const [matchStatsDraft, setMatchStatsDraft] = useState(null)
+  const [matchEventDraft, setMatchEventDraft] = useState(defaultMatchEventDraft)
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
+  const [deletingMatchEventGuid, setDeletingMatchEventGuid] = useState('')
   const [insightsScope, setInsightsScope] = useState('selected_season')
   const [tokenPayload, setTokenPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
@@ -722,6 +789,18 @@ export default function AdminDashboard({
     [seasonRoster, selectedMatchDetail]
   )
 
+  const matchEventPlayerGuids = useMemo(
+    () => ({
+      home: new Set((selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid)),
+      away: new Set((selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid)),
+      all: new Set([
+        ...(selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid),
+        ...(selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid),
+      ]),
+    }),
+    [selectedMatchDetail]
+  )
+
   const matchFormHomeGuids = useMemo(
     () => normalizePlayerGuids(matchForm.home_player_guids),
     [matchForm.home_player_guids]
@@ -819,6 +898,31 @@ export default function AdminDashboard({
         home_player_guids: homePlayerGuids,
         away_player_guids: awayPlayerGuids,
       }
+    })
+  }
+
+  const onMatchEventDraftField = (name) => (event) => {
+    const value = event.target.value
+    setMatchEventDraft((prev) => {
+      const next = {
+        ...(prev || defaultMatchEventDraft()),
+        [name]: value,
+      }
+      if (name === 'team_side') {
+        const allowedPlayers =
+          value === 'home'
+            ? matchEventPlayerGuids.home
+            : value === 'away'
+              ? matchEventPlayerGuids.away
+              : matchEventPlayerGuids.all
+        if (next.player_guid && !allowedPlayers.has(next.player_guid)) {
+          next.player_guid = ''
+        }
+      }
+      if (name === 'player_guid' && value && next.related_player_guid === value) {
+        next.related_player_guid = ''
+      }
+      return next
     })
   }
 
@@ -937,6 +1041,8 @@ export default function AdminDashboard({
     setSelectedMatchDetail(null)
     setMatchLineupsDraft(null)
     setMatchStatsDraft(null)
+    setMatchEventDraft(defaultMatchEventDraft())
+    setDeletingMatchEventGuid('')
   }
 
   const runAction = async (action, successMessage) => {
@@ -1006,6 +1112,8 @@ export default function AdminDashboard({
       setSelectedMatchDetail(null)
       setMatchLineupsDraft(null)
       setMatchStatsDraft(null)
+      setMatchEventDraft(defaultMatchEventDraft())
+      setDeletingMatchEventGuid('')
       return
     }
     const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, {
@@ -1022,6 +1130,8 @@ export default function AdminDashboard({
       setSelectedMatchDetail(null)
       setMatchLineupsDraft(null)
       setMatchStatsDraft(null)
+      setMatchEventDraft(defaultMatchEventDraft())
+      setDeletingMatchEventGuid('')
     }
   }
 
@@ -1031,6 +1141,8 @@ export default function AdminDashboard({
     setSelectedMatchDetail(detail)
     setMatchLineupsDraft(buildMatchLineupsDraft(detail))
     setMatchStatsDraft(buildMatchStatsDraft(detail))
+    setMatchEventDraft(defaultMatchEventDraft())
+    setDeletingMatchEventGuid('')
     return detail
   }
 
@@ -1920,6 +2032,8 @@ export default function AdminDashboard({
     const previousSelectedMatchDetail = selectedMatchDetail
     const previousMatchLineupsDraft = matchLineupsDraft
     const previousMatchStatsDraft = matchStatsDraft
+    const previousMatchEventDraft = matchEventDraft
+    const previousDeletingMatchEventGuid = deletingMatchEventGuid
     const deletedWasSelected = selectedMatchGuid === match.guid
 
     // Cancel any in-flight matches fetch to avoid stale overwrite.
@@ -1935,6 +2049,8 @@ export default function AdminDashboard({
       setSelectedMatchDetail(null)
       setMatchLineupsDraft(null)
       setMatchStatsDraft(null)
+      setMatchEventDraft(defaultMatchEventDraft())
+      setDeletingMatchEventGuid('')
     }
 
     setDeletingMatchGuid(match.guid)
@@ -1970,6 +2086,8 @@ export default function AdminDashboard({
         setSelectedMatchDetail(previousSelectedMatchDetail)
         setMatchLineupsDraft(previousMatchLineupsDraft)
         setMatchStatsDraft(previousMatchStatsDraft)
+        setMatchEventDraft(previousMatchEventDraft)
+        setDeletingMatchEventGuid(previousDeletingMatchEventGuid)
       }
       if (deleteError?.status === 401) {
         await onLogout()
@@ -1990,6 +2108,14 @@ export default function AdminDashboard({
 
   const handleSaveMatchLineups = async () => {
     if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !matchLineupsDraft) {
+      return
+    }
+    if (
+      selectedMatchDetail &&
+      (selectedMatchDetail.tracking_status !== 'not_started' ||
+        (selectedMatchDetail.events || []).length > 0)
+    ) {
+      setError(new Error(t('dashboard.admin.errors.matchLineupsLocked')))
       return
     }
     const homePlayerGuids = normalizePlayerGuids(matchLineupsDraft.home_player_guids)
@@ -2025,6 +2151,165 @@ export default function AdminDashboard({
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.lineupsUpdated'))
+  }
+
+  const handleStartMatch = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.startMatch(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid
+      )
+      setSelectedMatchDetail(updated)
+      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+      setMatchStatsDraft(buildMatchStatsDraft(updated))
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, t('dashboard.admin.notices.matchTrackingStarted'))
+  }
+
+  const handleStopMatch = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.stopMatch(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid
+      )
+      setSelectedMatchDetail(updated)
+      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+      setMatchStatsDraft(buildMatchStatsDraft(updated))
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, t('dashboard.admin.notices.matchTrackingStopped'))
+  }
+
+  const createMatchEventAndRefresh = async ({
+    eventType,
+    teamSide,
+    playerGuid = '',
+    relatedPlayerGuid = '',
+    note = '',
+    elapsedSeconds = null,
+    valueDelta = 1,
+    successMessage,
+    resetDraft = false,
+  }) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.createMatchEvent(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid,
+        {
+          event_type: eventType,
+          team_side: teamSide,
+          player_guid: playerGuid || null,
+          related_player_guid: relatedPlayerGuid || null,
+          note: note || null,
+          elapsed_seconds: elapsedSeconds,
+          value_delta: valueDelta,
+        }
+      )
+      setSelectedMatchDetail(updated)
+      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+      setMatchStatsDraft(buildMatchStatsDraft(updated))
+      if (resetDraft) {
+        setMatchEventDraft(defaultMatchEventDraft())
+      }
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, successMessage)
+  }
+
+  const handleQuickMatchEvent = async ({ eventType, teamSide, playerGuid, valueDelta }) => {
+    if (!selectedMatchDetail) {
+      return
+    }
+    if (!isLiveTrackingStatus(selectedMatchDetail.tracking_status)) {
+      setError(new Error(t('dashboard.admin.errors.matchTrackingLiveRequired')))
+      return
+    }
+    await createMatchEventAndRefresh({
+      eventType,
+      teamSide,
+      playerGuid,
+      valueDelta,
+      successMessage: t('dashboard.admin.notices.matchEventCreated'),
+    })
+  }
+
+  const handleCreateMatchEvent = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !selectedMatchDetail) {
+      return
+    }
+
+    const elapsed = parseMatchEventElapsedDraft(matchEventDraft)
+    if (!elapsed.isValid) {
+      setError(new Error(t('dashboard.admin.errors.invalidMatchEventElapsed')))
+      return
+    }
+    if (!isLiveTrackingStatus(selectedMatchDetail.tracking_status) && !elapsed.hasValue) {
+      setError(new Error(t('dashboard.admin.errors.matchEventElapsedRequired')))
+      return
+    }
+
+    const eventType = String(matchEventDraft.event_type || '').trim().toLowerCase()
+    const playerGuid = String(matchEventDraft.player_guid || '').trim()
+    const relatedPlayerGuid = String(matchEventDraft.related_player_guid || '').trim()
+    const valueDelta = Number(matchEventDraft.value_delta || 1)
+    if (![1, -1].includes(valueDelta)) {
+      setError(new Error(t('dashboard.admin.errors.invalidMatchEventDelta')))
+      return
+    }
+    if (MATCH_EVENT_TYPES_REQUIRING_PLAYER.has(eventType) && !playerGuid) {
+      setError(new Error(t('dashboard.admin.errors.matchEventPlayerRequired')))
+      return
+    }
+    if (playerGuid && relatedPlayerGuid && playerGuid === relatedPlayerGuid) {
+      setError(new Error(t('dashboard.admin.errors.matchEventPlayersMustDiffer')))
+      return
+    }
+
+    await createMatchEventAndRefresh({
+      eventType: matchEventDraft.event_type,
+      teamSide: matchEventDraft.team_side,
+      playerGuid,
+      relatedPlayerGuid,
+      note: String(matchEventDraft.note || '').trim(),
+      elapsedSeconds: elapsed.value,
+      valueDelta,
+      successMessage: t('dashboard.admin.notices.matchEventCreated'),
+      resetDraft: true,
+    })
+  }
+
+  const handleDeleteMatchEvent = async (eventGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !eventGuid) {
+      return
+    }
+
+    setDeletingMatchEventGuid(eventGuid)
+    await runAction(async () => {
+      const updated = await adminService.deleteMatchEvent(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid,
+        eventGuid
+      )
+      setSelectedMatchDetail(updated)
+      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+      setMatchStatsDraft(buildMatchStatsDraft(updated))
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, t('dashboard.admin.notices.matchEventDeleted'))
+    setDeletingMatchEventGuid('')
   }
 
   const onMatchStatsDraftField = (teamKey, playerGuid, field) => (event) => {
@@ -2171,6 +2456,8 @@ export default function AdminDashboard({
       selectedMatchDetail,
       matchLineupsDraft,
       matchStatsDraft,
+      matchEventDraft,
+      deletingMatchEventGuid,
       matchEditorLineupPlayers,
       matchDraftHomeGuids,
       matchDraftAwayGuids,
@@ -2183,6 +2470,12 @@ export default function AdminDashboard({
       handleRequestDeleteSeasonMatch,
       onMatchLineupsDraftChange,
       handleSaveMatchLineups,
+      onMatchEventDraftField,
+      handleStartMatch,
+      handleStopMatch,
+      handleQuickMatchEvent,
+      handleCreateMatchEvent,
+      handleDeleteMatchEvent,
       onMatchStatsDraftField,
       handleSaveMatchStats,
       closeMatchEditor,
@@ -2190,6 +2483,7 @@ export default function AdminDashboard({
     helpers: {
       t,
       formatDate,
+      formatElapsedDuration,
       formatPlayerDisplayName,
     },
   })

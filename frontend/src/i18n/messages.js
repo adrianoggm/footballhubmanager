@@ -100,8 +100,20 @@ export const messages = {
           closeAction: 'Close',
           matchDate: 'Date: {date}',
           finalScore: 'Score: {score}',
+          trackingNotStarted: 'Not started',
+          trackingLive: 'Live',
+          trackingFinished: 'Finished',
+          elapsed: 'Elapsed: {value}',
+          startedAt: 'Started: {value}',
+          endedAt: 'Ended: {value}',
           highlightsTitle: 'Highlights',
           noHighlights: 'No standout stats yet for this match.',
+          eventsTitle: 'Event timeline',
+          eventsEmpty: 'No timeline events recorded yet.',
+          eventPlayer: 'Player: {player}',
+          eventRelatedPlayer: 'Related: {player}',
+          eventNote: 'Note: {note}',
+          eventRecordedAt: 'Recorded: {value}',
           highlightGoals: 'Top scorer: {player} ({value})',
           highlightAssists: 'Top assists: {player} ({value})',
           highlightSaves: 'Top saves: {player} ({value})',
@@ -388,6 +400,7 @@ export const messages = {
           home: 'Home',
           away: 'Away',
           status: 'Status',
+          tracking: 'Tracking',
           statusOpen: 'Open',
           statusClosed: 'Closed',
           actions: 'Actions',
@@ -405,8 +418,70 @@ export const messages = {
           statsEditorTitle: 'Match stats: {home} vs {away}',
           statsEditorDescription:
             'Update player stats to close the match and recalculate standings.',
+          workflowsTitle: 'Manage match flow',
+          workflowsDescription:
+            'Use Tracking for the match clock and event timeline. Use Manual result for old matches or to close a tracked match with final stats.',
+          trackingTab: 'Tracking',
+          manualResultTab: 'Manual result',
+          manualResultTitle: 'Manual result: {home} vs {away}',
+          manualResultDescription:
+            'Enter or adjust lineups and final player stats here. Starting the match clock is optional.',
+          manualResultHint:
+            'This mode works both for historical matches and for finishing a match after live tracking.',
           lineupsReopenHint:
             'Updating lineups on a closed match reopens it and removes its current standings impact.',
+          trackingTitle: 'Match tracking',
+          trackingDescription:
+            'Start the match clock and log timed events such as goals, cards, fouls, saves or sanctions.',
+          startTracking: 'Start match',
+          stopTracking: 'Stop match',
+          liveClockLabel: 'Live clock',
+          quickTrackingTitle: 'Quick live tracking',
+          quickTrackingDescription:
+            'Use the running match clock to increase or decrease goals, assists, saves, yellow cards and red cards directly from each player row.',
+          quickTrackingDisabledHint:
+            'Quick tracking buttons are enabled only while the match timer is running.',
+          quickTrackingTeam: 'Live events: {team}',
+          manualEventTitle: 'Manual or custom event',
+          manualEventDescription:
+            'Use this form for fouls, sanctions, notes, related players, or manual timestamps.',
+          lineupsLockedTrackingHint:
+            'Lineups are locked once the match clock starts or timeline events are recorded.',
+          eventAction: 'Action',
+          eventDeltaAdd: 'Increase (+1)',
+          eventDeltaSubtract: 'Decrease (-1)',
+          eventType: 'Event type',
+          teamSide: 'Team side',
+          eventPlayer: 'Player',
+          eventPlayerSelect: 'Select a player',
+          eventPlayerOptional: 'No player selected',
+          eventRelatedPlayer: 'Related player',
+          eventRelatedPlayerOptional: 'No related player',
+          eventMinute: 'Minute',
+          eventSecond: 'Second',
+          eventNote: 'Note',
+          eventNotePlaceholder: 'Optional context for this event',
+          createEvent: 'Add event',
+          deleteEvent: 'Delete event',
+          eventTimeHelperLive:
+            'The live clock is running. Leave minute and second empty to use the current elapsed time, or fill them in to override it.',
+          eventTimeHelperManual:
+            'If the live clock is not running, enter a minute and optional second to place the event on the timeline.',
+          eventTypes: {
+            goal: 'Goal',
+            assist: 'Assist',
+            save: 'Save',
+            foul: 'Foul',
+            yellow_card: 'Yellow card',
+            red_card: 'Red card',
+            sanction: 'Sanction',
+            other: 'Other',
+          },
+          teamSides: {
+            home: 'Home',
+            away: 'Away',
+            neutral: 'Neutral',
+          },
           teamStats: 'Team stats: {team}',
           goals: 'Goals',
           assists: 'Assists',
@@ -502,6 +577,10 @@ export const messages = {
           seasonDeleted: 'Season deleted',
           detailedMatchCreated: 'Detailed match created',
           matchDeleted: 'Match deleted',
+          matchTrackingStarted: 'Match tracking started',
+          matchTrackingStopped: 'Match tracking stopped',
+          matchEventCreated: 'Match event added',
+          matchEventDeleted: 'Match event deleted',
           matchResultUpdated: 'Match result updated',
           matchStatsUpdated: 'Match stats updated',
           lineupsUpdated: 'Lineups updated',
@@ -519,9 +598,21 @@ export const messages = {
         errors: {
           lineupsRequired: 'Home and away lineups must include at least one player',
           lineupsOverlap: 'The same player cannot be in both lineups',
+          matchLineupsLocked:
+            'Lineups cannot be changed after the match clock starts or when timeline events already exist.',
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
             'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
+          invalidMatchEventElapsed:
+            'Event time must use a valid minute and a second between 0 and 59.',
+          invalidMatchEventDelta: 'Event action must be increase or decrease.',
+          matchEventElapsedRequired:
+            'Start the match clock or enter a minute and second before adding an event.',
+          matchTrackingLiveRequired:
+            'Start the match timer before using the quick live tracking buttons.',
+          matchEventPlayerRequired: 'Select a player for this event type.',
+          matchEventPlayersMustDiffer:
+            'Player and related player must be different for the same event.',
           selectedSeasonStartDateRequired: 'Season start date is required',
           selectedSeasonEndDateRequired: 'Season end date is required',
           invalidSeasonRange: 'Season start date must be before or equal to end date',
@@ -782,8 +873,20 @@ export const messages = {
           closeAction: 'Cerrar',
           matchDate: 'Fecha: {date}',
           finalScore: 'Marcador: {score}',
+          trackingNotStarted: 'Sin iniciar',
+          trackingLive: 'En juego',
+          trackingFinished: 'Finalizado',
+          elapsed: 'Tiempo: {value}',
+          startedAt: 'Inicio: {value}',
+          endedAt: 'Fin: {value}',
           highlightsTitle: 'Destacados',
           noHighlights: 'Todavía no hay estadísticas destacadas para este partido.',
+          eventsTitle: 'Cronología del partido',
+          eventsEmpty: 'Todavía no hay eventos registrados en la cronología.',
+          eventPlayer: 'Jugador: {player}',
+          eventRelatedPlayer: 'Relacionado: {player}',
+          eventNote: 'Nota: {note}',
+          eventRecordedAt: 'Registrado: {value}',
           highlightGoals: 'Máximo goleador: {player} ({value})',
           highlightAssists: 'Más asistencias: {player} ({value})',
           highlightSaves: 'Más paradas: {player} ({value})',
@@ -1078,6 +1181,7 @@ export const messages = {
           home: 'Local',
           away: 'Visitante',
           status: 'Estado',
+          tracking: 'Seguimiento',
           statusOpen: 'Abierto',
           statusClosed: 'Cerrado',
           actions: 'Acciones',
@@ -1095,8 +1199,70 @@ export const messages = {
           statsEditorTitle: 'Estadísticas: {home} vs {away}',
           statsEditorDescription:
             'Actualiza estadísticas por jugador para cerrar el partido y recalcular la clasificación.',
+          workflowsTitle: 'Flujo de gestión del partido',
+          workflowsDescription:
+            'Usa Seguimiento para el reloj y la cronología de eventos. Usa Resultado manual para partidos antiguos o para cerrar un partido seguido en vivo con estadísticas finales.',
+          trackingTab: 'Seguimiento',
+          manualResultTab: 'Resultado manual',
+          manualResultTitle: 'Resultado manual: {home} vs {away}',
+          manualResultDescription:
+            'Introduce o ajusta aquí alineaciones y estadísticas finales por jugador. Iniciar el reloj es opcional.',
+          manualResultHint:
+            'Este modo sirve tanto para partidos históricos como para cerrar un partido después del seguimiento en vivo.',
           lineupsReopenHint:
             'Actualizar convocatorias en un partido cerrado lo reabre y elimina su impacto actual en la clasificación.',
+          trackingTitle: 'Seguimiento del partido',
+          trackingDescription:
+            'Inicia el reloj del partido y registra eventos con tiempo como goles, tarjetas, faltas, paradas o sanciones.',
+          startTracking: 'Iniciar partido',
+          stopTracking: 'Detener partido',
+          liveClockLabel: 'Reloj en vivo',
+          quickTrackingTitle: 'Seguimiento rápido en vivo',
+          quickTrackingDescription:
+            'Usa el reloj del partido para incrementar o disminuir goles, asistencias, paradas, tarjetas amarillas y tarjetas rojas directamente desde cada fila de jugador.',
+          quickTrackingDisabledHint:
+            'Los botones de seguimiento rápido solo están activos mientras el reloj del partido está corriendo.',
+          quickTrackingTeam: 'Eventos en vivo: {team}',
+          manualEventTitle: 'Evento manual o personalizado',
+          manualEventDescription:
+            'Usa este formulario para faltas, sanciones, notas, jugadores relacionados o tiempos manuales.',
+          lineupsLockedTrackingHint:
+            'Las alineaciones quedan bloqueadas cuando se inicia el reloj del partido o ya existen eventos en la cronología.',
+          eventAction: 'Acción',
+          eventDeltaAdd: 'Incrementar (+1)',
+          eventDeltaSubtract: 'Disminuir (-1)',
+          eventType: 'Tipo de evento',
+          teamSide: 'Lado del equipo',
+          eventPlayer: 'Jugador',
+          eventPlayerSelect: 'Selecciona un jugador',
+          eventPlayerOptional: 'Sin jugador',
+          eventRelatedPlayer: 'Jugador relacionado',
+          eventRelatedPlayerOptional: 'Sin jugador relacionado',
+          eventMinute: 'Minuto',
+          eventSecond: 'Segundo',
+          eventNote: 'Nota',
+          eventNotePlaceholder: 'Contexto opcional del evento',
+          createEvent: 'Añadir evento',
+          deleteEvent: 'Eliminar evento',
+          eventTimeHelperLive:
+            'El reloj en vivo está activo. Deja minuto y segundo vacíos para usar el tiempo actual, o rellénalos para ajustarlo manualmente.',
+          eventTimeHelperManual:
+            'Si el reloj no está activo, indica un minuto y un segundo opcional para colocar el evento en la cronología.',
+          eventTypes: {
+            goal: 'Gol',
+            assist: 'Asistencia',
+            save: 'Parada',
+            foul: 'Falta',
+            yellow_card: 'Tarjeta amarilla',
+            red_card: 'Tarjeta roja',
+            sanction: 'Sanción',
+            other: 'Otro',
+          },
+          teamSides: {
+            home: 'Local',
+            away: 'Visitante',
+            neutral: 'Neutral',
+          },
           teamStats: 'Datos del equipo: {team}',
           goals: 'Goles',
           assists: 'Asistencias',
@@ -1194,6 +1360,10 @@ export const messages = {
           seasonDeleted: 'Temporada eliminada',
           detailedMatchCreated: 'Partido detallado creado',
           matchDeleted: 'Partido eliminado',
+          matchTrackingStarted: 'Seguimiento del partido iniciado',
+          matchTrackingStopped: 'Seguimiento del partido detenido',
+          matchEventCreated: 'Evento de partido añadido',
+          matchEventDeleted: 'Evento de partido eliminado',
           matchResultUpdated: 'Resultado del partido actualizado',
           matchStatsUpdated: 'Estadísticas del partido actualizadas',
           lineupsUpdated: 'Convocatorias actualizadas',
@@ -1211,10 +1381,23 @@ export const messages = {
         errors: {
           lineupsRequired: 'La alineación local y visitante debe incluir al menos un jugador',
           lineupsOverlap: 'Un mismo jugador no puede estar en las dos convocatorias',
+          matchLineupsLocked:
+            'No se pueden cambiar las alineaciones después de iniciar el reloj del partido o si ya existen eventos en la cronología.',
           invalidMatchResult:
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
             'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
+          invalidMatchEventElapsed:
+            'El tiempo del evento debe usar un minuto válido y un segundo entre 0 y 59.',
+          invalidMatchEventDelta:
+            'La acción del evento debe ser incrementar o disminuir.',
+          matchEventElapsedRequired:
+            'Inicia el reloj del partido o indica minuto y segundo antes de añadir un evento.',
+          matchTrackingLiveRequired:
+            'Inicia el reloj del partido antes de usar los botones de seguimiento rápido.',
+          matchEventPlayerRequired: 'Selecciona un jugador para este tipo de evento.',
+          matchEventPlayersMustDiffer:
+            'El jugador y el jugador relacionado deben ser distintos dentro del mismo evento.',
           selectedSeasonStartDateRequired: 'La fecha de inicio de la temporada es obligatoria',
           selectedSeasonEndDateRequired: 'La fecha de fin de la temporada es obligatoria',
           invalidSeasonRange:
