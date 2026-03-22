@@ -5,6 +5,7 @@ from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import season_competition_controller as controller
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
+    CreateSeasonMatchEventRequest,
     CreateSeasonMatchRequest,
     MatchInsightsRequest,
     MatchPlayerStatsRequest,
@@ -30,6 +31,10 @@ from persistence.application.use_cases.manage_season_competition_usecase import 
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
     SeasonMatchDetailInfo,
+    SeasonMatchAlreadyStartedError,
+    SeasonMatchClockNotRunningError,
+    SeasonMatchEventNotFoundError,
+    SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchesPage,
     SeasonMatchInfo,
     SeasonMatchInvalidPlayersError,
@@ -147,8 +152,13 @@ def _match_detail(match_guid: str = "match-1") -> SeasonMatchDetailInfo:
         season_guid="season-1",
         match_date=date(2025, 1, 10),
         status="played",
+        tracking_status="not_started",
+        started_at_epoch=None,
+        ended_at_epoch=None,
+        elapsed_seconds=0,
         home_team=home_team,
         away_team=away_team,
+        events=[],
     )
 
 
@@ -164,6 +174,10 @@ def _matches_page(total: int, page: int = 1, page_size: int = 20) -> SeasonMatch
         away_score=1,
         home_players=1,
         away_players=1,
+        tracking_status="not_started",
+        started_at_epoch=None,
+        ended_at_epoch=None,
+        elapsed_seconds=0,
     )
     return SeasonMatchesPage(items=[summary], page=page, page_size=page_size, total=total)
 
@@ -256,6 +270,22 @@ class _UseCaseStub:
     def update_match_lineups_for_admin(self, **kwargs):
         self._call("update_match_lineups_for_admin", **kwargs)
         return _match_detail("match-lineups")
+
+    def start_match_for_admin(self, **kwargs):
+        self._call("start_match_for_admin", **kwargs)
+        return _match_detail("match-started")
+
+    def stop_match_for_admin(self, **kwargs):
+        self._call("stop_match_for_admin", **kwargs)
+        return _match_detail("match-stopped")
+
+    def create_match_event_for_admin(self, **kwargs):
+        self._call("create_match_event_for_admin", **kwargs)
+        return _match_detail("match-event-created")
+
+    def delete_match_event_for_admin(self, **kwargs):
+        self._call("delete_match_event_for_admin", **kwargs)
+        return _match_detail("match-event-deleted")
 
     def list_season_matches(self, **kwargs):
         self._call("list_season_matches", **kwargs)
@@ -621,6 +651,186 @@ def test_update_season_match_lineups_maps_lineup_locked_error():
         )
     assert exc.value.status_code == 409
     assert exc.value.detail == "Cannot update lineups after match stats have been recorded"
+
+
+def test_start_season_match_success():
+    use_case = _UseCaseStub()
+    response = controller.start_season_match(
+        "pena-1",
+        "season-1",
+        "match-1",
+        admin_session=_admin_session(19),
+        use_case=use_case,
+    )
+    assert response.guid == "match-started"
+    assert use_case.last_call == (
+        "start_match_for_admin",
+        {
+            "pena_guid": "pena-1",
+            "season_guid": "season-1",
+            "match_guid": "match-1",
+            "admin_id": 19,
+        },
+    )
+
+
+def test_start_season_match_maps_clock_error():
+    use_case = _UseCaseStub()
+    use_case.error_by_method["start_match_for_admin"] = SeasonMatchAlreadyStartedError()
+    with pytest.raises(HTTPException) as exc:
+        controller.start_season_match(
+            "pena-1",
+            "season-1",
+            "match-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "Match tracking is already running or has already been started"
+
+
+def test_stop_season_match_success():
+    use_case = _UseCaseStub()
+    response = controller.stop_season_match(
+        "pena-1",
+        "season-1",
+        "match-1",
+        admin_session=_admin_session(20),
+        use_case=use_case,
+    )
+    assert response.guid == "match-stopped"
+    assert use_case.last_call == (
+        "stop_match_for_admin",
+        {
+            "pena_guid": "pena-1",
+            "season_guid": "season-1",
+            "match_guid": "match-1",
+            "admin_id": 20,
+        },
+    )
+
+
+def test_stop_season_match_maps_clock_error():
+    use_case = _UseCaseStub()
+    use_case.error_by_method["stop_match_for_admin"] = SeasonMatchClockNotRunningError()
+    with pytest.raises(HTTPException) as exc:
+        controller.stop_season_match(
+            "pena-1",
+            "season-1",
+            "match-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+    assert exc.value.status_code == 409
+    assert exc.value.detail == "Match tracking is not currently running"
+
+
+def test_create_season_match_event_success():
+    use_case = _UseCaseStub()
+    response = controller.create_season_match_event(
+        "pena-1",
+        "season-1",
+        "match-1",
+        payload=CreateSeasonMatchEventRequest(
+            event_type="goal",
+            team_side="home",
+            player_guid="p1",
+            related_player_guid="p2",
+            note="Volley finish",
+            elapsed_seconds=125,
+            value_delta=-1,
+        ),
+        admin_session=_admin_session(21),
+        use_case=use_case,
+    )
+    assert response.guid == "match-event-created"
+    method, payload = use_case.last_call
+    assert method == "create_match_event_for_admin"
+    assert payload["pena_guid"] == "pena-1"
+    assert payload["season_guid"] == "season-1"
+    assert payload["match_guid"] == "match-1"
+    assert payload["admin_id"] == 21
+    assert payload["data"].event_type == "goal"
+    assert payload["data"].team_side == "home"
+    assert payload["data"].player_guid == "p1"
+    assert payload["data"].related_player_guid == "p2"
+    assert payload["data"].note == "Volley finish"
+    assert payload["data"].elapsed_seconds == 125
+    assert payload["data"].value_delta == -1
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (
+            SeasonMatchClockNotRunningError(),
+            409,
+            "Start the match or provide a manual elapsed time before logging events",
+        ),
+        (
+            SeasonMatchEventPlayerNotInMatchError(),
+            409,
+            "Event players must belong to the selected match",
+        ),
+    ],
+)
+def test_create_season_match_event_maps_domain_errors(error, status_code, detail):
+    use_case = _UseCaseStub()
+    use_case.error_by_method["create_match_event_for_admin"] = error
+    with pytest.raises(HTTPException) as exc:
+        controller.create_season_match_event(
+            "pena-1",
+            "season-1",
+            "match-1",
+            payload=CreateSeasonMatchEventRequest(
+                event_type="goal",
+                team_side="home",
+                player_guid="p1",
+            ),
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+def test_delete_season_match_event_success():
+    use_case = _UseCaseStub()
+    response = controller.delete_season_match_event(
+        "pena-1",
+        "season-1",
+        "match-1",
+        "event-1",
+        admin_session=_admin_session(22),
+        use_case=use_case,
+    )
+    assert response.guid == "match-event-deleted"
+    assert use_case.last_call == (
+        "delete_match_event_for_admin",
+        {
+            "pena_guid": "pena-1",
+            "season_guid": "season-1",
+            "match_guid": "match-1",
+            "event_guid": "event-1",
+            "admin_id": 22,
+        },
+    )
+
+
+def test_delete_season_match_event_maps_not_found():
+    use_case = _UseCaseStub()
+    use_case.error_by_method["delete_match_event_for_admin"] = SeasonMatchEventNotFoundError()
+    with pytest.raises(HTTPException) as exc:
+        controller.delete_season_match_event(
+            "pena-1",
+            "season-1",
+            "match-1",
+            "event-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "Match event not found"
 
 
 def test_list_season_matches_success():
