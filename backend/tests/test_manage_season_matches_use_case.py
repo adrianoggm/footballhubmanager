@@ -14,6 +14,7 @@ from persistence.application.ports.season_competition_port import (
     MatchLineupLockedError,
     MatchNotFoundError,
     MatchPlayerStatsResult,
+    MatchReportClosedError,
     MatchResult,
     MatchStatsMismatchError,
     MatchSummaryResult,
@@ -46,6 +47,7 @@ from persistence.application.use_cases.manage_season_matches_usecase import (
     SeasonMatchLineupsUpdate,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
     SeasonMatchResultUpdate,
     SeasonMatchStatsMismatchError,
     SeasonMatchStatsUpdate,
@@ -75,6 +77,7 @@ class _FakeRepo:
     should_raise_match_clock_not_running: bool = False
     should_raise_event_not_found: bool = False
     should_raise_event_player_not_in_match: bool = False
+    should_raise_match_report_closed: bool = False
     last_payload: dict | None = None
 
     @staticmethod
@@ -267,6 +270,8 @@ class _FakeRepo:
             raise MatchNotFoundError()
         if self.should_raise_match_already_started:
             raise MatchClockAlreadyStartedError()
+        if self.should_raise_match_report_closed:
+            raise MatchReportClosedError()
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         self.last_payload = kwargs
@@ -283,6 +288,8 @@ class _FakeRepo:
             raise MatchNotFoundError()
         if self.should_raise_match_clock_not_running:
             raise MatchClockNotRunningError()
+        if self.should_raise_match_report_closed:
+            raise MatchReportClosedError()
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         self.last_payload = kwargs
@@ -301,6 +308,8 @@ class _FakeRepo:
             raise MatchClockNotRunningError()
         if self.should_raise_event_player_not_in_match:
             raise MatchEventPlayerNotInMatchError()
+        if self.should_raise_match_report_closed:
+            raise MatchReportClosedError()
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         self.last_payload = kwargs
@@ -317,6 +326,8 @@ class _FakeRepo:
             raise MatchNotFoundError()
         if self.should_raise_event_not_found:
             raise MatchEventNotFoundError()
+        if self.should_raise_match_report_closed:
+            raise MatchReportClosedError()
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         self.last_payload = kwargs
@@ -922,6 +933,7 @@ def test_get_match_detail_returns_detail():
         (_FakeRepo(should_raise_season_not_found=True), PenaSeasonNotFoundError),
         (_FakeRepo(should_raise_match_not_found=True), SeasonMatchNotFoundError),
         (_FakeRepo(should_raise_match_already_started=True), SeasonMatchAlreadyStartedError),
+        (_FakeRepo(should_raise_match_report_closed=True), SeasonMatchReportClosedError),
         (_FakeRepo(should_raise_invalid_match_data=True), InvalidSeasonMatchDataError),
     ],
 )
@@ -1011,6 +1023,7 @@ def test_create_match_event_rejects_invalid_payload():
             _FakeRepo(should_raise_event_player_not_in_match=True),
             SeasonMatchEventPlayerNotInMatchError,
         ),
+        (_FakeRepo(should_raise_match_report_closed=True), SeasonMatchReportClosedError),
         (_FakeRepo(should_raise_invalid_match_data=True), InvalidSeasonMatchDataError),
     ],
 )
@@ -1070,6 +1083,7 @@ def test_create_match_event_normalizes_payload():
         (_FakeRepo(should_raise_season_not_found=True), PenaSeasonNotFoundError),
         (_FakeRepo(should_raise_match_not_found=True), SeasonMatchNotFoundError),
         (_FakeRepo(should_raise_event_not_found=True), SeasonMatchEventNotFoundError),
+        (_FakeRepo(should_raise_match_report_closed=True), SeasonMatchReportClosedError),
         (_FakeRepo(should_raise_invalid_match_data=True), InvalidSeasonMatchDataError),
     ],
 )

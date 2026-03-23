@@ -42,6 +42,7 @@ from persistence.application.use_cases.manage_season_competition_usecase import 
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsInfo,
+    SeasonMatchReportClosedError,
     SeasonMatchStatsMismatchError,
     SeasonMatchSummaryInfo,
     SeasonMatchTeamInfo,
@@ -98,7 +99,7 @@ def _match(match_guid: str = "match-1") -> SeasonMatchInfo:
         away_player_guid="player-2",
         home_player_name="Ana",
         away_player_name="Luis",
-        status="played",
+        status="closed",
         home_score=2,
         away_score=1,
     )
@@ -151,7 +152,7 @@ def _match_detail(match_guid: str = "match-1") -> SeasonMatchDetailInfo:
         guid=match_guid,
         season_guid="season-1",
         match_date=date(2025, 1, 10),
-        status="played",
+        status="closed",
         tracking_status="not_started",
         started_at_epoch=None,
         ended_at_epoch=None,
@@ -167,7 +168,7 @@ def _matches_page(total: int, page: int = 1, page_size: int = 20) -> SeasonMatch
         guid="match-1",
         season_guid="season-1",
         match_date=date(2025, 1, 10),
-        status="played",
+        status="closed",
         home_team_name="Home",
         away_team_name="Away",
         home_score=2,
@@ -689,6 +690,23 @@ def test_start_season_match_maps_clock_error():
     assert exc.value.detail == "Match tracking is already running or has already been started"
 
 
+def test_start_season_match_maps_closed_report():
+    use_case = _UseCaseStub()
+    use_case.error_by_method["start_match_for_admin"] = SeasonMatchReportClosedError()
+    with pytest.raises(HTTPException) as exc:
+        controller.start_season_match(
+            "pena-1",
+            "season-1",
+            "match-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+    assert exc.value.status_code == 409
+    assert (
+        exc.value.detail == "This match report is already closed and tracking cannot be restarted"
+    )
+
+
 def test_stop_season_match_success():
     use_case = _UseCaseStub()
     response = controller.stop_season_match(
@@ -763,6 +781,11 @@ def test_create_season_match_event_success():
     ("error", "status_code", "detail"),
     [
         (
+            SeasonMatchReportClosedError(),
+            409,
+            "The official match report is closed, so the timeline is read-only",
+        ),
+        (
             SeasonMatchClockNotRunningError(),
             409,
             "Start the match or provide a manual elapsed time before logging events",
@@ -831,6 +854,25 @@ def test_delete_season_match_event_maps_not_found():
         )
     assert exc.value.status_code == 404
     assert exc.value.detail == "Match event not found"
+
+
+def test_delete_season_match_event_maps_closed_report():
+    use_case = _UseCaseStub()
+    use_case.error_by_method["delete_match_event_for_admin"] = SeasonMatchReportClosedError()
+    with pytest.raises(HTTPException) as exc:
+        controller.delete_season_match_event(
+            "pena-1",
+            "season-1",
+            "match-1",
+            "event-1",
+            admin_session=_admin_session(),
+            use_case=use_case,
+        )
+    assert exc.value.status_code == 409
+    assert (
+        exc.value.detail
+        == "The official match report is closed, so timeline events cannot be removed"
+    )
 
 
 def test_list_season_matches_success():
