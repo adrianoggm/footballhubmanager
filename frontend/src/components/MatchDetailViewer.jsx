@@ -363,6 +363,8 @@ export default function MatchDetailViewer({
   const isClosed = String(displayedDetail.status || '').toLowerCase() === 'closed'
   const highlights = buildHighlights(displayedDetail, t)
   const displayedElapsed = resolveLiveElapsed(displayedDetail, nowEpoch)
+  const lineupChangeCount = Number(displayedDetail.lineup_change_count || 0)
+  const hasLineupAudit = lineupChangeCount > 0
 
   return (
     <Stack spacing={2}>
@@ -432,6 +434,28 @@ export default function MatchDetailViewer({
           />
         ) : null}
       </Stack>
+
+      {hasLineupAudit ? (
+        <Alert severity="warning">
+          <Stack spacing={0.5}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {t('dashboard.common.matchDetail.lineupAuditTitle', {
+                count: lineupChangeCount,
+              })}
+            </Typography>
+            <Typography variant="body2">
+              {t('dashboard.common.matchDetail.lineupAuditDescription')}
+            </Typography>
+            {displayedDetail.lineup_updated_at_epoch ? (
+              <Typography variant="caption" color="text.secondary">
+                {t('dashboard.common.matchDetail.lineupAuditLastUpdate', {
+                  value: formatEpochSeconds(displayedDetail.lineup_updated_at_epoch),
+                })}
+              </Typography>
+            ) : null}
+          </Stack>
+        </Alert>
+      ) : null}
 
       <Stack spacing={1}>
         <Typography variant="subtitle2">

@@ -10,18 +10,16 @@ import {
   LinearProgress,
   MenuItem,
   Stack,
-  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
   TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import LineupDragBuilder from '../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../MatchDetailViewer.jsx'
 
@@ -54,9 +52,6 @@ const isLiveTrackingStatus = (value) => {
 }
 
 const clampTrackedValue = (value) => Math.max(0, Number(value || 0))
-
-const buildDefaultMatchWorkflow = (matchDetail) =>
-  isLiveTrackingStatus(matchDetail?.tracking_status) ? 'tracking' : 'manual'
 
 const resolveDisplayedElapsed = (matchDetail, nowEpoch) => {
   if (!matchDetail) {
@@ -329,13 +324,6 @@ function TrackingTeamPanel({
 export default function AdminMatchesSection({ state, actions, helpers }) {
   const { t, formatDate, formatElapsedDuration, formatPlayerDisplayName } = helpers
   const [nowEpoch, setNowEpoch] = useState(() => Math.floor(Date.now() / 1000))
-  const [editorWorkflow, setEditorWorkflow] = useState('manual')
-  const initializedWorkflowMatchGuidRef = useRef('')
-  const previousSelectedMatchStateRef = useRef({
-    guid: '',
-    status: '',
-    trackingStatus: '',
-  })
   const {
     selectedSeasonGuid,
     seasonRosterLoading,
@@ -400,14 +388,33 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   )
   const eventCountsByPlayer = buildPlayerEventCounts(selectedMatchEvents)
   const selectedTrackedScore = buildTrackedTeamScore(selectedMatchDetail)
-  const lineupsLocked = Boolean(
-    selectedMatchDetail &&
-    (selectedMatchDetail.tracking_status !== 'not_started' || selectedMatchEvents.length > 0)
-  )
+  const officiallyClosed = String(selectedMatchDetail?.status || '').toLowerCase() === 'closed'
+  const trackingIsLive = isLiveTrackingStatus(selectedMatchDetail?.tracking_status)
+  const trackingFinished =
+    String(selectedMatchDetail?.tracking_status || '').toLowerCase() === 'finished'
+  const timelineLocked = officiallyClosed
+  const hasLineupAudit = Number(selectedMatchDetail?.lineup_change_count || 0) > 0
   const quickTrackingEnabled = Boolean(
-    isLiveTrackingStatus(selectedMatchDetail?.tracking_status) && !loading && !matchStatsLoading
+    !officiallyClosed && trackingIsLive && !loading && !matchStatsLoading
   )
   const displayedElapsed = resolveDisplayedElapsed(selectedMatchDetail, nowEpoch)
+  const workflowPhaseLabel = officiallyClosed
+    ? t('dashboard.admin.matches.workflowPhaseClosed')
+    : trackingIsLive
+      ? t('dashboard.admin.matches.workflowPhaseLive')
+      : trackingFinished || selectedMatchEvents.length > 0
+        ? t('dashboard.admin.matches.workflowPhaseReview')
+        : t('dashboard.admin.matches.workflowPhaseManual')
+  const workflowSummary = officiallyClosed
+    ? t('dashboard.admin.matches.workflowSummaryClosed')
+    : trackingIsLive
+      ? t('dashboard.admin.matches.workflowSummaryLive')
+      : trackingFinished || selectedMatchEvents.length > 0
+        ? t('dashboard.admin.matches.workflowSummaryReview')
+        : t('dashboard.admin.matches.workflowSummaryManual')
+  const officialScoreLabel = t('dashboard.admin.matches.finalScore', {
+    score: `${selectedMatchDetail?.home_team?.score ?? 0} - ${selectedMatchDetail?.away_team?.score ?? 0}`,
+  })
 
   useEffect(() => {
     if (!isLiveTrackingStatus(selectedMatchDetail?.tracking_status)) {
@@ -419,57 +426,6 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
     }, 1000)
     return () => window.clearInterval(timerId)
   }, [selectedMatchDetail?.tracking_status, selectedMatchDetail?.started_at_epoch])
-
-  useEffect(() => {
-    if (!selectedMatchGuid) {
-      initializedWorkflowMatchGuidRef.current = ''
-      previousSelectedMatchStateRef.current = {
-        guid: '',
-        status: '',
-        trackingStatus: '',
-      }
-      return
-    }
-    if (!selectedMatchDetail || selectedMatchDetail.guid !== selectedMatchGuid) {
-      return
-    }
-    if (initializedWorkflowMatchGuidRef.current === selectedMatchGuid) {
-      return
-    }
-    setEditorWorkflow(buildDefaultMatchWorkflow(selectedMatchDetail))
-    initializedWorkflowMatchGuidRef.current = selectedMatchGuid
-  }, [selectedMatchGuid, selectedMatchDetail])
-
-  useEffect(() => {
-    if (
-      !selectedMatchGuid ||
-      !selectedMatchDetail ||
-      selectedMatchDetail.guid !== selectedMatchGuid
-    ) {
-      return
-    }
-
-    const previousState = previousSelectedMatchStateRef.current
-    const isSameMatch = previousState.guid === selectedMatchGuid
-    const trackingJustStopped =
-      isSameMatch &&
-      isLiveTrackingStatus(previousState.trackingStatus) &&
-      !isLiveTrackingStatus(selectedMatchDetail.tracking_status)
-    const matchJustClosed =
-      isSameMatch &&
-      String(previousState.status || '').toLowerCase() !== 'closed' &&
-      String(selectedMatchDetail.status || '').toLowerCase() === 'closed'
-
-    if ((trackingJustStopped || matchJustClosed) && editorWorkflow === 'tracking') {
-      setEditorWorkflow('manual')
-    }
-
-    previousSelectedMatchStateRef.current = {
-      guid: selectedMatchGuid,
-      status: selectedMatchDetail.status,
-      trackingStatus: selectedMatchDetail.tracking_status,
-    }
-  }, [editorWorkflow, selectedMatchGuid, selectedMatchDetail])
 
   return (
     <Grid container spacing={2.5} sx={{ width: '100%' }}>
@@ -612,15 +568,26 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                             <TableCell>{match.home_team_name}</TableCell>
                             <TableCell>{match.away_team_name}</TableCell>
                             <TableCell>
-                              <Chip
-                                size="small"
-                                color={isClosed ? 'success' : 'warning'}
-                                label={
-                                  isClosed
-                                    ? t('dashboard.admin.matches.statusClosed')
-                                    : t('dashboard.admin.matches.statusOpen')
-                                }
-                              />
+                              <Stack spacing={0.75}>
+                                <Chip
+                                  size="small"
+                                  color={isClosed ? 'success' : 'warning'}
+                                  label={
+                                    isClosed
+                                      ? t('dashboard.admin.matches.statusClosed')
+                                      : t('dashboard.admin.matches.statusOpen')
+                                  }
+                                />
+                                {Number(match.lineup_change_count || 0) > 0 ? (
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={t('dashboard.admin.matches.lineupAuditBadge', {
+                                      count: match.lineup_change_count,
+                                    })}
+                                  />
+                                ) : null}
+                              </Stack>
                             </TableCell>
                             <TableCell>
                               <Stack spacing={0.75}>
@@ -640,7 +607,9 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
-                                {t('dashboard.admin.matches.scoreFromStats')}
+                                {trackedScore && status !== 'closed'
+                                  ? t('dashboard.admin.matches.scoreFromTracking')
+                                  : t('dashboard.admin.matches.scoreFromStats')}
                               </Typography>
                             </TableCell>
                             <TableCell>
@@ -692,7 +661,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                           t={t}
                           formatDate={formatDate}
                           showSubtitle={false}
-                          onDeleteEvent={handleDeleteMatchEvent}
+                          onDeleteEvent={timelineLocked ? null : handleDeleteMatchEvent}
                           deletingEventGuid={deletingMatchEventGuid}
                         />
 
@@ -707,509 +676,576 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                           </Typography>
                         </Box>
 
-                        <Tabs
-                          value={editorWorkflow}
-                          onChange={(_, value) => setEditorWorkflow(value)}
-                          variant="fullWidth"
-                          sx={{ minHeight: 44 }}
+                        <Alert severity={officiallyClosed || trackingIsLive ? 'success' : 'info'}>
+                          <Stack spacing={0.5}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                              {workflowPhaseLabel}
+                            </Typography>
+                            <Typography variant="body2">{workflowSummary}</Typography>
+                          </Stack>
+                        </Alert>
+
+                        <Card
+                          variant="outlined"
+                          sx={{
+                            borderColor: trackingIsLive ? 'success.main' : 'divider',
+                          }}
                         >
-                          <Tab
-                            value="tracking"
-                            label={t('dashboard.admin.matches.trackingTab')}
-                            sx={{ minHeight: 44 }}
-                          />
-                          <Tab
-                            value="manual"
-                            label={t('dashboard.admin.matches.manualResultTab')}
-                            sx={{ minHeight: 44 }}
-                          />
-                        </Tabs>
-
-                        {editorWorkflow === 'tracking' && (
-                          <Stack spacing={2}>
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {t('dashboard.admin.matches.trackingTitle')}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {t('dashboard.admin.matches.trackingDescription')}
-                              </Typography>
-                            </Box>
-
-                            <Stack
-                              direction={{ xs: 'column', sm: 'row' }}
-                              spacing={1}
-                              alignItems={{ sm: 'center' }}
-                              flexWrap="wrap"
-                              useFlexGap
-                            >
-                              <Chip
-                                size="small"
-                                color={trackingChipColor(selectedMatchDetail.tracking_status)}
-                                label={trackingLabel(selectedMatchDetail.tracking_status, t)}
-                              />
-                              <Button
-                                variant="contained"
-                                color="success"
-                                onClick={handleStartMatch}
-                                disabled={
-                                  loading ||
-                                  matchStatsLoading ||
-                                  selectedMatchDetail.tracking_status !== 'not_started' ||
-                                  selectedMatchEvents.length > 0
-                                }
-                              >
-                                {t('dashboard.admin.matches.startTracking')}
-                              </Button>
-                              <Button
-                                variant="outlined"
-                                color="warning"
-                                onClick={handleStopMatch}
-                                disabled={
-                                  loading ||
-                                  matchStatsLoading ||
-                                  !isLiveTrackingStatus(selectedMatchDetail.tracking_status)
-                                }
-                              >
-                                {t('dashboard.admin.matches.stopTracking')}
-                              </Button>
-                            </Stack>
-
-                            <Box
-                              sx={{
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                borderRadius: 2,
-                                px: 2,
-                                py: 1.5,
-                                backgroundColor: 'background.paper',
-                              }}
-                            >
-                              <Typography variant="overline" color="text.secondary">
-                                {t('dashboard.admin.matches.liveClockLabel')}
-                              </Typography>
-                              <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
-                                {formatElapsedDuration(displayedElapsed)}
-                              </Typography>
-                            </Box>
-
-                            <Alert
-                              severity={
-                                isLiveTrackingStatus(selectedMatchDetail.tracking_status)
-                                  ? 'success'
-                                  : 'info'
-                              }
-                            >
-                              {isLiveTrackingStatus(selectedMatchDetail.tracking_status)
-                                ? t('dashboard.admin.matches.eventTimeHelperLive')
-                                : t('dashboard.admin.matches.eventTimeHelperManual')}
-                            </Alert>
-
-                            {lineupsLocked && (
-                              <Alert severity="warning">
-                                {t('dashboard.admin.matches.lineupsLockedTrackingHint')}
-                              </Alert>
-                            )}
-
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {t('dashboard.admin.matches.quickTrackingTitle')}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {t('dashboard.admin.matches.quickTrackingDescription')}
-                              </Typography>
-                            </Box>
-
-                            {!quickTrackingEnabled && (
-                              <Alert severity="info">
-                                {t('dashboard.admin.matches.quickTrackingDisabledHint')}
-                              </Alert>
-                            )}
-
+                          <CardContent>
                             <Stack spacing={2}>
-                              <TrackingTeamPanel
-                                team={selectedMatchDetail.home_team}
-                                teamSide="home"
-                                score={
-                                  selectedTrackedScore?.home ?? selectedMatchDetail.home_team.score
-                                }
-                                eventCountsByPlayer={eventCountsByPlayer}
-                                disabled={!quickTrackingEnabled}
-                                onAdjust={handleQuickMatchEvent}
-                                formatPlayerDisplayName={formatPlayerDisplayName}
-                                t={t}
-                              />
-                              <TrackingTeamPanel
-                                team={selectedMatchDetail.away_team}
-                                teamSide="away"
-                                score={
-                                  selectedTrackedScore?.away ?? selectedMatchDetail.away_team.score
-                                }
-                                eventCountsByPlayer={eventCountsByPlayer}
-                                disabled={!quickTrackingEnabled}
-                                onAdjust={handleQuickMatchEvent}
-                                formatPlayerDisplayName={formatPlayerDisplayName}
-                                t={t}
-                              />
-                            </Stack>
-
-                            <Divider />
-
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {t('dashboard.admin.matches.manualEventTitle')}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {t('dashboard.admin.matches.manualEventDescription')}
-                              </Typography>
-                            </Box>
-
-                            <Grid container spacing={2}>
-                              <Grid item xs={12} md={4}>
-                                <TextField
-                                  select
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventType')}
-                                  value={matchEventDraft?.event_type || 'goal'}
-                                  onChange={onMatchEventDraftField('event_type')}
+                              <Box>
+                                <Stack
+                                  direction={{ xs: 'column', sm: 'row' }}
+                                  spacing={1}
+                                  alignItems={{ sm: 'center' }}
+                                  justifyContent="space-between"
                                 >
-                                  {MATCH_EVENT_TYPES.map((eventType) => (
-                                    <MenuItem key={eventType} value={eventType}>
-                                      {t(`dashboard.admin.matches.eventTypes.${eventType}`)}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                              </Grid>
-                              <Grid item xs={12} md={4}>
-                                <TextField
-                                  select
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.teamSide')}
-                                  value={matchEventDraft?.team_side || 'home'}
-                                  onChange={onMatchEventDraftField('team_side')}
-                                >
-                                  {['home', 'away', 'neutral'].map((teamSide) => (
-                                    <MenuItem key={teamSide} value={teamSide}>
-                                      {t(`dashboard.admin.matches.teamSides.${teamSide}`)}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                              </Grid>
-                              <Grid item xs={12} md={4}>
-                                <TextField
-                                  select
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventAction')}
-                                  value={matchEventDraft?.value_delta || '1'}
-                                  onChange={onMatchEventDraftField('value_delta')}
-                                >
-                                  <MenuItem value="1">
-                                    {t('dashboard.admin.matches.eventDeltaAdd')}
-                                  </MenuItem>
-                                  <MenuItem value="-1">
-                                    {t('dashboard.admin.matches.eventDeltaSubtract')}
-                                  </MenuItem>
-                                </TextField>
-                              </Grid>
-                              <Grid item xs={12} md={4}>
-                                <TextField
-                                  select
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventPlayer')}
-                                  value={matchEventDraft?.player_guid || ''}
-                                  onChange={onMatchEventDraftField('player_guid')}
+                                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                    {t('dashboard.admin.matches.trackingSectionTitle')}
+                                  </Typography>
+                                  {trackingIsLive ? (
+                                    <Chip
+                                      size="small"
+                                      color="success"
+                                      label={t('dashboard.admin.matches.workflowRecommended')}
+                                    />
+                                  ) : null}
+                                </Stack>
+                                <Typography variant="body2" color="text.secondary">
+                                  {t('dashboard.admin.matches.trackingDescription')}
+                                </Typography>
+                              </Box>
+
+                              <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                spacing={1}
+                                alignItems={{ sm: 'center' }}
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
+                                <Chip
+                                  size="small"
+                                  color={trackingChipColor(selectedMatchDetail.tracking_status)}
+                                  label={trackingLabel(selectedMatchDetail.tracking_status, t)}
+                                />
+                                <Button
+                                  variant="contained"
+                                  color="success"
+                                  onClick={handleStartMatch}
                                   disabled={
-                                    !primaryEventPlayers.length &&
-                                    !MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER.has(
-                                      matchEventDraft?.event_type || ''
-                                    )
+                                    loading ||
+                                    matchStatsLoading ||
+                                    officiallyClosed ||
+                                    selectedMatchDetail.tracking_status !== 'not_started' ||
+                                    selectedMatchEvents.length > 0
                                   }
                                 >
-                                  <MenuItem value="">
-                                    {MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER.has(
-                                      matchEventDraft?.event_type || ''
-                                    )
-                                      ? t('dashboard.admin.matches.eventPlayerOptional')
-                                      : t('dashboard.admin.matches.eventPlayerSelect')}
-                                  </MenuItem>
-                                  {primaryEventPlayers.map((player) => (
-                                    <MenuItem key={player.guid} value={player.guid}>
-                                      {player.label}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                              </Grid>
-                              <Grid item xs={12} md={4}>
-                                <TextField
-                                  select
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventRelatedPlayer')}
-                                  value={matchEventDraft?.related_player_guid || ''}
-                                  onChange={onMatchEventDraftField('related_player_guid')}
+                                  {t('dashboard.admin.matches.startTracking')}
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  color="warning"
+                                  onClick={handleStopMatch}
+                                  disabled={
+                                    loading ||
+                                    matchStatsLoading ||
+                                    !isLiveTrackingStatus(selectedMatchDetail.tracking_status)
+                                  }
                                 >
-                                  <MenuItem value="">
-                                    {t('dashboard.admin.matches.eventRelatedPlayerOptional')}
-                                  </MenuItem>
-                                  {relatedEventPlayers.map((player) => (
-                                    <MenuItem key={player.guid} value={player.guid}>
-                                      {player.label}
-                                    </MenuItem>
-                                  ))}
-                                </TextField>
-                              </Grid>
-                              <Grid item xs={6} md={2}>
-                                <TextField
-                                  type="number"
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventMinute')}
-                                  value={matchEventDraft?.minute || ''}
-                                  onChange={onMatchEventDraftField('minute')}
-                                  inputProps={{ min: 0 }}
-                                />
-                              </Grid>
-                              <Grid item xs={6} md={2}>
-                                <TextField
-                                  type="number"
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventSecond')}
-                                  value={matchEventDraft?.second || ''}
-                                  onChange={onMatchEventDraftField('second')}
-                                  inputProps={{ min: 0, max: 59 }}
-                                />
-                              </Grid>
-                              <Grid item xs={12} md={4}>
-                                <TextField
-                                  fullWidth
-                                  label={t('dashboard.admin.matches.eventNote')}
-                                  value={matchEventDraft?.note || ''}
-                                  onChange={onMatchEventDraftField('note')}
-                                  placeholder={t('dashboard.admin.matches.eventNotePlaceholder')}
-                                />
-                              </Grid>
-                            </Grid>
+                                  {t('dashboard.admin.matches.stopTracking')}
+                                </Button>
+                              </Stack>
 
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                              <Button
-                                variant="contained"
-                                onClick={handleCreateMatchEvent}
-                                disabled={loading || matchStatsLoading}
+                              <Box
+                                sx={{
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  borderRadius: 2,
+                                  px: 2,
+                                  py: 1.5,
+                                  backgroundColor: 'background.paper',
+                                }}
                               >
-                                {t('dashboard.admin.matches.createEvent')}
-                              </Button>
-                            </Stack>
-                          </Stack>
-                        )}
+                                <Typography variant="overline" color="text.secondary">
+                                  {t('dashboard.admin.matches.liveClockLabel')}
+                                </Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+                                  {formatElapsedDuration(displayedElapsed)}
+                                </Typography>
+                              </Box>
 
-                        {editorWorkflow === 'manual' && (
-                          <Stack spacing={2}>
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {t('dashboard.admin.matches.manualResultTitle', {
-                                  home: selectedMatchDetail.home_team.team_name,
-                                  away: selectedMatchDetail.away_team.team_name,
-                                })}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {t('dashboard.admin.matches.manualResultDescription')}
-                              </Typography>
-                            </Box>
-
-                            <Alert severity="info">
-                              {t('dashboard.admin.matches.manualResultHint')}
-                            </Alert>
-
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              flexWrap="wrap"
-                              useFlexGap
-                            >
-                              <Typography variant="body2" color="text.secondary">
-                                {t('dashboard.admin.matches.status')}:
-                              </Typography>
-                              <Chip
-                                size="small"
-                                color={
-                                  selectedMatchDetail.status === 'closed' ? 'success' : 'warning'
+                              <Alert
+                                severity={
+                                  isLiveTrackingStatus(selectedMatchDetail.tracking_status)
+                                    ? 'success'
+                                    : 'info'
                                 }
-                                label={
-                                  selectedMatchDetail.status === 'closed'
-                                    ? t('dashboard.admin.matches.statusClosed')
-                                    : t('dashboard.admin.matches.statusOpen')
-                                }
-                              />
-                              <Chip
-                                size="small"
-                                color={trackingChipColor(selectedMatchDetail.tracking_status)}
-                                label={trackingLabel(selectedMatchDetail.tracking_status, t)}
-                              />
-                            </Stack>
-
-                            {selectedMatchDetail.status === 'closed' && (
-                              <Alert severity="warning">
-                                {t('dashboard.admin.matches.lineupsReopenHint')}
-                              </Alert>
-                            )}
-
-                            {lineupsLocked && (
-                              <Alert severity="warning">
-                                {t('dashboard.admin.matches.lineupsLockedTrackingHint')}
-                              </Alert>
-                            )}
-
-                            <LineupDragBuilder
-                              players={matchEditorLineupPlayers}
-                              homeGuids={matchDraftHomeGuids}
-                              awayGuids={matchDraftAwayGuids}
-                              onChange={onMatchLineupsDraftChange}
-                              availableTitle={t('dashboard.admin.matches.availablePlayers')}
-                              homeTitle={
-                                selectedMatchDetail.home_team.team_name ||
-                                t('dashboard.admin.matches.homeLineup')
-                              }
-                              awayTitle={
-                                selectedMatchDetail.away_team.team_name ||
-                                t('dashboard.admin.matches.awayLineup')
-                              }
-                              helperText={t('dashboard.admin.matches.lineupBoardHint')}
-                              emptyText={t('dashboard.admin.matches.lineupEmpty')}
-                              addHomeText={t('dashboard.admin.matches.addToHome')}
-                              addAwayText={t('dashboard.admin.matches.addToAway')}
-                              moveHomeText={t('dashboard.admin.matches.moveToHome')}
-                              moveAwayText={t('dashboard.admin.matches.moveToAway')}
-                              removeText={t('dashboard.admin.matches.removeFromLineup')}
-                              disabled={loading || matchStatsLoading || lineupsLocked}
-                            />
-
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                              <Button
-                                variant="outlined"
-                                onClick={handleSaveMatchLineups}
-                                disabled={loading || matchStatsLoading || lineupsLocked}
                               >
-                                {t('dashboard.admin.matches.saveLineups')}
-                              </Button>
-                            </Stack>
+                                {isLiveTrackingStatus(selectedMatchDetail.tracking_status)
+                                  ? t('dashboard.admin.matches.eventTimeHelperLive')
+                                  : t('dashboard.admin.matches.eventTimeHelperManual')}
+                              </Alert>
 
-                            <Grid container spacing={2}>
-                              {[
-                                { key: 'home_team', team: selectedMatchDetail.home_team },
-                                { key: 'away_team', team: selectedMatchDetail.away_team },
-                              ].map(({ key, team }) => (
-                                <Grid key={key} item xs={12} lg={6} sx={{ minWidth: 0 }}>
-                                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                    {t('dashboard.admin.matches.teamStats', {
-                                      team: team.team_name,
-                                    })}
+                              {officiallyClosed && (
+                                <Alert severity="warning">
+                                  {t('dashboard.admin.matches.timelineClosedHint')}
+                                </Alert>
+                              )}
+
+                              {hasLineupAudit && (
+                                <Alert severity="warning">
+                                  {t('dashboard.admin.matches.lineupAuditHint', {
+                                    count: selectedMatchDetail.lineup_change_count,
+                                  })}
+                                </Alert>
+                              )}
+
+                              <Box>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                  {t('dashboard.admin.matches.quickTrackingTitle')}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {t('dashboard.admin.matches.quickTrackingDescription')}
+                                </Typography>
+                              </Box>
+
+                              {!quickTrackingEnabled && (
+                                <Alert severity="info">
+                                  {t('dashboard.admin.matches.quickTrackingDisabledHint')}
+                                </Alert>
+                              )}
+
+                              <Stack spacing={2}>
+                                <TrackingTeamPanel
+                                  team={selectedMatchDetail.home_team}
+                                  teamSide="home"
+                                  score={
+                                    selectedTrackedScore?.home ??
+                                    selectedMatchDetail.home_team.score
+                                  }
+                                  eventCountsByPlayer={eventCountsByPlayer}
+                                  disabled={!quickTrackingEnabled}
+                                  onAdjust={handleQuickMatchEvent}
+                                  formatPlayerDisplayName={formatPlayerDisplayName}
+                                  t={t}
+                                />
+                                <TrackingTeamPanel
+                                  team={selectedMatchDetail.away_team}
+                                  teamSide="away"
+                                  score={
+                                    selectedTrackedScore?.away ??
+                                    selectedMatchDetail.away_team.score
+                                  }
+                                  eventCountsByPlayer={eventCountsByPlayer}
+                                  disabled={!quickTrackingEnabled}
+                                  onAdjust={handleQuickMatchEvent}
+                                  formatPlayerDisplayName={formatPlayerDisplayName}
+                                  t={t}
+                                />
+                              </Stack>
+
+                              {!timelineLocked && (
+                                <>
+                                  <Divider />
+
+                                  <Box>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                      {t('dashboard.admin.matches.manualEventTitle')}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {t('dashboard.admin.matches.manualEventDescription')}
+                                    </Typography>
+                                  </Box>
+
+                                  <Grid container spacing={2}>
+                                    <Grid item xs={12} md={4}>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventType')}
+                                        value={matchEventDraft?.event_type || 'goal'}
+                                        onChange={onMatchEventDraftField('event_type')}
+                                      >
+                                        {MATCH_EVENT_TYPES.map((eventType) => (
+                                          <MenuItem key={eventType} value={eventType}>
+                                            {t(`dashboard.admin.matches.eventTypes.${eventType}`)}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.teamSide')}
+                                        value={matchEventDraft?.team_side || 'home'}
+                                        onChange={onMatchEventDraftField('team_side')}
+                                      >
+                                        {['home', 'away', 'neutral'].map((teamSide) => (
+                                          <MenuItem key={teamSide} value={teamSide}>
+                                            {t(`dashboard.admin.matches.teamSides.${teamSide}`)}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventAction')}
+                                        value={matchEventDraft?.value_delta || '1'}
+                                        onChange={onMatchEventDraftField('value_delta')}
+                                      >
+                                        <MenuItem value="1">
+                                          {t('dashboard.admin.matches.eventDeltaAdd')}
+                                        </MenuItem>
+                                        <MenuItem value="-1">
+                                          {t('dashboard.admin.matches.eventDeltaSubtract')}
+                                        </MenuItem>
+                                      </TextField>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventPlayer')}
+                                        value={matchEventDraft?.player_guid || ''}
+                                        onChange={onMatchEventDraftField('player_guid')}
+                                        disabled={
+                                          !primaryEventPlayers.length &&
+                                          !MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER.has(
+                                            matchEventDraft?.event_type || ''
+                                          )
+                                        }
+                                      >
+                                        <MenuItem value="">
+                                          {MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER.has(
+                                            matchEventDraft?.event_type || ''
+                                          )
+                                            ? t('dashboard.admin.matches.eventPlayerOptional')
+                                            : t('dashboard.admin.matches.eventPlayerSelect')}
+                                        </MenuItem>
+                                        {primaryEventPlayers.map((player) => (
+                                          <MenuItem key={player.guid} value={player.guid}>
+                                            {player.label}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventRelatedPlayer')}
+                                        value={matchEventDraft?.related_player_guid || ''}
+                                        onChange={onMatchEventDraftField('related_player_guid')}
+                                      >
+                                        <MenuItem value="">
+                                          {t('dashboard.admin.matches.eventRelatedPlayerOptional')}
+                                        </MenuItem>
+                                        {relatedEventPlayers.map((player) => (
+                                          <MenuItem key={player.guid} value={player.guid}>
+                                            {player.label}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                    </Grid>
+                                    <Grid item xs={6} md={2}>
+                                      <TextField
+                                        type="number"
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventMinute')}
+                                        value={matchEventDraft?.minute || ''}
+                                        onChange={onMatchEventDraftField('minute')}
+                                        inputProps={{ min: 0 }}
+                                      />
+                                    </Grid>
+                                    <Grid item xs={6} md={2}>
+                                      <TextField
+                                        type="number"
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventSecond')}
+                                        value={matchEventDraft?.second || ''}
+                                        onChange={onMatchEventDraftField('second')}
+                                        inputProps={{ min: 0, max: 59 }}
+                                      />
+                                    </Grid>
+                                    <Grid item xs={12} md={4}>
+                                      <TextField
+                                        fullWidth
+                                        label={t('dashboard.admin.matches.eventNote')}
+                                        value={matchEventDraft?.note || ''}
+                                        onChange={onMatchEventDraftField('note')}
+                                        placeholder={t(
+                                          'dashboard.admin.matches.eventNotePlaceholder'
+                                        )}
+                                      />
+                                    </Grid>
+                                  </Grid>
+
+                                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                    <Button
+                                      variant="contained"
+                                      onClick={handleCreateMatchEvent}
+                                      disabled={loading || matchStatsLoading}
+                                    >
+                                      {t('dashboard.admin.matches.createEvent')}
+                                    </Button>
+                                  </Stack>
+                                </>
+                              )}
+                            </Stack>
+                          </CardContent>
+                        </Card>
+
+                        <Card
+                          variant="outlined"
+                          sx={{
+                            borderColor:
+                              officiallyClosed || trackingFinished ? 'primary.main' : 'divider',
+                          }}
+                        >
+                          <CardContent>
+                            <Stack spacing={2}>
+                              <Box>
+                                <Stack
+                                  direction={{ xs: 'column', sm: 'row' }}
+                                  spacing={1}
+                                  alignItems={{ sm: 'center' }}
+                                  justifyContent="space-between"
+                                >
+                                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                    {t('dashboard.admin.matches.reportSectionTitle')}
                                   </Typography>
-                                  <Table size="small">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                                        <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
-                                        <TableCell>
-                                          {t('dashboard.admin.matches.assists')}
-                                        </TableCell>
-                                        <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
-                                        <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {team.players.map((player) => (
-                                        <TableRow key={player.player_guid}>
-                                          <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                                  {officiallyClosed || trackingFinished ? (
+                                    <Chip
+                                      size="small"
+                                      color="primary"
+                                      label={t('dashboard.admin.matches.workflowRecommended')}
+                                    />
+                                  ) : null}
+                                </Stack>
+                                <Typography variant="body2" color="text.secondary">
+                                  {t('dashboard.admin.matches.manualResultTitle', {
+                                    home: selectedMatchDetail.home_team.team_name,
+                                    away: selectedMatchDetail.away_team.team_name,
+                                  })}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {t('dashboard.admin.matches.manualResultDescription')}
+                                </Typography>
+                              </Box>
+
+                              <Alert severity="info">
+                                {t('dashboard.admin.matches.manualResultHint')}
+                              </Alert>
+
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
+                                <Typography variant="body2" color="text.secondary">
+                                  {t('dashboard.admin.matches.status')}:
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  color={
+                                    selectedMatchDetail.status === 'closed' ? 'success' : 'warning'
+                                  }
+                                  label={
+                                    selectedMatchDetail.status === 'closed'
+                                      ? t('dashboard.admin.matches.statusClosed')
+                                      : t('dashboard.admin.matches.statusOpen')
+                                  }
+                                />
+                                <Chip
+                                  size="small"
+                                  color={trackingChipColor(selectedMatchDetail.tracking_status)}
+                                  label={trackingLabel(selectedMatchDetail.tracking_status, t)}
+                                />
+                                <Chip size="small" variant="outlined" label={officialScoreLabel} />
+                              </Stack>
+
+                              {selectedMatchDetail.status === 'closed' && (
+                                <Alert severity="warning">
+                                  {t('dashboard.admin.matches.closedMatchEditableHint')}
+                                </Alert>
+                              )}
+
+                              {hasLineupAudit && (
+                                <Alert severity="warning">
+                                  {t('dashboard.admin.matches.lineupAuditHint', {
+                                    count: selectedMatchDetail.lineup_change_count,
+                                  })}
+                                </Alert>
+                              )}
+
+                              <LineupDragBuilder
+                                players={matchEditorLineupPlayers}
+                                homeGuids={matchDraftHomeGuids}
+                                awayGuids={matchDraftAwayGuids}
+                                onChange={onMatchLineupsDraftChange}
+                                availableTitle={t('dashboard.admin.matches.availablePlayers')}
+                                homeTitle={
+                                  selectedMatchDetail.home_team.team_name ||
+                                  t('dashboard.admin.matches.homeLineup')
+                                }
+                                awayTitle={
+                                  selectedMatchDetail.away_team.team_name ||
+                                  t('dashboard.admin.matches.awayLineup')
+                                }
+                                helperText={t('dashboard.admin.matches.lineupBoardHint')}
+                                emptyText={t('dashboard.admin.matches.lineupEmpty')}
+                                addHomeText={t('dashboard.admin.matches.addToHome')}
+                                addAwayText={t('dashboard.admin.matches.addToAway')}
+                                moveHomeText={t('dashboard.admin.matches.moveToHome')}
+                                moveAwayText={t('dashboard.admin.matches.moveToAway')}
+                                removeText={t('dashboard.admin.matches.removeFromLineup')}
+                                disabled={loading || matchStatsLoading}
+                              />
+
+                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                <Button
+                                  variant="outlined"
+                                  onClick={handleSaveMatchLineups}
+                                  disabled={loading || matchStatsLoading}
+                                >
+                                  {t('dashboard.admin.matches.saveLineups')}
+                                </Button>
+                              </Stack>
+
+                              <Grid container spacing={2}>
+                                {[
+                                  { key: 'home_team', team: selectedMatchDetail.home_team },
+                                  { key: 'away_team', team: selectedMatchDetail.away_team },
+                                ].map(({ key, team }) => (
+                                  <Grid key={key} item xs={12} lg={6} sx={{ minWidth: 0 }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                      {t('dashboard.admin.matches.teamStats', {
+                                        team: team.team_name,
+                                      })}
+                                    </Typography>
+                                    <Table size="small">
+                                      <TableHead>
+                                        <TableRow>
+                                          <TableCell>{t('dashboard.admin.table.player')}</TableCell>
                                           <TableCell>
-                                            <TextField
-                                              type="number"
-                                              size="small"
-                                              value={
-                                                matchStatsDraft[key]?.players.find(
-                                                  (item) => item.player_guid === player.player_guid
-                                                )?.goals ?? '0'
-                                              }
-                                              onChange={onMatchStatsDraftField(
-                                                key,
-                                                player.player_guid,
-                                                'goals'
-                                              )}
-                                              inputProps={{ min: 0 }}
-                                              sx={{ maxWidth: 90 }}
-                                            />
+                                            {t('dashboard.admin.matches.goals')}
                                           </TableCell>
                                           <TableCell>
-                                            <TextField
-                                              type="number"
-                                              size="small"
-                                              value={
-                                                matchStatsDraft[key]?.players.find(
-                                                  (item) => item.player_guid === player.player_guid
-                                                )?.assists ?? '0'
-                                              }
-                                              onChange={onMatchStatsDraftField(
-                                                key,
-                                                player.player_guid,
-                                                'assists'
-                                              )}
-                                              inputProps={{ min: 0 }}
-                                              sx={{ maxWidth: 90 }}
-                                            />
+                                            {t('dashboard.admin.matches.assists')}
                                           </TableCell>
                                           <TableCell>
-                                            <TextField
-                                              type="number"
-                                              size="small"
-                                              value={
-                                                matchStatsDraft[key]?.players.find(
-                                                  (item) => item.player_guid === player.player_guid
-                                                )?.saves ?? '0'
-                                              }
-                                              onChange={onMatchStatsDraftField(
-                                                key,
-                                                player.player_guid,
-                                                'saves'
-                                              )}
-                                              inputProps={{ min: 0 }}
-                                              sx={{ maxWidth: 90 }}
-                                            />
+                                            {t('dashboard.admin.matches.saves')}
                                           </TableCell>
                                           <TableCell>
-                                            <TextField
-                                              type="number"
-                                              size="small"
-                                              value={
-                                                matchStatsDraft[key]?.players.find(
-                                                  (item) => item.player_guid === player.player_guid
-                                                )?.rating ?? '0'
-                                              }
-                                              onChange={onMatchStatsDraftField(
-                                                key,
-                                                player.player_guid,
-                                                'rating'
-                                              )}
-                                              inputProps={{ min: 0, step: 0.1 }}
-                                              sx={{ maxWidth: 90 }}
-                                            />
+                                            {t('dashboard.admin.matches.rating')}
                                           </TableCell>
                                         </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </Grid>
-                              ))}
-                            </Grid>
+                                      </TableHead>
+                                      <TableBody>
+                                        {team.players.map((player) => (
+                                          <TableRow key={player.player_guid}>
+                                            <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                                            <TableCell>
+                                              <TextField
+                                                type="number"
+                                                size="small"
+                                                value={
+                                                  matchStatsDraft[key]?.players.find(
+                                                    (item) =>
+                                                      item.player_guid === player.player_guid
+                                                  )?.goals ?? '0'
+                                                }
+                                                onChange={onMatchStatsDraftField(
+                                                  key,
+                                                  player.player_guid,
+                                                  'goals'
+                                                )}
+                                                inputProps={{ min: 0 }}
+                                                sx={{ maxWidth: 90 }}
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <TextField
+                                                type="number"
+                                                size="small"
+                                                value={
+                                                  matchStatsDraft[key]?.players.find(
+                                                    (item) =>
+                                                      item.player_guid === player.player_guid
+                                                  )?.assists ?? '0'
+                                                }
+                                                onChange={onMatchStatsDraftField(
+                                                  key,
+                                                  player.player_guid,
+                                                  'assists'
+                                                )}
+                                                inputProps={{ min: 0 }}
+                                                sx={{ maxWidth: 90 }}
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <TextField
+                                                type="number"
+                                                size="small"
+                                                value={
+                                                  matchStatsDraft[key]?.players.find(
+                                                    (item) =>
+                                                      item.player_guid === player.player_guid
+                                                  )?.saves ?? '0'
+                                                }
+                                                onChange={onMatchStatsDraftField(
+                                                  key,
+                                                  player.player_guid,
+                                                  'saves'
+                                                )}
+                                                inputProps={{ min: 0 }}
+                                                sx={{ maxWidth: 90 }}
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <TextField
+                                                type="number"
+                                                size="small"
+                                                value={
+                                                  matchStatsDraft[key]?.players.find(
+                                                    (item) =>
+                                                      item.player_guid === player.player_guid
+                                                  )?.rating ?? '0'
+                                                }
+                                                onChange={onMatchStatsDraftField(
+                                                  key,
+                                                  player.player_guid,
+                                                  'rating'
+                                                )}
+                                                inputProps={{ min: 0, step: 0.1 }}
+                                                sx={{ maxWidth: 90 }}
+                                              />
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </Grid>
+                                ))}
+                              </Grid>
 
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                              <Button
-                                variant="contained"
-                                onClick={handleSaveMatchStats}
-                                disabled={loading || matchStatsLoading}
-                              >
-                                {t('dashboard.admin.matches.saveStats')}
-                              </Button>
+                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                <Button
+                                  variant="contained"
+                                  onClick={handleSaveMatchStats}
+                                  disabled={loading || matchStatsLoading}
+                                >
+                                  {t('dashboard.admin.matches.saveStats')}
+                                </Button>
+                              </Stack>
                             </Stack>
-                          </Stack>
-                        )}
+                          </CardContent>
+                        </Card>
 
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                           <Button variant="text" onClick={closeMatchEditor} disabled={loading}>

@@ -570,6 +570,7 @@ export default function AdminDashboard({
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState('')
+  const [noticeSeverity, setNoticeSeverity] = useState('success')
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
@@ -1055,10 +1056,17 @@ export default function AdminDashboard({
     setLoading(true)
     setError(null)
     setNotice('')
+    setNoticeSeverity('success')
     try {
       await action()
       if (successMessage) {
-        setNotice(successMessage)
+        if (typeof successMessage === 'string') {
+          setNotice(successMessage)
+          setNoticeSeverity('success')
+        } else {
+          setNotice(successMessage.message || '')
+          setNoticeSeverity(successMessage.severity || 'success')
+        }
       }
     } catch (actionError) {
       if (actionError?.status === 401) {
@@ -1608,6 +1616,7 @@ export default function AdminDashboard({
       await loadPenaData(selectedPenaGuid)
       applySeasonContext(createdSeason.guid)
       await loadStandings(selectedPenaGuid, createdSeason.guid)
+      setNoticeSeverity('success')
       setNotice(
         importedCount
           ? t('dashboard.admin.notices.seasonCreatedWithImported', { count: importedCount })
@@ -2062,6 +2071,7 @@ export default function AdminDashboard({
     setDeletingMatchGuid(match.guid)
     setError(null)
     setNotice('')
+    setNoticeSeverity('success')
     try {
       if (import.meta.env.DEV) {
         console.debug('[AdminDashboard] delete request start', { matchGuid: match.guid })
@@ -2082,6 +2092,7 @@ export default function AdminDashboard({
         }
         setError(refreshError)
       }
+      setNoticeSeverity('success')
       setNotice(t('dashboard.admin.notices.matchDeleted'))
     } catch (deleteError) {
       // Rollback optimistic state only if delete itself failed.
@@ -2116,14 +2127,6 @@ export default function AdminDashboard({
     if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !matchLineupsDraft) {
       return
     }
-    if (
-      selectedMatchDetail &&
-      (selectedMatchDetail.tracking_status !== 'not_started' ||
-        (selectedMatchDetail.events || []).length > 0)
-    ) {
-      setError(new Error(t('dashboard.admin.errors.matchLineupsLocked')))
-      return
-    }
     const homePlayerGuids = normalizePlayerGuids(matchLineupsDraft.home_player_guids)
     const awayPlayerGuids = normalizePlayerGuids(matchLineupsDraft.away_player_guids)
     if (!homePlayerGuids.length || !awayPlayerGuids.length) {
@@ -2138,25 +2141,31 @@ export default function AdminDashboard({
       return
     }
 
-    await runAction(async () => {
-      const updated = await adminService.updateMatchLineups(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        {
-          home_team: { player_guids: homePlayerGuids },
-          away_team: { player_guids: awayPlayerGuids },
-        }
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      await Promise.all([
-        loadStandings(selectedPenaGuid, selectedSeasonGuid),
-        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
-      ])
-    }, t('dashboard.admin.notices.lineupsUpdated'))
+    await runAction(
+      async () => {
+        const updated = await adminService.updateMatchLineups(
+          selectedPenaGuid,
+          selectedSeasonGuid,
+          selectedMatchGuid,
+          {
+            home_team: { player_guids: homePlayerGuids },
+            away_team: { player_guids: awayPlayerGuids },
+          }
+        )
+        setSelectedMatchDetail(updated)
+        setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+        setMatchStatsDraft(buildMatchStatsDraft(updated))
+        await Promise.all([
+          loadStandings(selectedPenaGuid, selectedSeasonGuid),
+          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
+          loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
+        ])
+      },
+      {
+        message: t('dashboard.admin.notices.lineupsUpdatedWarning'),
+        severity: 'warning',
+      }
+    )
   }
 
   const handleStartMatch = async () => {
@@ -2668,7 +2677,7 @@ export default function AdminDashboard({
     >
       {loading && <LinearProgress />}
       {error && <Alert severity="error">{errorMessage}</Alert>}
-      {notice && <Alert severity="success">{notice}</Alert>}
+      {notice && <Alert severity={noticeSeverity}>{notice}</Alert>}
 
       {!selectedPenaGuid && <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>}
 

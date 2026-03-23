@@ -122,6 +122,10 @@ export const messages = {
           totalAssists: 'Assists: {value}',
           totalSaves: 'Saves: {value}',
           averageRating: 'Avg rating: {value}',
+          lineupAuditTitle: 'Lineups updated {count} time(s)',
+          lineupAuditDescription:
+            'Lineup changes stay available for correction purposes, but they are considered a high-impact match edit.',
+          lineupAuditLastUpdate: 'Last lineup update: {value}',
           player: 'Player',
           position: 'Pos',
           goals: 'Goals',
@@ -403,11 +407,13 @@ export const messages = {
           tracking: 'Tracking',
           statusOpen: 'Open',
           statusClosed: 'Closed',
+          lineupAuditBadge: 'Lineup edits: {count}',
           actions: 'Actions',
           result: 'Result',
           resultSource: 'Update source',
           finalScore: 'Final score',
           scoreFromStats: 'Set score from team/player stats.',
+          scoreFromTracking: 'Preview from live tracking timeline.',
           manageStats: 'Manage stats',
           manageMatch: 'Manage match',
           deleteMatch: 'Delete',
@@ -421,6 +427,21 @@ export const messages = {
           workflowsTitle: 'Manage match flow',
           workflowsDescription:
             'Use Tracking for the match clock and event timeline. Use Manual result for old matches or to close a tracked match with final stats.',
+          workflowPhaseLive: 'Live tracking in progress',
+          workflowPhaseReview: 'Review the report before closing',
+          workflowPhaseManual: 'Manual or historical editing',
+          workflowPhaseClosed: 'Official match report closed',
+          workflowSummaryLive:
+            'Capture events from the clock here. The official report stays available below for final validation.',
+          workflowSummaryReview:
+            'Tracking has stopped or the timeline already has data. Review the official report below and save the final acta.',
+          workflowSummaryManual:
+            'Use the official report section below for old matches or when you prefer to enter the result manually.',
+          workflowSummaryClosed:
+            'The acta is officially closed. You can still make corrections, and the system will keep the report synchronized.',
+          workflowRecommended: 'Recommended now',
+          trackingSectionTitle: '1. Live tracking',
+          reportSectionTitle: '2. Official report',
           trackingTab: 'Tracking',
           manualResultTab: 'Manual result',
           manualResultTitle: 'Manual result: {home} vs {away}',
@@ -430,6 +451,8 @@ export const messages = {
             'This mode works both for historical matches and for finishing a match after live tracking.',
           lineupsReopenHint:
             'Updating lineups on a closed match reopens it and removes its current standings impact.',
+          closedMatchEditableHint:
+            'This match report is officially closed. You can still correct lineups or stats, and the system will keep the report closed after recalculating it.',
           trackingTitle: 'Match tracking',
           trackingDescription:
             'Start the match clock and log timed events such as goals, cards, fouls, saves or sanctions.',
@@ -447,6 +470,10 @@ export const messages = {
             'Use this form for fouls, sanctions, notes, related players, or manual timestamps.',
           lineupsLockedTrackingHint:
             'Lineups are locked once the match clock starts or timeline events are recorded.',
+          timelineClosedHint:
+            'The official match report is already closed. The timeline is read-only now; use Manual result to correct lineups or final stats.',
+          lineupAuditHint:
+            'Lineups for this match have already been edited {count} time(s). Review changes carefully before saving again.',
           eventAction: 'Action',
           eventDeltaAdd: 'Increase (+1)',
           eventDeltaSubtract: 'Decrease (-1)',
@@ -584,6 +611,8 @@ export const messages = {
           matchResultUpdated: 'Match result updated',
           matchStatsUpdated: 'Match stats updated',
           lineupsUpdated: 'Lineups updated',
+          lineupsUpdatedWarning:
+            'Lineups updated. This change has been recorded because lineup edits can materially alter the official match report.',
           joinCodeGenerated: 'Join code generated',
           guestCreatedAdded: 'Guest created and added to selected season',
           guestCreated: 'Guest player created',
@@ -895,6 +924,10 @@ export const messages = {
           totalAssists: 'Asistencias: {value}',
           totalSaves: 'Paradas: {value}',
           averageRating: 'Valoración media: {value}',
+          lineupAuditTitle: 'Alineaciones actualizadas {count} vez/veces',
+          lineupAuditDescription:
+            'Los cambios de alineación siguen permitidos para corregir el acta, pero se consideran una edición de alto impacto del partido.',
+          lineupAuditLastUpdate: 'Última actualización de alineaciones: {value}',
           player: 'Jugador',
           position: 'Pos',
           goals: 'Goles',
@@ -1184,11 +1217,13 @@ export const messages = {
           tracking: 'Seguimiento',
           statusOpen: 'Abierto',
           statusClosed: 'Cerrado',
+          lineupAuditBadge: 'Cambios de alineación: {count}',
           actions: 'Acciones',
           result: 'Resultado',
           resultSource: 'Origen de actualización',
           finalScore: 'Marcador final',
           scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
+          scoreFromTracking: 'Vista previa desde la cronología del seguimiento en vivo.',
           manageStats: 'Editar estadísticas',
           manageMatch: 'Gestionar partido',
           deleteMatch: 'Eliminar',
@@ -1202,6 +1237,21 @@ export const messages = {
           workflowsTitle: 'Flujo de gestión del partido',
           workflowsDescription:
             'Usa Seguimiento para el reloj y la cronología de eventos. Usa Resultado manual para partidos antiguos o para cerrar un partido seguido en vivo con estadísticas finales.',
+          workflowPhaseLive: 'Seguimiento en vivo activo',
+          workflowPhaseReview: 'Revisar el acta antes de cerrar',
+          workflowPhaseManual: 'Edición manual o histórica',
+          workflowPhaseClosed: 'Acta oficial cerrada',
+          workflowSummaryLive:
+            'Registra aquí los eventos del reloj. El acta oficial sigue disponible debajo para validación final.',
+          workflowSummaryReview:
+            'El seguimiento ya terminó o la cronología ya tiene datos. Revisa debajo el acta oficial y guarda el cierre final.',
+          workflowSummaryManual:
+            'Usa la sección de acta oficial para partidos antiguos o cuando prefieras cargar el resultado manualmente.',
+          workflowSummaryClosed:
+            'El acta ya está oficialmente cerrada. Aun así puedes corregir datos, y el sistema mantendrá la coherencia del cierre.',
+          workflowRecommended: 'Recomendado ahora',
+          trackingSectionTitle: '1. Seguimiento en vivo',
+          reportSectionTitle: '2. Acta oficial',
           trackingTab: 'Seguimiento',
           manualResultTab: 'Resultado manual',
           manualResultTitle: 'Resultado manual: {home} vs {away}',
@@ -1211,6 +1261,8 @@ export const messages = {
             'Este modo sirve tanto para partidos históricos como para cerrar un partido después del seguimiento en vivo.',
           lineupsReopenHint:
             'Actualizar convocatorias en un partido cerrado lo reabre y elimina su impacto actual en la clasificación.',
+          closedMatchEditableHint:
+            'El acta oficial de este partido ya está cerrada. Aun así puedes corregir alineaciones o estadísticas, y el sistema mantendrá el cierre tras recalcularla.',
           trackingTitle: 'Seguimiento del partido',
           trackingDescription:
             'Inicia el reloj del partido y registra eventos con tiempo como goles, tarjetas, faltas, paradas o sanciones.',
@@ -1228,6 +1280,10 @@ export const messages = {
             'Usa este formulario para faltas, sanciones, notas, jugadores relacionados o tiempos manuales.',
           lineupsLockedTrackingHint:
             'Las alineaciones quedan bloqueadas cuando se inicia el reloj del partido o ya existen eventos en la cronología.',
+          timelineClosedHint:
+            'El acta oficial del partido ya está cerrada. La cronología queda en solo lectura; usa Resultado manual para corregir alineaciones o estadísticas finales.',
+          lineupAuditHint:
+            'Las alineaciones de este partido ya se han editado {count} vez/veces. Revisa bien el cambio antes de guardar de nuevo.',
           eventAction: 'Acción',
           eventDeltaAdd: 'Incrementar (+1)',
           eventDeltaSubtract: 'Disminuir (-1)',
@@ -1367,6 +1423,8 @@ export const messages = {
           matchResultUpdated: 'Resultado del partido actualizado',
           matchStatsUpdated: 'Estadísticas del partido actualizadas',
           lineupsUpdated: 'Convocatorias actualizadas',
+          lineupsUpdatedWarning:
+            'Convocatorias actualizadas. El cambio ha quedado registrado porque una modificación de alineación puede alterar materialmente el acta oficial del partido.',
           joinCodeGenerated: 'Código de acceso generado',
           guestCreatedAdded: 'Invitado creado y añadido a la temporada seleccionada',
           guestCreated: 'Jugador invitado creado',
