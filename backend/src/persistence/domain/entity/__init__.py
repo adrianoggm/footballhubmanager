@@ -1,6 +1,7 @@
 from .admin_accounts_entity import AdminAccounts
 from .base_entity import Base
 from .football_match_entity import FootballMatch
+from .football_match_event_entity import FootballMatchEvent
 from .nationality_entity import Nationality
 from .pena_accountability_entity import PenaAccountability
 from .pena_entity import Pena
@@ -22,6 +23,7 @@ __all__ = [
     "Player",
     "Team",
     "FootballMatch",
+    "FootballMatchEvent",
     "Pena",
     "PenaAccountability",
     "PenaMemberAccount",

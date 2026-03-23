@@ -77,6 +77,25 @@ class UpdateSeasonMatchLineupsRequest(BaseModel):
     away_team: MatchTeamLineupsRequest
 
 
+class CreateSeasonMatchEventRequest(BaseModel):
+    event_type: Literal[
+        "goal",
+        "assist",
+        "save",
+        "foul",
+        "yellow_card",
+        "red_card",
+        "sanction",
+        "other",
+    ]
+    team_side: Literal["home", "away", "neutral"]
+    player_guid: str | None = None
+    related_player_guid: str | None = None
+    note: str | None = None
+    elapsed_seconds: int | None = Field(default=None, ge=0)
+    value_delta: int = Field(default=1, ge=-1, le=1)
+
+
 class MatchInsightsRequest(BaseModel):
     season_guids: list[str] = Field(min_length=1)
     scope: Literal["selected_season", "all_seasons"] | None = None

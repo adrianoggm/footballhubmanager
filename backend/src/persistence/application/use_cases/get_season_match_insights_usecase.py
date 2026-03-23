@@ -126,6 +126,10 @@ class GetSeasonMatchInsightsUseCase:
                     season_guid=item["season_guid"],
                     match_date=item["match_date"],
                     status="closed",
+                    tracking_status="finished",
+                    started_at_epoch=None,
+                    ended_at_epoch=None,
+                    elapsed_seconds=0,
                     home_team=MatchTeamResult(
                         team_guid=f"{item['match_guid']}:home",
                         team_name="Home",
@@ -144,6 +148,7 @@ class GetSeasonMatchInsightsUseCase:
                         average_rating=round(away_average_rating, 2),
                         players=item["away_players"],
                     ),
+                    events=[],
                 )
             )
         return details

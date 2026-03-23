@@ -1,13 +1,21 @@
+import time
 from datetime import date
 
 from persistence.application.ports.season_competition_port import (
     InvalidMatchDataError,
+    MatchClockAlreadyStartedError,
+    MatchClockNotRunningError,
     MatchDetailResult,
     MatchesPageResult,
+    MatchEventCreateData,
+    MatchEventNotFoundError,
+    MatchEventPlayerNotInMatchError,
+    MatchEventResult,
     MatchNotFoundError,
     MatchPlayersNotInSeasonError,
     MatchPlayerStatsResult,
     MatchPlayerStatsUpdateData,
+    MatchReportClosedError,
     MatchResult,
     MatchStatsMismatchError,
     MatchSummaryResult,
@@ -22,6 +30,7 @@ from persistence.application.ports.season_competition_port import (
 from persistence.application.ports.season_match_port import SeasonMatchPort
 from persistence.domain.entity import (
     FootballMatch,
+    FootballMatchEvent,
     Pena,
     PenaPlayer,
     Player,
@@ -102,7 +111,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_player_guid=away_player.guid,
             home_player_name=f"{home_player.name} {home_player.surname1}",
             away_player_name=f"{away_player.name} {away_player.surname1}",
-            status="open",
+            status=self._match_status(football_match),
             home_score=0,
             away_score=0,
         )
@@ -263,7 +272,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_team_id=away_team.id,
             for_update=True,
         )
+        was_closed = self._match_status(football_match) == "closed"
         self._remove_match_standings(
+            football_match=football_match,
             pena_id=pena.id,
             season_id=season.id,
             home_team_players=home_team_players,
@@ -287,8 +298,222 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_team_id=away_team.id,
             home_players=home_players,
             away_players=away_players,
+            closed_match=was_closed,
+        )
+        football_match.lineup_change_count = (
+            int(getattr(football_match, "lineup_change_count", 0) or 0) + 1
+        )
+        football_match.lineup_updated_at_epoch = self._now_epoch()
+        if was_closed:
+            home_team_players, away_team_players = self._load_required_team_players(
+                home_team_id=home_team.id,
+                away_team_id=away_team.id,
+                for_update=True,
+            )
+            self._close_match_report(
+                football_match=football_match,
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
+
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
         )
 
+    def start_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        if self._match_status(football_match) == "closed":
+            self.session.rollback()
+            raise MatchReportClosedError()
+        if football_match.started_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockAlreadyStartedError()
+        if self._match_has_events(football_match.id, for_update=True):
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        football_match.started_at_epoch = self._now_epoch()
+        football_match.ended_at_epoch = None
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def stop_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockNotRunningError()
+
+        home_team_players, away_team_players = self._load_required_team_players(
+            home_team_id=home_team.id,
+            away_team_id=away_team.id,
+            for_update=True,
+        )
+        self._remove_match_standings(
+            football_match=football_match,
+            pena_id=pena.id,
+            season_id=season.id,
+            home_team_players=home_team_players,
+            away_team_players=away_team_players,
+        )
+        events = self._list_match_events(match_id=football_match.id, for_update=True)
+        if events:
+            self._apply_tracked_events_to_team_players(
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+                events=events,
+            )
+        self._close_match_report(
+            football_match=football_match,
+            pena_id=pena.id,
+            season_id=season.id,
+            home_team_players=home_team_players,
+            away_team_players=away_team_players,
+        )
+
+        football_match.ended_at_epoch = self._now_epoch()
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def create_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        event: MatchEventCreateData,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        if self._match_status(football_match) == "closed":
+            self.session.rollback()
+            raise MatchReportClosedError()
+        home_team_players, away_team_players = self._load_required_team_players(
+            home_team_id=home_team.id,
+            away_team_id=away_team.id,
+            for_update=True,
+        )
+        roster_by_team = {
+            "home": self._team_player_guid_map(home_team_players),
+            "away": self._team_player_guid_map(away_team_players),
+        }
+        players_by_guid = {
+            **roster_by_team["home"],
+            **roster_by_team["away"],
+        }
+
+        primary_player = self._resolve_event_player(
+            player_guid=event.player_guid,
+            team_side=event.team_side,
+            players_by_guid=players_by_guid,
+            roster_by_team=roster_by_team,
+        )
+        related_player = self._resolve_related_event_player(
+            player_guid=event.related_player_guid,
+            players_by_guid=players_by_guid,
+        )
+
+        elapsed_seconds = self._resolve_event_elapsed_seconds(football_match, event.elapsed_seconds)
+        match_event = FootballMatchEvent(
+            id_match=football_match.id,
+            event_type=event.event_type,
+            team_side=event.team_side,
+            elapsed_seconds=elapsed_seconds,
+            value_delta=event.value_delta,
+            id_player=primary_player.id_player if primary_player else None,
+            id_related_player=related_player.id_player if related_player else None,
+            note=event.note,
+            recorded_at_epoch=self._now_epoch(),
+        )
+        self.session.add(match_event)
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def delete_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        event_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+            for_update=True,
+        )
+        event = self._get_match_event(
+            match_id=football_match.id,
+            event_guid=event_guid,
+            for_update=True,
+        )
+        if self._match_status(football_match) == "closed":
+            self.session.rollback()
+            raise MatchReportClosedError()
+        if not event:
+            self.session.rollback()
+            raise MatchEventNotFoundError()
+
+        self.session.delete(event)
         self.session.commit()
         return self._build_match_detail_result(
             pena_id=pena.id,
@@ -338,14 +563,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
 
         old_home_score = sum(row.goals for row in home_team_players)
         old_away_score = sum(row.goals for row in away_team_players)
-        standings_applied = self._match_standings_applied(home_team_players, away_team_players)
-        home_season_players, away_season_players = self._load_match_season_players(
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
-        if standings_applied:
+        if self._match_status(football_match) == "closed":
+            home_season_players, away_season_players = self._load_match_season_players(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
             self._apply_team_outcome_delta(
                 home_team_stats=home_season_players,
                 away_team_stats=away_season_players,
@@ -357,15 +581,17 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         self._apply_team_player_stats(home_roster, home_stats_map)
         self._apply_team_player_stats(away_roster, away_stats_map)
 
-        new_home_score = sum(row.goals for row in home_team_players)
-        new_away_score = sum(row.goals for row in away_team_players)
-        self._apply_team_outcome_delta(
-            home_team_stats=home_season_players,
-            away_team_stats=away_season_players,
-            home_score=new_home_score,
-            away_score=new_away_score,
-            delta=1,
+        self._close_match_report(
+            football_match=football_match,
+            pena_id=pena.id,
+            season_id=season.id,
+            home_team_players=home_team_players,
+            away_team_players=away_team_players,
         )
+
+        # Saving final stats ends live tracking when the match had been started.
+        if football_match.started_at_epoch is not None and football_match.ended_at_epoch is None:
+            football_match.ended_at_epoch = self._now_epoch()
 
         self.session.commit()
         return self._build_match_detail_result(
@@ -416,25 +642,39 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         }
         teams_by_id = self._get_teams_by_ids(team_ids, for_update=False)
         team_stats = self._get_team_match_summary_stats(team_ids)
+        current_epoch = self._now_epoch()
 
         items: list[MatchSummaryResult] = []
         for football_match in matches:
             home_team = teams_by_id[football_match.id_home_team]
             away_team = teams_by_id[football_match.id_away_team]
-            home_score, home_players, home_closed = team_stats.get(home_team.id, (0, 0, False))
-            away_score, away_players, away_closed = team_stats.get(away_team.id, (0, 0, False))
+            home_score, home_players = team_stats.get(home_team.id, (0, 0))
+            away_score, away_players = team_stats.get(away_team.id, (0, 0))
             items.append(
                 MatchSummaryResult(
                     guid=football_match.guid,
                     season_guid=season.guid,
                     match_date=football_match.match_date,
-                    status="closed" if home_closed and away_closed else "open",
+                    status=self._match_status(football_match),
                     home_team_name=home_team.name,
                     away_team_name=away_team.name,
                     home_score=home_score,
                     away_score=away_score,
                     home_players=home_players,
                     away_players=away_players,
+                    tracking_status=self._match_tracking_status(football_match),
+                    started_at_epoch=football_match.started_at_epoch,
+                    ended_at_epoch=football_match.ended_at_epoch,
+                    elapsed_seconds=self._match_elapsed_seconds(
+                        football_match,
+                        current_epoch=current_epoch,
+                    ),
+                    lineup_change_count=int(getattr(football_match, "lineup_change_count", 0) or 0),
+                    lineup_updated_at_epoch=getattr(
+                        football_match,
+                        "lineup_updated_at_epoch",
+                        None,
+                    ),
                 )
             )
 
@@ -492,6 +732,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             for_update=True,
         )
         self._remove_match_standings(
+            football_match=football_match,
             pena_id=pena.id,
             season_id=season.id,
             home_team_players=home_team_players,
@@ -676,6 +917,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             id_away_team=away_team.id,
             match_date=match_date,
             id_season=season_id,
+            status="open",
         )
         self.session.add(football_match)
         self.session.flush()
@@ -730,7 +972,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             raise MatchNotFoundError()
         return teams_by_id
 
-    def _get_team_match_summary_stats(self, team_ids: set[int]) -> dict[int, tuple[int, int, bool]]:
+    def _get_team_match_summary_stats(self, team_ids: set[int]) -> dict[int, tuple[int, int]]:
         if not team_ids:
             return {}
 
@@ -739,7 +981,6 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
                 TeamPlayer.id_team.label("team_id"),
                 func.coalesce(func.sum(TeamPlayer.goals), 0).label("score"),
                 func.count(TeamPlayer.id_player).label("players"),
-                func.min(TeamPlayer.rating).label("min_rating"),
             )
             .where(TeamPlayer.id_team.in_(team_ids))
             .group_by(TeamPlayer.id_team)
@@ -748,7 +989,6 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             int(row.team_id): (
                 int(row.score),
                 int(row.players),
-                row.min_rating is not None and float(row.min_rating) >= 0.0,
             )
             for row in rows
         }
@@ -795,16 +1035,27 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
                 self.session.rollback()
                 raise MatchPlayersNotInSeasonError()
 
-    def _add_team_players(self, *, team_id: int, players: list[Player]) -> None:
+    def _add_team_players(
+        self,
+        *,
+        team_id: int,
+        players: list[Player],
+        preserved_by_player_id: dict[int, dict[str, float | int]] | None = None,
+        closed_match: bool = False,
+    ) -> None:
         for player in players:
+            preserved = (preserved_by_player_id or {}).get(player.id, {})
+            rating = float(preserved.get("rating", 0.0 if closed_match else -1.0))
+            if closed_match and rating < 0:
+                rating = 0.0
             self.session.add(
                 TeamPlayer(
                     id_team=team_id,
                     id_player=player.id,
-                    goals=0,
-                    assists=0,
-                    rating=-1.0,
-                    saves=0,
+                    goals=int(preserved.get("goals", 0)),
+                    assists=int(preserved.get("assists", 0)),
+                    rating=rating,
+                    saves=int(preserved.get("saves", 0)),
                 )
             )
 
@@ -855,6 +1106,91 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             result[player.guid] = team_player
         return result
 
+    @staticmethod
+    def _now_epoch() -> int:
+        return int(time.time())
+
+    def _match_has_events(self, match_id: int, *, for_update: bool) -> bool:
+        stmt = select(FootballMatchEvent.id).where(FootballMatchEvent.id_match == match_id).limit(1)
+        if for_update:
+            stmt = stmt.with_for_update()
+        return self.session.execute(stmt).scalar_one_or_none() is not None
+
+    def _get_match_event(
+        self,
+        *,
+        match_id: int,
+        event_guid: str,
+        for_update: bool,
+    ) -> FootballMatchEvent | None:
+        stmt = select(FootballMatchEvent).where(
+            FootballMatchEvent.id_match == match_id,
+            FootballMatchEvent.guid == event_guid,
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def _list_match_events(
+        self,
+        *,
+        match_id: int,
+        for_update: bool,
+    ) -> list[FootballMatchEvent]:
+        stmt = (
+            select(FootballMatchEvent)
+            .where(FootballMatchEvent.id_match == match_id)
+            .order_by(FootballMatchEvent.elapsed_seconds.asc(), FootballMatchEvent.id.asc())
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return list(self.session.execute(stmt).scalars())
+
+    def _resolve_event_player(
+        self,
+        *,
+        player_guid: str | None,
+        team_side: str,
+        players_by_guid: dict[str, TeamPlayer],
+        roster_by_team: dict[str, dict[str, TeamPlayer]],
+    ) -> TeamPlayer | None:
+        if not player_guid:
+            return None
+        team_player = players_by_guid.get(player_guid)
+        if not team_player:
+            self.session.rollback()
+            raise MatchEventPlayerNotInMatchError()
+        if team_side in {"home", "away"} and player_guid not in roster_by_team[team_side]:
+            self.session.rollback()
+            raise MatchEventPlayerNotInMatchError()
+        return team_player
+
+    def _resolve_related_event_player(
+        self,
+        *,
+        player_guid: str | None,
+        players_by_guid: dict[str, TeamPlayer],
+    ) -> TeamPlayer | None:
+        if not player_guid:
+            return None
+        team_player = players_by_guid.get(player_guid)
+        if not team_player:
+            self.session.rollback()
+            raise MatchEventPlayerNotInMatchError()
+        return team_player
+
+    def _resolve_event_elapsed_seconds(
+        self,
+        football_match: FootballMatch,
+        provided_elapsed_seconds: int | None,
+    ) -> int:
+        if provided_elapsed_seconds is not None:
+            return int(provided_elapsed_seconds)
+        if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockNotRunningError()
+        return max(self._now_epoch() - int(football_match.started_at_epoch), 0)
+
     def _team_season_players(
         self,
         *,
@@ -901,12 +1237,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     def _remove_match_standings(
         self,
         *,
+        football_match: FootballMatch,
         pena_id: int,
         season_id: int,
         home_team_players: list[TeamPlayer],
         away_team_players: list[TeamPlayer],
     ) -> None:
-        if not self._match_standings_applied(home_team_players, away_team_players):
+        if self._match_status(football_match) != "closed":
             return
         home_season_players, away_season_players = self._load_match_season_players(
             pena_id=pena_id,
@@ -930,33 +1267,128 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         away_team_id: int,
         home_players: list[Player],
         away_players: list[Player],
+        closed_match: bool,
     ) -> None:
+        preserved_by_player_id = {
+            int(team_player.id_player): {
+                "goals": int(team_player.goals),
+                "assists": int(team_player.assists),
+                "saves": int(team_player.saves),
+                "rating": float(team_player.rating),
+            }
+            for team_player in existing_players
+        }
         for team_player in existing_players:
             self.session.delete(team_player)
         self.session.flush()
-        self._add_team_players(team_id=home_team_id, players=home_players)
-        self._add_team_players(team_id=away_team_id, players=away_players)
+        self._add_team_players(
+            team_id=home_team_id,
+            players=home_players,
+            preserved_by_player_id=preserved_by_player_id,
+            closed_match=closed_match,
+        )
+        self._add_team_players(
+            team_id=away_team_id,
+            players=away_players,
+            preserved_by_player_id=preserved_by_player_id,
+            closed_match=closed_match,
+        )
+        # Session autoflush is disabled, so explicit flush is required before
+        # the closed-match recalculation path reads the updated rosters again.
+        self.session.flush()
 
     @staticmethod
-    def _match_standings_applied(
+    def _apply_tracked_events_to_team_players(
+        *,
         home_team_players: list[TeamPlayer],
         away_team_players: list[TeamPlayer],
-    ) -> bool:
-        if not home_team_players or not away_team_players:
-            return False
-        return all(player.rating >= 0 for player in home_team_players + away_team_players)
+        events: list[FootballMatchEvent],
+    ) -> None:
+        tracked_event_types = {"goal", "assist", "save"}
+        counts_by_player_id: dict[int, dict[str, int]] = {}
+
+        for event in events:
+            player_id = getattr(event, "id_player", None)
+            event_type = str(getattr(event, "event_type", "") or "").strip().lower()
+            if player_id is None or event_type not in tracked_event_types:
+                continue
+            current = counts_by_player_id.setdefault(
+                int(player_id),
+                {"goal": 0, "assist": 0, "save": 0},
+            )
+            current[event_type] += int(getattr(event, "value_delta", 1) or 1)
+
+        for team_player in home_team_players + away_team_players:
+            player_counts = counts_by_player_id.get(int(team_player.id_player), {})
+            team_player.goals = max(0, int(player_counts.get("goal", 0)))
+            team_player.assists = max(0, int(player_counts.get("assist", 0)))
+            team_player.saves = max(0, int(player_counts.get("save", 0)))
+            if float(team_player.rating) < 0:
+                team_player.rating = 0.0
+
+    @staticmethod
+    def _match_status(football_match: FootballMatch) -> str:
+        status = str(getattr(football_match, "status", "") or "").strip().lower()
+        if status in {"open", "closed"}:
+            return status
+        return "closed" if getattr(football_match, "ended_at_epoch", None) is not None else "open"
+
+    @staticmethod
+    def _normalize_team_player_ratings(team_players: list[TeamPlayer]) -> None:
+        for player in team_players:
+            if float(player.rating) < 0:
+                player.rating = 0.0
+
+    def _close_match_report(
+        self,
+        *,
+        football_match: FootballMatch,
+        pena_id: int,
+        season_id: int,
+        home_team_players: list[TeamPlayer],
+        away_team_players: list[TeamPlayer],
+    ) -> None:
+        self._normalize_team_player_ratings(home_team_players + away_team_players)
+        home_season_players, away_season_players = self._load_match_season_players(
+            pena_id=pena_id,
+            season_id=season_id,
+            home_team_players=home_team_players,
+            away_team_players=away_team_players,
+        )
+        self._apply_team_outcome_delta(
+            home_team_stats=home_season_players,
+            away_team_stats=away_season_players,
+            home_score=sum(player.goals for player in home_team_players),
+            away_score=sum(player.goals for player in away_team_players),
+            delta=1,
+        )
+        football_match.status = "closed"
+
+    @staticmethod
+    def _match_tracking_status(football_match: FootballMatch) -> str:
+        if football_match.started_at_epoch is None:
+            return "not_started"
+        if football_match.ended_at_epoch is None:
+            return "live"
+        return "finished"
 
     @classmethod
-    def _match_status_from_players(
+    def _match_elapsed_seconds(
         cls,
-        home_team_players: list[TeamPlayer],
-        away_team_players: list[TeamPlayer],
-    ) -> str:
-        return (
-            "closed"
-            if cls._match_standings_applied(home_team_players, away_team_players)
-            else "open"
+        football_match: FootballMatch,
+        *,
+        current_epoch: int | None = None,
+    ) -> int:
+        if football_match.started_at_epoch is None:
+            return 0
+        end_epoch = (
+            football_match.ended_at_epoch
+            if football_match.ended_at_epoch is not None
+            else current_epoch
+            if current_epoch is not None
+            else cls._now_epoch()
         )
+        return max(int(end_epoch) - int(football_match.started_at_epoch), 0)
 
     @staticmethod
     def _apply_team_outcome_delta(
@@ -1013,7 +1445,17 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         )
         home_players = team_players_by_id.get(home_team.id, [])
         away_players = team_players_by_id.get(away_team.id, [])
-        player_ids = {team_player.id_player for team_player in home_players + away_players}
+        events = self._list_match_events(match_id=football_match.id, for_update=False)
+        player_ids = {team_player.id_player for team_player in home_players + away_players}.union(
+            {
+                player_id
+                for player_id in [
+                    *(event.id_player for event in events),
+                    *(event.id_related_player for event in events),
+                ]
+                if player_id is not None
+            }
+        )
         players_by_id = self._get_players_by_ids(player_ids)
         links_by_player_id = self._get_pena_player_links_by_player_ids(
             pena_id=pena_id,
@@ -1029,7 +1471,11 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             guid=football_match.guid,
             season_guid=season_guid,
             match_date=football_match.match_date,
-            status=self._match_status_from_players(home_players, away_players),
+            status=self._match_status(football_match),
+            tracking_status=self._match_tracking_status(football_match),
+            started_at_epoch=football_match.started_at_epoch,
+            ended_at_epoch=football_match.ended_at_epoch,
+            elapsed_seconds=self._match_elapsed_seconds(football_match),
             home_team=self._build_match_team_result(
                 team=home_team,
                 team_players=home_players,
@@ -1044,6 +1490,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
                 links_by_player_id=links_by_player_id,
                 positions_by_player_id=positions_by_player_id,
             ),
+            events=self._build_match_event_results(
+                events=events,
+                players_by_id=players_by_id,
+                links_by_player_id=links_by_player_id,
+            ),
+            lineup_change_count=int(getattr(football_match, "lineup_change_count", 0) or 0),
+            lineup_updated_at_epoch=getattr(football_match, "lineup_updated_at_epoch", None),
         )
 
     def _build_match_team_result(
@@ -1096,6 +1549,62 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             total_saves=total_saves,
             average_rating=round(average_rating, 2),
             players=players,
+        )
+
+    def _build_match_event_results(
+        self,
+        *,
+        events: list[FootballMatchEvent],
+        players_by_id: dict[int, Player],
+        links_by_player_id: dict[int, PenaPlayer],
+    ) -> list[MatchEventResult]:
+        return [
+            self._build_match_event_result(
+                event=event,
+                players_by_id=players_by_id,
+                links_by_player_id=links_by_player_id,
+            )
+            for event in events
+        ]
+
+    def _build_match_event_result(
+        self,
+        *,
+        event: FootballMatchEvent,
+        players_by_id: dict[int, Player],
+        links_by_player_id: dict[int, PenaPlayer],
+    ) -> MatchEventResult:
+        primary_player = players_by_id.get(event.id_player) if event.id_player is not None else None
+        related_player = (
+            players_by_id.get(event.id_related_player)
+            if event.id_related_player is not None
+            else None
+        )
+        primary_link = (
+            links_by_player_id.get(primary_player.id) if primary_player is not None else None
+        )
+        related_link = (
+            links_by_player_id.get(related_player.id) if related_player is not None else None
+        )
+
+        return MatchEventResult(
+            guid=event.guid,
+            event_type=event.event_type,
+            team_side=event.team_side,
+            elapsed_seconds=int(event.elapsed_seconds),
+            value_delta=int(event.value_delta),
+            player_guid=primary_player.guid if primary_player else None,
+            player_name=primary_player.name if primary_player else None,
+            player_surname1=primary_player.surname1 if primary_player else None,
+            player_surname2=primary_player.surname2 if primary_player else None,
+            player_nickname=primary_link.nickname if primary_link else None,
+            related_player_guid=related_player.guid if related_player else None,
+            related_player_name=related_player.name if related_player else None,
+            related_player_surname1=related_player.surname1 if related_player else None,
+            related_player_surname2=related_player.surname2 if related_player else None,
+            related_player_nickname=related_link.nickname if related_link else None,
+            note=event.note,
+            recorded_at_epoch=int(event.recorded_at_epoch),
         )
 
     def _get_players_by_ids(self, player_ids: set[int]) -> dict[int, Player]:

@@ -5,6 +5,18 @@ from persistence.application.ports.season_competition_port import (
     InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
 )
 from persistence.application.ports.season_competition_port import (
+    MatchClockAlreadyStartedError as RepositoryMatchClockAlreadyStartedError,
+)
+from persistence.application.ports.season_competition_port import (
+    MatchClockNotRunningError as RepositoryMatchClockNotRunningError,
+)
+from persistence.application.ports.season_competition_port import (
+    MatchEventNotFoundError as RepositoryMatchEventNotFoundError,
+)
+from persistence.application.ports.season_competition_port import (
+    MatchEventPlayerNotInMatchError as RepositoryMatchEventPlayerNotInMatchError,
+)
+from persistence.application.ports.season_competition_port import (
     MatchLineupLockedError as RepositoryMatchLineupLockedError,
 )
 from persistence.application.ports.season_competition_port import (
@@ -12,6 +24,9 @@ from persistence.application.ports.season_competition_port import (
 )
 from persistence.application.ports.season_competition_port import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
+)
+from persistence.application.ports.season_competition_port import (
+    MatchReportClosedError as RepositoryMatchReportClosedError,
 )
 from persistence.application.ports.season_competition_port import (
     MatchStatsMismatchError as RepositoryMatchStatsMismatchError,
@@ -38,10 +53,15 @@ from persistence.application.use_cases.season_competition_errors import (
     PenaSeasonAccessDeniedError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
+    SeasonMatchAlreadyStartedError,
+    SeasonMatchClockNotRunningError,
+    SeasonMatchEventNotFoundError,
+    SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
     SeasonMatchStatsMismatchError,
     SeasonPlayerNotFoundError,
 )
@@ -51,6 +71,7 @@ from .season_competition_models import (
     SeasonMatchCreateDetailed,
     SeasonMatchDetailInfo,
     SeasonMatchesPage,
+    SeasonMatchEventCreate,
     SeasonMatchInfo,
     SeasonMatchLineupsUpdate,
     SeasonMatchResultUpdate,
@@ -59,6 +80,7 @@ from .season_competition_models import (
 )
 from .season_competition_usecase_support import (
     clean_name,
+    normalize_match_event,
     normalize_player_stats,
     to_match_detail,
     to_match_info,
@@ -263,6 +285,135 @@ class ManageSeasonMatchesUseCase:
             raise PenaSeasonNotFoundError() from exc
         except RepositoryMatchNotFoundError as exc:
             raise SeasonMatchNotFoundError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+    def start_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> SeasonMatchDetailInfo:
+        try:
+            updated = self.repository.start_match_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchClockAlreadyStartedError as exc:
+            raise SeasonMatchAlreadyStartedError() from exc
+        except RepositoryMatchReportClosedError as exc:
+            raise SeasonMatchReportClosedError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+    def stop_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> SeasonMatchDetailInfo:
+        try:
+            updated = self.repository.stop_match_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchClockNotRunningError as exc:
+            raise SeasonMatchClockNotRunningError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+    def create_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        data: SeasonMatchEventCreate,
+    ) -> SeasonMatchDetailInfo:
+        event = normalize_match_event(data)
+        try:
+            updated = self.repository.create_match_event_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                admin_id=admin_id,
+                event=event,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchEventPlayerNotInMatchError as exc:
+            raise SeasonMatchEventPlayerNotInMatchError() from exc
+        except RepositoryMatchClockNotRunningError as exc:
+            raise SeasonMatchClockNotRunningError() from exc
+        except RepositoryMatchReportClosedError as exc:
+            raise SeasonMatchReportClosedError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+    def delete_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        event_guid: str,
+        admin_id: int,
+    ) -> SeasonMatchDetailInfo:
+        try:
+            updated = self.repository.delete_match_event_for_admin(
+                pena_guid=pena_guid,
+                season_guid=season_guid,
+                match_guid=match_guid,
+                event_guid=event_guid,
+                admin_id=admin_id,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchEventNotFoundError as exc:
+            raise SeasonMatchEventNotFoundError() from exc
+        except RepositoryMatchReportClosedError as exc:
+            raise SeasonMatchReportClosedError() from exc
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
         return to_match_detail(updated)

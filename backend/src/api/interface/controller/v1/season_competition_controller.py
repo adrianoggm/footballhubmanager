@@ -7,6 +7,7 @@ from api.dependencies.use_cases import (
 )
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
+    CreateSeasonMatchEventRequest,
     CreateSeasonMatchRequest,
     MatchInsightsRequest,
     RegisterSeasonPlayerRequest,
@@ -45,12 +46,19 @@ from persistence.application.use_cases import (
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonMatchesUseCase,
     ManageSeasonPlayersUseCase,
+    SeasonMatchAlreadyStartedError,
+    SeasonMatchClockNotRunningError,
     SeasonMatchCreate,
     SeasonMatchCreateDetailed,
+    SeasonMatchEventCreate,
+    SeasonMatchEventNotFoundError,
+    SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
+    SeasonMatchLineupLockedError,
     SeasonMatchLineupsUpdate,
     SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsUpdate,
+    SeasonMatchReportClosedError,
     SeasonMatchResultUpdate,
     SeasonMatchStatsUpdate,
     SeasonMatchTeamCreate,
@@ -144,6 +152,10 @@ UPDATE_SEASON_MATCH_LINEUPS_OVERRIDES = {
         status.HTTP_400_BAD_REQUEST,
         "Invalid lineup update data",
     ),
+    SeasonMatchLineupLockedError: (
+        status.HTTP_409_CONFLICT,
+        "Cannot update lineups after match stats have been recorded",
+    ),
 }
 
 
@@ -151,6 +163,70 @@ DELETE_SEASON_MATCH_OVERRIDES = {
     InvalidSeasonMatchDataError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match operation",
+    ),
+}
+
+
+START_SEASON_MATCH_OVERRIDES = {
+    SeasonMatchAlreadyStartedError: (
+        status.HTTP_409_CONFLICT,
+        "Match tracking is already running or has already been started",
+    ),
+    SeasonMatchReportClosedError: (
+        status.HTTP_409_CONFLICT,
+        "This match report is already closed and tracking cannot be restarted",
+    ),
+    InvalidSeasonMatchDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match tracking operation",
+    ),
+}
+
+
+STOP_SEASON_MATCH_OVERRIDES = {
+    SeasonMatchClockNotRunningError: (
+        status.HTTP_409_CONFLICT,
+        "Match tracking is not currently running",
+    ),
+    InvalidSeasonMatchDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match tracking operation",
+    ),
+}
+
+
+CREATE_SEASON_MATCH_EVENT_OVERRIDES = {
+    InvalidSeasonMatchDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match event data",
+    ),
+    SeasonMatchReportClosedError: (
+        status.HTTP_409_CONFLICT,
+        "The official match report is closed, so the timeline is read-only",
+    ),
+    SeasonMatchClockNotRunningError: (
+        status.HTTP_409_CONFLICT,
+        "Start the match or provide a manual elapsed time before logging events",
+    ),
+    SeasonMatchEventPlayerNotInMatchError: (
+        status.HTTP_409_CONFLICT,
+        "Event players must belong to the selected match",
+    ),
+}
+
+
+DELETE_SEASON_MATCH_EVENT_OVERRIDES = {
+    SeasonMatchEventNotFoundError: (
+        status.HTTP_404_NOT_FOUND,
+        "Match event not found",
+    ),
+    SeasonMatchReportClosedError: (
+        status.HTTP_409_CONFLICT,
+        "The official match report is closed, so timeline events cannot be removed",
+    ),
+    InvalidSeasonMatchDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match event operation",
     ),
 }
 
@@ -495,6 +571,102 @@ def update_season_match_lineups(
             home_player_guids=payload.home_team.player_guids,
             away_player_guids=payload.away_team.player_guids,
         ),
+    )
+    return to_season_match_detail_response(updated)
+
+
+@router.post(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/start",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=START_SEASON_MATCH_OVERRIDES)
+def start_season_match(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    admin_session=Depends(require_admin),
+    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+):
+    updated = use_case.start_match_for_admin(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        admin_id=admin_session.user_id,
+    )
+    return to_season_match_detail_response(updated)
+
+
+@router.post(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stop",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=STOP_SEASON_MATCH_OVERRIDES)
+def stop_season_match(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    admin_session=Depends(require_admin),
+    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+):
+    updated = use_case.stop_match_for_admin(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        admin_id=admin_session.user_id,
+    )
+    return to_season_match_detail_response(updated)
+
+
+@router.post(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/events",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=CREATE_SEASON_MATCH_EVENT_OVERRIDES)
+def create_season_match_event(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    payload: CreateSeasonMatchEventRequest,
+    admin_session=Depends(require_admin),
+    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+):
+    updated = use_case.create_match_event_for_admin(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        admin_id=admin_session.user_id,
+        data=SeasonMatchEventCreate(
+            event_type=payload.event_type,
+            team_side=payload.team_side,
+            player_guid=payload.player_guid,
+            related_player_guid=payload.related_player_guid,
+            note=payload.note,
+            elapsed_seconds=payload.elapsed_seconds,
+            value_delta=payload.value_delta,
+        ),
+    )
+    return to_season_match_detail_response(updated)
+
+
+@router.delete(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/events/{event_guid}",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=DELETE_SEASON_MATCH_EVENT_OVERRIDES)
+def delete_season_match_event(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    event_guid: str,
+    admin_session=Depends(require_admin),
+    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+):
+    updated = use_case.delete_match_event_for_admin(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        event_guid=event_guid,
+        admin_id=admin_session.user_id,
     )
     return to_season_match_detail_response(updated)
 

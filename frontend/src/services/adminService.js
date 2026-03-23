@@ -142,6 +142,33 @@ export class AdminService {
     )
   }
 
+  startMatch(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.post(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/start`,
+      {}
+    )
+  }
+
+  stopMatch(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.post(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/stop`,
+      {}
+    )
+  }
+
+  createMatchEvent(penaGuid, seasonGuid, matchGuid, payload) {
+    return httpClient.post(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/events`,
+      payload
+    )
+  }
+
+  deleteMatchEvent(penaGuid, seasonGuid, matchGuid, eventGuid) {
+    return httpClient.delete(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/events/${eventGuid}`
+    )
+  }
+
   deleteSeasonMatch(penaGuid, seasonGuid, matchGuid) {
     return httpClient.delete(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}`

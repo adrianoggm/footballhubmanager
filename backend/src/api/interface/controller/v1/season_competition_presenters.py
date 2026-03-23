@@ -4,6 +4,7 @@ from dataclasses import asdict
 from api.interface.controller.v1.model.response.season_competition_response import (
     SeasonMatchDetailResponse,
     SeasonMatchesPageResponse,
+    SeasonMatchEventResponse,
     SeasonMatchPlayerStatsResponse,
     SeasonMatchResponse,
     SeasonMatchSummaryResponse,
@@ -14,6 +15,7 @@ from api.interface.controller.v1.model.response.season_competition_response impo
 from persistence.application.use_cases import (
     SeasonMatchDetailInfo,
     SeasonMatchesPage,
+    SeasonMatchEventInfo,
     SeasonMatchInfo,
     SeasonMatchPlayerStatsInfo,
     SeasonMatchTeamInfo,
@@ -99,6 +101,10 @@ def to_season_match_player_response(
     return SeasonMatchPlayerStatsResponse(**asdict(item))
 
 
+def to_season_match_event_response(item: SeasonMatchEventInfo) -> SeasonMatchEventResponse:
+    return SeasonMatchEventResponse(**asdict(item))
+
+
 def to_season_match_team_response(item: SeasonMatchTeamInfo) -> SeasonMatchTeamResponse:
     payload = asdict(item)
     payload["players"] = [to_season_match_player_response(player) for player in item.players]
@@ -111,8 +117,15 @@ def to_season_match_detail_response(item: SeasonMatchDetailInfo) -> SeasonMatchD
         season_guid=item.season_guid,
         match_date=item.match_date,
         status=item.status,
+        tracking_status=item.tracking_status,
+        started_at_epoch=item.started_at_epoch,
+        ended_at_epoch=item.ended_at_epoch,
+        elapsed_seconds=item.elapsed_seconds,
         home_team=to_season_match_team_response(item.home_team),
         away_team=to_season_match_team_response(item.away_team),
+        events=[to_season_match_event_response(event) for event in item.events],
+        lineup_change_count=item.lineup_change_count,
+        lineup_updated_at_epoch=item.lineup_updated_at_epoch,
     )
 
 

@@ -1,5 +1,6 @@
 import {
   Alert,
+  Button,
   Chip,
   Divider,
   Grid,
@@ -12,12 +13,44 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { useEffect, useState } from 'react'
 
 const defaultFormatDate = (value) => {
   if (!value) {
     return '-'
   }
   return new Date(`${value}T00:00:00`).toLocaleDateString()
+}
+
+const defaultFormatEpochSeconds = (value) => {
+  if (!value) {
+    return '-'
+  }
+  return new Date(value * 1000).toLocaleString()
+}
+
+const defaultFormatElapsedDuration = (value) => {
+  const totalSeconds = Math.max(0, Number(value || 0))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(
+      seconds
+    ).padStart(2, '0')}`
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+const TRACKED_MATCH_EVENT_TYPES = ['goal', 'assist', 'save', 'yellow_card', 'red_card']
+
+const clampTrackedValue = (value) => Math.max(0, Number(value || 0))
+
+const isLiveTrackingStatus = (value) => {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+  return normalized === 'live' || normalized === 'in_progress'
 }
 
 const formatPlayerName = (player) => {
@@ -94,6 +127,123 @@ const buildHighlights = (detail, t) => {
     )
   }
   return highlights
+}
+
+const trackingChipColor = (status) => {
+  switch (String(status || '').toLowerCase()) {
+    case 'live':
+    case 'in_progress':
+      return 'success'
+    case 'finished':
+      return 'info'
+    default:
+      return 'default'
+  }
+}
+
+const trackingLabel = (status, t) => {
+  switch (String(status || '').toLowerCase()) {
+    case 'live':
+    case 'in_progress':
+      return t('dashboard.common.matchDetail.trackingLive')
+    case 'finished':
+      return t('dashboard.common.matchDetail.trackingFinished')
+    default:
+      return t('dashboard.common.matchDetail.trackingNotStarted')
+  }
+}
+
+const eventSeverity = (eventType) => {
+  switch (String(eventType || '').toLowerCase()) {
+    case 'goal':
+      return 'success'
+    case 'foul':
+    case 'yellow_card':
+      return 'warning'
+    case 'red_card':
+    case 'sanction':
+      return 'error'
+    default:
+      return 'info'
+  }
+}
+
+const resolveLiveElapsed = (detail, nowEpoch) => {
+  if (!isLiveTrackingStatus(detail?.tracking_status) || !detail?.started_at_epoch) {
+    return Number(detail?.elapsed_seconds || 0)
+  }
+  return Math.max(Number(detail?.elapsed_seconds || 0), nowEpoch - detail.started_at_epoch)
+}
+
+const buildTrackedPlayerEventCounts = (events) => {
+  const byPlayer = new Map()
+  ;(events || []).forEach((event) => {
+    const playerGuid = String(event?.player_guid || '').trim()
+    const eventType = String(event?.event_type || '')
+      .trim()
+      .toLowerCase()
+    if (!playerGuid || !TRACKED_MATCH_EVENT_TYPES.includes(eventType)) {
+      return
+    }
+    const valueDelta = Number(event?.value_delta || 1)
+    const current = byPlayer.get(playerGuid) || {
+      goal: 0,
+      assist: 0,
+      save: 0,
+      yellow_card: 0,
+      red_card: 0,
+    }
+    current[eventType] += valueDelta
+    byPlayer.set(playerGuid, current)
+  })
+  return byPlayer
+}
+
+const buildTrackedDisplayDetail = (detail) => {
+  if (!detail || detail.status === 'closed' || !(detail.events || []).length) {
+    return detail
+  }
+
+  const eventCountsByPlayer = buildTrackedPlayerEventCounts(detail.events)
+  const mapTrackedTeam = (team) => {
+    const players = (team?.players || []).map((player) => {
+      const counts = eventCountsByPlayer.get(player.player_guid) || {}
+      return {
+        ...player,
+        goals: clampTrackedValue(counts.goal),
+        assists: clampTrackedValue(counts.assist),
+        saves: clampTrackedValue(counts.save),
+      }
+    })
+    return {
+      ...team,
+      score: players.reduce((total, player) => total + clampTrackedValue(player.goals), 0),
+      total_assists: players.reduce(
+        (total, player) => total + clampTrackedValue(player.assists),
+        0
+      ),
+      total_saves: players.reduce((total, player) => total + clampTrackedValue(player.saves), 0),
+      players,
+    }
+  }
+
+  return {
+    ...detail,
+    home_team: mapTrackedTeam(detail.home_team),
+    away_team: mapTrackedTeam(detail.away_team),
+  }
+}
+
+const formatEventPlayer = (event, prefix) => {
+  const player = {
+    player_guid: event?.[`${prefix}_guid`] || '',
+    name: event?.[`${prefix}_name`] || '',
+    surname1: event?.[`${prefix}_surname1`] || '',
+    surname2: event?.[`${prefix}_surname2`] || '',
+    nickname: event?.[`${prefix}_nickname`] || '',
+  }
+  const label = formatPlayerName(player)
+  return label === '-' ? '' : label
 }
 
 function TeamBreakdown({ team, t }) {
@@ -186,14 +336,35 @@ export default function MatchDetailViewer({
   detail,
   t,
   formatDate = defaultFormatDate,
+  formatEpochSeconds = defaultFormatEpochSeconds,
+  formatElapsedDuration = defaultFormatElapsedDuration,
   showSubtitle = true,
+  onDeleteEvent = null,
+  deletingEventGuid = '',
 }) {
+  const [nowEpoch, setNowEpoch] = useState(() => Math.floor(Date.now() / 1000))
+
+  useEffect(() => {
+    if (!isLiveTrackingStatus(detail?.tracking_status)) {
+      return undefined
+    }
+    setNowEpoch(Math.floor(Date.now() / 1000))
+    const timerId = window.setInterval(() => {
+      setNowEpoch(Math.floor(Date.now() / 1000))
+    }, 1000)
+    return () => window.clearInterval(timerId)
+  }, [detail?.tracking_status, detail?.started_at_epoch])
+
   if (!detail) {
     return null
   }
 
-  const isClosed = String(detail.status || '').toLowerCase() === 'closed'
-  const highlights = buildHighlights(detail, t)
+  const displayedDetail = buildTrackedDisplayDetail(detail)
+  const isClosed = String(displayedDetail.status || '').toLowerCase() === 'closed'
+  const highlights = buildHighlights(displayedDetail, t)
+  const displayedElapsed = resolveLiveElapsed(displayedDetail, nowEpoch)
+  const lineupChangeCount = Number(displayedDetail.lineup_change_count || 0)
+  const hasLineupAudit = lineupChangeCount > 0
 
   return (
     <Stack spacing={2}>
@@ -229,10 +400,62 @@ export default function MatchDetailViewer({
           size="small"
           color="primary"
           label={t('dashboard.common.matchDetail.finalScore', {
-            score: `${detail.home_team?.score ?? 0} - ${detail.away_team?.score ?? 0}`,
+            score: `${displayedDetail.home_team?.score ?? 0} - ${displayedDetail.away_team?.score ?? 0}`,
           })}
         />
+        <Chip
+          size="small"
+          color={trackingChipColor(displayedDetail.tracking_status)}
+          label={trackingLabel(displayedDetail.tracking_status, t)}
+        />
+        <Chip
+          size="small"
+          variant="outlined"
+          label={t('dashboard.common.matchDetail.elapsed', {
+            value: formatElapsedDuration(displayedElapsed),
+          })}
+        />
+        {displayedDetail.started_at_epoch ? (
+          <Chip
+            size="small"
+            variant="outlined"
+            label={t('dashboard.common.matchDetail.startedAt', {
+              value: formatEpochSeconds(displayedDetail.started_at_epoch),
+            })}
+          />
+        ) : null}
+        {displayedDetail.ended_at_epoch ? (
+          <Chip
+            size="small"
+            variant="outlined"
+            label={t('dashboard.common.matchDetail.endedAt', {
+              value: formatEpochSeconds(displayedDetail.ended_at_epoch),
+            })}
+          />
+        ) : null}
       </Stack>
+
+      {hasLineupAudit ? (
+        <Alert severity="warning">
+          <Stack spacing={0.5}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {t('dashboard.common.matchDetail.lineupAuditTitle', {
+                count: lineupChangeCount,
+              })}
+            </Typography>
+            <Typography variant="body2">
+              {t('dashboard.common.matchDetail.lineupAuditDescription')}
+            </Typography>
+            {displayedDetail.lineup_updated_at_epoch ? (
+              <Typography variant="caption" color="text.secondary">
+                {t('dashboard.common.matchDetail.lineupAuditLastUpdate', {
+                  value: formatEpochSeconds(displayedDetail.lineup_updated_at_epoch),
+                })}
+              </Typography>
+            ) : null}
+          </Stack>
+        </Alert>
+      ) : null}
 
       <Stack spacing={1}>
         <Typography variant="subtitle2">
@@ -253,14 +476,105 @@ export default function MatchDetailViewer({
         )}
       </Stack>
 
+      <Stack spacing={1}>
+        <Typography variant="subtitle2">{t('dashboard.common.matchDetail.eventsTitle')}</Typography>
+        {(displayedDetail.events || []).length > 0 ? (
+          <Stack spacing={1}>
+            {(displayedDetail.events || []).map((event) => {
+              const primaryPlayer = formatEventPlayer(event, 'player')
+              const eventDelta = Number(event?.value_delta || 1)
+              const relatedPlayer = formatEventPlayer(
+                {
+                  related_guid: event.related_player_guid,
+                  related_name: event.related_player_name,
+                  related_surname1: event.related_player_surname1,
+                  related_surname2: event.related_player_surname2,
+                  related_nickname: event.related_player_nickname,
+                },
+                'related'
+              )
+              return (
+                <Alert
+                  key={event.guid}
+                  severity={eventSeverity(event.event_type)}
+                  action={
+                    onDeleteEvent ? (
+                      <Button
+                        size="small"
+                        color="inherit"
+                        onClick={() => onDeleteEvent(event.guid)}
+                        disabled={deletingEventGuid === event.guid}
+                      >
+                        {t('dashboard.admin.matches.deleteEvent')}
+                      </Button>
+                    ) : null
+                  }
+                >
+                  <Stack spacing={0.5}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={formatElapsedDuration(event.elapsed_seconds)}
+                      />
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={t(`dashboard.admin.matches.eventTypes.${event.event_type}`)}
+                      />
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={t(`dashboard.admin.matches.teamSides.${event.team_side}`)}
+                      />
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={eventDelta >= 0 ? `+${eventDelta}` : `${eventDelta}`}
+                      />
+                    </Stack>
+                    {primaryPlayer ? (
+                      <Typography variant="body2">
+                        {t('dashboard.common.matchDetail.eventPlayer', { player: primaryPlayer })}
+                      </Typography>
+                    ) : null}
+                    {relatedPlayer ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.common.matchDetail.eventRelatedPlayer', {
+                          player: relatedPlayer,
+                        })}
+                      </Typography>
+                    ) : null}
+                    {event.note ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.common.matchDetail.eventNote', { note: event.note })}
+                      </Typography>
+                    ) : null}
+                    <Typography variant="caption" color="text.secondary">
+                      {t('dashboard.common.matchDetail.eventRecordedAt', {
+                        value: formatEpochSeconds(event.recorded_at_epoch),
+                      })}
+                    </Typography>
+                  </Stack>
+                </Alert>
+              )
+            })}
+          </Stack>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            {t('dashboard.common.matchDetail.eventsEmpty')}
+          </Typography>
+        )}
+      </Stack>
+
       <Divider />
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
-          <TeamBreakdown team={detail.home_team} t={t} />
+          <TeamBreakdown team={displayedDetail.home_team} t={t} />
         </Grid>
         <Grid item xs={12} md={6}>
-          <TeamBreakdown team={detail.away_team} t={t} />
+          <TeamBreakdown team={displayedDetail.away_team} t={t} />
         </Grid>
       </Grid>
     </Stack>
