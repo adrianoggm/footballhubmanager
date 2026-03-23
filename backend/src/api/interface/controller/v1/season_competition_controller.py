@@ -58,6 +58,7 @@ from persistence.application.use_cases import (
     SeasonMatchLineupsUpdate,
     SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsUpdate,
+    SeasonMatchReportClosedError,
     SeasonMatchResultUpdate,
     SeasonMatchStatsUpdate,
     SeasonMatchTeamCreate,
@@ -171,6 +172,10 @@ START_SEASON_MATCH_OVERRIDES = {
         status.HTTP_409_CONFLICT,
         "Match tracking is already running or has already been started",
     ),
+    SeasonMatchReportClosedError: (
+        status.HTTP_409_CONFLICT,
+        "This match report is already closed and tracking cannot be restarted",
+    ),
     InvalidSeasonMatchDataError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match tracking operation",
@@ -195,6 +200,10 @@ CREATE_SEASON_MATCH_EVENT_OVERRIDES = {
         status.HTTP_400_BAD_REQUEST,
         "Invalid match event data",
     ),
+    SeasonMatchReportClosedError: (
+        status.HTTP_409_CONFLICT,
+        "The official match report is closed, so the timeline is read-only",
+    ),
     SeasonMatchClockNotRunningError: (
         status.HTTP_409_CONFLICT,
         "Start the match or provide a manual elapsed time before logging events",
@@ -210,6 +219,10 @@ DELETE_SEASON_MATCH_EVENT_OVERRIDES = {
     SeasonMatchEventNotFoundError: (
         status.HTTP_404_NOT_FOUND,
         "Match event not found",
+    ),
+    SeasonMatchReportClosedError: (
+        status.HTTP_409_CONFLICT,
+        "The official match report is closed, so timeline events cannot be removed",
     ),
     InvalidSeasonMatchDataError: (
         status.HTTP_400_BAD_REQUEST,

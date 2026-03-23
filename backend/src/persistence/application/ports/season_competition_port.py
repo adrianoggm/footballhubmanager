@@ -150,6 +150,8 @@ class MatchDetailResult:
     home_team: MatchTeamResult
     away_team: MatchTeamResult
     events: list[MatchEventResult]
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)
@@ -168,6 +170,8 @@ class MatchSummaryResult:
     started_at_epoch: int | None
     ended_at_epoch: int | None
     elapsed_seconds: int
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)
@@ -275,6 +279,10 @@ class MatchEventNotFoundError(Exception):
 
 
 class MatchEventPlayerNotInMatchError(Exception):
+    pass
+
+
+class MatchReportClosedError(Exception):
     pass
 
 

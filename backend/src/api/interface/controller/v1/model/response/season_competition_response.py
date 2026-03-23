@@ -217,6 +217,8 @@ class SeasonMatchDetailResponse(BaseModel):
     home_team: SeasonMatchTeamResponse
     away_team: SeasonMatchTeamResponse
     events: list[SeasonMatchEventResponse]
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 class SeasonMatchSummaryResponse(BaseModel):
@@ -234,6 +236,8 @@ class SeasonMatchSummaryResponse(BaseModel):
     started_at_epoch: int | None
     ended_at_epoch: int | None
     elapsed_seconds: int
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 class SeasonMatchesPageResponse(BaseModel):
