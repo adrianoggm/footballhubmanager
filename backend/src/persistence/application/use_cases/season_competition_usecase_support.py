@@ -1,6 +1,8 @@
 from persistence.application.ports.season_competition_port import (
     MatchDetailResult,
     MatchesPageResult,
+    MatchEventCreateData,
+    MatchEventResult,
     MatchPlayerStatsResult,
     MatchPlayerStatsUpdateData,
     MatchResult,
@@ -24,6 +26,8 @@ from .season_competition_models import (
     SeasonInfo,
     SeasonMatchDetailInfo,
     SeasonMatchesPage,
+    SeasonMatchEventCreate,
+    SeasonMatchEventInfo,
     SeasonMatchInfo,
     SeasonMatchPlayerStatsInfo,
     SeasonMatchPlayerStatsUpdate,
@@ -33,6 +37,19 @@ from .season_competition_models import (
     SeasonPlayersFilters,
     SeasonPlayersPage,
 )
+
+MATCH_EVENT_TYPES = {
+    "goal",
+    "assist",
+    "save",
+    "foul",
+    "yellow_card",
+    "red_card",
+    "sanction",
+    "other",
+}
+MATCH_EVENT_PLAYER_REQUIRED_TYPES = MATCH_EVENT_TYPES - {"other"}
+MATCH_EVENT_TEAM_SIDES = {"home", "away", "neutral"}
 
 
 def validate_stat_value(is_provided: bool, value: int | None) -> None:
@@ -119,6 +136,42 @@ def normalize_player_stats(
             )
         )
     return result
+
+
+def normalize_match_event(data: SeasonMatchEventCreate) -> MatchEventCreateData:
+    event_type = str(data.event_type or "").strip().lower()
+    team_side = str(data.team_side or "").strip().lower()
+    player_guid = clean_name(data.player_guid)
+    related_player_guid = clean_name(data.related_player_guid)
+    value_delta = int(data.value_delta)
+    note = normalize_optional_text(
+        data.note,
+        max_length=255,
+        invalid_error=InvalidSeasonMatchDataError,
+    )
+
+    if event_type not in MATCH_EVENT_TYPES:
+        raise InvalidSeasonMatchDataError()
+    if team_side not in MATCH_EVENT_TEAM_SIDES:
+        raise InvalidSeasonMatchDataError()
+    if event_type in MATCH_EVENT_PLAYER_REQUIRED_TYPES and not player_guid:
+        raise InvalidSeasonMatchDataError()
+    if data.elapsed_seconds is not None and data.elapsed_seconds < 0:
+        raise InvalidSeasonMatchDataError()
+    if value_delta not in {-1, 1}:
+        raise InvalidSeasonMatchDataError()
+    if player_guid and related_player_guid and player_guid == related_player_guid:
+        raise InvalidSeasonMatchDataError()
+
+    return MatchEventCreateData(
+        event_type=event_type,
+        team_side=team_side,
+        player_guid=player_guid,
+        related_player_guid=related_player_guid,
+        note=note,
+        elapsed_seconds=data.elapsed_seconds,
+        value_delta=value_delta,
+    )
 
 
 def to_repository_filters(filters: SeasonPlayersFilters) -> RepositorySeasonPlayerFilters:
@@ -209,6 +262,28 @@ def to_match_player(item: MatchPlayerStatsResult) -> SeasonMatchPlayerStatsInfo:
     )
 
 
+def to_match_event(item: MatchEventResult) -> SeasonMatchEventInfo:
+    return SeasonMatchEventInfo(
+        guid=item.guid,
+        event_type=item.event_type,
+        team_side=item.team_side,
+        elapsed_seconds=item.elapsed_seconds,
+        value_delta=item.value_delta,
+        player_guid=item.player_guid,
+        player_name=item.player_name,
+        player_surname1=item.player_surname1,
+        player_surname2=item.player_surname2,
+        player_nickname=item.player_nickname,
+        related_player_guid=item.related_player_guid,
+        related_player_name=item.related_player_name,
+        related_player_surname1=item.related_player_surname1,
+        related_player_surname2=item.related_player_surname2,
+        related_player_nickname=item.related_player_nickname,
+        note=item.note,
+        recorded_at_epoch=item.recorded_at_epoch,
+    )
+
+
 def to_match_team(item: MatchTeamResult) -> SeasonMatchTeamInfo:
     return SeasonMatchTeamInfo(
         team_guid=item.team_guid,
@@ -227,8 +302,15 @@ def to_match_detail(item: MatchDetailResult) -> SeasonMatchDetailInfo:
         season_guid=item.season_guid,
         match_date=item.match_date,
         status=item.status,
+        tracking_status=item.tracking_status,
+        started_at_epoch=item.started_at_epoch,
+        ended_at_epoch=item.ended_at_epoch,
+        elapsed_seconds=item.elapsed_seconds,
         home_team=to_match_team(item.home_team),
         away_team=to_match_team(item.away_team),
+        events=[to_match_event(event) for event in item.events],
+        lineup_change_count=item.lineup_change_count,
+        lineup_updated_at_epoch=item.lineup_updated_at_epoch,
     )
 
 
@@ -244,6 +326,12 @@ def to_match_summary(item: MatchSummaryResult) -> SeasonMatchSummaryInfo:
         away_score=item.away_score,
         home_players=item.home_players,
         away_players=item.away_players,
+        tracking_status=item.tracking_status,
+        started_at_epoch=item.started_at_epoch,
+        ended_at_epoch=item.ended_at_epoch,
+        elapsed_seconds=item.elapsed_seconds,
+        lineup_change_count=item.lineup_change_count,
+        lineup_updated_at_epoch=item.lineup_updated_at_epoch,
     )
 
 

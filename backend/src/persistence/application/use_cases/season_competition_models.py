@@ -140,6 +140,17 @@ class SeasonMatchLineupsUpdate:
 
 
 @dataclass(frozen=True)
+class SeasonMatchEventCreate:
+    event_type: str
+    team_side: str
+    player_guid: str | None = None
+    related_player_guid: str | None = None
+    note: str | None = None
+    elapsed_seconds: int | None = None
+    value_delta: int = 1
+
+
+@dataclass(frozen=True)
 class SeasonMatchInfo:
     guid: str
     season_guid: str
@@ -168,6 +179,27 @@ class SeasonMatchPlayerStatsInfo:
 
 
 @dataclass(frozen=True)
+class SeasonMatchEventInfo:
+    guid: str
+    event_type: str
+    team_side: str
+    elapsed_seconds: int
+    value_delta: int
+    player_guid: str | None
+    player_name: str | None
+    player_surname1: str | None
+    player_surname2: str | None
+    player_nickname: str | None
+    related_player_guid: str | None
+    related_player_name: str | None
+    related_player_surname1: str | None
+    related_player_surname2: str | None
+    related_player_nickname: str | None
+    note: str | None
+    recorded_at_epoch: int
+
+
+@dataclass(frozen=True)
 class SeasonMatchTeamInfo:
     team_guid: str
     team_name: str
@@ -184,8 +216,15 @@ class SeasonMatchDetailInfo:
     season_guid: str
     match_date: date
     status: str
+    tracking_status: str
+    started_at_epoch: int | None
+    ended_at_epoch: int | None
+    elapsed_seconds: int
     home_team: SeasonMatchTeamInfo
     away_team: SeasonMatchTeamInfo
+    events: list[SeasonMatchEventInfo]
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)
@@ -200,6 +239,12 @@ class SeasonMatchSummaryInfo:
     away_score: int
     home_players: int
     away_players: int
+    tracking_status: str
+    started_at_epoch: int | None
+    ended_at_epoch: int | None
+    elapsed_seconds: int
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)

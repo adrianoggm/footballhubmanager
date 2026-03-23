@@ -165,8 +165,13 @@ class _FakeRepo:
             season_guid="season-guid",
             match_date=date(2024, 3, 1),
             status="open",
+            tracking_status="not_started",
+            started_at_epoch=None,
+            ended_at_epoch=None,
+            elapsed_seconds=0,
             home_team=cls._match_team("Home"),
             away_team=cls._match_team("Away"),
+            events=[],
         )
 
     @staticmethod
@@ -221,6 +226,10 @@ class _FakeRepo:
             season_guid="season-guid",
             match_date=date(2024, 3, 1),
             status="closed",
+            tracking_status="finished",
+            started_at_epoch=100,
+            ended_at_epoch=6400,
+            elapsed_seconds=6300,
             home_team=cls._match_team_from_stats(
                 team_guid="home-team-guid",
                 team_name="Home",
@@ -231,6 +240,7 @@ class _FakeRepo:
                 team_name="Away",
                 values=away_players_stats,
             ),
+            events=[],
         )
 
     @staticmethod
@@ -246,6 +256,10 @@ class _FakeRepo:
             away_score=1,
             home_players=1,
             away_players=1,
+            tracking_status="not_started",
+            started_at_epoch=None,
+            ended_at_epoch=None,
+            elapsed_seconds=0,
         )
 
     def find_active_for_pena(self, *, pena_guid: str, reference_date: date):

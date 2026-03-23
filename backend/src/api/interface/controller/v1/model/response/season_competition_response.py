@@ -175,6 +175,26 @@ class SeasonMatchPlayerStatsResponse(BaseModel):
     rating: float
 
 
+class SeasonMatchEventResponse(BaseModel):
+    guid: str
+    event_type: str
+    team_side: str
+    elapsed_seconds: int
+    value_delta: int
+    player_guid: str | None
+    player_name: str | None
+    player_surname1: str | None
+    player_surname2: str | None
+    player_nickname: str | None
+    related_player_guid: str | None
+    related_player_name: str | None
+    related_player_surname1: str | None
+    related_player_surname2: str | None
+    related_player_nickname: str | None
+    note: str | None
+    recorded_at_epoch: int
+
+
 class SeasonMatchTeamResponse(BaseModel):
     team_guid: str
     team_name: str
@@ -190,8 +210,15 @@ class SeasonMatchDetailResponse(BaseModel):
     season_guid: str
     match_date: date
     status: str
+    tracking_status: str
+    started_at_epoch: int | None
+    ended_at_epoch: int | None
+    elapsed_seconds: int
     home_team: SeasonMatchTeamResponse
     away_team: SeasonMatchTeamResponse
+    events: list[SeasonMatchEventResponse]
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 class SeasonMatchSummaryResponse(BaseModel):
@@ -205,6 +232,12 @@ class SeasonMatchSummaryResponse(BaseModel):
     away_score: int
     home_players: int
     away_players: int
+    tracking_status: str
+    started_at_epoch: int | None
+    ended_at_epoch: int | None
+    elapsed_seconds: int
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 class SeasonMatchesPageResponse(BaseModel):

@@ -4,6 +4,7 @@ from typing import Protocol
 from persistence.application.ports.season_competition_port import (
     MatchDetailResult,
     MatchesPageResult,
+    MatchEventCreateData,
     MatchPlayerStatsUpdateData,
     MatchResult,
 )
@@ -81,6 +82,44 @@ class SeasonMatchPort(Protocol):
         admin_id: int,
         home_player_guids: list[str],
         away_player_guids: list[str],
+    ) -> MatchDetailResult: ...
+
+    def start_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult: ...
+
+    def stop_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult: ...
+
+    def create_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        event: MatchEventCreateData,
+    ) -> MatchDetailResult: ...
+
+    def delete_match_event_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        event_guid: str,
+        admin_id: int,
     ) -> MatchDetailResult: ...
 
     def list_season_matches(

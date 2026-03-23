@@ -1113,9 +1113,9 @@ def test_season_competition_update_lineups_and_delete_match():
         },
     )
     assert status == 200, reopened
-    assert reopened["status"] == "open"
-    assert reopened["home_team"]["score"] == 0
-    assert reopened["away_team"]["score"] == 0
+    assert reopened["status"] == "closed"
+    assert reopened["lineup_change_count"] == 2
+    assert reopened["lineup_updated_at_epoch"] is not None
     assert {item["player_guid"] for item in reopened["home_team"]["players"]} == set(
         player_guids[:2]
     )
