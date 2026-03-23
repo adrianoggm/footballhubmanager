@@ -14,5 +14,8 @@ class FootballMatch(GuidMixin, Base):
     id_away_team: Mapped[int] = mapped_column(ForeignKey("team.id"))
     match_date: Mapped[date] = mapped_column()
     id_season: Mapped[int] = mapped_column(ForeignKey("season.id"))
+    status: Mapped[str] = mapped_column(default="open")
     started_at_epoch: Mapped[int | None] = mapped_column(nullable=True)
     ended_at_epoch: Mapped[int | None] = mapped_column(nullable=True)
+    lineup_change_count: Mapped[int] = mapped_column(default=0)
+    lineup_updated_at_epoch: Mapped[int | None] = mapped_column(nullable=True)
