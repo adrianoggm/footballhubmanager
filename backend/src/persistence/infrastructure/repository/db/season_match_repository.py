@@ -1293,6 +1293,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             preserved_by_player_id=preserved_by_player_id,
             closed_match=closed_match,
         )
+        # Session autoflush is disabled, so explicit flush is required before
+        # the closed-match recalculation path reads the updated rosters again.
+        self.session.flush()
 
     @staticmethod
     def _apply_tracked_events_to_team_players(
