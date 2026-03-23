@@ -25,6 +25,7 @@ SeasonMatchInvalidPlayersError = _errors.SeasonMatchInvalidPlayersError
 SeasonMatchLineupLockedError = _errors.SeasonMatchLineupLockedError
 SeasonMatchNotFoundError = _errors.SeasonMatchNotFoundError
 SeasonMatchPlayersNotInSeasonError = _errors.SeasonMatchPlayersNotInSeasonError
+SeasonMatchReportClosedError = _errors.SeasonMatchReportClosedError
 SeasonMatchStatsMismatchError = _errors.SeasonMatchStatsMismatchError
 SeasonPlayerAlreadyRegisteredError = _errors.SeasonPlayerAlreadyRegisteredError
 SeasonPlayerInMatchError = _errors.SeasonPlayerInMatchError
@@ -82,6 +83,7 @@ __all__ = [
     "SeasonMatchPlayerStatsInfo",
     "SeasonMatchPlayerStatsUpdate",
     "SeasonMatchPlayersNotInSeasonError",
+    "SeasonMatchReportClosedError",
     "SeasonMatchResultUpdate",
     "SeasonMatchStatsMismatchError",
     "SeasonMatchStatsUpdate",

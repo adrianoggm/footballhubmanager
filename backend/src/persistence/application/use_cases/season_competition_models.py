@@ -223,6 +223,8 @@ class SeasonMatchDetailInfo:
     home_team: SeasonMatchTeamInfo
     away_team: SeasonMatchTeamInfo
     events: list[SeasonMatchEventInfo]
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)
@@ -241,6 +243,8 @@ class SeasonMatchSummaryInfo:
     started_at_epoch: int | None
     ended_at_epoch: int | None
     elapsed_seconds: int
+    lineup_change_count: int = 0
+    lineup_updated_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)

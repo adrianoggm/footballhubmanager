@@ -101,6 +101,7 @@ from .season_competition_errors import (
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
     SeasonMatchStatsMismatchError,
     SeasonPlayerAlreadyRegisteredError,
     SeasonPlayerInMatchError,

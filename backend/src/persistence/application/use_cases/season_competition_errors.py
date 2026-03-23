@@ -78,6 +78,10 @@ class SeasonMatchEventPlayerNotInMatchError(Exception):
     pass
 
 
+class SeasonMatchReportClosedError(Exception):
+    pass
+
+
 class SeasonPlayerInMatchError(Exception):
     pass
 

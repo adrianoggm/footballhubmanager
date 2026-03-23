@@ -26,6 +26,9 @@ from persistence.application.ports.season_competition_port import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
 )
 from persistence.application.ports.season_competition_port import (
+    MatchReportClosedError as RepositoryMatchReportClosedError,
+)
+from persistence.application.ports.season_competition_port import (
     MatchStatsMismatchError as RepositoryMatchStatsMismatchError,
 )
 from persistence.application.ports.season_competition_port import (
@@ -58,6 +61,7 @@ from persistence.application.use_cases.season_competition_errors import (
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
     SeasonMatchStatsMismatchError,
     SeasonPlayerNotFoundError,
 )
@@ -310,6 +314,8 @@ class ManageSeasonMatchesUseCase:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryMatchClockAlreadyStartedError as exc:
             raise SeasonMatchAlreadyStartedError() from exc
+        except RepositoryMatchReportClosedError as exc:
+            raise SeasonMatchReportClosedError() from exc
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
         return to_match_detail(updated)
@@ -373,6 +379,8 @@ class ManageSeasonMatchesUseCase:
             raise SeasonMatchEventPlayerNotInMatchError() from exc
         except RepositoryMatchClockNotRunningError as exc:
             raise SeasonMatchClockNotRunningError() from exc
+        except RepositoryMatchReportClosedError as exc:
+            raise SeasonMatchReportClosedError() from exc
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
         return to_match_detail(updated)
@@ -404,6 +412,8 @@ class ManageSeasonMatchesUseCase:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryMatchEventNotFoundError as exc:
             raise SeasonMatchEventNotFoundError() from exc
+        except RepositoryMatchReportClosedError as exc:
+            raise SeasonMatchReportClosedError() from exc
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
         return to_match_detail(updated)

@@ -309,6 +309,8 @@ def to_match_detail(item: MatchDetailResult) -> SeasonMatchDetailInfo:
         home_team=to_match_team(item.home_team),
         away_team=to_match_team(item.away_team),
         events=[to_match_event(event) for event in item.events],
+        lineup_change_count=item.lineup_change_count,
+        lineup_updated_at_epoch=item.lineup_updated_at_epoch,
     )
 
 
@@ -328,6 +330,8 @@ def to_match_summary(item: MatchSummaryResult) -> SeasonMatchSummaryInfo:
         started_at_epoch=item.started_at_epoch,
         ended_at_epoch=item.ended_at_epoch,
         elapsed_seconds=item.elapsed_seconds,
+        lineup_change_count=item.lineup_change_count,
+        lineup_updated_at_epoch=item.lineup_updated_at_epoch,
     )
 
 
