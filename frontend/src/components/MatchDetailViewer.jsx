@@ -47,7 +47,9 @@ const TRACKED_MATCH_EVENT_TYPES = ['goal', 'assist', 'save', 'yellow_card', 'red
 const clampTrackedValue = (value) => Math.max(0, Number(value || 0))
 
 const isLiveTrackingStatus = (value) => {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === 'live' || normalized === 'in_progress'
 }
 
@@ -177,7 +179,9 @@ const buildTrackedPlayerEventCounts = (events) => {
   const byPlayer = new Map()
   ;(events || []).forEach((event) => {
     const playerGuid = String(event?.player_guid || '').trim()
-    const eventType = String(event?.event_type || '').trim().toLowerCase()
+    const eventType = String(event?.event_type || '')
+      .trim()
+      .toLowerCase()
     if (!playerGuid || !TRACKED_MATCH_EVENT_TYPES.includes(eventType)) {
       return
     }
@@ -449,9 +453,7 @@ export default function MatchDetailViewer({
       </Stack>
 
       <Stack spacing={1}>
-        <Typography variant="subtitle2">
-          {t('dashboard.common.matchDetail.eventsTitle')}
-        </Typography>
+        <Typography variant="subtitle2">{t('dashboard.common.matchDetail.eventsTitle')}</Typography>
         {(displayedDetail.events || []).length > 0 ? (
           <Stack spacing={1}>
             {(displayedDetail.events || []).map((event) => {

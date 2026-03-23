@@ -1389,8 +1389,7 @@ export const messages = {
             'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
           invalidMatchEventElapsed:
             'El tiempo del evento debe usar un minuto válido y un segundo entre 0 y 59.',
-          invalidMatchEventDelta:
-            'La acción del evento debe ser incrementar o disminuir.',
+          invalidMatchEventDelta: 'La acción del evento debe ser incrementar o disminuir.',
           matchEventElapsedRequired:
             'Inicia el reloj del partido o indica minuto y segundo antes de añadir un evento.',
           matchTrackingLiveRequired:

@@ -1,8 +1,8 @@
 from persistence.application.ports.season_competition_port import (
     MatchDetailResult,
+    MatchesPageResult,
     MatchEventCreateData,
     MatchEventResult,
-    MatchesPageResult,
     MatchPlayerStatsResult,
     MatchPlayerStatsUpdateData,
     MatchResult,
@@ -25,9 +25,9 @@ from persistence.application.use_cases.season_competition_errors import (
 from .season_competition_models import (
     SeasonInfo,
     SeasonMatchDetailInfo,
+    SeasonMatchesPage,
     SeasonMatchEventCreate,
     SeasonMatchEventInfo,
-    SeasonMatchesPage,
     SeasonMatchInfo,
     SeasonMatchPlayerStatsInfo,
     SeasonMatchPlayerStatsUpdate,

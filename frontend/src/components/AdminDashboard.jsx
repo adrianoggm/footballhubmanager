@@ -510,7 +510,9 @@ const MATCH_EVENT_TYPES_REQUIRING_PLAYER = new Set([
 ])
 
 const isLiveTrackingStatus = (value) => {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === 'live' || normalized === 'in_progress'
 }
 
@@ -791,8 +793,12 @@ export default function AdminDashboard({
 
   const matchEventPlayerGuids = useMemo(
     () => ({
-      home: new Set((selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid)),
-      away: new Set((selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid)),
+      home: new Set(
+        (selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid)
+      ),
+      away: new Set(
+        (selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid)
+      ),
       all: new Set([
         ...(selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid),
         ...(selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid),
@@ -2261,7 +2267,9 @@ export default function AdminDashboard({
       return
     }
 
-    const eventType = String(matchEventDraft.event_type || '').trim().toLowerCase()
+    const eventType = String(matchEventDraft.event_type || '')
+      .trim()
+      .toLowerCase()
     const playerGuid = String(matchEventDraft.player_guid || '').trim()
     const relatedPlayerGuid = String(matchEventDraft.related_player_guid || '').trim()
     const valueDelta = Number(matchEventDraft.value_delta || 1)

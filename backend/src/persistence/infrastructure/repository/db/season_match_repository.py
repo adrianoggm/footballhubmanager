@@ -6,11 +6,12 @@ from persistence.application.ports.season_competition_port import (
     MatchClockAlreadyStartedError,
     MatchClockNotRunningError,
     MatchDetailResult,
+    MatchesPageResult,
     MatchEventCreateData,
     MatchEventNotFoundError,
     MatchEventPlayerNotInMatchError,
     MatchEventResult,
-    MatchesPageResult,
+    MatchLineupLockedError,
     MatchNotFoundError,
     MatchPlayersNotInSeasonError,
     MatchPlayerStatsResult,
@@ -360,10 +361,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             admin_id=admin_id,
             for_update=True,
         )
-        if (
-            football_match.started_at_epoch is None
-            or football_match.ended_at_epoch is not None
-        ):
+        if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
             self.session.rollback()
             raise MatchClockNotRunningError()
 
@@ -1152,10 +1150,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> int:
         if provided_elapsed_seconds is not None:
             return int(provided_elapsed_seconds)
-        if (
-            football_match.started_at_epoch is None
-            or football_match.ended_at_epoch is not None
-        ):
+        if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
             self.session.rollback()
             raise MatchClockNotRunningError()
         return max(self._now_epoch() - int(football_match.started_at_epoch), 0)
@@ -1312,7 +1307,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         end_epoch = (
             football_match.ended_at_epoch
             if football_match.ended_at_epoch is not None
-            else current_epoch if current_epoch is not None else cls._now_epoch()
+            else current_epoch
+            if current_epoch is not None
+            else cls._now_epoch()
         )
         return max(int(end_epoch) - int(football_match.started_at_epoch), 0)
 
@@ -1372,9 +1369,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         home_players = team_players_by_id.get(home_team.id, [])
         away_players = team_players_by_id.get(away_team.id, [])
         events = self._list_match_events(match_id=football_match.id, for_update=False)
-        player_ids = {
-            team_player.id_player for team_player in home_players + away_players
-        }.union(
+        player_ids = {team_player.id_player for team_player in home_players + away_players}.union(
             {
                 player_id
                 for player_id in [
@@ -1502,7 +1497,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> MatchEventResult:
         primary_player = players_by_id.get(event.id_player) if event.id_player is not None else None
         related_player = (
-            players_by_id.get(event.id_related_player) if event.id_related_player is not None else None
+            players_by_id.get(event.id_related_player)
+            if event.id_related_player is not None
+            else None
         )
         primary_link = (
             links_by_player_id.get(primary_player.id) if primary_player is not None else None

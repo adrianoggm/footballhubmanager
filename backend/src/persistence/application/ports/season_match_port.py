@@ -3,8 +3,8 @@ from typing import Protocol
 
 from persistence.application.ports.season_competition_port import (
     MatchDetailResult,
-    MatchEventCreateData,
     MatchesPageResult,
+    MatchEventCreateData,
     MatchPlayerStatsUpdateData,
     MatchResult,
 )

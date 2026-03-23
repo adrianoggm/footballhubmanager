@@ -72,7 +72,9 @@ def test_create_match_event_for_admin_uses_team_player_player_ids():
     )
     repo._load_required_team_players = lambda **kwargs: ([home_team_player], [away_team_player])
     repo._team_player_guid_map = lambda team_players: {
-        ("home-player-guid" if team_players[0] is home_team_player else "away-player-guid"): team_players[0]
+        (
+            "home-player-guid" if team_players[0] is home_team_player else "away-player-guid"
+        ): team_players[0]
     }
     repo._resolve_event_player = lambda **kwargs: home_team_player
     repo._resolve_related_event_player = lambda **kwargs: away_team_player
@@ -105,7 +107,12 @@ def test_create_match_event_for_admin_uses_team_player_player_ids():
 def test_update_match_stats_for_admin_stops_live_tracking_when_closing_match():
     session = Mock()
     repo = SqlAlchemySeasonMatchRepository(session)
-    football_match = SimpleNamespace(id=33, started_at_epoch=100, ended_at_epoch=None, guid="match-guid")
+    football_match = SimpleNamespace(
+        id=33,
+        started_at_epoch=100,
+        ended_at_epoch=None,
+        guid="match-guid",
+    )
     pena = SimpleNamespace(id=44)
     season = SimpleNamespace(id=55, guid="season-guid")
     home_team = SimpleNamespace(id=1)
@@ -134,7 +141,9 @@ def test_update_match_stats_for_admin_stops_live_tracking_when_closing_match():
     )
     repo._load_required_team_players = lambda **kwargs: ([home_team_player], [away_team_player])
     repo._team_player_guid_map = lambda team_players: {
-        ("home-player-guid" if team_players[0] is home_team_player else "away-player-guid"): team_players[0]
+        (
+            "home-player-guid" if team_players[0] is home_team_player else "away-player-guid"
+        ): team_players[0]
     }
     repo._match_standings_applied = lambda *args, **kwargs: False
     repo._load_match_season_players = lambda **kwargs: ([], [])
@@ -185,7 +194,12 @@ def test_update_match_stats_for_admin_stops_live_tracking_when_closing_match():
 def test_stop_match_for_admin_finalizes_tracked_stats_when_events_exist():
     session = Mock()
     repo = SqlAlchemySeasonMatchRepository(session)
-    football_match = SimpleNamespace(id=33, started_at_epoch=100, ended_at_epoch=None, guid="match-guid")
+    football_match = SimpleNamespace(
+        id=33,
+        started_at_epoch=100,
+        ended_at_epoch=None,
+        guid="match-guid",
+    )
     pena = SimpleNamespace(id=44)
     season = SimpleNamespace(id=55, guid="season-guid")
     home_team = SimpleNamespace(id=1)

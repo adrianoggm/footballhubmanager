@@ -47,7 +47,9 @@ const QUICK_TRACKING_EVENT_CONFIG = [
 ]
 
 const isLiveTrackingStatus = (value) => {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   return normalized === 'live' || normalized === 'in_progress'
 }
 
@@ -70,7 +72,9 @@ const buildPlayerEventCounts = (events) => {
   const byPlayer = new Map()
   ;(events || []).forEach((event) => {
     const playerGuid = String(event?.player_guid || '').trim()
-    const eventType = String(event?.event_type || '').trim().toLowerCase()
+    const eventType = String(event?.event_type || '')
+      .trim()
+      .toLowerCase()
     if (!playerGuid || !QUICK_TRACKING_EVENT_TYPES.includes(eventType)) {
       return
     }
@@ -210,7 +214,9 @@ function TrackingPlayerCard({
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
             {formatPlayerDisplayName(player)}
           </Typography>
-          {player.position ? <Chip size="small" variant="outlined" label={player.position} /> : null}
+          {player.position ? (
+            <Chip size="small" variant="outlined" label={player.position} />
+          ) : null}
         </Stack>
 
         <Box
@@ -396,7 +402,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   const selectedTrackedScore = buildTrackedTeamScore(selectedMatchDetail)
   const lineupsLocked = Boolean(
     selectedMatchDetail &&
-      (selectedMatchDetail.tracking_status !== 'not_started' || selectedMatchEvents.length > 0)
+    (selectedMatchDetail.tracking_status !== 'not_started' || selectedMatchEvents.length > 0)
   )
   const quickTrackingEnabled = Boolean(
     isLiveTrackingStatus(selectedMatchDetail?.tracking_status) && !loading && !matchStatsLoading
@@ -435,7 +441,11 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   }, [selectedMatchGuid, selectedMatchDetail])
 
   useEffect(() => {
-    if (!selectedMatchGuid || !selectedMatchDetail || selectedMatchDetail.guid !== selectedMatchGuid) {
+    if (
+      !selectedMatchGuid ||
+      !selectedMatchDetail ||
+      selectedMatchDetail.guid !== selectedMatchGuid
+    ) {
       return
     }
 
@@ -577,18 +587,18 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
               {selectedSeasonGuid && !seasonMatchesLoading && visibleSeasonMatches.length > 0 && (
                 <TableContainer>
                   <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.tracking')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.resultSource')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
-                          </TableRow>
-                        </TableHead>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.tracking')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.resultSource')}</TableCell>
+                        <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
+                      </TableRow>
+                    </TableHead>
                     <TableBody>
                       {visibleSeasonMatches.map((match) => {
                         const status = String(match.status || 'open').toLowerCase()
@@ -625,8 +635,8 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                               </Stack>
                             </TableCell>
                             <TableCell>
-                              {(trackedScore?.home ?? match.home_score) ?? 0} -{' '}
-                              {(trackedScore?.away ?? match.away_score) ?? 0}
+                              {trackedScore?.home ?? match.home_score ?? 0} -{' '}
+                              {trackedScore?.away ?? match.away_score ?? 0}
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2" color="text.secondary">
@@ -820,7 +830,9 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                               <TrackingTeamPanel
                                 team={selectedMatchDetail.home_team}
                                 teamSide="home"
-                                score={selectedTrackedScore?.home ?? selectedMatchDetail.home_team.score}
+                                score={
+                                  selectedTrackedScore?.home ?? selectedMatchDetail.home_team.score
+                                }
                                 eventCountsByPlayer={eventCountsByPlayer}
                                 disabled={!quickTrackingEnabled}
                                 onAdjust={handleQuickMatchEvent}
@@ -830,7 +842,9 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                               <TrackingTeamPanel
                                 team={selectedMatchDetail.away_team}
                                 teamSide="away"
-                                score={selectedTrackedScore?.away ?? selectedMatchDetail.away_team.score}
+                                score={
+                                  selectedTrackedScore?.away ?? selectedMatchDetail.away_team.score
+                                }
                                 eventCountsByPlayer={eventCountsByPlayer}
                                 disabled={!quickTrackingEnabled}
                                 onAdjust={handleQuickMatchEvent}
@@ -1016,7 +1030,9 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                               </Typography>
                               <Chip
                                 size="small"
-                                color={selectedMatchDetail.status === 'closed' ? 'success' : 'warning'}
+                                color={
+                                  selectedMatchDetail.status === 'closed' ? 'success' : 'warning'
+                                }
                                 label={
                                   selectedMatchDetail.status === 'closed'
                                     ? t('dashboard.admin.matches.statusClosed')
@@ -1083,14 +1099,18 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
                               ].map(({ key, team }) => (
                                 <Grid key={key} item xs={12} lg={6} sx={{ minWidth: 0 }}>
                                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                    {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
+                                    {t('dashboard.admin.matches.teamStats', {
+                                      team: team.team_name,
+                                    })}
                                   </Typography>
                                   <Table size="small">
                                     <TableHead>
                                       <TableRow>
                                         <TableCell>{t('dashboard.admin.table.player')}</TableCell>
                                         <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
-                                        <TableCell>{t('dashboard.admin.matches.assists')}</TableCell>
+                                        <TableCell>
+                                          {t('dashboard.admin.matches.assists')}
+                                        </TableCell>
                                         <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
                                         <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
                                       </TableRow>

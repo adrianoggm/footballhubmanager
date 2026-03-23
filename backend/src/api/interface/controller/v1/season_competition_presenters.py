@@ -3,8 +3,8 @@ from dataclasses import asdict
 
 from api.interface.controller.v1.model.response.season_competition_response import (
     SeasonMatchDetailResponse,
-    SeasonMatchEventResponse,
     SeasonMatchesPageResponse,
+    SeasonMatchEventResponse,
     SeasonMatchPlayerStatsResponse,
     SeasonMatchResponse,
     SeasonMatchSummaryResponse,
@@ -14,8 +14,8 @@ from api.interface.controller.v1.model.response.season_competition_response impo
 )
 from persistence.application.use_cases import (
     SeasonMatchDetailInfo,
-    SeasonMatchEventInfo,
     SeasonMatchesPage,
+    SeasonMatchEventInfo,
     SeasonMatchInfo,
     SeasonMatchPlayerStatsInfo,
     SeasonMatchTeamInfo,

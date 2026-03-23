@@ -1,4 +1,10 @@
 from persistence.application.ports.season_competition_port import (
+    InvalidMatchDataError as RepositoryInvalidMatchDataError,
+)
+from persistence.application.ports.season_competition_port import (
+    InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
+)
+from persistence.application.ports.season_competition_port import (
     MatchClockAlreadyStartedError as RepositoryMatchClockAlreadyStartedError,
 )
 from persistence.application.ports.season_competition_port import (
@@ -9,12 +15,6 @@ from persistence.application.ports.season_competition_port import (
 )
 from persistence.application.ports.season_competition_port import (
     MatchEventPlayerNotInMatchError as RepositoryMatchEventPlayerNotInMatchError,
-)
-from persistence.application.ports.season_competition_port import (
-    InvalidMatchDataError as RepositoryInvalidMatchDataError,
-)
-from persistence.application.ports.season_competition_port import (
-    InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
 )
 from persistence.application.ports.season_competition_port import (
     MatchLineupLockedError as RepositoryMatchLineupLockedError,
@@ -66,8 +66,8 @@ from .season_competition_models import (
     SeasonMatchCreate,
     SeasonMatchCreateDetailed,
     SeasonMatchDetailInfo,
-    SeasonMatchEventCreate,
     SeasonMatchesPage,
+    SeasonMatchEventCreate,
     SeasonMatchInfo,
     SeasonMatchLineupsUpdate,
     SeasonMatchResultUpdate,
