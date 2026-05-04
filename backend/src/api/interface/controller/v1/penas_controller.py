@@ -6,6 +6,7 @@ from api.dependencies.use_cases import (
     get_link_user_to_pena_use_case,
     get_pena_accountability_use_case,
     get_pena_labels_use_case,
+    get_pena_profile_use_case,
     get_penas_use_case,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
@@ -14,7 +15,10 @@ from api.interface.controller.v1.model.request.pena_accountability_request impor
     UpsertPenaMemberAccountRequest,
 )
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
-from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
+from api.interface.controller.v1.model.request.penas_request import (
+    ConsumeLinkTokenRequest,
+    UpdatePenaProfileRequest,
+)
 from api.interface.controller.v1.model.response.pena_accountability_response import (
     PenaAccountabilityMemberAccountResponse,
     PenaAccountabilityResponse,
@@ -41,6 +45,7 @@ from persistence.application.use_cases import (
     LinkUserToPenaUseCase,
     ManagePenaAccountabilityUseCase,
     ManagePenaLabelsUseCase,
+    ManagePenaProfileUseCase,
     PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,
     PenaAccountabilityInfo,
@@ -48,6 +53,7 @@ from persistence.application.use_cases import (
     PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilitySettingsUpdate,
     PenaLabelsUpdate,
+    PenaProfileUpdate,
     PenasPage,
 )
 
@@ -172,6 +178,22 @@ def get_pena(
     pena = use_case.execute_by_guid(pena_guid)
     if not pena:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
+    return PenaResponse(**asdict(pena))
+
+
+@router.put("/penas/{pena_guid}/profile", response_model=PenaResponse)
+@map_exceptions
+def update_pena_profile(
+    pena_guid: str,
+    payload: UpdatePenaProfileRequest,
+    admin_session=Depends(require_admin),
+    use_case: ManagePenaProfileUseCase = Depends(get_pena_profile_use_case),
+):
+    pena = use_case.update_for_admin(
+        pena_guid=pena_guid,
+        admin_id=admin_session.user_id,
+        update=PenaProfileUpdate(image_url=payload.image_url),
+    )
     return PenaResponse(**asdict(pena))
 
 

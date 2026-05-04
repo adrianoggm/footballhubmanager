@@ -20,6 +20,7 @@ class PlayerProfile:
     surname2: str | None
     nationality: str
     penas: list[PenaInfo]
+    image_url: str | None = None
 
 
 class GetPlayerProfileUseCase:
@@ -46,5 +47,6 @@ class GetPlayerProfileUseCase:
             surname1=profile.surname1,
             surname2=profile.surname2,
             nationality=profile.nationality,
+            image_url=profile.image_url,
             penas=[PenaInfo(guid=pena.guid, name=pena.name) for pena in profile.penas],
         )

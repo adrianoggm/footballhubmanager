@@ -6,3 +6,4 @@ class PlayerUpdateRequest(BaseModel):
     surname1: str | None = Field(default=None)
     surname2: str | None = Field(default=None)
     nationality: str | None = Field(default=None)
+    image_url: str | None = Field(default=None)

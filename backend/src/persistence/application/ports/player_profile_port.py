@@ -16,9 +16,14 @@ class PlayerProfileResult:
     surname2: str | None
     nationality: str
     penas: list[PenaInfoResult]
+    image_url: str | None = None
 
 
 class InvalidNationalityError(Exception):
+    pass
+
+
+class InvalidProfileImageError(Exception):
     pass
 
 
@@ -35,6 +40,7 @@ class PlayerProfilePort(Protocol):
         surname1: str | None,
         surname2: str | None,
         nationality: str | None,
+        image_url: str | None,
     ) -> PlayerProfileResult | None: ...
 
     def update_by_account_id(
@@ -45,4 +51,5 @@ class PlayerProfilePort(Protocol):
         surname1: str | None,
         surname2: str | None,
         nationality: str | None,
+        image_url: str | None,
     ) -> PlayerProfileResult | None: ...

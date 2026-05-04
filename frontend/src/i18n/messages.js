@@ -84,6 +84,18 @@ export const messages = {
         identityTitle: 'Visual identity',
         identityHint: 'Reserved space for the pena or league crest.',
         identityPlaceholder: 'Crest',
+        profileImageLabel: 'Profile image',
+        imageEmpty: 'No image selected',
+        imageActions: {
+          choose: 'Choose image',
+          replace: 'Replace image',
+          remove: 'Remove image',
+          processing: 'Processing image...',
+        },
+        imageErrors: {
+          invalidType: 'Use a JPG, PNG, or WebP image.',
+          processing: 'The image could not be processed. Try another file.',
+        },
         summaryMeta: {
           section: 'Section',
           range: 'Range',
@@ -159,6 +171,12 @@ export const messages = {
         referenceSeason: 'Reference season',
         noLinkedPenaInfo:
           'This admin account has no linked pena. In this system, each admin has exactly one pena created at admin registration. Logout and create a new admin account if this is a legacy account.',
+        openPenaSettings: 'Pena settings',
+        penaSettingsTitle: 'Pena settings',
+        penaSettingsHint: 'Keep the pena image lightweight and consistent across the dashboard.',
+        penaImageHint:
+          'The selected image is automatically center-cropped to a square, resized, and compressed before saving.',
+        savePenaProfile: 'Save pena image',
         seasonActiveSuffix: ' (Active)',
         tabs: {
           overview: 'Overview',
@@ -622,6 +640,7 @@ export const messages = {
           membershipUpdatedByAdmin: 'Membership updated',
           membershipRemovedByAdmin: 'Membership removed',
           labelsUpdated: 'Labels updated',
+          penaProfileUpdated: 'Pena image updated',
           standingsUpdated: 'Standings updated',
         },
         errors: {
@@ -673,6 +692,8 @@ export const messages = {
         profileSettingsTitle: 'Profile settings',
         profileSettingsHint:
           'Update your personal data here. You usually only need this occasionally.',
+        profileImageHint:
+          'The selected image is automatically center-cropped to a square, resized, and compressed before saving.',
         settingsCancel: 'Close',
         saveProfile: 'Save profile',
         joinTitle: 'Join a Pena',
@@ -886,6 +907,18 @@ export const messages = {
         identityTitle: 'Identidad visual',
         identityHint: 'Espacio reservado para el escudo de la peña o de la liga.',
         identityPlaceholder: 'Escudo',
+        profileImageLabel: 'Imagen de perfil',
+        imageEmpty: 'No hay imagen seleccionada',
+        imageActions: {
+          choose: 'Elegir imagen',
+          replace: 'Cambiar imagen',
+          remove: 'Quitar imagen',
+          processing: 'Procesando imagen...',
+        },
+        imageErrors: {
+          invalidType: 'Usa una imagen JPG, PNG o WebP.',
+          processing: 'No se pudo procesar la imagen. Prueba con otro archivo.',
+        },
         summaryMeta: {
           section: 'Apartado',
           range: 'Rango',
@@ -964,6 +997,12 @@ export const messages = {
         referenceSeason: 'Temporada de referencia',
         noLinkedPenaInfo:
           'Esta cuenta de admin no tiene una peña vinculada. En este sistema, cada admin tiene exactamente una peña creada durante el registro. Cierra sesión y crea un nuevo admin si esta es una cuenta antigua.',
+        openPenaSettings: 'Configurar peña',
+        penaSettingsTitle: 'Configuración de peña',
+        penaSettingsHint: 'Mantén la imagen de la peña ligera y consistente en todo el panel.',
+        penaImageHint:
+          'La imagen seleccionada se recorta automáticamente al centro en formato cuadrado, se redimensiona y se comprime antes de guardarse.',
+        savePenaProfile: 'Guardar imagen de peña',
         seasonActiveSuffix: ' (Activa)',
         tabs: {
           overview: 'Resumen',
@@ -1434,6 +1473,7 @@ export const messages = {
           membershipUpdatedByAdmin: 'Membresía actualizada',
           membershipRemovedByAdmin: 'Membresía eliminada',
           labelsUpdated: 'Etiquetas actualizadas',
+          penaProfileUpdated: 'Imagen de peña actualizada',
           standingsUpdated: 'Clasificación actualizada',
         },
         errors: {
@@ -1490,6 +1530,8 @@ export const messages = {
         profileSettingsTitle: 'Configuración de perfil',
         profileSettingsHint:
           'Actualiza aquí tus datos personales. Normalmente solo lo necesitarás de forma puntual.',
+        profileImageHint:
+          'La imagen seleccionada se recorta automáticamente al centro en formato cuadrado, se redimensiona y se comprime antes de guardarse.',
         settingsCancel: 'Cerrar',
         saveProfile: 'Guardar perfil',
         joinTitle: 'Unirme a una peña',

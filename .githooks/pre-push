@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+source "$(dirname "$0")/common.sh"
+
+skip_hooks_if_requested
+require_repo_root
+
+files="$(push_candidate_files)"
+
+if [[ -z "$files" ]]; then
+  hook_note "No push delta detected; skipping quality gates"
+  exit 0
+fi
+
+if has_backend_changes "$files"; then
+  hook_note "Running backend pre-push gate"
+  require_backend_env
+  run_cmd just check
+fi
+
+if has_frontend_changes "$files"; then
+  hook_note "Running frontend pre-push gate"
+  require_frontend_env
+  run_cmd just frontend-check
+fi

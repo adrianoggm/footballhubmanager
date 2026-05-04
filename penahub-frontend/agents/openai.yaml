@@ -1,0 +1,7 @@
+interface:
+  display_name: "PeñaHub Frontend"
+  short_description: "React dashboard workflow for this repo"
+  default_prompt: "Use $penahub-frontend to implement or review frontend work in this PeñaHub repository."
+
+policy:
+  allow_implicit_invocation: true

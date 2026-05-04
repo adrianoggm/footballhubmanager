@@ -1,0 +1,7 @@
+interface:
+  display_name: "Code Review Expert"
+  short_description: "Review changes with a senior engineer lens"
+  default_prompt: "Use $code-review-expert to review the current git changes in this repository."
+
+policy:
+  allow_implicit_invocation: true

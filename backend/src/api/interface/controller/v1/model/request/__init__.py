@@ -17,7 +17,10 @@ from api.interface.controller.v1.model.request.pena_seasons_request import (
     CreatePenaSeasonRequest,
     UpdatePenaSeasonRequest,
 )
-from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
+from api.interface.controller.v1.model.request.penas_request import (
+    ConsumeLinkTokenRequest,
+    UpdatePenaProfileRequest,
+)
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
@@ -59,6 +62,7 @@ __all__ = [
     "UpdatePenaAccountabilityRequest",
     "UpdatePenaLabelsRequest",
     "UpdatePenaMembershipRequest",
+    "UpdatePenaProfileRequest",
     "UpdatePenaSeasonRequest",
     "UpdateSeasonMatchLineupsRequest",
     "UpdateSeasonMatchRequest",

@@ -36,6 +36,7 @@ import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
+import ProfileImageField from './ProfileImageField.jsx'
 import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
 import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
@@ -101,6 +102,10 @@ const defaultMembershipDraft = () => ({
   position: '',
 })
 
+const defaultPenaProfileDraft = () => ({
+  image_url: '',
+})
+
 const DEFAULT_LABEL_COLOR = '#64748B'
 const HEX_COLOR_RE = /^#?[0-9a-fA-F]{6}$/
 const DEFAULT_ROLE_LABEL_COLORS = {
@@ -116,6 +121,8 @@ const DEFAULT_POSITION_LABEL_COLORS = {
   polivalent: '#7C3AED',
   keeper: '#EA580C',
 }
+
+const asText = (value) => value ?? ''
 
 const normalizeHexColor = (value) => {
   const normalized = String(value || '').trim()
@@ -414,6 +421,14 @@ const mapDashboardErrorMessage = (error, t) => {
   return error.message
 }
 
+const mapProfileImageErrorMessage = (error, t) => {
+  const raw = String(error?.message || '').toLowerCase()
+  if (raw.includes('jpg') || raw.includes('png') || raw.includes('webp')) {
+    return t('dashboard.common.imageErrors.invalidType')
+  }
+  return t('dashboard.common.imageErrors.processing')
+}
+
 function SectionLoader() {
   return (
     <Card sx={{ width: '100%' }}>
@@ -571,6 +586,7 @@ export default function AdminDashboard({
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState('')
   const [noticeSeverity, setNoticeSeverity] = useState('success')
+  const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
@@ -616,6 +632,7 @@ export default function AdminDashboard({
   const [editingMembershipPlayer, setEditingMembershipPlayer] = useState(null)
   const [membershipDraft, setMembershipDraft] = useState(defaultMembershipDraft)
   const [pendingRemoveMembershipPlayer, setPendingRemoveMembershipPlayer] = useState(null)
+  const [penaProfileDraft, setPenaProfileDraft] = useState(defaultPenaProfileDraft)
 
   const historySeasons = useMemo(() => {
     return [...seasonList].sort((left, right) => {
@@ -737,6 +754,13 @@ export default function AdminDashboard({
     if (onSectionChange) {
       onSectionChange(resolvedSectionId)
     }
+  }
+
+  const openPenaSettings = () => {
+    setPenaProfileDraft({
+      image_url: asText(selectedPena?.image_url),
+    })
+    setPenaSettingsOpen(true)
   }
 
   const shouldLoadHistoricalPlayers =
@@ -1288,6 +1312,20 @@ export default function AdminDashboard({
     } finally {
       setInitializing(false)
     }
+  }
+
+  const handleSavePenaProfile = async () => {
+    if (!selectedPenaGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.updatePenaProfile(selectedPenaGuid, penaProfileDraft)
+      setPenas((prev) =>
+        prev.map((item) => (item.guid === updated.guid ? { ...item, ...updated } : item))
+      )
+      setPenaSettingsOpen(false)
+    }, t('dashboard.admin.notices.penaProfileUpdated'))
   }
 
   useEffect(() => {
@@ -2618,6 +2656,13 @@ export default function AdminDashboard({
               <ThemeModeSwitcher />
               <Button
                 variant="outlined"
+                onClick={openPenaSettings}
+                disabled={loading || !selectedPenaGuid}
+              >
+                {t('dashboard.admin.openPenaSettings')}
+              </Button>
+              <Button
+                variant="outlined"
                 onClick={() => runAction(loadDashboard, '')}
                 disabled={loading}
               >
@@ -3161,6 +3206,44 @@ export default function AdminDashboard({
           </CardContent>
         </Card>
       )}
+
+      <Dialog
+        open={penaSettingsOpen}
+        onClose={() => setPenaSettingsOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t('dashboard.admin.penaSettingsTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('dashboard.admin.penaSettingsHint')}
+            </Typography>
+            <ProfileImageField
+              value={penaProfileDraft.image_url}
+              alt={selectedPena?.name || t('dashboard.admin.panelTitle')}
+              label={t('dashboard.common.profileImageLabel')}
+              helperText={t('dashboard.admin.penaImageHint')}
+              chooseLabel={t('dashboard.common.imageActions.choose')}
+              replaceLabel={t('dashboard.common.imageActions.replace')}
+              removeLabel={t('dashboard.common.imageActions.remove')}
+              emptyLabel={t('dashboard.common.imageEmpty')}
+              processingLabel={t('dashboard.common.imageActions.processing')}
+              disabled={loading}
+              onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
+              onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPenaSettingsOpen(false)} disabled={loading}>
+            {t('dashboard.user.settingsCancel')}
+          </Button>
+          <Button variant="contained" onClick={handleSavePenaProfile} disabled={loading}>
+            {t('dashboard.admin.savePenaProfile')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(overviewMatchGuid)}
