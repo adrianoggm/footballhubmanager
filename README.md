@@ -97,6 +97,7 @@ The project solves operational friction for community football organizers:
 2. Start infrastructure with [Docker Guide](docs/docker.md).
 3. Recommended task runner usage:
    - `just bootstrap`
+   - `just install-hooks`
    - `just run-backend`
    - `just run-frontend`
    - `just check` (backend format + lint + unit tests)
@@ -105,6 +106,7 @@ The project solves operational friction for community football organizers:
 ## Documentation
 
 - [Documentation Index](docs/README.md)
+- [Agent Collaboration Guide](AGENTS.md)
 - [Project Overview](docs/overview.md)
 - [Backend Guide](docs/backend.md)
 - [Frontend Guide](docs/frontend.md)

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base_entity import Base, GuidMixin
@@ -12,4 +12,5 @@ class Player(GuidMixin, Base):
     surname1: Mapped[str] = mapped_column()
     surname2: Mapped[str | None] = mapped_column()
     nationality: Mapped[str] = mapped_column()
+    image_url: Mapped[str | None] = mapped_column(Text)
     id_player_account: Mapped[int | None] = mapped_column(ForeignKey("player_account.id"))

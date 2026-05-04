@@ -1,0 +1,7 @@
+interface:
+  display_name: "PeñaHub Iteration Planner"
+  short_description: "Plan repo changes by backend/frontend slices"
+  default_prompt: "Use $penahub-iteration-planner to break this PeñaHub task into the smallest safe implementation plan."
+
+policy:
+  allow_implicit_invocation: true

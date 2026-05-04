@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class PenaResponse(BaseModel):
     guid: str
     name: str
+    image_url: str | None = None
 
 
 class PenasPageResponse(BaseModel):

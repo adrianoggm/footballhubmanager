@@ -25,6 +25,7 @@ import {
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
+import ProfileImageField from './ProfileImageField.jsx'
 import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
 import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
@@ -44,6 +45,7 @@ const defaultProfileForm = () => ({
   surname1: '',
   surname2: '',
   nationality: '',
+  image_url: '',
 })
 
 const defaultJoinForm = () => ({
@@ -95,6 +97,14 @@ const mapDashboardErrorMessage = (error, t) => {
     return t('dashboard.common.errors.network')
   }
   return error.message
+}
+
+const mapProfileImageErrorMessage = (error, t) => {
+  const raw = String(error?.message || '').toLowerCase()
+  if (raw.includes('jpg') || raw.includes('png') || raw.includes('webp')) {
+    return t('dashboard.common.imageErrors.invalidType')
+  }
+  return t('dashboard.common.imageErrors.processing')
 }
 
 function SectionLoader() {
@@ -393,6 +403,7 @@ export default function UserDashboard({
         surname1: asText(nextProfile.surname1),
         surname2: asText(nextProfile.surname2),
         nationality: asText(nextProfile.nationality),
+        image_url: asText(nextProfile.image_url),
       })
       setPenas(nextPenas)
       setNationalities(nextNationalities)
@@ -535,6 +546,7 @@ export default function UserDashboard({
         surname1: asText(profile.surname1),
         surname2: asText(profile.surname2),
         nationality: asText(profile.nationality),
+        image_url: asText(profile.image_url),
       })
     }
     setProfileSettingsOpen(true)
@@ -557,6 +569,7 @@ export default function UserDashboard({
         surname1: asText(updatedProfile.surname1),
         surname2: asText(updatedProfile.surname2),
         nationality: asText(updatedProfile.nationality),
+        image_url: asText(updatedProfile.image_url),
       })
     }, t('dashboard.user.noticeProfileUpdated'))
   }
@@ -763,7 +776,10 @@ export default function UserDashboard({
               name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
               subtitle={profileDisplayName || ''}
               placeholderLabel={t('dashboard.common.identityPlaceholder')}
-              imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
+              imageUrl={
+                resolveDashboardIdentityImageUrl(selectedPena) ||
+                resolveDashboardIdentityImageUrl(profile)
+              }
               imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
             />
 
@@ -1248,6 +1264,20 @@ export default function UserDashboard({
             <Typography variant="body2" color="text.secondary">
               {t('dashboard.user.profileSettingsHint')}
             </Typography>
+            <ProfileImageField
+              value={profileForm.image_url}
+              alt={profileDisplayName || t('dashboard.user.profileSettingsTitle')}
+              label={t('dashboard.common.profileImageLabel')}
+              helperText={t('dashboard.user.profileImageHint')}
+              chooseLabel={t('dashboard.common.imageActions.choose')}
+              replaceLabel={t('dashboard.common.imageActions.replace')}
+              removeLabel={t('dashboard.common.imageActions.remove')}
+              emptyLabel={t('dashboard.common.imageEmpty')}
+              processingLabel={t('dashboard.common.imageActions.processing')}
+              disabled={loading}
+              onChange={(value) => setProfileForm((prev) => ({ ...prev, image_url: value }))}
+              onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+            />
             <TextField
               label={t('dashboard.user.fields.name')}
               value={profileForm.name}

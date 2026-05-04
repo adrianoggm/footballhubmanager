@@ -11,6 +11,9 @@ from persistence.application.use_cases.update_player_profile_usecase import (
 from persistence.application.use_cases.update_player_profile_usecase import (
     InvalidPlayerUpdateDataError,
 )
+from persistence.application.use_cases.update_player_profile_usecase import (
+    InvalidProfileImageError as PlayerInvalidProfileImageError,
+)
 
 
 def _session(*, user_type: str, user_id: int = 5) -> SessionData:
@@ -31,6 +34,7 @@ def _profile(guid: str = "player-1") -> PlayerProfile:
         surname2=None,
         nationality="ES",
         penas=[PenaInfo(guid="pena-1", name="Pena Uno")],
+        image_url=None,
     )
 
 
@@ -103,6 +107,7 @@ def test_update_me_success_calls_use_case_with_payload_fields():
                 "surname1": update.surname1,
                 "surname2": update.surname2,
                 "nationality": update.nationality,
+                "image_url": update.image_url,
             }
             return _profile(guid="player-updated")
 
@@ -113,6 +118,7 @@ def test_update_me_success_calls_use_case_with_payload_fields():
             surname1="Diaz",
             surname2="Lopez",
             nationality="ES",
+            image_url="data:image/jpeg;base64,QQ==",
         ),
         session=_session(user_type="user", user_id=31),
         use_case=use_case,
@@ -125,6 +131,7 @@ def test_update_me_success_calls_use_case_with_payload_fields():
         "surname1": "Diaz",
         "surname2": "Lopez",
         "nationality": "ES",
+        "image_url": "data:image/jpeg;base64,QQ==",
     }
 
 
@@ -132,6 +139,7 @@ def test_update_me_success_calls_use_case_with_payload_fields():
     ("error", "status_code", "detail"),
     [
         (PlayerInvalidNationalityError(), 400, "Invalid nationality"),
+        (PlayerInvalidProfileImageError(), 400, "Invalid profile image"),
         (InvalidPlayerUpdateDataError(), 400, "Invalid player update data"),
     ],
 )

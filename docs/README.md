@@ -4,6 +4,7 @@ This folder contains the technical documentation for `footballhubmanager`.
 
 ## Core
 
+- [Agent Collaboration Guide](../AGENTS.md)
 - [Project Overview](overview.md)
 - [Backend Guide](backend.md)
 - [Frontend Guide](frontend.md)

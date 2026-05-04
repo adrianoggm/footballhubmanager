@@ -48,6 +48,7 @@ def update_me(
         surname1=payload.surname1,
         surname2=payload.surname2,
         nationality=payload.nationality,
+        image_url=payload.image_url,
     )
     profile = _profile_or_404(use_case.execute_by_account_id(session.user_id, update))
     return PlayerProfileResponse(**asdict(profile))

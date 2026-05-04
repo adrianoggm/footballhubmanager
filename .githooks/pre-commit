@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+source "$(dirname "$0")/common.sh"
+
+skip_hooks_if_requested
+require_repo_root
+
+files="$(staged_files)"
+
+if [[ -z "$files" ]]; then
+  exit 0
+fi
+
+if has_backend_changes "$files"; then
+  hook_note "Running backend staged checks"
+  require_backend_env
+  run_cmd just format-check
+  run_cmd just lint
+fi
+
+if has_frontend_changes "$files"; then
+  hook_note "Running frontend staged checks"
+  require_frontend_env
+  run_cmd npm --prefix frontend run format:check
+  run_cmd npm --prefix frontend run lint
+fi

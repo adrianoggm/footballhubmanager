@@ -6,6 +6,7 @@ from typing import Protocol
 class PenaSummary:
     guid: str
     name: str
+    image_url: str | None = None
 
 
 @dataclass(frozen=True)

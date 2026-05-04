@@ -1,0 +1,7 @@
+interface:
+  display_name: "PeñaHub Quality Guard"
+  short_description: "Pick and run the right repo checks"
+  default_prompt: "Use $penahub-quality-guard to validate this PeñaHub change and choose the correct quality gates."
+
+policy:
+  allow_implicit_invocation: true

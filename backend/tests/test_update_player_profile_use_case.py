@@ -11,6 +11,7 @@ from persistence.application.ports.player_profile_port import (
 from persistence.application.use_cases.update_player_profile_usecase import (
     InvalidNationalityError,
     InvalidPlayerUpdateDataError,
+    InvalidProfileImageError,
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
 )
@@ -32,6 +33,7 @@ class _FakeRepo:
                 surname2=None,
                 nationality="Spain",
                 penas=[PenaInfoResult(guid="pena-guid", name="Pena")],
+                image_url=None,
             )
 
     def find_by_guid(self, player_guid: str):
@@ -40,7 +42,7 @@ class _FakeRepo:
     def find_by_account_id(self, account_id: int):
         return self.profile
 
-    def update_by_guid(self, player_guid: str, *, name, surname1, surname2, nationality):
+    def update_by_guid(self, player_guid: str, *, name, surname1, surname2, nationality, image_url):
         if self.should_raise_invalid_nationality:
             raise RepositoryInvalidNationalityError()
         self.updated_payload = {
@@ -49,10 +51,13 @@ class _FakeRepo:
             "surname1": surname1,
             "surname2": surname2,
             "nationality": nationality,
+            "image_url": image_url,
         }
         return self.profile
 
-    def update_by_account_id(self, account_id: int, *, name, surname1, surname2, nationality):
+    def update_by_account_id(
+        self, account_id: int, *, name, surname1, surname2, nationality, image_url
+    ):
         if self.should_raise_invalid_nationality:
             raise RepositoryInvalidNationalityError()
         self.updated_payload = {
@@ -61,6 +66,7 @@ class _FakeRepo:
             "surname1": surname1,
             "surname2": surname2,
             "nationality": nationality,
+            "image_url": image_url,
         }
         return self.profile
 
@@ -86,6 +92,7 @@ def test_update_profile_positive_normalizes_fields():
         "surname1": "Garcia",
         "surname2": "Milena",
         "nationality": "Spain",
+        "image_url": None,
     }
 
 
@@ -168,3 +175,14 @@ def test_update_profile_by_account_id_returns_none_when_repository_does_not_upda
     )
 
     assert result is None
+
+
+def test_update_profile_rejects_invalid_image_payload():
+    repo = _FakeRepo()
+    use_case = UpdatePlayerProfileUseCase(repo)
+
+    with pytest.raises(InvalidProfileImageError):
+        use_case.execute_by_account_id(
+            10,
+            PlayerUpdate(image_url="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA=="),
+        )
