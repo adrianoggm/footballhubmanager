@@ -10,6 +10,7 @@ from persistence.application.ports.pena_query_port import (
 class PenaInfo:
     guid: str
     name: str
+    image_url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -54,12 +55,15 @@ class GetPenasUseCase:
         pena = self.repository.find_by_guid(pena_guid)
         if not pena:
             return None
-        return PenaInfo(guid=pena.guid, name=pena.name)
+        return PenaInfo(guid=pena.guid, name=pena.name, image_url=pena.image_url)
 
     @staticmethod
     def _to_page(result: PenasPageResult) -> PenasPage:
         return PenasPage(
-            items=[PenaInfo(guid=item.guid, name=item.name) for item in result.items],
+            items=[
+                PenaInfo(guid=item.guid, name=item.name, image_url=item.image_url)
+                for item in result.items
+            ],
             page=result.page,
             page_size=result.page_size,
             total=result.total,

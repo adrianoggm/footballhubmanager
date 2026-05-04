@@ -10,7 +10,10 @@ from api.interface.controller.v1.model.request.pena_accountability_request impor
     UpsertPenaMemberAccountRequest,
 )
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
-from api.interface.controller.v1.model.request.penas_request import ConsumeLinkTokenRequest
+from api.interface.controller.v1.model.request.penas_request import (
+    ConsumeLinkTokenRequest,
+    UpdatePenaProfileRequest,
+)
 from auth.dependencies import require_user
 from auth.session import SessionData
 from fastapi import HTTPException
@@ -41,6 +44,12 @@ from persistence.application.use_cases.manage_pena_labels_usecase import (
     PenaLabelsAccessDeniedError,
     PenaLabelsInfo,
     PenaLabelsPenaNotFoundError,
+)
+from persistence.application.use_cases.manage_pena_profile_usecase import (
+    InvalidPenaProfileImageError,
+    PenaProfileAccessDeniedError,
+    PenaProfileInfo,
+    PenaProfileNotFoundError,
 )
 
 
@@ -230,6 +239,65 @@ def test_get_pena_returns_pena_when_found():
 
     assert response.guid == "pena-xyz"
     assert response.name == "Pena Found"
+
+
+def test_update_pena_profile_success():
+    class _UseCase:
+        def __init__(self):
+            self.last_call: dict | None = None
+
+        def update_for_admin(self, *, pena_guid: str, admin_id: int, update):
+            self.last_call = {
+                "pena_guid": pena_guid,
+                "admin_id": admin_id,
+                "image_url": update.image_url,
+            }
+            return PenaProfileInfo(
+                guid=pena_guid,
+                name="Pena Uno",
+                image_url=update.image_url,
+            )
+
+    use_case = _UseCase()
+    response = penas_controller.update_pena_profile(
+        "pena-1",
+        UpdatePenaProfileRequest(image_url="data:image/jpeg;base64,QQ=="),
+        admin_session=_session(user_type="admin", user_id=99),
+        use_case=use_case,
+    )
+
+    assert response.guid == "pena-1"
+    assert response.image_url == "data:image/jpeg;base64,QQ=="
+    assert use_case.last_call == {
+        "pena_guid": "pena-1",
+        "admin_id": 99,
+        "image_url": "data:image/jpeg;base64,QQ==",
+    }
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+      (PenaProfileNotFoundError(), 404, "Pena not found"),
+      (PenaProfileAccessDeniedError(), 403, "Admin does not manage this pena"),
+      (InvalidPenaProfileImageError(), 400, "Invalid profile image"),
+    ],
+)
+def test_update_pena_profile_maps_domain_errors(error, status_code, detail):
+    class _UseCase:
+        def update_for_admin(self, **_kwargs):
+            raise error
+
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.update_pena_profile(
+            "pena-1",
+            UpdatePenaProfileRequest(image_url="data:image/jpeg;base64,QQ=="),
+            admin_session=_session(user_type="admin", user_id=99),
+            use_case=_UseCase(),
+        )
+
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
 
 
 def test_get_pena_labels_returns_labels():

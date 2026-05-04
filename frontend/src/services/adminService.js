@@ -34,6 +34,10 @@ export class AdminService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/labels`)
   }
 
+  updatePenaProfile(penaGuid, payload) {
+    return httpClient.put(`${API_V1}/penas/${penaGuid}/profile`, payload)
+  }
+
   getPenaAccountability(penaGuid) {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/accountability`)
   }

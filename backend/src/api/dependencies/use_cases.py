@@ -25,6 +25,9 @@ from persistence.application.use_cases.manage_pena_labels_usecase import (
 from persistence.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
 )
+from persistence.application.use_cases.manage_pena_profile_usecase import (
+    ManagePenaProfileUseCase,
+)
 from persistence.application.use_cases.manage_pena_seasons_usecase import (
     ManagePenaSeasonsUseCase,
 )
@@ -143,6 +146,10 @@ def get_pena_membership_use_case(
 
 def get_pena_players_use_case(db: Session = Depends(get_db)) -> GetPenaPlayersUseCase:
     return GetPenaPlayersUseCase(SqlAlchemyPenaPlayerQueryRepository(db))
+
+
+def get_pena_profile_use_case(db: Session = Depends(get_db)) -> ManagePenaProfileUseCase:
+    return ManagePenaProfileUseCase(SqlAlchemyPenaQueryRepository(db))
 
 
 def get_manage_pena_seasons_use_case(
