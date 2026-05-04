@@ -1,5 +1,9 @@
 export const resolveDashboardIdentityImageUrl = (value = null) =>
   [
+    value?.profile_image_url,
+    value?.profileImageUrl,
+    value?.avatar_url,
+    value?.avatarUrl,
     value?.crest_url,
     value?.crestUrl,
     value?.logo_url,

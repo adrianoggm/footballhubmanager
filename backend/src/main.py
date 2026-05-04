@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from uvicorn import run
 
 # Logger
@@ -103,6 +103,23 @@ def _db_startup_retries() -> tuple[int, float]:
     return max(1, attempts), max(0.1, delay)
 
 
+def _ensure_profile_image_columns() -> None:
+    if engine.dialect.name != "mysql":
+        return
+
+    with engine.begin() as conn:
+        inspector = inspect(conn)
+        table_columns = {
+            "pena": {column["name"] for column in inspector.get_columns("pena")},
+            "player": {column["name"] for column in inspector.get_columns("player")},
+        }
+
+        if "image_url" not in table_columns["pena"]:
+            conn.execute(text("ALTER TABLE pena ADD COLUMN image_url LONGTEXT NULL"))
+        if "image_url" not in table_columns["player"]:
+            conn.execute(text("ALTER TABLE player ADD COLUMN image_url LONGTEXT NULL"))
+
+
 # Lifespan for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -134,6 +151,8 @@ async def lifespan(app: FastAPI):
     if last_error is not None:
         logger.error("Database connection failed after %s attempts: %s", max_attempts, last_error)
         raise last_error
+
+    _ensure_profile_image_columns()
 
     yield
 
