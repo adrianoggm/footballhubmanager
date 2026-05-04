@@ -14,7 +14,7 @@ from persistence.infrastructure.repository.db.pena_accountability_repository imp
 def test_save_settings_for_admin_rejects_access_denied():
     session = Mock()
     repository = SqlAlchemyPenaAccountabilityRepository(session)
-    repository._get_pena = lambda _pena_guid, for_update=True: SimpleNamespace(id=1, id_admin=10)
+    repository._lock_pena = lambda _pena_guid: SimpleNamespace(id=1, id_admin=10)
 
     with pytest.raises(PenaNotManagedByAdminError):
         repository.save_settings_for_admin(
@@ -37,7 +37,7 @@ def test_delete_expense_for_admin_maps_missing_expense():
     session.execute.return_value = no_expense
 
     repository = SqlAlchemyPenaAccountabilityRepository(session)
-    repository._get_pena = lambda _pena_guid, for_update=True: SimpleNamespace(id=1, id_admin=10)
+    repository._lock_pena = lambda _pena_guid: SimpleNamespace(id=1, id_admin=10)
 
     with pytest.raises(PenaExpenseNotFoundError):
         repository.delete_expense_for_admin(

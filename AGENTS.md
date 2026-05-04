@@ -47,6 +47,12 @@ Use `docs/backend.md` as the main reference.
 Backend guardrails:
 
 - Hexagonal architecture is mandatory in backend changes.
+- SOLID is mandatory, not aspirational:
+  - `S`: one reason to change per module/class/use case whenever practical
+  - `O`: extend behavior with explicit types/policies/use cases instead of boolean branches and scattered conditionals
+  - `L`: implementations behind ports must be safely replaceable without surprising callers
+  - `I`: ports stay small and purpose-specific; avoid wide interfaces that force unrelated dependencies
+  - `D`: high-level policy depends on ports/contracts, never on SQLAlchemy or infrastructure details
 - Controllers stay thin: validate input, call use cases, map errors.
 - Use cases own orchestration and business rules.
 - Ports define contracts; repositories implement them.

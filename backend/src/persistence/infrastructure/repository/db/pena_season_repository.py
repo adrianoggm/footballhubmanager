@@ -157,10 +157,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             self.session.rollback()
             raise PenaNotManagedByAdminError()
 
-        season = self._get_season_for_pena(
+        season = self._lock_season_for_pena(
             pena_id=pena.id,
             season_guid=season_guid,
-            for_update=True,
         )
 
         resolved_start_date = start_date if start_date_provided else season.start_date
@@ -216,10 +215,9 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             self.session.rollback()
             raise PenaNotManagedByAdminError()
 
-        season = self._get_season_for_pena(
+        season = self._lock_season_for_pena(
             pena_id=pena.id,
             season_guid=season_guid,
-            for_update=True,
         )
         self.session.delete(season)
         self.session.commit()
@@ -231,10 +229,21 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             raise PenaNotFoundError()
         return pena
 
-    def _get_season_for_pena(self, *, pena_id: int, season_guid: str, for_update: bool) -> Season:
-        stmt = select(Season).where(Season.guid == season_guid, Season.id_pena == pena_id)
-        if for_update:
-            stmt = stmt.with_for_update()
+    def _get_season_for_pena(self, *, pena_id: int, season_guid: str) -> Season:
+        season = self.session.execute(
+            select(Season).where(Season.guid == season_guid, Season.id_pena == pena_id)
+        ).scalar_one_or_none()
+        if not season:
+            self.session.rollback()
+            raise SeasonNotFoundError()
+        return season
+
+    def _lock_season_for_pena(self, *, pena_id: int, season_guid: str) -> Season:
+        stmt = (
+            select(Season)
+            .where(Season.guid == season_guid, Season.id_pena == pena_id)
+            .with_for_update()
+        )
         season = self.session.execute(stmt).scalar_one_or_none()
         if not season:
             self.session.rollback()
