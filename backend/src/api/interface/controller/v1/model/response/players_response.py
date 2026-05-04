@@ -12,4 +12,5 @@ class PlayerProfileResponse(BaseModel):
     surname1: str
     surname2: str | None
     nationality: str
+    image_url: str | None = None
     penas: list[PenaInfoResponse]

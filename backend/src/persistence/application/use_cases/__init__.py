@@ -56,6 +56,14 @@ from .manage_pena_membership_usecase import (
     PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
 )
+from .manage_pena_profile_usecase import (
+    InvalidPenaProfileImageError,
+    ManagePenaProfileUseCase,
+    PenaProfileAccessDeniedError,
+    PenaProfileInfo,
+    PenaProfileNotFoundError,
+    PenaProfileUpdate,
+)
 from .manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
 )
@@ -133,6 +141,7 @@ from .season_competition_models import (
     SeasonPlayerStatsUpdate,
 )
 from .update_player_profile_usecase import InvalidNationalityError as PlayerInvalidNationalityError
+from .update_player_profile_usecase import InvalidProfileImageError as PlayerInvalidProfileImageError
 from .update_player_profile_usecase import (
     InvalidPlayerUpdateDataError,
     PlayerUpdate,
