@@ -141,9 +141,11 @@ from .season_competition_models import (
     SeasonPlayerStatsUpdate,
 )
 from .update_player_profile_usecase import InvalidNationalityError as PlayerInvalidNationalityError
-from .update_player_profile_usecase import InvalidProfileImageError as PlayerInvalidProfileImageError
 from .update_player_profile_usecase import (
     InvalidPlayerUpdateDataError,
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
+)
+from .update_player_profile_usecase import (
+    InvalidProfileImageError as PlayerInvalidProfileImageError,
 )

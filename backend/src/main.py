@@ -104,7 +104,8 @@ def _db_startup_retries() -> tuple[int, float]:
 
 
 def _ensure_profile_image_columns() -> None:
-    if engine.dialect.name != "mysql":
+    dialect_name = getattr(getattr(engine, "dialect", None), "name", None)
+    if dialect_name != "mysql":
         return
 
     with engine.begin() as conn:

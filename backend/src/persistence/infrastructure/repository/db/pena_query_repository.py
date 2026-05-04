@@ -1,14 +1,16 @@
-from persistence.application.ports.pena_query_port import (
-    PenaQueryPort,
-    PenasPageResult,
-    PenaSummary,
-)
 from persistence.application.ports.pena_profile_port import (
     InvalidPenaProfileImageError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.profile_image_utils import is_supported_profile_image_data_url
+from persistence.application.ports.pena_query_port import (
+    PenaQueryPort,
+    PenasPageResult,
+    PenaSummary,
+)
+from persistence.application.use_cases.profile_image_utils import (
+    is_supported_profile_image_data_url,
+)
 from persistence.domain.entity import Pena, PenaPlayer, Player
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

@@ -5,8 +5,10 @@ from persistence.application.ports.player_profile_port import (
     PlayerProfilePort,
     PlayerProfileResult,
 )
+from persistence.application.use_cases.profile_image_utils import (
+    is_supported_profile_image_data_url,
+)
 from persistence.domain.entity import Pena, PenaPlayer, Player
-from persistence.application.use_cases.profile_image_utils import is_supported_profile_image_data_url
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session

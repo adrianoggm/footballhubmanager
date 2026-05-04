@@ -999,8 +999,7 @@ export const messages = {
           'Esta cuenta de admin no tiene una peña vinculada. En este sistema, cada admin tiene exactamente una peña creada durante el registro. Cierra sesión y crea un nuevo admin si esta es una cuenta antigua.',
         openPenaSettings: 'Configurar peña',
         penaSettingsTitle: 'Configuración de peña',
-        penaSettingsHint:
-          'Mantén la imagen de la peña ligera y consistente en todo el panel.',
+        penaSettingsHint: 'Mantén la imagen de la peña ligera y consistente en todo el panel.',
         penaImageHint:
           'La imagen seleccionada se recorta automáticamente al centro en formato cuadrado, se redimensiona y se comprime antes de guardarse.',
         savePenaProfile: 'Guardar imagen de peña',

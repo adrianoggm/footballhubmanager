@@ -10,8 +10,8 @@ from persistence.application.ports.player_profile_port import (
 )
 from persistence.application.use_cases.update_player_profile_usecase import (
     InvalidNationalityError,
-    InvalidProfileImageError,
     InvalidPlayerUpdateDataError,
+    InvalidProfileImageError,
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
 )

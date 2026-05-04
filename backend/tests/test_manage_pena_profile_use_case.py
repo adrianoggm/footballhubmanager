@@ -2,15 +2,15 @@ import pytest
 from persistence.application.ports.pena_profile_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
+from persistence.application.ports.pena_profile_port import (
+    PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
+)
 from persistence.application.use_cases.manage_pena_profile_usecase import (
     InvalidPenaProfileImageError,
     ManagePenaProfileUseCase,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
     PenaProfileUpdate,
-)
-from persistence.application.ports.pena_profile_port import (
-    PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
 )
 
 

@@ -278,9 +278,9 @@ def test_update_pena_profile_success():
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
     [
-      (PenaProfileNotFoundError(), 404, "Pena not found"),
-      (PenaProfileAccessDeniedError(), 403, "Admin does not manage this pena"),
-      (InvalidPenaProfileImageError(), 400, "Invalid profile image"),
+        (PenaProfileNotFoundError(), 404, "Pena not found"),
+        (PenaProfileAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (InvalidPenaProfileImageError(), 400, "Invalid profile image"),
     ],
 )
 def test_update_pena_profile_maps_domain_errors(error, status_code, detail):

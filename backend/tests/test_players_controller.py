@@ -9,10 +9,10 @@ from persistence.application.use_cases.update_player_profile_usecase import (
     InvalidNationalityError as PlayerInvalidNationalityError,
 )
 from persistence.application.use_cases.update_player_profile_usecase import (
-    InvalidProfileImageError as PlayerInvalidProfileImageError,
+    InvalidPlayerUpdateDataError,
 )
 from persistence.application.use_cases.update_player_profile_usecase import (
-    InvalidPlayerUpdateDataError,
+    InvalidProfileImageError as PlayerInvalidProfileImageError,
 )
 
 
