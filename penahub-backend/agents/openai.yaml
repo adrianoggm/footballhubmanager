@@ -1,0 +1,7 @@
+interface:
+  display_name: "PeñaHub Backend"
+  short_description: "FastAPI backend workflow for this repo"
+  default_prompt: "Use $penahub-backend to implement or review backend work in this PeñaHub repository."
+
+policy:
+  allow_implicit_invocation: true

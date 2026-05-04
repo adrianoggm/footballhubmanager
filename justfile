@@ -7,6 +7,12 @@ venv_python := env_var_or_default("VENV_PYTHON", if os() == "windows" { "backend
 default:
     @just --list
 
+install-hooks:
+    git config core.hooksPath .githooks
+
+hooks-status:
+    @printf "core.hooksPath=%s\n" "$$(git config --get core.hooksPath || echo .git/hooks)"
+
 bootstrap:
     {{python_cmd}} -m venv backend/.venv
     {{venv_python}} -m pip install --upgrade pip
