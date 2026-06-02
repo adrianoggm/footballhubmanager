@@ -14,6 +14,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayersPageResult,
 )
 from persistence.application.ports.season_player_port import SeasonPlayerPort
+from persistence.application.update_policies import FieldUpdate
 from persistence.domain.entity import (
     FootballMatch,
     Pena,
@@ -253,18 +254,12 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
         season_guid: str,
         admin_id: int,
         player_guid: str,
-        wins_provided: bool,
-        wins: int | None,
-        losses_provided: bool,
-        losses: int | None,
-        draws_provided: bool,
-        draws: int | None,
-        quality_level_provided: bool,
-        quality_level: float | None,
-        role_provided: bool,
-        role: str | None,
-        position_provided: bool,
-        position: str | None,
+        wins: FieldUpdate[int],
+        losses: FieldUpdate[int],
+        draws: FieldUpdate[int],
+        quality_level: FieldUpdate[float],
+        role: FieldUpdate[str | None],
+        position: FieldUpdate[str | None],
     ) -> SeasonPlayerResult:
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
@@ -280,35 +275,35 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
             for_update=True,
         )
 
-        if wins_provided:
-            if wins is None or wins < 0:
+        if wins.is_set():
+            if wins.value is None or wins.value < 0:
                 self.session.rollback()
                 raise InvalidSeasonPlayerStatsError()
-            season_player.wins = wins
-        if losses_provided:
-            if losses is None or losses < 0:
+            season_player.wins = wins.value
+        if losses.is_set():
+            if losses.value is None or losses.value < 0:
                 self.session.rollback()
                 raise InvalidSeasonPlayerStatsError()
-            season_player.losses = losses
-        if draws_provided:
-            if draws is None or draws < 0:
+            season_player.losses = losses.value
+        if draws.is_set():
+            if draws.value is None or draws.value < 0:
                 self.session.rollback()
                 raise InvalidSeasonPlayerStatsError()
-            season_player.draws = draws
-        if quality_level_provided:
-            if quality_level is None or quality_level < 0:
+            season_player.draws = draws.value
+        if quality_level.is_set():
+            if quality_level.value is None or quality_level.value < 0:
                 self.session.rollback()
                 raise InvalidSeasonPlayerStatsError()
-            season_player.quality_level = quality_level
-        if role_provided:
+            season_player.quality_level = quality_level.value
+        if role.is_set():
             resolved_role_id, resolved_role_name = self._resolve_role_snapshot_for_update(
                 pena_id=pena.id,
-                role=role,
+                role=role.value,
             )
             season_player.id_role = resolved_role_id
             season_player.role = resolved_role_name
-        if position_provided:
-            season_player.position = position
+        if position.is_set():
+            season_player.position = position.value
 
         self.session.commit()
         position_color_map = parse_label_colors_payload(pena.position_label_colors)

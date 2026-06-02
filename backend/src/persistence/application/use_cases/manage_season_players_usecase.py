@@ -29,6 +29,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
 from persistence.application.ports.season_player_port import SeasonPlayerPort
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.season_competition_errors import (
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -136,27 +137,30 @@ class ManageSeasonPlayersUseCase:
         player_guid: str,
         update: SeasonPlayerStatsUpdate,
     ) -> SeasonPlayerInfo:
-        if not (
-            update.wins_provided
-            or update.losses_provided
-            or update.draws_provided
-            or update.quality_level_provided
-            or update.role_provided
-            or update.position_provided
+        if not any(
+            field_update.is_set()
+            for field_update in (
+                update.wins,
+                update.losses,
+                update.draws,
+                update.quality_level,
+                update.role,
+                update.position,
+            )
         ):
             raise InvalidSeasonPlayerUpdateDataError()
 
-        validate_stat_value(update.wins_provided, update.wins)
-        validate_stat_value(update.losses_provided, update.losses)
-        validate_stat_value(update.draws_provided, update.draws)
-        validate_quality_value(update.quality_level_provided, update.quality_level)
+        validate_stat_value(update.wins)
+        validate_stat_value(update.losses)
+        validate_stat_value(update.draws)
+        validate_quality_value(update.quality_level)
         normalized_role = normalize_optional_text(
-            update.role if update.role_provided else None,
+            update.role.value if update.role.is_set() else None,
             max_length=80,
             invalid_error=InvalidSeasonPlayerUpdateDataError,
         )
         normalized_position = normalize_optional_text(
-            update.position if update.position_provided else None,
+            update.position.value if update.position.is_set() else None,
             max_length=50,
             invalid_error=InvalidSeasonPlayerUpdateDataError,
         )
@@ -167,18 +171,18 @@ class ManageSeasonPlayersUseCase:
                 season_guid=season_guid,
                 admin_id=admin_id,
                 player_guid=player_guid,
-                wins_provided=update.wins_provided,
                 wins=update.wins,
-                losses_provided=update.losses_provided,
                 losses=update.losses,
-                draws_provided=update.draws_provided,
                 draws=update.draws,
-                quality_level_provided=update.quality_level_provided,
                 quality_level=update.quality_level,
-                role_provided=update.role_provided,
-                role=normalized_role,
-                position_provided=update.position_provided,
-                position=normalized_position,
+                role=(
+                    FieldUpdate.set(normalized_role) if update.role.is_set() else FieldUpdate.keep()
+                ),
+                position=(
+                    FieldUpdate.set(normalized_position)
+                    if update.position.is_set()
+                    else FieldUpdate.keep()
+                ),
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc

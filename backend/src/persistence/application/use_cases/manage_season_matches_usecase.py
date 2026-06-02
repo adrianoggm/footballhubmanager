@@ -47,6 +47,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
 from persistence.application.ports.season_match_port import SeasonMatchPort
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.season_competition_errors import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -145,7 +146,7 @@ class ManageSeasonMatchesUseCase:
                 admin_id=admin_id,
                 home_score=update.home_score,
                 away_score=update.away_score,
-                update_standings=update.update_standings,
+                standings_policy=update.standings_policy,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -248,20 +249,23 @@ class ManageSeasonMatchesUseCase:
         admin_id: int,
         update: SeasonMatchUpdate,
     ) -> SeasonMatchDetailInfo:
-        if not (
-            update.match_date_provided
-            or update.home_team_name_provided
-            or update.away_team_name_provided
+        if not any(
+            field_update.is_set()
+            for field_update in (
+                update.match_date,
+                update.home_team_name,
+                update.away_team_name,
+            )
         ):
             raise InvalidSeasonMatchDataError()
 
-        home_team_name = clean_name(update.home_team_name)
-        away_team_name = clean_name(update.away_team_name)
-        if update.home_team_name_provided and home_team_name is None:
+        home_team_name = clean_name(update.home_team_name.value)
+        away_team_name = clean_name(update.away_team_name.value)
+        if update.home_team_name.is_set() and home_team_name is None:
             raise InvalidSeasonMatchDataError()
-        if update.away_team_name_provided and away_team_name is None:
+        if update.away_team_name.is_set() and away_team_name is None:
             raise InvalidSeasonMatchDataError()
-        if update.match_date_provided and update.match_date is None:
+        if update.match_date.is_set() and update.match_date.value is None:
             raise InvalidSeasonMatchDataError()
 
         try:
@@ -270,12 +274,13 @@ class ManageSeasonMatchesUseCase:
                 season_guid=season_guid,
                 match_guid=match_guid,
                 admin_id=admin_id,
-                match_date_provided=update.match_date_provided,
                 match_date=update.match_date,
-                home_team_name_provided=update.home_team_name_provided,
-                home_team_name=home_team_name,
-                away_team_name_provided=update.away_team_name_provided,
-                away_team_name=away_team_name,
+                home_team_name=FieldUpdate.set(home_team_name)
+                if update.home_team_name.is_set()
+                else FieldUpdate.keep(),
+                away_team_name=FieldUpdate.set(away_team_name)
+                if update.away_team_name.is_set()
+                else FieldUpdate.keep(),
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc

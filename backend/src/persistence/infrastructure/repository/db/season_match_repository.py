@@ -28,6 +28,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError,
 )
 from persistence.application.ports.season_match_port import SeasonMatchPort
+from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
 from persistence.domain.entity import (
     FootballMatch,
     FootballMatchEvent,
@@ -125,7 +126,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         admin_id: int,
         home_score: int,
         away_score: int,
-        update_standings: bool,
+        standings_policy: StandingsUpdatePolicy,
     ) -> MatchResult:
         self.session.rollback()
         raise InvalidMatchDataError()
@@ -137,23 +138,20 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         season_guid: str,
         match_guid: str,
         admin_id: int,
-        match_date_provided: bool,
-        match_date: date | None,
-        home_team_name_provided: bool,
-        home_team_name: str | None,
-        away_team_name_provided: bool,
-        away_team_name: str | None,
+        match_date: FieldUpdate[date],
+        home_team_name: FieldUpdate[str | None],
+        away_team_name: FieldUpdate[str | None],
     ) -> MatchDetailResult:
-        if not (match_date_provided or home_team_name_provided or away_team_name_provided):
+        if not (match_date.is_set() or home_team_name.is_set() or away_team_name.is_set()):
             self.session.rollback()
             raise InvalidMatchDataError()
-        if match_date_provided and match_date is None:
+        if match_date.is_set() and match_date.value is None:
             self.session.rollback()
             raise InvalidMatchDataError()
-        if home_team_name_provided and not home_team_name:
+        if home_team_name.is_set() and not home_team_name.value:
             self.session.rollback()
             raise InvalidMatchDataError()
-        if away_team_name_provided and not away_team_name:
+        if away_team_name.is_set() and not away_team_name.value:
             self.session.rollback()
             raise InvalidMatchDataError()
 
@@ -172,12 +170,12 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             raise MatchNotFoundError()
         football_match, home_team, away_team = bundle
 
-        if match_date_provided:
-            football_match.match_date = match_date
-        if home_team_name_provided:
-            home_team.name = home_team_name
-        if away_team_name_provided:
-            away_team.name = away_team_name
+        if match_date.is_set():
+            football_match.match_date = match_date.value
+        if home_team_name.is_set():
+            home_team.name = home_team_name.value
+        if away_team_name.is_set():
+            away_team.name = away_team_name.value
 
         self.session.commit()
         return self._build_match_detail_result(

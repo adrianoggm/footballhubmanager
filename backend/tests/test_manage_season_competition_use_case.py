@@ -30,6 +30,7 @@ from persistence.application.ports.season_competition_port import (
 from persistence.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonDataError,
     InvalidSeasonMatchDataError,
@@ -659,7 +660,7 @@ def test_update_player_stats_validates_payload_and_values():
             season_guid="season-guid",
             admin_id=1,
             player_guid="player-guid",
-            update=SeasonPlayerStatsUpdate(wins=-1, wins_provided=True),
+            update=SeasonPlayerStatsUpdate(wins=FieldUpdate.set(-1)),
         )
 
 
@@ -672,7 +673,7 @@ def test_update_player_stats_maps_invalid_stats_error():
             season_guid="season-guid",
             admin_id=1,
             player_guid="player-guid",
-            update=SeasonPlayerStatsUpdate(wins=3, wins_provided=True),
+            update=SeasonPlayerStatsUpdate(wins=FieldUpdate.set(3)),
         )
 
 
@@ -774,8 +775,7 @@ def test_update_match_validates_payload_and_maps_not_found():
             match_guid="match-guid",
             admin_id=1,
             update=SeasonMatchUpdate(
-                home_team_name="   ",
-                home_team_name_provided=True,
+                home_team_name=FieldUpdate.set("   "),
             ),
         )
 
@@ -788,8 +788,7 @@ def test_update_match_validates_payload_and_maps_not_found():
             match_guid="match-guid",
             admin_id=1,
             update=SeasonMatchUpdate(
-                home_team_name="Home",
-                home_team_name_provided=True,
+                home_team_name=FieldUpdate.set("Home"),
             ),
         )
 
@@ -800,15 +799,13 @@ def test_update_match_validates_payload_and_maps_not_found():
         match_guid="match-guid",
         admin_id=1,
         update=SeasonMatchUpdate(
-            home_team_name=" New Home ",
-            away_team_name=" New Away ",
-            home_team_name_provided=True,
-            away_team_name_provided=True,
+            home_team_name=FieldUpdate.set(" New Home "),
+            away_team_name=FieldUpdate.set(" New Away "),
         ),
     )
     assert updated.guid == "match-guid"
-    assert repo.last_payload["home_team_name"] == "New Home"
-    assert repo.last_payload["away_team_name"] == "New Away"
+    assert repo.last_payload["home_team_name"] == FieldUpdate.set("New Home")
+    assert repo.last_payload["away_team_name"] == FieldUpdate.set("New Away")
 
 
 def test_create_match_with_lineups_rejects_invalid_roster():

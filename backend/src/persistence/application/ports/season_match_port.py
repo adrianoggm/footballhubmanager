@@ -8,6 +8,7 @@ from persistence.application.ports.season_competition_port import (
     MatchPlayerStatsUpdateData,
     MatchResult,
 )
+from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
 
 
 class SeasonMatchPort(Protocol):
@@ -31,7 +32,7 @@ class SeasonMatchPort(Protocol):
         admin_id: int,
         home_score: int,
         away_score: int,
-        update_standings: bool,
+        standings_policy: StandingsUpdatePolicy,
     ) -> MatchResult: ...
 
     def create_match_with_lineups_for_admin(
@@ -65,12 +66,9 @@ class SeasonMatchPort(Protocol):
         season_guid: str,
         match_guid: str,
         admin_id: int,
-        match_date_provided: bool,
-        match_date: date | None,
-        home_team_name_provided: bool,
-        home_team_name: str | None,
-        away_team_name_provided: bool,
-        away_team_name: str | None,
+        match_date: FieldUpdate[date],
+        home_team_name: FieldUpdate[str | None],
+        away_team_name: FieldUpdate[str | None],
     ) -> MatchDetailResult: ...
 
     def update_match_lineups_for_admin(
