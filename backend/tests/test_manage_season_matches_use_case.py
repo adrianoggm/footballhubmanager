@@ -28,6 +28,7 @@ from persistence.application.ports.season_competition_port import (
 from persistence.application.ports.season_competition_port import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
 )
+from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
 from persistence.application.use_cases.manage_season_matches_usecase import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -477,7 +478,11 @@ def test_update_match_result_maps_repository_errors(repo, expected_error):
             season_guid="season-guid",
             match_guid="match-guid",
             admin_id=9,
-            update=SeasonMatchResultUpdate(home_score=2, away_score=1, update_standings=False),
+            update=SeasonMatchResultUpdate(
+                home_score=2,
+                away_score=1,
+                standings_policy=StandingsUpdatePolicy.SKIP,
+            ),
         )
 
 
@@ -489,11 +494,15 @@ def test_update_match_result_forwards_payload():
         season_guid="season-guid",
         match_guid="match-guid",
         admin_id=9,
-        update=SeasonMatchResultUpdate(home_score=2, away_score=1, update_standings=False),
+        update=SeasonMatchResultUpdate(
+            home_score=2,
+            away_score=1,
+            standings_policy=StandingsUpdatePolicy.SKIP,
+        ),
     )
 
     assert result.home_score == 2
-    assert repo.last_payload["update_standings"] is False
+    assert repo.last_payload["standings_policy"] is StandingsUpdatePolicy.SKIP
 
 
 @pytest.mark.parametrize(
@@ -680,9 +689,9 @@ def test_update_match_stats_normalizes_player_guids():
     "update",
     [
         SeasonMatchUpdate(),
-        SeasonMatchUpdate(home_team_name="   ", home_team_name_provided=True),
-        SeasonMatchUpdate(away_team_name="   ", away_team_name_provided=True),
-        SeasonMatchUpdate(match_date=None, match_date_provided=True),
+        SeasonMatchUpdate(home_team_name=FieldUpdate.set("   ")),
+        SeasonMatchUpdate(away_team_name=FieldUpdate.set("   ")),
+        SeasonMatchUpdate(match_date=FieldUpdate.set(None)),
     ],
 )
 def test_update_match_rejects_invalid_payload(update):
@@ -713,7 +722,7 @@ def test_update_match_maps_repository_errors(repo, expected_error):
             season_guid="season-guid",
             match_guid="match-guid",
             admin_id=9,
-            update=SeasonMatchUpdate(home_team_name="Home", home_team_name_provided=True),
+            update=SeasonMatchUpdate(home_team_name=FieldUpdate.set("Home")),
         )
 
 
@@ -726,17 +735,15 @@ def test_update_match_normalizes_names_and_passes_flags():
         match_guid="match-guid",
         admin_id=9,
         update=SeasonMatchUpdate(
-            home_team_name=" Home ",
-            away_team_name=" Away ",
-            home_team_name_provided=True,
-            away_team_name_provided=True,
+            home_team_name=FieldUpdate.set(" Home "),
+            away_team_name=FieldUpdate.set(" Away "),
         ),
     )
 
     assert result.guid == "match-guid"
-    assert repo.last_payload["home_team_name"] == "Home"
-    assert repo.last_payload["away_team_name"] == "Away"
-    assert repo.last_payload["match_date_provided"] is False
+    assert repo.last_payload["home_team_name"] == FieldUpdate.set("Home")
+    assert repo.last_payload["away_team_name"] == FieldUpdate.set("Away")
+    assert repo.last_payload["match_date"] == FieldUpdate.keep()
 
 
 @pytest.mark.parametrize(

@@ -17,6 +17,7 @@ from api.interface.controller.v1.model.response.pena_players_response import (
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin, require_user
 from fastapi import APIRouter, Depends, Query, Response, status
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases import (
     GetPenaPlayersUseCase,
     ManagePenaMembershipUseCase,
@@ -159,11 +160,16 @@ def update_my_pena_membership(
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
     update = PenaMembershipUpdate(
-        nickname=payload.nickname,
-        nickname_provided="nickname" in payload.model_fields_set,
-        role_provided=False,
-        position=payload.position,
-        position_provided="position" in payload.model_fields_set,
+        nickname=(
+            FieldUpdate.set(payload.nickname)
+            if "nickname" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        position=(
+            FieldUpdate.set(payload.position)
+            if "position" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
     )
     membership = use_case.update_for_user(
         pena_guid=pena_guid,
@@ -194,12 +200,21 @@ def update_pena_player_membership_as_admin(
     use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
 ):
     update = PenaMembershipUpdate(
-        nickname=payload.nickname,
-        role=payload.role,
-        position=payload.position,
-        nickname_provided="nickname" in payload.model_fields_set,
-        role_provided="role" in payload.model_fields_set,
-        position_provided="position" in payload.model_fields_set,
+        nickname=(
+            FieldUpdate.set(payload.nickname)
+            if "nickname" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        role=(
+            FieldUpdate.set(payload.role)
+            if "role" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        position=(
+            FieldUpdate.set(payload.position)
+            if "position" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
     )
     membership = use_case.update_for_admin(
         pena_guid=pena_guid,

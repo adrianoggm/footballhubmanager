@@ -22,6 +22,7 @@ from api.interface.controller.v1.model.request.season_competition_request import
 )
 from auth.session import SessionData
 from fastapi import HTTPException
+from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
 from persistence.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
@@ -460,10 +461,9 @@ def test_update_season_player_stats_sets_partial_flags():
     method, payload = use_case.last_call
     assert method == "update_player_stats_for_admin"
     update = payload["update"]
-    assert update.wins == 5
-    assert update.wins_provided is True
-    assert update.losses_provided is False
-    assert update.quality_level_provided is False
+    assert update.wins == FieldUpdate.set(5)
+    assert update.losses == FieldUpdate.keep()
+    assert update.quality_level == FieldUpdate.keep()
 
 
 def test_unregister_player_from_season_success():
@@ -563,6 +563,7 @@ def test_update_season_match_result_success():
     assert method == "update_match_result_for_admin"
     assert payload["update"].home_score == 2
     assert payload["update"].away_score == 1
+    assert payload["update"].standings_policy is StandingsUpdatePolicy.APPLY
 
 
 def test_update_season_match_success_and_partial_flags():
@@ -578,9 +579,8 @@ def test_update_season_match_success_and_partial_flags():
     assert response.guid == "match-updated"
     _, payload = use_case.last_call
     update = payload["update"]
-    assert update.home_team_name == "Titans"
-    assert update.home_team_name_provided is True
-    assert update.away_team_name_provided is False
+    assert update.home_team_name == FieldUpdate.set("Titans")
+    assert update.away_team_name == FieldUpdate.keep()
 
 
 def test_create_season_match_with_lineups_success():

@@ -44,9 +44,9 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         budget_visibility: str,
         expenses_visibility: str,
     ) -> PenaAccountabilityResult:
-        pena = self._get_pena(pena_guid, for_update=True)
+        pena = self._lock_pena(pena_guid)
         self._ensure_admin_manages_pena(pena=pena, admin_id=admin_id)
-        row = self._get_or_create_accountability_row(pena_id=pena.id, for_update=True)
+        row = self._get_or_create_locked_accountability_row(pena_id=pena.id)
         row.currency = currency
         row.balance_cents = balance_cents
         row.reserve_cents = reserve_cents
@@ -65,7 +65,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         contribution_cents: int,
         note: str | None,
     ) -> PenaAccountabilityResult:
-        pena = self._get_pena(pena_guid, for_update=True)
+        pena = self._lock_pena(pena_guid)
         self._ensure_admin_manages_pena(pena=pena, admin_id=admin_id)
         player = self._get_member_player_for_pena(pena_id=pena.id, player_guid=player_guid)
 
@@ -94,7 +94,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         admin_id: int,
         player_guid: str,
     ) -> PenaAccountabilityResult:
-        pena = self._get_pena(pena_guid, for_update=True)
+        pena = self._lock_pena(pena_guid)
         self._ensure_admin_manages_pena(pena=pena, admin_id=admin_id)
         player = self._get_member_player_for_pena(pena_id=pena.id, player_guid=player_guid)
 
@@ -125,7 +125,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         occurred_on: date,
         note: str | None,
     ) -> PenaAccountabilityResult:
-        pena = self._get_pena(pena_guid, for_update=True)
+        pena = self._lock_pena(pena_guid)
         self._ensure_admin_manages_pena(pena=pena, admin_id=admin_id)
         expense = PenaExpense(
             id_pena=pena.id,
@@ -146,7 +146,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         admin_id: int,
         expense_guid: str,
     ) -> PenaAccountabilityResult:
-        pena = self._get_pena(pena_guid, for_update=True)
+        pena = self._lock_pena(pena_guid)
         self._ensure_admin_manages_pena(pena=pena, admin_id=admin_id)
         expense = self.session.execute(
             select(PenaExpense)
@@ -166,11 +166,18 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
             select(Player.guid).where(Player.id_player_account == account_id)
         ).scalar_one_or_none()
 
-    def _get_pena(self, pena_guid: str, *, for_update: bool = False) -> Pena:
+    def _get_pena(self, pena_guid: str) -> Pena:
         stmt = select(Pena).where(Pena.guid == pena_guid)
-        if for_update:
-            stmt = stmt.with_for_update()
         pena = self.session.execute(stmt).scalar_one_or_none()
+        if not pena:
+            self.session.rollback()
+            raise PenaNotFoundError()
+        return pena
+
+    def _lock_pena(self, pena_guid: str) -> Pena:
+        pena = self.session.execute(
+            select(Pena).where(Pena.guid == pena_guid).with_for_update()
+        ).scalar_one_or_none()
         if not pena:
             self.session.rollback()
             raise PenaNotFoundError()
@@ -181,16 +188,12 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
             self.session.rollback()
             raise PenaNotManagedByAdminError()
 
-    def _get_or_create_accountability_row(
-        self,
-        *,
-        pena_id: int,
-        for_update: bool,
-    ) -> PenaAccountability:
-        stmt = select(PenaAccountability).where(PenaAccountability.id_pena == pena_id)
-        if for_update:
-            stmt = stmt.with_for_update()
-        row = self.session.execute(stmt).scalar_one_or_none()
+    def _get_or_create_locked_accountability_row(self, *, pena_id: int) -> PenaAccountability:
+        row = self.session.execute(
+            select(PenaAccountability)
+            .where(PenaAccountability.id_pena == pena_id)
+            .with_for_update()
+        ).scalar_one_or_none()
         if row:
             return row
         row = PenaAccountability(

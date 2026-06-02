@@ -9,6 +9,7 @@ from api.interface.controller.v1.model.request.pena_seasons_request import (
 )
 from auth.session import SessionData
 from fastapi import HTTPException
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     PenaSeasonAccessDeniedError,
@@ -249,12 +250,11 @@ def test_update_pena_season_sets_model_fields_flags_for_partial_update():
     assert response.guid == "season-updated"
     update = use_case.last_call["update"]
     assert use_case.last_call["admin_id"] == 33
-    assert update.points_win == 5
-    assert update.points_win_provided is True
-    assert update.points_draw_provided is False
-    assert update.points_loss_provided is False
-    assert update.start_date_provided is False
-    assert update.end_date_provided is False
+    assert update.points_win == FieldUpdate.set(5)
+    assert update.points_draw == FieldUpdate.keep()
+    assert update.points_loss == FieldUpdate.keep()
+    assert update.start_date == FieldUpdate.keep()
+    assert update.end_date == FieldUpdate.keep()
 
 
 @pytest.mark.parametrize(

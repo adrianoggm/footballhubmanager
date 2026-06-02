@@ -11,6 +11,7 @@ from persistence.application.ports.pena_membership_port import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
@@ -87,11 +88,8 @@ class _FakeRepo:
         *,
         pena_guid: str,
         account_id: int,
-        nickname_provided: bool,
         nickname,
-        role_provided: bool,
         role,
-        position_provided: bool,
         position,
     ):
         if self.should_raise_pena_not_found:
@@ -105,11 +103,8 @@ class _FakeRepo:
         self.last_payload = {
             "pena_guid": pena_guid,
             "account_id": account_id,
-            "nickname_provided": nickname_provided,
             "nickname": nickname,
-            "role_provided": role_provided,
             "role": role,
-            "position_provided": position_provided,
             "position": position,
         }
         return self._sample_result()
@@ -129,11 +124,8 @@ class _FakeRepo:
         pena_guid: str,
         admin_id: int,
         player_guid: str,
-        nickname_provided: bool,
         nickname,
-        role_provided: bool,
         role,
-        position_provided: bool,
         position,
     ):
         self._raise_maybe()
@@ -143,11 +135,8 @@ class _FakeRepo:
             "pena_guid": pena_guid,
             "admin_id": admin_id,
             "player_guid": player_guid,
-            "nickname_provided": nickname_provided,
             "nickname": nickname,
-            "role_provided": role_provided,
             "role": role,
-            "position_provided": position_provided,
             "position": position,
         }
         return self._sample_result()
@@ -203,22 +192,17 @@ def test_update_for_user_positive_normalizes_blank_to_none():
         pena_guid="pena-guid",
         account_id=12,
         update=PenaMembershipUpdate(
-            nickname="  ",
-            position="  GK ",
-            nickname_provided=True,
-            position_provided=True,
+            nickname=FieldUpdate.set("  "),
+            position=FieldUpdate.set("  GK "),
         ),
     )
 
     assert repo.last_payload == {
         "pena_guid": "pena-guid",
         "account_id": 12,
-        "nickname_provided": True,
-        "nickname": None,
-        "role_provided": False,
-        "role": None,
-        "position_provided": True,
-        "position": "GK",
+        "nickname": FieldUpdate.set(None),
+        "role": FieldUpdate.keep(),
+        "position": FieldUpdate.set("GK"),
     }
     assert result.role == "member"
 
@@ -261,7 +245,7 @@ def test_update_for_admin_maps_not_managed_to_access_denied():
             pena_guid="pena-guid",
             admin_id=1,
             player_guid="player-guid",
-            update=PenaMembershipUpdate(nickname="N", nickname_provided=True),
+            update=PenaMembershipUpdate(nickname=FieldUpdate.set("N")),
         )
 
 
@@ -274,7 +258,7 @@ def test_update_for_admin_maps_missing_membership_to_conflict_domain_error():
             pena_guid="pena-guid",
             admin_id=1,
             player_guid="player-guid",
-            update=PenaMembershipUpdate(position="CM", position_provided=True),
+            update=PenaMembershipUpdate(position=FieldUpdate.set("CM")),
         )
 
 
@@ -322,7 +306,7 @@ def test_update_for_user_maps_expected_errors(repo, expected_error):
         use_case.update_for_user(
             pena_guid="pena-guid",
             account_id=12,
-            update=PenaMembershipUpdate(nickname="Nick", nickname_provided=True),
+            update=PenaMembershipUpdate(nickname=FieldUpdate.set("Nick")),
         )
 
 
@@ -341,7 +325,7 @@ def test_update_for_admin_maps_player_and_role_validation_errors(repo, expected_
             pena_guid="pena-guid",
             admin_id=1,
             player_guid="player-guid",
-            update=PenaMembershipUpdate(role="captain", role_provided=True),
+            update=PenaMembershipUpdate(role=FieldUpdate.set("captain")),
         )
 
 

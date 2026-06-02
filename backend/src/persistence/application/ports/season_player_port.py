@@ -5,6 +5,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayerResult,
     SeasonPlayersPageResult,
 )
+from persistence.application.update_policies import FieldUpdate
 
 
 class SeasonPlayerPort(Protocol):
@@ -34,18 +35,12 @@ class SeasonPlayerPort(Protocol):
         season_guid: str,
         admin_id: int,
         player_guid: str,
-        wins_provided: bool,
-        wins: int | None,
-        losses_provided: bool,
-        losses: int | None,
-        draws_provided: bool,
-        draws: int | None,
-        quality_level_provided: bool,
-        quality_level: float | None,
-        role_provided: bool,
-        role: str | None,
-        position_provided: bool,
-        position: str | None,
+        wins: FieldUpdate[int],
+        losses: FieldUpdate[int],
+        draws: FieldUpdate[int],
+        quality_level: FieldUpdate[float],
+        role: FieldUpdate[str | None],
+        position: FieldUpdate[str | None],
     ) -> SeasonPlayerResult: ...
 
     def unregister_player_for_admin(

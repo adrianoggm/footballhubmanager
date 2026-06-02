@@ -18,6 +18,7 @@ from persistence.application.ports.season_competition_port import (
 from persistence.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.manage_season_players_usecase import (
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -311,12 +312,12 @@ def test_register_players_bulk_normalizes_and_forwards_payload():
     "update",
     [
         SeasonPlayerStatsUpdate(),
-        SeasonPlayerStatsUpdate(wins=-1, wins_provided=True),
-        SeasonPlayerStatsUpdate(losses=-1, losses_provided=True),
-        SeasonPlayerStatsUpdate(draws=-1, draws_provided=True),
-        SeasonPlayerStatsUpdate(quality_level=-0.1, quality_level_provided=True),
-        SeasonPlayerStatsUpdate(role="x" * 81, role_provided=True),
-        SeasonPlayerStatsUpdate(position="x" * 51, position_provided=True),
+        SeasonPlayerStatsUpdate(wins=FieldUpdate.set(-1)),
+        SeasonPlayerStatsUpdate(losses=FieldUpdate.set(-1)),
+        SeasonPlayerStatsUpdate(draws=FieldUpdate.set(-1)),
+        SeasonPlayerStatsUpdate(quality_level=FieldUpdate.set(-0.1)),
+        SeasonPlayerStatsUpdate(role=FieldUpdate.set("x" * 81)),
+        SeasonPlayerStatsUpdate(position=FieldUpdate.set("x" * 51)),
     ],
 )
 def test_update_player_stats_rejects_invalid_payload(update):
@@ -339,16 +340,11 @@ def test_update_player_stats_normalizes_optional_text_and_forwards_flags():
         admin_id=3,
         player_guid="player-guid",
         update=SeasonPlayerStatsUpdate(
-            wins=4,
-            draws=1,
-            quality_level=8.5,
-            role=" Captain ",
-            position=" GK ",
-            wins_provided=True,
-            draws_provided=True,
-            quality_level_provided=True,
-            role_provided=True,
-            position_provided=True,
+            wins=FieldUpdate.set(4),
+            draws=FieldUpdate.set(1),
+            quality_level=FieldUpdate.set(8.5),
+            role=FieldUpdate.set(" Captain "),
+            position=FieldUpdate.set(" GK "),
         ),
     )
 
@@ -358,18 +354,12 @@ def test_update_player_stats_normalizes_optional_text_and_forwards_flags():
         "season_guid": "season-guid",
         "admin_id": 3,
         "player_guid": "player-guid",
-        "wins_provided": True,
-        "wins": 4,
-        "losses_provided": False,
-        "losses": None,
-        "draws_provided": True,
-        "draws": 1,
-        "quality_level_provided": True,
-        "quality_level": 8.5,
-        "role_provided": True,
-        "role": "Captain",
-        "position_provided": True,
-        "position": "GK",
+        "wins": FieldUpdate.set(4),
+        "losses": FieldUpdate.keep(),
+        "draws": FieldUpdate.set(1),
+        "quality_level": FieldUpdate.set(8.5),
+        "role": FieldUpdate.set("Captain"),
+        "position": FieldUpdate.set("GK"),
     }
 
 
@@ -391,7 +381,7 @@ def test_update_player_stats_maps_repository_errors(repo, expected_error):
             season_guid="season-guid",
             admin_id=3,
             player_guid="player-guid",
-            update=SeasonPlayerStatsUpdate(wins=1, wins_provided=True),
+            update=SeasonPlayerStatsUpdate(wins=FieldUpdate.set(1)),
         )
 
 
