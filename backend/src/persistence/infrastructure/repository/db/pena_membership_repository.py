@@ -9,6 +9,7 @@ from persistence.application.ports.pena_membership_port import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.domain.entity import Nationality, Pena, PenaPlayer, PenaRole, Player
 from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
 from sqlalchemy import select
@@ -38,24 +39,25 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
         *,
         pena_guid: str,
         account_id: int,
-        nickname_provided: bool,
-        nickname: str | None,
-        role_provided: bool,
-        role: str | None,
-        position_provided: bool,
-        position: str | None,
+        nickname: FieldUpdate[str | None],
+        role: FieldUpdate[str | None],
+        position: FieldUpdate[str | None],
     ) -> PenaMembershipResult:
         pena = self._get_pena(pena_guid)
         player = self._get_player_by_account(account_id)
         roles = self._lock_roles_for_pena(pena.id)
         link = self._lock_link(pena_id=pena.id, player_id=player.id)
 
-        if nickname_provided:
-            link.nickname = nickname
-        if role_provided:
-            link.id_role = self._resolve_assigned_role_id(roles=roles, player=player, role=role)
-        if position_provided:
-            link.position = position
+        if nickname.is_set():
+            link.nickname = nickname.value
+        if role.is_set():
+            link.id_role = self._resolve_assigned_role_id(
+                roles=roles,
+                player=player,
+                role=role.value,
+            )
+        if position.is_set():
+            link.position = position.value
 
         self.session.commit()
         return self._to_result(pena=pena, player=player, link=link, roles=roles)
@@ -79,12 +81,9 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
         pena_guid: str,
         admin_id: int,
         player_guid: str,
-        nickname_provided: bool,
-        nickname: str | None,
-        role_provided: bool,
-        role: str | None,
-        position_provided: bool,
-        position: str | None,
+        nickname: FieldUpdate[str | None],
+        role: FieldUpdate[str | None],
+        position: FieldUpdate[str | None],
     ) -> PenaMembershipResult:
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
@@ -95,12 +94,16 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
         roles = self._lock_roles_for_pena(pena.id)
         link = self._lock_link(pena_id=pena.id, player_id=player.id)
 
-        if nickname_provided:
-            link.nickname = nickname
-        if role_provided:
-            link.id_role = self._resolve_assigned_role_id(roles=roles, player=player, role=role)
-        if position_provided:
-            link.position = position
+        if nickname.is_set():
+            link.nickname = nickname.value
+        if role.is_set():
+            link.id_role = self._resolve_assigned_role_id(
+                roles=roles,
+                player=player,
+                role=role.value,
+            )
+        if position.is_set():
+            link.position = position.value
 
         self.session.commit()
         return self._to_result(pena=pena, player=player, link=link, roles=roles)

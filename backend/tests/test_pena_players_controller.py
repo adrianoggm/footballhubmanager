@@ -7,6 +7,7 @@ from api.interface.controller.v1.model.request.pena_players_request import (
 from auth.dependencies import require_user
 from auth.session import SessionData
 from fastapi import HTTPException
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.get_pena_players_usecase import (
     PenaPlayerInfo,
     PenaPlayersPage,
@@ -281,10 +282,8 @@ def test_update_my_pena_membership_sets_partial_flags():
 
     assert response.player_guid == "player-22"
     update = use_case.last_call["update"]
-    assert update.nickname == "Neo"
-    assert update.position is None
-    assert update.nickname_provided is True
-    assert update.position_provided is False
+    assert update.nickname == FieldUpdate.set("Neo")
+    assert update.position == FieldUpdate.keep()
 
 
 @pytest.mark.parametrize(
@@ -380,9 +379,8 @@ def test_update_pena_player_membership_as_admin_sets_partial_flags():
 
     assert response.player_guid == "player-9"
     update = use_case.last_call["update"]
-    assert update.position == "DEF"
-    assert update.position_provided is True
-    assert update.nickname_provided is False
+    assert update.position == FieldUpdate.set("DEF")
+    assert update.nickname == FieldUpdate.keep()
 
 
 @pytest.mark.parametrize(
