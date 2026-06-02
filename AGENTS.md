@@ -23,9 +23,10 @@ planning, implementing, validating, and reviewing changes in `footballhubmanager
    - the relevant docs under `docs/`
 2. Keep changes scoped to the smallest vertical slice that solves the task.
 3. Do not mix broad refactors with feature work unless the refactor is required for correctness.
-4. Preserve existing architectural boundaries instead of introducing shortcuts across layers.
-5. Match the existing validation bar for the area you touch.
-6. Do not edit generated or environment artifacts unless the task explicitly requires it:
+4. Follow the repository's hexagonal architecture and conventions to the letter.
+5. Preserve existing architectural boundaries instead of introducing shortcuts across layers.
+6. Match the existing validation bar for the area you touch.
+7. Do not edit generated or environment artifacts unless the task explicitly requires it:
    - `backend/.venv/`
    - `backend/htmlcov/`
    - `frontend/dist/`
@@ -45,9 +46,24 @@ Use `docs/backend.md` as the main reference.
 
 Backend guardrails:
 
+- Hexagonal architecture is mandatory in backend changes.
+- SOLID is mandatory, not aspirational:
+  - `S`: one reason to change per module/class/use case whenever practical
+  - `O`: extend behavior with explicit types/policies/use cases instead of boolean branches and scattered conditionals
+  - `L`: implementations behind ports must be safely replaceable without surprising callers
+  - `I`: ports stay small and purpose-specific; avoid wide interfaces that force unrelated dependencies
+  - `D`: high-level policy depends on ports/contracts, never on SQLAlchemy or infrastructure details
 - Controllers stay thin: validate input, call use cases, map errors.
 - Use cases own orchestration and business rules.
 - Ports define contracts; repositories implement them.
+- Dependencies must continue to point inward:
+  - Controllers -> Use Cases -> Ports <- Adapters
+- Do not bypass ports to call repositories or SQL from controllers or unrelated layers.
+- Do not move business rules into FastAPI wiring, DTOs, or repository helpers.
+- Do not use boolean flags in Python APIs or use cases to switch behavior.
+  - Bad: `execute(..., for_admin=True)` or `build_report(..., include_history=False)`
+  - Prefer explicit policies, enums, separate methods, or separate use cases when behavior changes by mode.
+  - Booleans are fine for stored state, but not as hidden control-flow switches.
 - Keep API-facing GUID contracts intact unless the task explicitly changes them.
 - If you add or change persistence behavior, add or update unit tests first when practical.
 
@@ -65,6 +81,7 @@ Use `docs/frontend.md` and `docs/frontend-sitemap.md` as the main references.
 
 Frontend guardrails:
 
+- Frontend conventions are mandatory for structure, naming, routing, i18n, and service placement.
 - Keep route pages thin; move reusable stateful behavior into hooks/components.
 - Reuse existing service and hook patterns before creating new abstractions.
 - Preserve admin/user parity where the feature is meant to exist in both dashboards.

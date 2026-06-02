@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from persistence.application.ports.pena_membership_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
@@ -25,6 +25,7 @@ from persistence.application.ports.pena_membership_port import (
 from persistence.application.ports.pena_membership_port import (
     UserPlayerNotFoundError as RepositoryUserPlayerNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 
 
 @dataclass(frozen=True)
@@ -42,12 +43,9 @@ class PenaMembershipInfo:
 
 @dataclass(frozen=True)
 class PenaMembershipUpdate:
-    nickname: str | None = None
-    role: str | None = None
-    position: str | None = None
-    nickname_provided: bool = False
-    role_provided: bool = False
-    position_provided: bool = False
+    nickname: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
+    role: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
+    position: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
 
 
 @dataclass(frozen=True)
@@ -135,12 +133,13 @@ class ManagePenaMembershipUseCase:
             membership = self.repository.update_by_account(
                 pena_guid=pena_guid,
                 account_id=account_id,
-                nickname_provided=update.nickname_provided,
-                nickname=nickname,
-                role_provided=update.role_provided,
-                role=role,
-                position_provided=update.position_provided,
-                position=position,
+                nickname=FieldUpdate.set(nickname)
+                if update.nickname.is_set()
+                else FieldUpdate.keep(),
+                role=FieldUpdate.set(role) if update.role.is_set() else FieldUpdate.keep(),
+                position=FieldUpdate.set(position)
+                if update.position.is_set()
+                else FieldUpdate.keep(),
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaMembershipPenaNotFoundError() from exc
@@ -177,12 +176,13 @@ class ManagePenaMembershipUseCase:
                 pena_guid=pena_guid,
                 admin_id=admin_id,
                 player_guid=player_guid,
-                nickname_provided=update.nickname_provided,
-                nickname=nickname,
-                role_provided=update.role_provided,
-                role=role,
-                position_provided=update.position_provided,
-                position=position,
+                nickname=FieldUpdate.set(nickname)
+                if update.nickname.is_set()
+                else FieldUpdate.keep(),
+                role=FieldUpdate.set(role) if update.role.is_set() else FieldUpdate.keep(),
+                position=FieldUpdate.set(position)
+                if update.position.is_set()
+                else FieldUpdate.keep(),
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaMembershipPenaNotFoundError() from exc
@@ -260,28 +260,24 @@ class ManagePenaMembershipUseCase:
     def _normalize_update(
         update: PenaMembershipUpdate,
     ) -> tuple[str | None, str | None, str | None]:
-        if (
-            not update.nickname_provided
-            and not update.role_provided
-            and not update.position_provided
-        ):
+        if not (update.nickname.is_set() or update.role.is_set() or update.position.is_set()):
             raise InvalidPenaMembershipUpdateDataError()
 
-        nickname = update.nickname
-        role = update.role
-        position = update.position
+        nickname = update.nickname.value
+        role = update.role.value
+        position = update.position.value
 
-        if update.nickname_provided:
+        if update.nickname.is_set():
             nickname = nickname.strip() if nickname is not None else None
             if nickname == "":
                 nickname = None
 
-        if update.role_provided:
+        if update.role.is_set():
             role = role.strip() if role is not None else None
             if role == "":
                 role = None
 
-        if update.position_provided:
+        if update.position.is_set():
             position = position.strip() if position is not None else None
             if position == "":
                 position = None

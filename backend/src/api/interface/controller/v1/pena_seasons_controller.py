@@ -14,6 +14,7 @@ from api.interface.controller.v1.model.response.pena_seasons_response import (
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, Query, Response, status
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
@@ -125,16 +126,31 @@ def update_pena_season(
         season_guid=season_guid,
         admin_id=admin_session.user_id,
         update=PenaSeasonUpdate(
-            start_date=payload.start_date,
-            end_date=payload.end_date,
-            points_win=payload.points_win,
-            points_draw=payload.points_draw,
-            points_loss=payload.points_loss,
-            start_date_provided="start_date" in payload.model_fields_set,
-            end_date_provided="end_date" in payload.model_fields_set,
-            points_win_provided="points_win" in payload.model_fields_set,
-            points_draw_provided="points_draw" in payload.model_fields_set,
-            points_loss_provided="points_loss" in payload.model_fields_set,
+            start_date=(
+                FieldUpdate.set(payload.start_date)
+                if "start_date" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            end_date=(
+                FieldUpdate.set(payload.end_date)
+                if "end_date" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            points_win=(
+                FieldUpdate.set(payload.points_win)
+                if "points_win" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            points_draw=(
+                FieldUpdate.set(payload.points_draw)
+                if "points_draw" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            points_loss=(
+                FieldUpdate.set(payload.points_loss)
+                if "points_loss" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
         ),
     )
     return PenaSeasonResponse(**asdict(updated))

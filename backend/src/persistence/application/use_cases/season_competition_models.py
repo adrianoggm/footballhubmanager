@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import date
 
+from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
+
 
 @dataclass(frozen=True)
 class SeasonInfo:
@@ -67,18 +69,12 @@ class SeasonCreate:
 
 @dataclass(frozen=True)
 class SeasonPlayerStatsUpdate:
-    wins: int | None = None
-    losses: int | None = None
-    draws: int | None = None
-    quality_level: float | None = None
-    role: str | None = None
-    position: str | None = None
-    wins_provided: bool = False
-    losses_provided: bool = False
-    draws_provided: bool = False
-    quality_level_provided: bool = False
-    role_provided: bool = False
-    position_provided: bool = False
+    wins: FieldUpdate[int] = field(default_factory=FieldUpdate.keep)
+    losses: FieldUpdate[int] = field(default_factory=FieldUpdate.keep)
+    draws: FieldUpdate[int] = field(default_factory=FieldUpdate.keep)
+    quality_level: FieldUpdate[float] = field(default_factory=FieldUpdate.keep)
+    role: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
+    position: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
 
 
 @dataclass(frozen=True)
@@ -103,19 +99,16 @@ class SeasonMatchCreateDetailed:
 
 @dataclass(frozen=True)
 class SeasonMatchUpdate:
-    match_date: date | None = None
-    home_team_name: str | None = None
-    away_team_name: str | None = None
-    match_date_provided: bool = False
-    home_team_name_provided: bool = False
-    away_team_name_provided: bool = False
+    match_date: FieldUpdate[date] = field(default_factory=FieldUpdate.keep)
+    home_team_name: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
+    away_team_name: FieldUpdate[str | None] = field(default_factory=FieldUpdate.keep)
 
 
 @dataclass(frozen=True)
 class SeasonMatchResultUpdate:
     home_score: int
     away_score: int
-    update_standings: bool = True
+    standings_policy: StandingsUpdatePolicy = StandingsUpdatePolicy.APPLY
 
 
 @dataclass(frozen=True)

@@ -11,6 +11,7 @@ from persistence.application.ports.pena_season_port import (
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
@@ -107,16 +108,11 @@ class _FakeRepo:
         pena_guid: str,
         season_guid: str,
         admin_id: int,
-        start_date_provided: bool,
-        start_date: date | None,
-        end_date_provided: bool,
-        end_date: date | None,
-        points_win_provided: bool,
-        points_win: int | None,
-        points_draw_provided: bool,
-        points_draw: int | None,
-        points_loss_provided: bool,
-        points_loss: int | None,
+        start_date,
+        end_date,
+        points_win,
+        points_draw,
+        points_loss,
     ) -> PenaSeasonResult:
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
@@ -125,41 +121,36 @@ class _FakeRepo:
         if self.should_raise_season_not_found:
             raise SeasonNotFoundError()
         if (
-            (start_date_provided and start_date is None)
-            or (end_date_provided and end_date is None)
-            or (points_win_provided and points_win is None)
-            or (points_draw_provided and points_draw is None)
-            or (points_loss_provided and points_loss is None)
+            (start_date.is_set() and start_date.value is None)
+            or (end_date.is_set() and end_date.value is None)
+            or (points_win.is_set() and points_win.value is None)
+            or (points_draw.is_set() and points_draw.value is None)
+            or (points_loss.is_set() and points_loss.value is None)
             or (
-                start_date_provided
-                and end_date_provided
-                and start_date is not None
-                and end_date is not None
-                and start_date > end_date
+                start_date.is_set()
+                and end_date.is_set()
+                and start_date.value is not None
+                and end_date.value is not None
+                and start_date.value > end_date.value
             )
         ):
             raise InvalidSeasonDateRangeError()
         if self.should_raise_overlap:
             raise SeasonDateRangeOverlapError()
 
-        resolved_start = start_date or date(2024, 9, 1)
-        resolved_end = end_date or date(2025, 6, 30)
-        resolved_points_win = points_win if points_win is not None else 3
-        resolved_points_draw = points_draw if points_draw is not None else 1
-        resolved_points_loss = points_loss if points_loss is not None else 0
+        resolved_start = start_date.value if start_date.is_set() else date(2024, 9, 1)
+        resolved_end = end_date.value if end_date.is_set() else date(2025, 6, 30)
+        resolved_points_win = points_win.value if points_win.is_set() else 3
+        resolved_points_draw = points_draw.value if points_draw.is_set() else 1
+        resolved_points_loss = points_loss.value if points_loss.is_set() else 0
         self.last_payload = {
             "pena_guid": pena_guid,
             "season_guid": season_guid,
             "admin_id": admin_id,
-            "start_date_provided": start_date_provided,
             "start_date": start_date,
-            "end_date_provided": end_date_provided,
             "end_date": end_date,
-            "points_win_provided": points_win_provided,
             "points_win": points_win,
-            "points_draw_provided": points_draw_provided,
             "points_draw": points_draw,
-            "points_loss_provided": points_loss_provided,
             "points_loss": points_loss,
         }
         return PenaSeasonResult(
@@ -264,8 +255,7 @@ def test_update_for_admin_positive_partial_update():
         season_guid="season-guid",
         admin_id=55,
         update=PenaSeasonUpdate(
-            end_date=date(2025, 7, 15),
-            end_date_provided=True,
+            end_date=FieldUpdate.set(date(2025, 7, 15)),
         ),
     )
 
@@ -273,16 +263,11 @@ def test_update_for_admin_positive_partial_update():
         "pena_guid": "pena-guid",
         "season_guid": "season-guid",
         "admin_id": 55,
-        "start_date_provided": False,
-        "start_date": None,
-        "end_date_provided": True,
-        "end_date": date(2025, 7, 15),
-        "points_win_provided": False,
-        "points_win": None,
-        "points_draw_provided": False,
-        "points_draw": None,
-        "points_loss_provided": False,
-        "points_loss": None,
+        "start_date": FieldUpdate.keep(),
+        "end_date": FieldUpdate.set(date(2025, 7, 15)),
+        "points_win": FieldUpdate.keep(),
+        "points_draw": FieldUpdate.keep(),
+        "points_loss": FieldUpdate.keep(),
     }
     assert updated.end_date == date(2025, 7, 15)
 
@@ -309,7 +294,7 @@ def test_update_for_admin_rejects_null_date_values():
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=55,
-            update=PenaSeasonUpdate(start_date_provided=True),
+            update=PenaSeasonUpdate(start_date=FieldUpdate.set(None)),
         )
 
 
@@ -322,7 +307,7 @@ def test_update_for_admin_maps_access_denied():
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=55,
-            update=PenaSeasonUpdate(end_date=date(2025, 7, 15), end_date_provided=True),
+            update=PenaSeasonUpdate(end_date=FieldUpdate.set(date(2025, 7, 15))),
         )
 
 
@@ -389,7 +374,7 @@ def test_update_and_delete_for_admin_map_not_found_access_and_overlap_errors():
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
-            update=PenaSeasonUpdate(start_date=date(2024, 8, 1), start_date_provided=True),
+            update=PenaSeasonUpdate(start_date=FieldUpdate.set(date(2024, 8, 1))),
         )
     with pytest.raises(PenaSeasonNotFoundError):
         missing_use_case.delete_for_admin(
@@ -412,5 +397,5 @@ def test_update_and_delete_for_admin_map_not_found_access_and_overlap_errors():
             pena_guid="pena-guid",
             season_guid="season-guid",
             admin_id=1,
-            update=PenaSeasonUpdate(start_date=date(2024, 8, 1), start_date_provided=True),
+            update=PenaSeasonUpdate(start_date=FieldUpdate.set(date(2024, 8, 1))),
         )

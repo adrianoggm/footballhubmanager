@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from persistence.application.update_policies import FieldUpdate
+
 
 @dataclass(frozen=True)
 class PenaMembershipResult:
@@ -57,12 +59,9 @@ class PenaMembershipPort(Protocol):
         *,
         pena_guid: str,
         account_id: int,
-        nickname_provided: bool,
-        nickname: str | None,
-        role_provided: bool,
-        role: str | None,
-        position_provided: bool,
-        position: str | None,
+        nickname: FieldUpdate[str | None],
+        role: FieldUpdate[str | None],
+        position: FieldUpdate[str | None],
     ) -> PenaMembershipResult: ...
 
     def delete_by_account(
@@ -78,12 +77,9 @@ class PenaMembershipPort(Protocol):
         pena_guid: str,
         admin_id: int,
         player_guid: str,
-        nickname_provided: bool,
-        nickname: str | None,
-        role_provided: bool,
-        role: str | None,
-        position_provided: bool,
-        position: str | None,
+        nickname: FieldUpdate[str | None],
+        role: FieldUpdate[str | None],
+        position: FieldUpdate[str | None],
     ) -> PenaMembershipResult: ...
 
     def delete_by_player_for_admin(

@@ -21,6 +21,7 @@ Read adjacent production/test files before introducing a new pattern.
 
 ## Required architecture rules
 
+- Hexagonal architecture and existing repo conventions are mandatory. Do not treat them as guidance.
 - Controllers: `backend/src/api/interface/controller/v1`
   - transport only
   - map inputs/errors/responses
@@ -32,6 +33,9 @@ Read adjacent production/test files before introducing a new pattern.
   - implement persistence details only
 
 Do not move SQL or orchestration logic into controllers.
+Do not bypass ports.
+Do not push business rules into DTOs, dependency wiring, or repository convenience code.
+Dependencies must continue to point inward: controllers -> use cases -> ports <- adapters.
 
 ## Implementation workflow
 

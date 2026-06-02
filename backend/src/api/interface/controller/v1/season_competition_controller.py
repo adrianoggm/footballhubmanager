@@ -40,6 +40,7 @@ from api.interface.controller.v1.season_competition_presenters import (
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
 from fastapi import APIRouter, Depends, Query, status
+from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
 from persistence.application.use_cases import (
     GetSeasonMatchInsightsUseCase,
     InvalidSeasonMatchDataError,
@@ -293,18 +294,36 @@ def update_season_player_stats(
     use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
 ):
     update = SeasonPlayerStatsUpdate(
-        wins=payload.wins,
-        losses=payload.losses,
-        draws=payload.draws,
-        quality_level=payload.quality_level,
-        role=payload.role,
-        position=payload.position,
-        wins_provided="wins" in payload.model_fields_set,
-        losses_provided="losses" in payload.model_fields_set,
-        draws_provided="draws" in payload.model_fields_set,
-        quality_level_provided="quality_level" in payload.model_fields_set,
-        role_provided="role" in payload.model_fields_set,
-        position_provided="position" in payload.model_fields_set,
+        wins=(
+            FieldUpdate.set(payload.wins)
+            if "wins" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        losses=(
+            FieldUpdate.set(payload.losses)
+            if "losses" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        draws=(
+            FieldUpdate.set(payload.draws)
+            if "draws" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        quality_level=(
+            FieldUpdate.set(payload.quality_level)
+            if "quality_level" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        role=(
+            FieldUpdate.set(payload.role)
+            if "role" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        position=(
+            FieldUpdate.set(payload.position)
+            if "position" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
     )
     updated = use_case.update_player_stats_for_admin(
         pena_guid=pena_guid,
@@ -436,7 +455,11 @@ def update_season_match_result(
         update=SeasonMatchResultUpdate(
             home_score=payload.home_score,
             away_score=payload.away_score,
-            update_standings=payload.update_standings,
+            standings_policy=(
+                StandingsUpdatePolicy.APPLY
+                if payload.update_standings
+                else StandingsUpdatePolicy.SKIP
+            ),
         ),
     )
     return to_season_match_response(updated)
@@ -456,12 +479,21 @@ def update_season_match(
     use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
 ):
     update = SeasonMatchUpdate(
-        match_date=payload.match_date,
-        home_team_name=payload.home_team_name,
-        away_team_name=payload.away_team_name,
-        match_date_provided="match_date" in payload.model_fields_set,
-        home_team_name_provided="home_team_name" in payload.model_fields_set,
-        away_team_name_provided="away_team_name" in payload.model_fields_set,
+        match_date=(
+            FieldUpdate.set(payload.match_date)
+            if "match_date" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        home_team_name=(
+            FieldUpdate.set(payload.home_team_name)
+            if "home_team_name" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
+        away_team_name=(
+            FieldUpdate.set(payload.away_team_name)
+            if "away_team_name" in payload.model_fields_set
+            else FieldUpdate.keep()
+        ),
     )
     updated = use_case.update_match_for_admin(
         pena_guid=pena_guid,

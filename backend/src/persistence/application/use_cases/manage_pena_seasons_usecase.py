@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from persistence.application.ports.pena_season_port import (
@@ -21,6 +21,7 @@ from persistence.application.ports.pena_season_port import (
 from persistence.application.ports.pena_season_port import (
     SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 
 
 @dataclass(frozen=True)
@@ -52,16 +53,11 @@ class PenaSeasonCreate:
 
 @dataclass(frozen=True)
 class PenaSeasonUpdate:
-    start_date: date | None = None
-    end_date: date | None = None
-    points_win: int | None = None
-    points_draw: int | None = None
-    points_loss: int | None = None
-    start_date_provided: bool = False
-    end_date_provided: bool = False
-    points_win_provided: bool = False
-    points_draw_provided: bool = False
-    points_loss_provided: bool = False
+    start_date: FieldUpdate[date] = field(default_factory=FieldUpdate.keep)
+    end_date: FieldUpdate[date] = field(default_factory=FieldUpdate.keep)
+    points_win: FieldUpdate[int] = field(default_factory=FieldUpdate.keep)
+    points_draw: FieldUpdate[int] = field(default_factory=FieldUpdate.keep)
+    points_loss: FieldUpdate[int] = field(default_factory=FieldUpdate.keep)
 
 
 class InvalidPenaSeasonDataError(Exception):
@@ -164,26 +160,29 @@ class ManagePenaSeasonsUseCase:
         admin_id: int,
         update: PenaSeasonUpdate,
     ) -> PenaSeasonInfo:
-        if not (
-            update.start_date_provided
-            or update.end_date_provided
-            or update.points_win_provided
-            or update.points_draw_provided
-            or update.points_loss_provided
+        if not any(
+            field_update.is_set()
+            for field_update in (
+                update.start_date,
+                update.end_date,
+                update.points_win,
+                update.points_draw,
+                update.points_loss,
+            )
         ):
             raise InvalidPenaSeasonDataError()
-        if update.points_win_provided and update.points_win is None:
+        if update.points_win.is_set() and update.points_win.value is None:
             raise InvalidPenaSeasonDataError()
-        if update.points_draw_provided and update.points_draw is None:
+        if update.points_draw.is_set() and update.points_draw.value is None:
             raise InvalidPenaSeasonDataError()
-        if update.points_loss_provided and update.points_loss is None:
+        if update.points_loss.is_set() and update.points_loss.value is None:
             raise InvalidPenaSeasonDataError()
         if (
-            update.start_date_provided
-            and update.end_date_provided
-            and update.start_date is not None
-            and update.end_date is not None
-            and update.start_date > update.end_date
+            update.start_date.is_set()
+            and update.end_date.is_set()
+            and update.start_date.value is not None
+            and update.end_date.value is not None
+            and update.start_date.value > update.end_date.value
         ):
             raise InvalidPenaSeasonDataError()
 
@@ -192,15 +191,10 @@ class ManagePenaSeasonsUseCase:
                 pena_guid=pena_guid,
                 season_guid=season_guid,
                 admin_id=admin_id,
-                start_date_provided=update.start_date_provided,
                 start_date=update.start_date,
-                end_date_provided=update.end_date_provided,
                 end_date=update.end_date,
-                points_win_provided=update.points_win_provided,
                 points_win=update.points_win,
-                points_draw_provided=update.points_draw_provided,
                 points_draw=update.points_draw,
-                points_loss_provided=update.points_loss_provided,
                 points_loss=update.points_loss,
             )
         except RepositoryPenaNotFoundError as exc:

@@ -15,6 +15,7 @@ from persistence.application.ports.season_competition_port import (
 from persistence.application.ports.season_competition_port import (
     SeasonPlayerFilters as RepositorySeasonPlayerFilters,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.application.use_cases.season_competition_errors import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
@@ -52,17 +53,17 @@ MATCH_EVENT_PLAYER_REQUIRED_TYPES = MATCH_EVENT_TYPES - {"other"}
 MATCH_EVENT_TEAM_SIDES = {"home", "away", "neutral"}
 
 
-def validate_stat_value(is_provided: bool, value: int | None) -> None:
-    if not is_provided:
+def validate_stat_value(update: FieldUpdate[int]) -> None:
+    if not update.is_set():
         return
-    if value is None or value < 0:
+    if update.value is None or update.value < 0:
         raise InvalidSeasonPlayerUpdateDataError()
 
 
-def validate_quality_value(is_provided: bool, value: float | None) -> None:
-    if not is_provided:
+def validate_quality_value(update: FieldUpdate[float]) -> None:
+    if not update.is_set():
         return
-    if value is None or value < 0:
+    if update.value is None or update.value < 0:
         raise InvalidSeasonPlayerUpdateDataError()
 
 

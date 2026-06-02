@@ -28,7 +28,7 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
 
     def get_by_pena_guid(self, *, pena_guid: str) -> PenaLabelsResult:
         pena = self._get_pena(pena_guid)
-        roles = self._get_roles_for_pena(pena.id, for_update=False)
+        roles = self._get_roles_for_pena(pena.id)
         return self._to_result(pena=pena, roles=roles)
 
     def update_for_admin(
@@ -41,12 +41,12 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
         role_colors: dict[str, str],
         position_colors: dict[str, str],
     ) -> PenaLabelsResult:
-        pena = self._get_pena(pena_guid, for_update=True)
+        pena = self._lock_pena(pena_guid)
         if pena.id_admin != admin_id:
             self.session.rollback()
             raise PenaNotManagedByAdminError()
 
-        current_roles = self._get_roles_for_pena(pena.id, for_update=True)
+        current_roles = self._lock_roles_for_pena(pena.id)
         updated_roles = self._sync_roles(
             pena_id=pena.id,
             current_roles=current_roles,
@@ -58,11 +58,18 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
         self.session.commit()
         return self._to_result(pena=pena, roles=updated_roles)
 
-    def _get_pena(self, pena_guid: str, *, for_update: bool = False) -> Pena:
+    def _get_pena(self, pena_guid: str) -> Pena:
         stmt = select(Pena).where(Pena.guid == pena_guid)
-        if for_update:
-            stmt = stmt.with_for_update()
         pena = self.session.execute(stmt).scalar_one_or_none()
+        if not pena:
+            self.session.rollback()
+            raise PenaNotFoundError()
+        return pena
+
+    def _lock_pena(self, pena_guid: str) -> Pena:
+        pena = self.session.execute(
+            select(Pena).where(Pena.guid == pena_guid).with_for_update()
+        ).scalar_one_or_none()
         if not pena:
             self.session.rollback()
             raise PenaNotFoundError()
@@ -93,7 +100,7 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
             position_colors=position_colors,
         )
 
-    def _get_roles_for_pena(self, pena_id: int, *, for_update: bool) -> list[PenaRole]:
+    def _get_roles_for_pena(self, pena_id: int) -> list[PenaRole]:
         stmt = (
             select(PenaRole)
             .where(PenaRole.id_pena == pena_id)
@@ -102,8 +109,18 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
                 PenaRole.id.asc(),
             )
         )
-        if for_update:
-            stmt = stmt.with_for_update()
+        return list(self.session.execute(stmt).scalars().all())
+
+    def _lock_roles_for_pena(self, pena_id: int) -> list[PenaRole]:
+        stmt = (
+            select(PenaRole)
+            .where(PenaRole.id_pena == pena_id)
+            .order_by(
+                PenaRole.sort_order.asc(),
+                PenaRole.id.asc(),
+            )
+            .with_for_update()
+        )
         return list(self.session.execute(stmt).scalars().all())
 
     def _sync_roles(
