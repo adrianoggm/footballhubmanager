@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
 
+from persistence.application.update_policies import FieldUpdate
+
 
 @dataclass(frozen=True)
 class PenaSeasonResult:
@@ -70,16 +72,11 @@ class PenaSeasonPort(Protocol):
         pena_guid: str,
         season_guid: str,
         admin_id: int,
-        start_date_provided: bool,
-        start_date: date | None,
-        end_date_provided: bool,
-        end_date: date | None,
-        points_win_provided: bool,
-        points_win: int | None,
-        points_draw_provided: bool,
-        points_draw: int | None,
-        points_loss_provided: bool,
-        points_loss: int | None,
+        start_date: FieldUpdate[date],
+        end_date: FieldUpdate[date],
+        points_win: FieldUpdate[int],
+        points_draw: FieldUpdate[int],
+        points_loss: FieldUpdate[int],
     ) -> PenaSeasonResult: ...
 
     def delete_for_admin(

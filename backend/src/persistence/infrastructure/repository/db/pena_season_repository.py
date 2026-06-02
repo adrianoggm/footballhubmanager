@@ -10,6 +10,7 @@ from persistence.application.ports.pena_season_port import (
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
 )
+from persistence.application.update_policies import FieldUpdate
 from persistence.domain.entity import Pena, Season
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -141,16 +142,11 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         pena_guid: str,
         season_guid: str,
         admin_id: int,
-        start_date_provided: bool,
-        start_date: date | None,
-        end_date_provided: bool,
-        end_date: date | None,
-        points_win_provided: bool,
-        points_win: int | None,
-        points_draw_provided: bool,
-        points_draw: int | None,
-        points_loss_provided: bool,
-        points_loss: int | None,
+        start_date: FieldUpdate[date],
+        end_date: FieldUpdate[date],
+        points_win: FieldUpdate[int],
+        points_draw: FieldUpdate[int],
+        points_loss: FieldUpdate[int],
     ) -> PenaSeasonResult:
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
@@ -162,11 +158,11 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             season_guid=season_guid,
         )
 
-        resolved_start_date = start_date if start_date_provided else season.start_date
-        resolved_end_date = end_date if end_date_provided else season.end_date
-        resolved_points_win = points_win if points_win_provided else season.points_win
-        resolved_points_draw = points_draw if points_draw_provided else season.points_draw
-        resolved_points_loss = points_loss if points_loss_provided else season.points_loss
+        resolved_start_date = start_date.value if start_date.is_set() else season.start_date
+        resolved_end_date = end_date.value if end_date.is_set() else season.end_date
+        resolved_points_win = points_win.value if points_win.is_set() else season.points_win
+        resolved_points_draw = points_draw.value if points_draw.is_set() else season.points_draw
+        resolved_points_loss = points_loss.value if points_loss.is_set() else season.points_loss
         if (
             resolved_start_date is None
             or resolved_end_date is None
