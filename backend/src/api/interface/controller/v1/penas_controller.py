@@ -38,8 +38,11 @@ from auth.dependencies import (
     require_admin,
     require_user,
 )
-from core.application.models import PenaProfileUpdate, PenasPage
+from core.application.models import PenaLabelsUpdate, PenaProfileUpdate, PenasPage
 from core.application.use_cases.get_penas_usecase import GetPenasUseCase
+from core.application.use_cases.manage_pena_labels_usecase import (
+    ManagePenaLabelsUseCase,
+)
 from core.application.use_cases.manage_pena_profile_usecase import (
     ManagePenaProfileUseCase,
 )
@@ -48,14 +51,12 @@ from persistence.application.use_cases import (
     GeneratePenaLinkTokenUseCase,
     LinkUserToPenaUseCase,
     ManagePenaAccountabilityUseCase,
-    ManagePenaLabelsUseCase,
     PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
     PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilitySettingsUpdate,
-    PenaLabelsUpdate,
 )
 
 router = APIRouter()

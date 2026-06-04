@@ -1,4 +1,4 @@
-from core.domain.label_config import (
+from .label_config import (
     DEFAULT_LABEL_COLOR,
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,

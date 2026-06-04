@@ -1,11 +1,10 @@
-from persistence.application.ports.pena_labels_port import (
+from core.application.ports.pena_labels_port import (
     PenaLabelsPort,
     PenaLabelsResult,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.domain.entity import Pena, PenaPlayer, PenaRole
-from persistence.domain.label_config import (
+from core.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,
     DEFAULT_ROLE_LABEL_COLORS,
@@ -18,6 +17,7 @@ from persistence.domain.label_config import (
     parse_labels_payload,
     pick_preferred_label,
 )
+from persistence.domain.entity import Pena, PenaPlayer, PenaRole
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 

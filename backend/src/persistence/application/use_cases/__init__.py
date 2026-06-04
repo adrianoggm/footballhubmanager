@@ -1,5 +1,7 @@
 from core.application.models import PenaInfo as PenaSummary
 from core.application.models import (
+    PenaLabelsInfo,
+    PenaLabelsUpdate,
     PenaPlayerFilters,
     PenaPlayerInfo,
     PenaPlayersPage,
@@ -14,6 +16,12 @@ from core.application.use_cases.get_penas_usecase import GetPenasUseCase
 from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
+)
+from core.application.use_cases.manage_pena_labels_usecase import (
+    InvalidPenaLabelsDataError,
+    ManagePenaLabelsUseCase,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
 )
 from core.application.use_cases.manage_pena_profile_usecase import (
     InvalidPenaProfileImageError,
@@ -58,14 +66,6 @@ from .manage_pena_accountability_usecase import (
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
     PenaAccountabilitySettingsUpdate,
-)
-from .manage_pena_labels_usecase import (
-    InvalidPenaLabelsDataError,
-    ManagePenaLabelsUseCase,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsInfo,
-    PenaLabelsPenaNotFoundError,
-    PenaLabelsUpdate,
 )
 from .manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,

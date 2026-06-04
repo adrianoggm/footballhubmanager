@@ -9,7 +9,10 @@ from core.application.use_cases import (
     InvalidNationalityError as PlayerInvalidNationalityError,
 )
 from core.application.use_cases import (
+    InvalidPenaLabelsDataError,
     InvalidPlayerUpdateDataError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
 )
 from core.application.use_cases import (
     InvalidProfileImageError as PlayerInvalidProfileImageError,
@@ -30,7 +33,6 @@ from persistence.application.use_cases import (
     InvalidLinkTokenError,
     InvalidPenaAccountabilityDataError,
     InvalidPenaGuestPlayerDataError,
-    InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
     InvalidPenaProfileImageError,
     InvalidRegistrationDataError,
@@ -44,8 +46,6 @@ from persistence.application.use_cases import (
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsPenaNotFoundError,
     PenaMembershipAccessDeniedError,
     PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,

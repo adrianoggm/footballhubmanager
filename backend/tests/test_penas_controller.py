@@ -16,7 +16,12 @@ from api.interface.controller.v1.model.request.penas_request import (
 )
 from auth.dependencies import require_user
 from auth.session import SessionData
-from core.application.models import PenaInfo, PenaProfileInfo, PenasPage
+from core.application.models import PenaInfo, PenaLabelsInfo, PenaProfileInfo, PenasPage
+from core.application.use_cases.manage_pena_labels_usecase import (
+    InvalidPenaLabelsDataError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
+)
 from core.application.use_cases.manage_pena_profile_usecase import (
     InvalidPenaProfileImageError,
     PenaProfileAccessDeniedError,
@@ -43,12 +48,6 @@ from persistence.application.use_cases.manage_pena_accountability_usecase import
     PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
-)
-from persistence.application.use_cases.manage_pena_labels_usecase import (
-    InvalidPenaLabelsDataError,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsInfo,
-    PenaLabelsPenaNotFoundError,
 )
 
 
