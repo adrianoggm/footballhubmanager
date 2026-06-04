@@ -1,4 +1,4 @@
-from persistence.application.ports.pena_player_query_port import (
+from core.application.ports.pena_player_query_port import (
     PenaPlayerInfoResult,
     PenaPlayerQueryPort,
     PenaPlayersPageResult,

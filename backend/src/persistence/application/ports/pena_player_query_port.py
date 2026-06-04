@@ -1,40 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Protocol
+from core.application.ports.pena_player_query_port import (
+    PenaPlayerInfoResult,
+    PenaPlayerQueryPort,
+    PenaPlayersPageResult,
+)
 
-
-@dataclass(frozen=True)
-class PenaPlayerInfoResult:
-    guid: str
-    name: str
-    surname1: str
-    surname2: str | None
-    nationality: str
-    nickname: str | None
-    role: str | None = field(default=None, kw_only=True)
-    position: str | None
-
-
-@dataclass(frozen=True)
-class PenaPlayersPageResult:
-    items: list[PenaPlayerInfoResult]
-    page: int
-    page_size: int
-    total: int
-
-
-class PenaPlayerQueryPort(Protocol):
-    def find_by_pena_guid(
-        self,
-        pena_guid: str,
-        *,
-        name: str | None,
-        surname1: str | None,
-        surname2: str | None,
-        nationality: str | None,
-        nickname: str | None,
-        role: str | None,
-        position: str | None,
-        search: str | None,
-        page: int,
-        page_size: int,
-    ) -> PenaPlayersPageResult: ...
+__all__ = ["PenaPlayerInfoResult", "PenaPlayerQueryPort", "PenaPlayersPageResult"]
