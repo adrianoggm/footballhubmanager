@@ -1,4 +1,5 @@
 from .pena_listing_models import PenaInfo, PenasPage, PenasPageResult, PenaSummary
+from .player_profile_models import PlayerProfile
 from .season_match_insights_models import (
     MatchDetail,
     MatchInsightRow,
@@ -15,4 +16,5 @@ __all__ = [
     "PenasPage",
     "PenasPageResult",
     "PenaSummary",
+    "PlayerProfile",
 ]

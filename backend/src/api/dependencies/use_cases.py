@@ -4,6 +4,7 @@ from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import 
 )
 from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_penas_usecase import GetPenasUseCase
+from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
@@ -12,9 +13,6 @@ from persistence.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
 from persistence.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
-from persistence.application.use_cases.get_player_profile_usecase import (
-    GetPlayerProfileUseCase,
-)
 from persistence.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from persistence.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,

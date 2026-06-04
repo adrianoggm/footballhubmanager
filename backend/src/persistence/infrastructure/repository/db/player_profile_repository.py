@@ -1,4 +1,4 @@
-from persistence.application.ports.player_profile_port import (
+from core.application.ports.player_profile_port import (
     InvalidNationalityError,
     InvalidProfileImageError,
     PenaInfoResult,

@@ -1,5 +1,11 @@
 from .nationality_query_port import NationalityQueryPort
 from .pena_query_port import PenaQueryPort
+from .player_profile_port import PlayerProfilePort
 from .season_match_insights_port import SeasonMatchInsightsPort
 
-__all__ = ["NationalityQueryPort", "PenaQueryPort", "SeasonMatchInsightsPort"]
+__all__ = [
+    "NationalityQueryPort",
+    "PenaQueryPort",
+    "PlayerProfilePort",
+    "SeasonMatchInsightsPort",
+]
