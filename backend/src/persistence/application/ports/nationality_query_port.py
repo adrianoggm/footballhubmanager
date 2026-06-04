@@ -1,5 +1,3 @@
-from typing import Protocol
+from core.application.ports.nationality_query_port import NationalityQueryPort
 
-
-class NationalityQueryPort(Protocol):
-    def list_names(self) -> list[str]: ...
+__all__ = ["NationalityQueryPort"]

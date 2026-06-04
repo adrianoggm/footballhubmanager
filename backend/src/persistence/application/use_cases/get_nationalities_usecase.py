@@ -1,11 +1,3 @@
-from persistence.application.ports.nationality_query_port import (
-    NationalityQueryPort,
-)
+from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 
-
-class GetNationalitiesUseCase:
-    def __init__(self, repository: NationalityQueryPort):
-        self.repository = repository
-
-    def execute(self) -> list[str]:
-        return self.repository.list_names()
+__all__ = ["GetNationalitiesUseCase"]

@@ -1,5 +1,6 @@
 from core.application.models import PenaInfo as PenaSummary
 from core.application.models import PenasPage
+from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_penas_usecase import GetPenasUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
@@ -10,7 +11,6 @@ from .generate_pena_link_token_usecase import (
     PenaAccessDeniedError,
     PenaLinkToken,
 )
-from .get_nationalities_usecase import GetNationalitiesUseCase
 from .get_pena_players_usecase import (
     GetPenaPlayersUseCase,
     PenaPlayerFilters,
