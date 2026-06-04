@@ -6,20 +6,23 @@ from api.interface.controller.v1.model.request.pena_players_request import (
 )
 from auth.dependencies import require_user
 from auth.session import SessionData
-from core.application.models import PenaPlayerInfo, PenaPlayersPage
-from fastapi import HTTPException
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases.manage_pena_membership_usecase import (
+from core.application.models import (
+    PenaMembershipInfo,
+    PenaPlayerInfo,
+    PenaPlayersPage,
+)
+from core.application.policies import FieldUpdate
+from core.application.use_cases.manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     PenaMembershipAccessDeniedError,
-    PenaMembershipInfo,
     PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUserProfileNotFoundError,
 )
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_id: int) -> SessionData:

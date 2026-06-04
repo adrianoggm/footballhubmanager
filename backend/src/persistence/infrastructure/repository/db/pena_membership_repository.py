@@ -1,4 +1,5 @@
-from persistence.application.ports.pena_membership_port import (
+from core.application.policies import FieldUpdate
+from core.application.ports.pena_membership_port import (
     InvalidNationalityError,
     InvalidRoleLabelError,
     PenaMembershipNotFoundError,
@@ -9,7 +10,6 @@ from persistence.application.ports.pena_membership_port import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
-from persistence.application.update_policies import FieldUpdate
 from persistence.domain.entity import Nationality, Pena, PenaPlayer, PenaRole, Player
 from persistence.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
 from sqlalchemy import select

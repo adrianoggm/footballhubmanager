@@ -9,6 +9,11 @@ from .pena_accountability_models import (
 from .pena_labels_models import PenaLabelsInfo, PenaLabelsUpdate
 from .pena_link_models import PenaLinkToken
 from .pena_listing_models import PenaInfo, PenasPage, PenasPageResult, PenaSummary
+from .pena_membership_models import (
+    PenaGuestPlayerCreate,
+    PenaMembershipInfo,
+    PenaMembershipUpdate,
+)
 from .pena_player_models import PenaPlayerFilters, PenaPlayerInfo, PenaPlayersPage
 from .pena_profile_models import PenaProfileInfo, PenaProfileUpdate
 from .player_profile_models import PlayerProfile
@@ -40,6 +45,9 @@ __all__ = [
     "PenaLinkToken",
     "PenaLabelsInfo",
     "PenaLabelsUpdate",
+    "PenaGuestPlayerCreate",
+    "PenaMembershipInfo",
+    "PenaMembershipUpdate",
     "PenaPlayerFilters",
     "PenaPlayerInfo",
     "PenaPlayersPage",

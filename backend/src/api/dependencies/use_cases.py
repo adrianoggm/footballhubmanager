@@ -19,6 +19,9 @@ from core.application.use_cases.manage_pena_accountability_usecase import (
 from core.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
+from core.application.use_cases.manage_pena_membership_usecase import (
+    ManagePenaMembershipUseCase,
+)
 from core.application.use_cases.manage_pena_profile_usecase import (
     ManagePenaProfileUseCase,
 )
@@ -28,9 +31,6 @@ from core.application.use_cases.update_player_profile_usecase import (
     UpdatePlayerProfileUseCase,
 )
 from fastapi import Depends
-from persistence.application.use_cases.manage_pena_membership_usecase import (
-    ManagePenaMembershipUseCase,
-)
 from persistence.application.use_cases.manage_pena_seasons_usecase import (
     ManagePenaSeasonsUseCase,
 )

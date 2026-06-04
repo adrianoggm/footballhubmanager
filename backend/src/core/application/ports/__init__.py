@@ -2,6 +2,7 @@ from .nationality_query_port import NationalityQueryPort
 from .pena_accountability_port import PenaAccountabilityPort
 from .pena_labels_port import PenaLabelsPort
 from .pena_link_port import PenaLinkPort
+from .pena_membership_port import PenaMembershipPort
 from .pena_player_query_port import PenaPlayerQueryPort
 from .pena_profile_port import PenaProfilePort
 from .pena_query_port import PenaQueryPort
@@ -15,6 +16,7 @@ __all__ = [
     "PenaAccountabilityPort",
     "PenaLabelsPort",
     "PenaLinkPort",
+    "PenaMembershipPort",
     "PenaPlayerQueryPort",
     "PenaProfilePort",
     "PenaQueryPort",
