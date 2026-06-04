@@ -1,29 +1,4 @@
-from dataclasses import dataclass
-from typing import Protocol
+from core.application.models import PenasPageResult, PenaSummary
+from core.application.ports.pena_query_port import PenaQueryPort
 
-
-@dataclass(frozen=True)
-class PenaSummary:
-    guid: str
-    name: str
-    image_url: str | None = None
-
-
-@dataclass(frozen=True)
-class PenasPageResult:
-    items: list[PenaSummary]
-    page: int
-    page_size: int
-    total: int
-
-
-class PenaQueryPort(Protocol):
-    def find_for_admin(
-        self, admin_id: int, *, page: int, page_size: int, search: str | None
-    ) -> PenasPageResult: ...
-
-    def find_for_user(
-        self, account_id: int, *, page: int, page_size: int, search: str | None
-    ) -> PenasPageResult: ...
-
-    def find_by_guid(self, pena_guid: str) -> PenaSummary | None: ...
+__all__ = ["PenaQueryPort", "PenasPageResult", "PenaSummary"]

@@ -1,12 +1,9 @@
+from core.application.models import PenasPageResult, PenaSummary
+from core.application.ports.pena_query_port import PenaQueryPort
 from persistence.application.ports.pena_profile_port import (
     InvalidPenaProfileImageError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
-)
-from persistence.application.ports.pena_query_port import (
-    PenaQueryPort,
-    PenasPageResult,
-    PenaSummary,
 )
 from persistence.application.use_cases.profile_image_utils import (
     is_supported_profile_image_data_url,
