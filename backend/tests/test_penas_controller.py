@@ -17,6 +17,11 @@ from api.interface.controller.v1.model.request.penas_request import (
 from auth.dependencies import require_user
 from auth.session import SessionData
 from core.application.models import (
+    PenaAccountabilityExpenseCreate,
+    PenaAccountabilityExpenseInfo,
+    PenaAccountabilityInfo,
+    PenaAccountabilityMemberAccountInfo,
+    PenaAccountabilityMemberAccountUpsert,
     PenaInfo,
     PenaLabelsInfo,
     PenaLinkToken,
@@ -31,6 +36,13 @@ from core.application.use_cases.link_user_to_pena_usecase import (
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
+from core.application.use_cases.manage_pena_accountability_usecase import (
+    InvalidPenaAccountabilityDataError,
+    PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityExpenseNotFoundError,
+    PenaAccountabilityMemberNotFoundError,
+    PenaAccountabilityPenaNotFoundError,
+)
 from core.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     PenaLabelsAccessDeniedError,
@@ -42,18 +54,6 @@ from core.application.use_cases.manage_pena_profile_usecase import (
     PenaProfileNotFoundError,
 )
 from fastapi import HTTPException
-from persistence.application.use_cases.manage_pena_accountability_usecase import (
-    InvalidPenaAccountabilityDataError,
-    PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseCreate,
-    PenaAccountabilityExpenseInfo,
-    PenaAccountabilityExpenseNotFoundError,
-    PenaAccountabilityInfo,
-    PenaAccountabilityMemberAccountInfo,
-    PenaAccountabilityMemberAccountUpsert,
-    PenaAccountabilityMemberNotFoundError,
-    PenaAccountabilityPenaNotFoundError,
-)
 
 
 def _session(*, user_type: str, user_id: int = 7) -> SessionData:

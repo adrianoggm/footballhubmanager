@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from persistence.application.ports.pena_accountability_port import (
+from core.application.ports.pena_accountability_port import (
     PenaExpenseNotFoundError,
     PenaNotManagedByAdminError,
 )

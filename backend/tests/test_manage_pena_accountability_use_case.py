@@ -2,7 +2,12 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 import pytest
-from persistence.application.ports.pena_accountability_port import (
+from core.application.models import (
+    PenaAccountabilityExpenseCreate,
+    PenaAccountabilityMemberAccountUpsert,
+    PenaAccountabilitySettingsUpdate,
+)
+from core.application.ports.pena_accountability_port import (
     PenaAccountabilityExpenseResult,
     PenaAccountabilityMemberAccountResult,
     PenaAccountabilityResult,
@@ -11,16 +16,13 @@ from persistence.application.ports.pena_accountability_port import (
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.manage_pena_accountability_usecase import (
+from core.application.use_cases.manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
     ManagePenaAccountabilityUseCase,
     PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseNotFoundError,
-    PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
-    PenaAccountabilitySettingsUpdate,
 )
 
 
