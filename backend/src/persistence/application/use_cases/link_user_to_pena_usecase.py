@@ -1,4 +1,4 @@
-from persistence.application.ports.pena_link_port import (
+from core.application.ports.pena_link_port import (
     InvalidOrExpiredLinkTokenError,
     PenaLinkPort,
     UserAlreadyLinkedToPenaError,

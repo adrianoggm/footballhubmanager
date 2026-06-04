@@ -11,6 +11,7 @@ from core.application.use_cases import (
 from core.application.use_cases import (
     InvalidPenaLabelsDataError,
     InvalidPlayerUpdateDataError,
+    PenaAccessDeniedError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
 )
@@ -41,7 +42,6 @@ from persistence.application.use_cases import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
-    PenaAccessDeniedError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,

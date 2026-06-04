@@ -2,6 +2,7 @@ from core.application.models import PenaInfo as PenaSummary
 from core.application.models import (
     PenaLabelsInfo,
     PenaLabelsUpdate,
+    PenaLinkToken,
     PenaPlayerFilters,
     PenaPlayerInfo,
     PenaPlayersPage,
@@ -9,6 +10,10 @@ from core.application.models import (
     PenaProfileUpdate,
     PenasPage,
     PlayerProfile,
+)
+from core.application.use_cases.generate_pena_link_token_usecase import (
+    GeneratePenaLinkTokenUseCase,
+    PenaAccessDeniedError,
 )
 from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
@@ -41,11 +46,6 @@ from core.application.use_cases.update_player_profile_usecase import (
     InvalidProfileImageError as PlayerInvalidProfileImageError,
 )
 
-from .generate_pena_link_token_usecase import (
-    GeneratePenaLinkTokenUseCase,
-    PenaAccessDeniedError,
-    PenaLinkToken,
-)
 from .get_player_profile_usecase import PenaInfo
 from .link_user_to_pena_usecase import (
     InvalidLinkTokenError,

@@ -1,3 +1,7 @@
+from .generate_pena_link_token_usecase import (
+    GeneratePenaLinkTokenUseCase,
+    PenaAccessDeniedError,
+)
 from .get_nationalities_usecase import GetNationalitiesUseCase
 from .get_pena_players_usecase import GetPenaPlayersUseCase
 from .get_penas_usecase import GetPenasUseCase
@@ -29,6 +33,7 @@ from .update_player_profile_usecase import (
 )
 
 __all__ = [
+    "GeneratePenaLinkTokenUseCase",
     "GetNationalitiesUseCase",
     "GetPenaPlayersUseCase",
     "GetPenasUseCase",
@@ -42,6 +47,7 @@ __all__ = [
     "InvalidSeasonInsightsDataError",
     "ManagePenaLabelsUseCase",
     "ManagePenaProfileUseCase",
+    "PenaAccessDeniedError",
     "PenaLabelsAccessDeniedError",
     "PenaLabelsPenaNotFoundError",
     "PenaProfileAccessDeniedError",

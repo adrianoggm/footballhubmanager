@@ -1,4 +1,5 @@
 from .pena_labels_models import PenaLabelsInfo, PenaLabelsUpdate
+from .pena_link_models import PenaLinkToken
 from .pena_listing_models import PenaInfo, PenasPage, PenasPageResult, PenaSummary
 from .pena_player_models import PenaPlayerFilters, PenaPlayerInfo, PenaPlayersPage
 from .pena_profile_models import PenaProfileInfo, PenaProfileUpdate
@@ -16,6 +17,7 @@ __all__ = [
     "MatchPlayerStats",
     "MatchTeam",
     "PenaInfo",
+    "PenaLinkToken",
     "PenaLabelsInfo",
     "PenaLabelsUpdate",
     "PenaPlayerFilters",

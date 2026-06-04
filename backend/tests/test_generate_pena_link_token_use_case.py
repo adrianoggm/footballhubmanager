@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 import pytest
+from core.application.use_cases.generate_pena_link_token_usecase import (
+    GeneratePenaLinkTokenUseCase,
+    PenaAccessDeniedError,
+)
 from persistence.application.ports.pena_link_port import (
     PenaLinkTokenResult,
     PenaNotManagedByAdminError,
-)
-from persistence.application.use_cases.generate_pena_link_token_usecase import (
-    GeneratePenaLinkTokenUseCase,
-    PenaAccessDeniedError,
 )
 
 
