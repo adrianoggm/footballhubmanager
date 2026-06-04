@@ -16,7 +16,12 @@ from api.interface.controller.v1.model.request.penas_request import (
 )
 from auth.dependencies import require_user
 from auth.session import SessionData
-from core.application.models import PenaInfo, PenasPage
+from core.application.models import PenaInfo, PenaProfileInfo, PenasPage
+from core.application.use_cases.manage_pena_profile_usecase import (
+    InvalidPenaProfileImageError,
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
+)
 from fastapi import HTTPException
 from persistence.application.use_cases.generate_pena_link_token_usecase import (
     PenaAccessDeniedError,
@@ -44,12 +49,6 @@ from persistence.application.use_cases.manage_pena_labels_usecase import (
     PenaLabelsAccessDeniedError,
     PenaLabelsInfo,
     PenaLabelsPenaNotFoundError,
-)
-from persistence.application.use_cases.manage_pena_profile_usecase import (
-    InvalidPenaProfileImageError,
-    PenaProfileAccessDeniedError,
-    PenaProfileInfo,
-    PenaProfileNotFoundError,
 )
 
 

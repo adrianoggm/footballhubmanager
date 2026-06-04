@@ -1,11 +1,12 @@
 from core.application.models import PenasPageResult, PenaSummary
-from core.application.ports.pena_query_port import PenaQueryPort
-from persistence.application.ports.pena_profile_port import (
+from core.application.ports.pena_profile_port import (
     InvalidPenaProfileImageError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
+    PenaProfilePort,
 )
-from persistence.application.use_cases.profile_image_utils import (
+from core.application.ports.pena_query_port import PenaQueryPort
+from core.application.services.profile_image_utils import (
     is_supported_profile_image_data_url,
 )
 from persistence.domain.entity import Pena, PenaPlayer, Player
@@ -13,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPenaQueryRepository(PenaQueryPort):
+class SqlAlchemyPenaQueryRepository(PenaQueryPort, PenaProfilePort):
     def __init__(self, session: Session):
         self.session = session
 
