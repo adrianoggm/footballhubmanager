@@ -2,6 +2,9 @@ from auth.application.use_cases.login import LoginAdminUseCase, LoginUserUseCase
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
+from core.application.use_cases.get_season_match_insights_usecase import (
+    GetSeasonMatchInsightsUseCase,
+)
 from fastapi import Depends
 from persistence.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
@@ -11,9 +14,6 @@ from persistence.application.use_cases.get_pena_players_usecase import GetPenaPl
 from persistence.application.use_cases.get_penas_usecase import GetPenasUseCase
 from persistence.application.use_cases.get_player_profile_usecase import (
     GetPlayerProfileUseCase,
-)
-from persistence.application.use_cases.get_season_match_insights_usecase import (
-    GetSeasonMatchInsightsUseCase,
 )
 from persistence.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from persistence.application.use_cases.manage_pena_accountability_usecase import (

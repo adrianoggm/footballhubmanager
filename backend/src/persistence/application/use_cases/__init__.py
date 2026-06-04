@@ -1,3 +1,7 @@
+from core.application.use_cases.get_season_match_insights_usecase import (
+    GetSeasonMatchInsightsUseCase,
+)
+
 from .generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
     PenaAccessDeniedError,
@@ -13,7 +17,6 @@ from .get_pena_players_usecase import (
 from .get_penas_usecase import GetPenasUseCase, PenasPage
 from .get_penas_usecase import PenaInfo as PenaSummary
 from .get_player_profile_usecase import GetPlayerProfileUseCase, PenaInfo, PlayerProfile
-from .get_season_match_insights_usecase import GetSeasonMatchInsightsUseCase
 from .link_user_to_pena_usecase import (
     InvalidLinkTokenError,
     LinkUserToPenaUseCase,

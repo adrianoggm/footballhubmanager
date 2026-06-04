@@ -1,12 +1,3 @@
-from typing import Protocol
+from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
 
-from persistence.application.ports.season_competition_port import MatchInsightRowResult
-
-
-class SeasonMatchInsightsPort(Protocol):
-    def list_closed_match_insight_rows(
-        self,
-        *,
-        pena_guid: str,
-        season_guids: list[str],
-    ) -> list[MatchInsightRowResult]: ...
+__all__ = ["SeasonMatchInsightsPort"]

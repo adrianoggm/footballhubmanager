@@ -11,11 +11,18 @@
 
 The backend follows a hexagonal structure:
 
+- Core domain and application (target structure): `backend/src/core`
 - Domain entities: `backend/src/persistence/domain/entity`
 - Use cases: `backend/src/persistence/application/use_cases`
 - Ports (interfaces): `backend/src/persistence/application/ports`
 - Infrastructure adapters: `backend/src/persistence/infrastructure`
 - HTTP controllers: `backend/src/api/interface/controller/v1`
+
+Transitional note:
+
+- New or migrated business slices should move into `backend/src/core/application` and
+  `backend/src/core/domain`.
+- `backend/src/persistence/application` is legacy application placement that should shrink over time.
 
 Controller contract models are organized under:
 

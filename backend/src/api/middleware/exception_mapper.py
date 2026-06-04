@@ -5,6 +5,15 @@ from functools import wraps
 from typing import Any
 
 from auth.application.use_cases.login import InvalidCredentialsError
+from core.application.use_cases import (
+    InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsDataError,
+)
+from core.application.use_cases import (
+    PenaSeasonNotFoundError as CoreCompetitionPenaSeasonNotFoundError,
+)
+from core.application.use_cases import (
+    PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
+)
 from fastapi import HTTPException, status
 from persistence.application.use_cases import (
     AdminUsernameExistsError,
@@ -157,8 +166,20 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         status.HTTP_409_CONFLICT,
         "Season range overlaps an existing season",
     ),
+    CoreCompetitionPenaSeasonPenaNotFoundError: (
+        status.HTTP_404_NOT_FOUND,
+        "Pena not found",
+    ),
+    CoreCompetitionPenaSeasonNotFoundError: (
+        status.HTTP_404_NOT_FOUND,
+        "Season not found",
+    ),
     InvalidSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season data"),
     InvalidSeasonInsightsDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match insights request",
+    ),
+    CoreInvalidSeasonInsightsDataError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match insights request",
     ),

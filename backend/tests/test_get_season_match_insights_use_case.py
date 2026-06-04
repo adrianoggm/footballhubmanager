@@ -2,24 +2,24 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-from persistence.application.ports.season_competition_port import (
-    MatchInsightRowResult,
-    PenaNotFoundError,
-    SeasonNotFoundError,
-)
-from persistence.application.use_cases.get_season_match_insights_usecase import (
+from core.application.models import MatchInsightRow
+from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
-from persistence.application.use_cases.season_competition_errors import (
+from core.application.use_cases.season_match_insights_errors import (
     InvalidSeasonInsightsDataError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
+)
+from persistence.application.ports.season_competition_port import (
+    PenaNotFoundError,
+    SeasonNotFoundError,
 )
 
 
 @dataclass
 class _FakeRepo:
-    rows: list[MatchInsightRowResult] | None = None
+    rows: list[MatchInsightRow] | None = None
     error: Exception | None = None
     last_payload: dict | None = None
 
@@ -60,7 +60,7 @@ def test_execute_maps_repository_not_found_errors():
 def test_execute_computes_report_from_closed_matches():
     repo = _FakeRepo(
         rows=[
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
@@ -76,7 +76,7 @@ def test_execute_computes_report_from_closed_matches():
                 assists=1,
                 saves=0,
             ),
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
@@ -92,7 +92,7 @@ def test_execute_computes_report_from_closed_matches():
                 assists=0,
                 saves=1,
             ),
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
@@ -108,7 +108,7 @@ def test_execute_computes_report_from_closed_matches():
                 assists=1,
                 saves=0,
             ),
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
@@ -155,7 +155,7 @@ def test_execute_computes_report_from_closed_matches():
 def test_collect_match_insight_details_preserves_position_and_rating():
     repo = _FakeRepo(
         rows=[
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
@@ -173,7 +173,7 @@ def test_collect_match_insight_details_preserves_position_and_rating():
                 player_position="CM",
                 rating=8.0,
             ),
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
@@ -191,7 +191,7 @@ def test_collect_match_insight_details_preserves_position_and_rating():
                 player_position=None,
                 rating=6.0,
             ),
-            MatchInsightRowResult(
+            MatchInsightRow(
                 season_guid="season-guid",
                 match_guid="match-closed",
                 match_date=date(2024, 3, 1),
