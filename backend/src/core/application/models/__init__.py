@@ -12,6 +12,12 @@ from .pena_listing_models import PenaInfo, PenasPage, PenasPageResult, PenaSumma
 from .pena_player_models import PenaPlayerFilters, PenaPlayerInfo, PenaPlayersPage
 from .pena_profile_models import PenaProfileInfo, PenaProfileUpdate
 from .player_profile_models import PlayerProfile
+from .registration_models import (
+    AdminRegistration,
+    RegisteredAdmin,
+    RegisteredUser,
+    UserRegistration,
+)
 from .season_match_insights_models import (
     MatchDetail,
     MatchInsightRow,
@@ -43,4 +49,8 @@ __all__ = [
     "PenasPageResult",
     "PenaSummary",
     "PlayerProfile",
+    "RegisteredAdmin",
+    "RegisteredUser",
+    "AdminRegistration",
+    "UserRegistration",
 ]

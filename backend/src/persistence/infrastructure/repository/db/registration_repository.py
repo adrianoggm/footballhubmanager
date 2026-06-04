@@ -1,4 +1,4 @@
-from persistence.application.ports.registration_port import (
+from core.application.ports.registration_port import (
     AdminRegistrationPort,
     DuplicateUsernameError,
     InvalidNationalityError,

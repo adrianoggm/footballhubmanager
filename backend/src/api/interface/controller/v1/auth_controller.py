@@ -21,13 +21,10 @@ from auth.application.use_cases.login import (
 )
 from auth.dependencies import get_current_session
 from auth.session import create_session, invalidate_session
+from core.application.models import AdminRegistration, UserRegistration
+from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
+from core.application.use_cases.register_user_usecase import RegisterUserUseCase
 from fastapi import APIRouter, Depends
-from persistence.application.use_cases import (
-    AdminRegistration,
-    RegisterAdminUseCase,
-    RegisterUserUseCase,
-    UserRegistration,
-)
 from persistence.module import get_db
 from sqlalchemy.orm import Session
 

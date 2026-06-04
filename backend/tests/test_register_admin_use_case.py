@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
-from persistence.application.ports.registration_port import (
+from core.application.models import AdminRegistration
+from core.application.ports.registration_port import (
     DuplicateUsernameError,
     RegisteredAdminResult,
 )
-from persistence.application.use_cases.register_admin_usecase import (
-    AdminRegistration,
+from core.application.use_cases.register_admin_usecase import (
     InvalidAdminRegistrationDataError,
     RegisterAdminUseCase,
     UsernameAlreadyExistsError,

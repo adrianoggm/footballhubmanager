@@ -6,10 +6,13 @@ from typing import Any
 
 from auth.application.use_cases.login import InvalidCredentialsError
 from core.application.use_cases import (
+    AdminUsernameExistsError,
+    InvalidAdminRegistrationDataError,
     InvalidLinkTokenError,
     InvalidPenaAccountabilityDataError,
     InvalidPenaLabelsDataError,
     InvalidPlayerUpdateDataError,
+    InvalidRegistrationDataError,
     PenaAccessDeniedError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseNotFoundError,
@@ -18,7 +21,9 @@ from core.application.use_cases import (
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
     UserAlreadyLinkedError,
+    UserInvalidNationalityError,
     UserProfileNotFoundError,
+    UserUsernameExistsError,
 )
 from core.application.use_cases import (
     InvalidNationalityError as PlayerInvalidNationalityError,
@@ -37,12 +42,9 @@ from core.application.use_cases import (
 )
 from fastapi import HTTPException, status
 from persistence.application.use_cases import (
-    AdminUsernameExistsError,
-    InvalidAdminRegistrationDataError,
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     InvalidPenaProfileImageError,
-    InvalidRegistrationDataError,
     InvalidSeasonDataError,
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
@@ -65,8 +67,6 @@ from persistence.application.use_cases import (
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    UserInvalidNationalityError,
-    UserUsernameExistsError,
 )
 from persistence.application.use_cases import (
     PenaSeasonAccessDeniedError as CompetitionPenaSeasonAccessDeniedError,

@@ -22,6 +22,8 @@ from core.application.use_cases.manage_pena_labels_usecase import (
 from core.application.use_cases.manage_pena_profile_usecase import (
     ManagePenaProfileUseCase,
 )
+from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
+from core.application.use_cases.register_user_usecase import RegisterUserUseCase
 from core.application.use_cases.update_player_profile_usecase import (
     UpdatePlayerProfileUseCase,
 )
@@ -44,8 +46,6 @@ from persistence.application.use_cases.manage_season_matches_usecase import (
 from persistence.application.use_cases.manage_season_players_usecase import (
     ManageSeasonPlayersUseCase,
 )
-from persistence.application.use_cases.register_admin_usecase import RegisterAdminUseCase
-from persistence.application.use_cases.register_user_usecase import RegisterUserUseCase
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
 )

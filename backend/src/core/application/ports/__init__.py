@@ -6,9 +6,11 @@ from .pena_player_query_port import PenaPlayerQueryPort
 from .pena_profile_port import PenaProfilePort
 from .pena_query_port import PenaQueryPort
 from .player_profile_port import PlayerProfilePort
+from .registration_port import AdminRegistrationPort, UserRegistrationPort
 from .season_match_insights_port import SeasonMatchInsightsPort
 
 __all__ = [
+    "AdminRegistrationPort",
     "NationalityQueryPort",
     "PenaAccountabilityPort",
     "PenaLabelsPort",
@@ -18,4 +20,5 @@ __all__ = [
     "PenaQueryPort",
     "PlayerProfilePort",
     "SeasonMatchInsightsPort",
+    "UserRegistrationPort",
 ]

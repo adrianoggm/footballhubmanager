@@ -33,6 +33,23 @@ from .manage_pena_profile_usecase import (
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
 )
+from .register_admin_usecase import (
+    InvalidAdminRegistrationDataError,
+    RegisterAdminUseCase,
+)
+from .register_admin_usecase import (
+    UsernameAlreadyExistsError as AdminUsernameExistsError,
+)
+from .register_user_usecase import (
+    InvalidNationalityError as UserInvalidNationalityError,
+)
+from .register_user_usecase import (
+    InvalidRegistrationDataError,
+    RegisterUserUseCase,
+)
+from .register_user_usecase import (
+    UsernameAlreadyExistsError as UserUsernameExistsError,
+)
 from .season_match_insights_errors import (
     InvalidSeasonInsightsDataError,
     PenaSeasonNotFoundError,
@@ -53,6 +70,7 @@ __all__ = [
     "GetPenasUseCase",
     "GetPlayerProfileUseCase",
     "GetSeasonMatchInsightsUseCase",
+    "InvalidAdminRegistrationDataError",
     "InvalidLinkTokenError",
     "InvalidPenaAccountabilityDataError",
     "InvalidPenaLabelsDataError",
@@ -60,11 +78,13 @@ __all__ = [
     "InvalidNationalityError",
     "InvalidPlayerUpdateDataError",
     "InvalidProfileImageError",
+    "InvalidRegistrationDataError",
     "InvalidSeasonInsightsDataError",
     "LinkUserToPenaUseCase",
     "ManagePenaAccountabilityUseCase",
     "ManagePenaLabelsUseCase",
     "ManagePenaProfileUseCase",
+    "AdminUsernameExistsError",
     "PenaAccessDeniedError",
     "PenaAccountabilityAccessDeniedError",
     "PenaAccountabilityExpenseNotFoundError",
@@ -77,7 +97,11 @@ __all__ = [
     "PenaSeasonNotFoundError",
     "PenaSeasonPenaNotFoundError",
     "PlayerUpdate",
+    "RegisterAdminUseCase",
+    "RegisterUserUseCase",
     "UpdatePlayerProfileUseCase",
+    "UserInvalidNationalityError",
+    "UserUsernameExistsError",
     "UserAlreadyLinkedError",
     "UserProfileNotFoundError",
 ]
