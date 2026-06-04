@@ -6,14 +6,17 @@ from typing import Any
 
 from auth.application.use_cases.login import InvalidCredentialsError
 from core.application.use_cases import (
-    InvalidNationalityError as PlayerInvalidNationalityError,
-)
-from core.application.use_cases import (
+    InvalidLinkTokenError,
     InvalidPenaLabelsDataError,
     InvalidPlayerUpdateDataError,
     PenaAccessDeniedError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
+)
+from core.application.use_cases import (
+    InvalidNationalityError as PlayerInvalidNationalityError,
 )
 from core.application.use_cases import (
     InvalidProfileImageError as PlayerInvalidProfileImageError,
@@ -31,7 +34,6 @@ from fastapi import HTTPException, status
 from persistence.application.use_cases import (
     AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
-    InvalidLinkTokenError,
     InvalidPenaAccountabilityDataError,
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
@@ -63,9 +65,7 @@ from persistence.application.use_cases import (
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    UserAlreadyLinkedError,
     UserInvalidNationalityError,
-    UserProfileNotFoundError,
     UserUsernameExistsError,
 )
 from persistence.application.use_cases import (

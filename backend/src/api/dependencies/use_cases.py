@@ -12,6 +12,7 @@ from core.application.use_cases.get_player_profile_usecase import GetPlayerProfi
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
+from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
@@ -22,7 +23,6 @@ from core.application.use_cases.update_player_profile_usecase import (
     UpdatePlayerProfileUseCase,
 )
 from fastapi import Depends
-from persistence.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from persistence.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
 )

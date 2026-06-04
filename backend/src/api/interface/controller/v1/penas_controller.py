@@ -43,6 +43,7 @@ from core.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
 from core.application.use_cases.get_penas_usecase import GetPenasUseCase
+from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
@@ -51,7 +52,6 @@ from core.application.use_cases.manage_pena_profile_usecase import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from persistence.application.use_cases import (
-    LinkUserToPenaUseCase,
     ManagePenaAccountabilityUseCase,
     PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,

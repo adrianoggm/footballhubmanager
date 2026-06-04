@@ -7,6 +7,12 @@ from .get_pena_players_usecase import GetPenaPlayersUseCase
 from .get_penas_usecase import GetPenasUseCase
 from .get_player_profile_usecase import GetPlayerProfileUseCase
 from .get_season_match_insights_usecase import GetSeasonMatchInsightsUseCase
+from .link_user_to_pena_usecase import (
+    InvalidLinkTokenError,
+    LinkUserToPenaUseCase,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
+)
 from .manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     ManagePenaLabelsUseCase,
@@ -39,12 +45,14 @@ __all__ = [
     "GetPenasUseCase",
     "GetPlayerProfileUseCase",
     "GetSeasonMatchInsightsUseCase",
+    "InvalidLinkTokenError",
     "InvalidPenaLabelsDataError",
     "InvalidPenaProfileImageError",
     "InvalidNationalityError",
     "InvalidPlayerUpdateDataError",
     "InvalidProfileImageError",
     "InvalidSeasonInsightsDataError",
+    "LinkUserToPenaUseCase",
     "ManagePenaLabelsUseCase",
     "ManagePenaProfileUseCase",
     "PenaAccessDeniedError",
@@ -56,4 +64,6 @@ __all__ = [
     "PenaSeasonPenaNotFoundError",
     "PlayerUpdate",
     "UpdatePlayerProfileUseCase",
+    "UserAlreadyLinkedError",
+    "UserProfileNotFoundError",
 ]

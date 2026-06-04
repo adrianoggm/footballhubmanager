@@ -26,6 +26,11 @@ from core.application.models import (
 from core.application.use_cases.generate_pena_link_token_usecase import (
     PenaAccessDeniedError,
 )
+from core.application.use_cases.link_user_to_pena_usecase import (
+    InvalidLinkTokenError,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
+)
 from core.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     PenaLabelsAccessDeniedError,
@@ -37,11 +42,6 @@ from core.application.use_cases.manage_pena_profile_usecase import (
     PenaProfileNotFoundError,
 )
 from fastapi import HTTPException
-from persistence.application.use_cases.link_user_to_pena_usecase import (
-    InvalidLinkTokenError,
-    UserAlreadyLinkedError,
-    UserProfileNotFoundError,
-)
 from persistence.application.use_cases.manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
     PenaAccountabilityAccessDeniedError,
