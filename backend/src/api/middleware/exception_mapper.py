@@ -6,6 +6,15 @@ from typing import Any
 
 from auth.application.use_cases.login import InvalidCredentialsError
 from core.application.use_cases import (
+    InvalidNationalityError as PlayerInvalidNationalityError,
+)
+from core.application.use_cases import (
+    InvalidPlayerUpdateDataError,
+)
+from core.application.use_cases import (
+    InvalidProfileImageError as PlayerInvalidProfileImageError,
+)
+from core.application.use_cases import (
     InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsDataError,
 )
 from core.application.use_cases import (
@@ -24,7 +33,6 @@ from persistence.application.use_cases import (
     InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
     InvalidPenaProfileImageError,
-    InvalidPlayerUpdateDataError,
     InvalidRegistrationDataError,
     InvalidSeasonDataError,
     InvalidSeasonInsightsDataError,
@@ -46,8 +54,6 @@ from persistence.application.use_cases import (
     PenaMembershipUserProfileNotFoundError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
-    PlayerInvalidNationalityError,
-    PlayerInvalidProfileImageError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,

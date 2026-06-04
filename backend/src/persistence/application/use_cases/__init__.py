@@ -6,6 +6,17 @@ from core.application.use_cases.get_player_profile_usecase import GetPlayerProfi
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
+from core.application.use_cases.update_player_profile_usecase import (
+    InvalidNationalityError as PlayerInvalidNationalityError,
+)
+from core.application.use_cases.update_player_profile_usecase import (
+    InvalidPlayerUpdateDataError,
+    PlayerUpdate,
+    UpdatePlayerProfileUseCase,
+)
+from core.application.use_cases.update_player_profile_usecase import (
+    InvalidProfileImageError as PlayerInvalidProfileImageError,
+)
 
 from .generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
@@ -144,13 +155,4 @@ from .season_competition_models import (
     SeasonPlayersFilters,
     SeasonPlayersPage,
     SeasonPlayerStatsUpdate,
-)
-from .update_player_profile_usecase import InvalidNationalityError as PlayerInvalidNationalityError
-from .update_player_profile_usecase import (
-    InvalidPlayerUpdateDataError,
-    PlayerUpdate,
-    UpdatePlayerProfileUseCase,
-)
-from .update_player_profile_usecase import (
-    InvalidProfileImageError as PlayerInvalidProfileImageError,
 )

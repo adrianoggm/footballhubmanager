@@ -7,13 +7,25 @@ from .season_match_insights_errors import (
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
 )
+from .update_player_profile_usecase import (
+    InvalidNationalityError,
+    InvalidPlayerUpdateDataError,
+    InvalidProfileImageError,
+    PlayerUpdate,
+    UpdatePlayerProfileUseCase,
+)
 
 __all__ = [
     "GetNationalitiesUseCase",
     "GetPenasUseCase",
     "GetPlayerProfileUseCase",
     "GetSeasonMatchInsightsUseCase",
+    "InvalidNationalityError",
+    "InvalidPlayerUpdateDataError",
+    "InvalidProfileImageError",
     "InvalidSeasonInsightsDataError",
     "PenaSeasonNotFoundError",
     "PenaSeasonPenaNotFoundError",
+    "PlayerUpdate",
+    "UpdatePlayerProfileUseCase",
 ]

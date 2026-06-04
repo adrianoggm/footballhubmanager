@@ -8,6 +8,9 @@ from core.application.use_cases.get_player_profile_usecase import GetPlayerProfi
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
+from core.application.use_cases.update_player_profile_usecase import (
+    UpdatePlayerProfileUseCase,
+)
 from fastapi import Depends
 from persistence.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
@@ -43,9 +46,6 @@ from persistence.application.use_cases.manage_season_players_usecase import (
 )
 from persistence.application.use_cases.register_admin_usecase import RegisterAdminUseCase
 from persistence.application.use_cases.register_user_usecase import RegisterUserUseCase
-from persistence.application.use_cases.update_player_profile_usecase import (
-    UpdatePlayerProfileUseCase,
-)
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
 )

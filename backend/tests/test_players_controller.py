@@ -4,16 +4,16 @@ from api.interface.controller.v1.model.request.players_request import PlayerUpda
 from auth.dependencies import require_user
 from auth.session import SessionData
 from core.application.models import PenaInfo, PlayerProfile
-from fastapi import HTTPException
-from persistence.application.use_cases.update_player_profile_usecase import (
+from core.application.use_cases.update_player_profile_usecase import (
     InvalidNationalityError as PlayerInvalidNationalityError,
 )
-from persistence.application.use_cases.update_player_profile_usecase import (
+from core.application.use_cases.update_player_profile_usecase import (
     InvalidPlayerUpdateDataError,
 )
-from persistence.application.use_cases.update_player_profile_usecase import (
+from core.application.use_cases.update_player_profile_usecase import (
     InvalidProfileImageError as PlayerInvalidProfileImageError,
 )
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_id: int = 5) -> SessionData:
