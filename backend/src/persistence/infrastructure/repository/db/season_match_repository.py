@@ -1,7 +1,8 @@
 import time
 from datetime import date
 
-from persistence.application.ports.season_competition_port import (
+from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     MatchClockAlreadyStartedError,
     MatchClockNotRunningError,
@@ -27,8 +28,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonNotFoundError,
     SeasonPlayerNotFoundError,
 )
-from persistence.application.ports.season_match_port import SeasonMatchPort
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.ports.season_match_port import SeasonMatchPort
 from persistence.domain.entity import (
     FootballMatch,
     FootballMatchEvent,

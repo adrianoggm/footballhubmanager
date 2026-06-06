@@ -31,6 +31,9 @@ from core.application.use_cases.manage_pena_seasons_usecase import (
 from core.application.use_cases.manage_season_lifecycle_usecase import (
     ManageSeasonLifecycleUseCase,
 )
+from core.application.use_cases.manage_season_matches_usecase import (
+    ManageSeasonMatchesUseCase,
+)
 from core.application.use_cases.manage_season_players_usecase import (
     ManageSeasonPlayersUseCase,
 )
@@ -42,9 +45,6 @@ from core.application.use_cases.update_player_profile_usecase import (
 from fastapi import Depends
 from persistence.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
-)
-from persistence.application.use_cases.manage_season_matches_usecase import (
-    ManageSeasonMatchesUseCase,
 )
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,

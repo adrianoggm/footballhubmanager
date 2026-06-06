@@ -11,6 +11,7 @@ from .player_profile_port import PlayerProfilePort
 from .registration_port import AdminRegistrationPort, UserRegistrationPort
 from .season_competition_port import SeasonCompetitionPort
 from .season_match_insights_port import SeasonMatchInsightsPort
+from .season_match_port import SeasonMatchPort
 from .season_player_port import SeasonPlayerPort
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "PenaSeasonPort",
     "PlayerProfilePort",
     "SeasonCompetitionPort",
+    "SeasonMatchPort",
     "SeasonMatchInsightsPort",
     "SeasonPlayerPort",
     "UserRegistrationPort",
