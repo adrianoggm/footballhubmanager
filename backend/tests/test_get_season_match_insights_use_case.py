@@ -3,6 +3,10 @@ from datetime import date
 
 import pytest
 from core.application.models import MatchInsightRow
+from core.application.ports.season_competition_port import (
+    PenaNotFoundError,
+    SeasonNotFoundError,
+)
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
@@ -10,10 +14,6 @@ from core.application.use_cases.season_match_insights_errors import (
     InvalidSeasonInsightsDataError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
-)
-from persistence.application.ports.season_competition_port import (
-    PenaNotFoundError,
-    SeasonNotFoundError,
 )
 
 

@@ -1,9 +1,9 @@
 from core.application.models import MatchInsightRow
-from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     PenaNotFoundError,
     SeasonNotFoundError,
 )
+from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
 from persistence.domain.entity import (
     FootballMatch,
     Pena,

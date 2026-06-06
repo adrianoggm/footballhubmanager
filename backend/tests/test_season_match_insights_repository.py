@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 from core.application.models import MatchInsightRow
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     SeasonNotFoundError,
 )
 from persistence.infrastructure.repository.db.season_match_insights_repository import (

@@ -1,12 +1,12 @@
 from core.application.models import MatchDetail, MatchPlayerStats, MatchTeam
 from core.application.ports import SeasonMatchInsightsPort
-from core.application.services import MatchInsightsReportBuilder
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
+from core.application.services import MatchInsightsReportBuilder
 
 from .season_match_insights_errors import (
     InvalidSeasonInsightsDataError,
