@@ -6,8 +6,7 @@ from core.application.ports.registration_port import (
     RegisteredUserResult,
     UserRegistrationPort,
 )
-from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
-from persistence.domain.label_config import (
+from core.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,
     DEFAULT_ROLE_LABEL_COLORS,
@@ -16,6 +15,7 @@ from persistence.domain.label_config import (
     dump_label_colors_payload,
     dump_labels_payload,
 )
+from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 

@@ -15,6 +15,12 @@ from core.application.ports.season_competition_port import (
     SeasonPlayersPageResult,
 )
 from core.application.ports.season_player_port import SeasonPlayerPort
+from core.domain.label_config import (
+    DEFAULT_POSITION_LABEL_COLORS,
+    DEFAULT_ROLE_LABEL_COLORS,
+    align_label_colors,
+    parse_label_colors_payload,
+)
 from persistence.domain.entity import (
     FootballMatch,
     Pena,
@@ -25,12 +31,6 @@ from persistence.domain.entity import (
     SeasonPlayer,
     Team,
     TeamPlayer,
-)
-from persistence.domain.label_config import (
-    DEFAULT_POSITION_LABEL_COLORS,
-    DEFAULT_ROLE_LABEL_COLORS,
-    align_label_colors,
-    parse_label_colors_payload,
 )
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
