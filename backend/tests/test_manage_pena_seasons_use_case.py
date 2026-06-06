@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-from persistence.application.ports.pena_season_port import (
+from core.application.models import PenaSeasonCreate, PenaSeasonUpdate
+from core.application.policies import FieldUpdate
+from core.application.ports.pena_season_port import (
     InvalidSeasonDateRangeError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
@@ -11,16 +13,13 @@ from persistence.application.ports.pena_season_port import (
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
 )
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
+from core.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
     PenaSeasonAccessDeniedError,
-    PenaSeasonCreate,
     PenaSeasonDateOverlapError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
-    PenaSeasonUpdate,
 )
 
 

@@ -16,6 +16,12 @@ from .pena_membership_models import (
 )
 from .pena_player_models import PenaPlayerFilters, PenaPlayerInfo, PenaPlayersPage
 from .pena_profile_models import PenaProfileInfo, PenaProfileUpdate
+from .pena_season_models import (
+    PenaSeasonCreate,
+    PenaSeasonInfo,
+    PenaSeasonsPage,
+    PenaSeasonUpdate,
+)
 from .player_profile_models import PlayerProfile
 from .registration_models import (
     AdminRegistration,
@@ -51,6 +57,10 @@ __all__ = [
     "PenaPlayerFilters",
     "PenaPlayerInfo",
     "PenaPlayersPage",
+    "PenaSeasonCreate",
+    "PenaSeasonInfo",
+    "PenaSeasonsPage",
+    "PenaSeasonUpdate",
     "PenaProfileInfo",
     "PenaProfileUpdate",
     "PenasPage",

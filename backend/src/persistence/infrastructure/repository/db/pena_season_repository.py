@@ -1,6 +1,7 @@
 from datetime import date
 
-from persistence.application.ports.pena_season_port import (
+from core.application.policies import FieldUpdate
+from core.application.ports.pena_season_port import (
     InvalidSeasonDateRangeError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
@@ -10,7 +11,6 @@ from persistence.application.ports.pena_season_port import (
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
 )
-from persistence.application.update_policies import FieldUpdate
 from persistence.domain.entity import Pena, Season
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

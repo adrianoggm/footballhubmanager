@@ -6,6 +6,7 @@ from .pena_membership_port import PenaMembershipPort
 from .pena_player_query_port import PenaPlayerQueryPort
 from .pena_profile_port import PenaProfilePort
 from .pena_query_port import PenaQueryPort
+from .pena_season_port import PenaSeasonPort
 from .player_profile_port import PlayerProfilePort
 from .registration_port import AdminRegistrationPort, UserRegistrationPort
 from .season_match_insights_port import SeasonMatchInsightsPort
@@ -20,6 +21,7 @@ __all__ = [
     "PenaPlayerQueryPort",
     "PenaProfilePort",
     "PenaQueryPort",
+    "PenaSeasonPort",
     "PlayerProfilePort",
     "SeasonMatchInsightsPort",
     "UserRegistrationPort",
