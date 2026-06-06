@@ -26,7 +26,6 @@ from core.application.ports.season_competition_port import (
     PlayerNotFoundError,
     SamePlayerMatchError,
     SeasonNotFoundError,
-    SeasonPlayerNotFoundError,
 )
 from core.application.ports.season_match_port import SeasonMatchPort
 from persistence.domain.entity import (
@@ -768,29 +767,37 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             raise PlayerNotFoundError()
         return player
 
-    def _get_season_player(
+    def _find_season_player(
         self,
         *,
         pena_id: int,
         season_id: int,
         player_id: int,
-        for_update: bool,
-        allow_missing: bool = False,
     ) -> SeasonPlayer | None:
         stmt = select(SeasonPlayer).where(
             SeasonPlayer.id_pena == pena_id,
             SeasonPlayer.id_season == season_id,
             SeasonPlayer.id_player == player_id,
         )
-        if for_update:
-            stmt = stmt.with_for_update()
-        row = self.session.execute(stmt).scalar_one_or_none()
-        if row:
-            return row
-        if allow_missing:
-            return None
-        self.session.rollback()
-        raise SeasonPlayerNotFoundError()
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def _find_locked_season_player(
+        self,
+        *,
+        pena_id: int,
+        season_id: int,
+        player_id: int,
+    ) -> SeasonPlayer | None:
+        stmt = (
+            select(SeasonPlayer)
+            .where(
+                SeasonPlayer.id_pena == pena_id,
+                SeasonPlayer.id_season == season_id,
+                SeasonPlayer.id_player == player_id,
+            )
+            .with_for_update()
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
 
     def _get_match_teams(
         self,
@@ -1001,12 +1008,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         players: list[Player] = []
         for player_guid in player_guids:
             player = self._get_player(player_guid)
-            season_player = self._get_season_player(
+            season_player = self._find_season_player(
                 pena_id=pena_id,
                 season_id=season_id,
                 player_id=player.id,
-                for_update=False,
-                allow_missing=True,
             )
             if not season_player:
                 self.session.rollback()
@@ -1022,12 +1027,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         players: list[Player],
     ) -> None:
         for player in players:
-            season_player = self._get_season_player(
+            season_player = self._find_season_player(
                 pena_id=pena_id,
                 season_id=season_id,
                 player_id=player.id,
-                for_update=False,
-                allow_missing=True,
             )
             if not season_player:
                 self.session.rollback()
@@ -1198,12 +1201,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> list[SeasonPlayer]:
         rows: list[SeasonPlayer] = []
         for team_player in team_players:
-            season_player = self._get_season_player(
+            season_player = self._find_locked_season_player(
                 pena_id=pena_id,
                 season_id=season_id,
                 player_id=team_player.id_player,
-                for_update=True,
-                allow_missing=True,
             )
             if not season_player:
                 self.session.rollback()
