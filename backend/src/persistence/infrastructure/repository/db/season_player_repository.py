@@ -268,11 +268,10 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
         player = self._get_player(player_guid)
         link = self._get_pena_player_link(pena_id=pena.id, player_id=player.id)
-        season_player = self._get_season_player(
+        season_player = self._lock_season_player(
             pena_id=pena.id,
             season_id=season.id,
             player_id=player.id,
-            for_update=True,
         )
 
         if wins.is_set():
@@ -331,12 +330,10 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
             raise PenaNotManagedByAdminError()
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
         player = self._get_player(player_guid)
-        season_player = self._get_season_player(
+        season_player = self._find_locked_season_player(
             pena_id=pena.id,
             season_id=season.id,
             player_id=player.id,
-            for_update=True,
-            allow_missing=True,
         )
         if not season_player:
             self.session.rollback()
@@ -560,29 +557,38 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
             return int(role_row.id), str(role_row.name)
         return None, role
 
-    def _get_season_player(
+    def _lock_season_player(
         self,
         *,
         pena_id: int,
         season_id: int,
         player_id: int,
-        for_update: bool,
-        allow_missing: bool = False,
+    ) -> SeasonPlayer:
+        row = self._find_locked_season_player(
+            pena_id=pena_id,
+            season_id=season_id,
+            player_id=player_id,
+        )
+        if row:
+            return row
+        self.session.rollback()
+        raise SeasonPlayerNotFoundError()
+
+    def _find_locked_season_player(
+        self,
+        *,
+        pena_id: int,
+        season_id: int,
+        player_id: int,
     ) -> SeasonPlayer | None:
         stmt = select(SeasonPlayer).where(
             SeasonPlayer.id_pena == pena_id,
             SeasonPlayer.id_season == season_id,
             SeasonPlayer.id_player == player_id,
         )
-        if for_update:
-            stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update()
         row = self.session.execute(stmt).scalar_one_or_none()
-        if row:
-            return row
-        if allow_missing:
-            return None
-        self.session.rollback()
-        raise SeasonPlayerNotFoundError()
+        return row
 
     def _player_has_season_matches(self, *, season_id: int, player_id: int) -> bool:
         row = self.session.execute(
