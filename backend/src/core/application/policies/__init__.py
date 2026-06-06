@@ -1,3 +1,3 @@
-from .update_policies import FieldUpdate, StandingsUpdatePolicy, UpdatePolicy
+from .update_policies import AmountSignPolicy, FieldUpdate, StandingsUpdatePolicy, UpdatePolicy
 
-__all__ = ["FieldUpdate", "StandingsUpdatePolicy", "UpdatePolicy"]
+__all__ = ["AmountSignPolicy", "FieldUpdate", "StandingsUpdatePolicy", "UpdatePolicy"]

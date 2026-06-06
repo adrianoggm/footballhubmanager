@@ -174,6 +174,31 @@ def test_update_settings_for_admin_normalizes_currency_and_visibility():
     assert repo.last_call["balance_cents"] == 777
 
 
+def test_update_settings_for_admin_allows_negative_balance():
+    repo = _FakeRepo()
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    use_case.update_settings_for_admin(
+        pena_guid="pena-guid",
+        admin_id=3,
+        update=PenaAccountabilitySettingsUpdate(balance_cents=-250),
+    )
+
+    assert repo.last_call is not None
+    assert repo.last_call["balance_cents"] == -250
+
+
+def test_update_settings_for_admin_rejects_negative_reserve():
+    use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
+
+    with pytest.raises(InvalidPenaAccountabilityDataError):
+        use_case.update_settings_for_admin(
+            pena_guid="pena-guid",
+            admin_id=3,
+            update=PenaAccountabilitySettingsUpdate(reserve_cents=-1),
+        )
+
+
 def test_update_settings_for_admin_uses_current_values_as_fallbacks():
     repo = _FakeRepo()
     use_case = ManagePenaAccountabilityUseCase(repo)

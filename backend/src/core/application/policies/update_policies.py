@@ -30,3 +30,8 @@ class FieldUpdate(Generic[T]):
 class StandingsUpdatePolicy(str, Enum):
     APPLY = "apply"
     SKIP = "skip"
+
+
+class AmountSignPolicy(str, Enum):
+    ALLOW_NEGATIVE = "allow_negative"
+    REQUIRE_NON_NEGATIVE = "require_non_negative"

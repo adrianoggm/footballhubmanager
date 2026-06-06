@@ -8,6 +8,7 @@ from core.application.models import (
     PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilitySettingsUpdate,
 )
+from core.application.policies import AmountSignPolicy
 from core.application.ports.pena_accountability_port import (
     PenaAccountabilityPort,
     PenaAccountabilityResult,
@@ -76,12 +77,12 @@ class ManagePenaAccountabilityUseCase:
         balance_cents = self._normalize_amount(
             update.balance_cents,
             fallback=current.balance_cents,
-            allow_negative=True,
+            sign_policy=AmountSignPolicy.ALLOW_NEGATIVE,
         )
         reserve_cents = self._normalize_amount(
             update.reserve_cents,
             fallback=current.reserve_cents,
-            allow_negative=False,
+            sign_policy=AmountSignPolicy.REQUIRE_NON_NEGATIVE,
         )
         budget_visibility = self._normalize_visibility(
             update.budget_visibility,
@@ -115,11 +116,15 @@ class ManagePenaAccountabilityUseCase:
         data: PenaAccountabilityMemberAccountUpsert,
     ) -> PenaAccountabilityInfo:
         player_guid = self._normalize_required_text(data.player_guid, max_length=64)
-        debt_cents = self._normalize_amount(data.debt_cents, fallback=0, allow_negative=False)
+        debt_cents = self._normalize_amount(
+            data.debt_cents,
+            fallback=0,
+            sign_policy=AmountSignPolicy.REQUIRE_NON_NEGATIVE,
+        )
         contribution_cents = self._normalize_amount(
             data.contribution_cents,
             fallback=0,
-            allow_negative=False,
+            sign_policy=AmountSignPolicy.REQUIRE_NON_NEGATIVE,
         )
         note = self._normalize_optional_text(data.note, max_length=255)
         try:
@@ -170,7 +175,11 @@ class ManagePenaAccountabilityUseCase:
     ) -> PenaAccountabilityInfo:
         title = self._normalize_required_text(data.title, max_length=160)
         category = self._normalize_optional_text(data.category, max_length=80)
-        amount_cents = self._normalize_amount(data.amount_cents, fallback=0, allow_negative=False)
+        amount_cents = self._normalize_amount(
+            data.amount_cents,
+            fallback=0,
+            sign_policy=AmountSignPolicy.REQUIRE_NON_NEGATIVE,
+        )
         note = self._normalize_optional_text(data.note, max_length=255)
         if not isinstance(data.occurred_on, date):
             raise InvalidPenaAccountabilityDataError()
@@ -309,12 +318,12 @@ class ManagePenaAccountabilityUseCase:
         value: int | None,
         *,
         fallback: int,
-        allow_negative: bool,
+        sign_policy: AmountSignPolicy,
     ) -> int:
         if value is None:
             return int(fallback)
         if not isinstance(value, int):
             raise InvalidPenaAccountabilityDataError()
-        if not allow_negative and value < 0:
+        if sign_policy is AmountSignPolicy.REQUIRE_NON_NEGATIVE and value < 0:
             raise InvalidPenaAccountabilityDataError()
         return value
