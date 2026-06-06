@@ -51,7 +51,7 @@ from core.application.models.season_competition_models import (
     SeasonMatchUpdate,
     SeasonPlayerStatsUpdate,
 )
-from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.policies import FieldUpdate
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
@@ -463,11 +463,7 @@ def update_season_match_result(
         update=SeasonMatchResultUpdate(
             home_score=payload.home_score,
             away_score=payload.away_score,
-            standings_policy=(
-                StandingsUpdatePolicy.APPLY
-                if payload.update_standings
-                else StandingsUpdatePolicy.SKIP
-            ),
+            standings_policy=payload.standings_policy,
         ),
     )
     return to_season_match_response(updated)

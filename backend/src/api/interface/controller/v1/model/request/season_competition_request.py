@@ -1,6 +1,7 @@
 from datetime import date
 from typing import Literal
 
+from core.application.policies import StandingsUpdatePolicy
 from pydantic import BaseModel, Field
 
 
@@ -31,7 +32,7 @@ class CreateSeasonMatchRequest(BaseModel):
 class UpdateSeasonMatchResultRequest(BaseModel):
     home_score: int = Field(ge=0)
     away_score: int = Field(ge=0)
-    update_standings: bool = True
+    standings_policy: StandingsUpdatePolicy = StandingsUpdatePolicy.APPLY
 
 
 class UpdateSeasonMatchRequest(BaseModel):
