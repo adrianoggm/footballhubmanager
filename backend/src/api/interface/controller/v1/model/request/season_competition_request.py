@@ -2,7 +2,7 @@ from datetime import date
 from typing import Literal
 
 from core.application.policies import StandingsUpdatePolicy
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RegisterSeasonPlayerRequest(BaseModel):
@@ -32,7 +32,36 @@ class CreateSeasonMatchRequest(BaseModel):
 class UpdateSeasonMatchResultRequest(BaseModel):
     home_score: int = Field(ge=0)
     away_score: int = Field(ge=0)
-    standings_policy: StandingsUpdatePolicy = StandingsUpdatePolicy.APPLY
+    update_standings: bool | None = Field(default=None, exclude=True)
+    standings_policy: StandingsUpdatePolicy | None = None
+
+    @model_validator(mode="after")
+    def _resolve_standings_policy(self):
+        if self.standings_policy is None:
+            if self.update_standings is None:
+                object.__setattr__(self, "standings_policy", StandingsUpdatePolicy.APPLY)
+            else:
+                object.__setattr__(
+                    self,
+                    "standings_policy",
+                    (
+                        StandingsUpdatePolicy.APPLY
+                        if self.update_standings
+                        else StandingsUpdatePolicy.SKIP
+                    ),
+                )
+            return self
+
+        if self.update_standings is not None:
+            expected_policy = (
+                StandingsUpdatePolicy.APPLY
+                if self.update_standings
+                else StandingsUpdatePolicy.SKIP
+            )
+            if self.standings_policy is not expected_policy:
+                raise ValueError("Conflicting standings update values")
+
+        return self
 
 
 class UpdateSeasonMatchRequest(BaseModel):

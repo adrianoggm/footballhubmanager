@@ -587,6 +587,25 @@ def test_update_season_match_result_respects_explicit_standings_policy():
     assert payload["update"].standings_policy is StandingsUpdatePolicy.SKIP
 
 
+def test_update_season_match_result_accepts_legacy_update_standings_flag():
+    use_case = _UseCaseStub()
+    controller.update_season_match_result(
+        "pena-1",
+        "season-1",
+        "match-1",
+        payload=UpdateSeasonMatchResultRequest(
+            home_score=2,
+            away_score=1,
+            update_standings=False,
+        ),
+        admin_session=_admin_session(66),
+        use_case=use_case,
+    )
+
+    _, payload = use_case.last_call
+    assert payload["update"].standings_policy is StandingsUpdatePolicy.SKIP
+
+
 def test_update_season_match_success_and_partial_flags():
     use_case = _UseCaseStub()
     response = controller.update_season_match(
