@@ -227,7 +227,7 @@ def test_stop_match_for_admin_finalizes_tracked_stats_when_events_exist():
         away_team,
     )
     repo._load_required_team_players = lambda **kwargs: ([home_team_player], [away_team_player])
-    repo._list_match_events = lambda **kwargs: [
+    repo._list_locked_match_events = lambda **kwargs: [
         SimpleNamespace(id_player=11, event_type="goal", value_delta=1),
         SimpleNamespace(id_player=11, event_type="assist", value_delta=1),
         SimpleNamespace(id_player=22, event_type="goal", value_delta=1),

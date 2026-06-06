@@ -345,7 +345,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         if football_match.started_at_epoch is not None:
             self.session.rollback()
             raise MatchClockAlreadyStartedError()
-        if self._match_has_events(football_match.id, for_update=True):
+        if self._has_locked_match_events(football_match.id):
             self.session.rollback()
             raise InvalidMatchDataError()
 
@@ -391,7 +391,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_team_players=home_team_players,
             away_team_players=away_team_players,
         )
-        events = self._list_match_events(match_id=football_match.id, for_update=True)
+        events = self._list_locked_match_events(match_id=football_match.id)
         if events:
             self._apply_tracked_events_to_team_players(
                 home_team_players=home_team_players,
@@ -498,10 +498,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             admin_id=admin_id,
             for_update=True,
         )
-        event = self._get_match_event(
+        event = self._find_locked_match_event(
             match_id=football_match.id,
             event_guid=event_guid,
-            for_update=True,
         )
         if self._match_status(football_match) == "closed":
             self.session.rollback()
@@ -1111,40 +1110,54 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     def _now_epoch() -> int:
         return int(time.time())
 
-    def _match_has_events(self, match_id: int, *, for_update: bool) -> bool:
-        stmt = select(FootballMatchEvent.id).where(FootballMatchEvent.id_match == match_id).limit(1)
-        if for_update:
-            stmt = stmt.with_for_update()
+    def _has_locked_match_events(self, match_id: int) -> bool:
+        stmt = (
+            select(FootballMatchEvent.id)
+            .where(FootballMatchEvent.id_match == match_id)
+            .limit(1)
+            .with_for_update()
+        )
         return self.session.execute(stmt).scalar_one_or_none() is not None
 
-    def _get_match_event(
+    def _find_locked_match_event(
         self,
         *,
         match_id: int,
         event_guid: str,
-        for_update: bool,
     ) -> FootballMatchEvent | None:
-        stmt = select(FootballMatchEvent).where(
-            FootballMatchEvent.id_match == match_id,
-            FootballMatchEvent.guid == event_guid,
+        stmt = (
+            select(FootballMatchEvent)
+            .where(
+                FootballMatchEvent.id_match == match_id,
+                FootballMatchEvent.guid == event_guid,
+            )
+            .with_for_update()
         )
-        if for_update:
-            stmt = stmt.with_for_update()
         return self.session.execute(stmt).scalar_one_or_none()
 
     def _list_match_events(
         self,
         *,
         match_id: int,
-        for_update: bool,
     ) -> list[FootballMatchEvent]:
         stmt = (
             select(FootballMatchEvent)
             .where(FootballMatchEvent.id_match == match_id)
             .order_by(FootballMatchEvent.elapsed_seconds.asc(), FootballMatchEvent.id.asc())
         )
-        if for_update:
-            stmt = stmt.with_for_update()
+        return list(self.session.execute(stmt).scalars())
+
+    def _list_locked_match_events(
+        self,
+        *,
+        match_id: int,
+    ) -> list[FootballMatchEvent]:
+        stmt = (
+            select(FootballMatchEvent)
+            .where(FootballMatchEvent.id_match == match_id)
+            .order_by(FootballMatchEvent.elapsed_seconds.asc(), FootballMatchEvent.id.asc())
+            .with_for_update()
+        )
         return list(self.session.execute(stmt).scalars())
 
     def _resolve_event_player(
@@ -1444,7 +1457,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         )
         home_players = team_players_by_id.get(home_team.id, [])
         away_players = team_players_by_id.get(away_team.id, [])
-        events = self._list_match_events(match_id=football_match.id, for_update=False)
+        events = self._list_match_events(match_id=football_match.id)
         player_ids = {team_player.id_player for team_player in home_players + away_players}.union(
             {
                 player_id
