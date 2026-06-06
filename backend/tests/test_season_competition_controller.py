@@ -21,9 +21,19 @@ from api.interface.controller.v1.model.request.season_competition_request import
     UpdateSeasonPlayerStatsRequest,
 )
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
-from persistence.application.use_cases.manage_season_competition_usecase import (
+from core.application.models.season_competition_models import (
+    SeasonMatchDetailInfo,
+    SeasonMatchesPage,
+    SeasonMatchInfo,
+    SeasonMatchPlayerStatsInfo,
+    SeasonMatchSummaryInfo,
+    SeasonMatchTeamInfo,
+    SeasonPlayerInfo,
+    SeasonPlayersFilters,
+    SeasonPlayersPage,
+)
+from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
@@ -33,28 +43,20 @@ from persistence.application.use_cases.manage_season_competition_usecase import 
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
-    SeasonMatchDetailInfo,
-    SeasonMatchesPage,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
-    SeasonMatchInfo,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
-    SeasonMatchPlayerStatsInfo,
     SeasonMatchReportClosedError,
     SeasonMatchStatsMismatchError,
-    SeasonMatchSummaryInfo,
-    SeasonMatchTeamInfo,
     SeasonPlayerAlreadyRegisteredError,
-    SeasonPlayerInfo,
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    SeasonPlayersFilters,
-    SeasonPlayersPage,
 )
+from fastapi import HTTPException
 
 
 def _admin_session(admin_id: int = 5) -> SessionData:
