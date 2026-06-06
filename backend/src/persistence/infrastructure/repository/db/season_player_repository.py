@@ -1,4 +1,5 @@
-from persistence.application.ports.season_competition_port import (
+from core.application.policies import FieldUpdate
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     PenaNotFoundError,
@@ -13,8 +14,7 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayerResult,
     SeasonPlayersPageResult,
 )
-from persistence.application.ports.season_player_port import SeasonPlayerPort
-from persistence.application.update_policies import FieldUpdate
+from core.application.ports.season_player_port import SeasonPlayerPort
 from persistence.domain.entity import (
     FootballMatch,
     Pena,
