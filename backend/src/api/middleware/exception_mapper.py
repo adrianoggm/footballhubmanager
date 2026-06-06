@@ -13,6 +13,7 @@ from core.application.use_cases import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
+    InvalidPenaProfileImageError,
     InvalidPlayerUpdateDataError,
     InvalidRegistrationDataError,
     PenaAccessDeniedError,
@@ -40,13 +41,7 @@ from core.application.use_cases import (
     InvalidProfileImageError as PlayerInvalidProfileImageError,
 )
 from core.application.use_cases import (
-    InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsDataError,
-)
-from core.application.use_cases import (
-    PenaSeasonNotFoundError as CoreCompetitionPenaSeasonNotFoundError,
-)
-from core.application.use_cases import (
-    PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
+    InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
 )
 from core.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
@@ -63,16 +58,12 @@ from core.application.use_cases.manage_pena_seasons_usecase import (
 from core.application.use_cases.manage_pena_seasons_usecase import (
     PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
 )
-from fastapi import HTTPException, status
-from persistence.application.use_cases import (
-    InvalidPenaProfileImageError,
+from core.application.use_cases.season_competition_errors import (
     InvalidSeasonDataError,
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
@@ -83,17 +74,28 @@ from persistence.application.use_cases import (
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonAccessDeniedError as CompetitionPenaSeasonAccessDeniedError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonDateOverlapError as CompetitionPenaSeasonDateOverlapError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonNotFoundError as CompetitionPenaSeasonNotFoundError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError as CompetitionPenaSeasonPenaNotFoundError,
+)
+from core.application.use_cases.season_match_insights_errors import (
+    PenaSeasonNotFoundError as CoreCompetitionPenaSeasonNotFoundError,
+)
+from core.application.use_cases.season_match_insights_errors import (
+    PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
+)
+from fastapi import HTTPException, status
+from persistence.application.use_cases import (
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
 )
 
 ExceptionStatus = tuple[int, str]
@@ -185,7 +187,7 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         status.HTTP_400_BAD_REQUEST,
         "Invalid match insights request",
     ),
-    CoreInvalidSeasonInsightsDataError: (
+    CoreInvalidSeasonInsightsRequestError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match insights request",
     ),

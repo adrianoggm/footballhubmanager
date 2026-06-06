@@ -39,36 +39,42 @@ from api.interface.controller.v1.season_competition_presenters import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
-from core.application.use_cases.get_season_match_insights_usecase import (
-    GetSeasonMatchInsightsUseCase,
-)
-from fastapi import APIRouter, Depends, Query, status
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
-from persistence.application.use_cases import (
-    InvalidSeasonMatchDataError,
-    InvalidSeasonPlayerUpdateDataError,
-    ManageSeasonMatchesUseCase,
-    ManageSeasonPlayersUseCase,
-    SeasonMatchAlreadyStartedError,
-    SeasonMatchClockNotRunningError,
+from core.application.models.season_competition_models import (
     SeasonMatchCreate,
     SeasonMatchCreateDetailed,
     SeasonMatchEventCreate,
-    SeasonMatchEventNotFoundError,
-    SeasonMatchEventPlayerNotInMatchError,
-    SeasonMatchInvalidPlayersError,
-    SeasonMatchLineupLockedError,
     SeasonMatchLineupsUpdate,
-    SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsUpdate,
-    SeasonMatchReportClosedError,
     SeasonMatchResultUpdate,
     SeasonMatchStatsUpdate,
     SeasonMatchTeamCreate,
     SeasonMatchUpdate,
-    SeasonPlayerNotFoundError,
     SeasonPlayerStatsUpdate,
 )
+from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.use_cases.get_season_match_insights_usecase import (
+    GetSeasonMatchInsightsUseCase,
+)
+from core.application.use_cases.manage_season_matches_usecase import (
+    ManageSeasonMatchesUseCase,
+)
+from core.application.use_cases.manage_season_players_usecase import (
+    ManageSeasonPlayersUseCase,
+)
+from core.application.use_cases.season_competition_errors import (
+    InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerUpdateDataError,
+    SeasonMatchAlreadyStartedError,
+    SeasonMatchClockNotRunningError,
+    SeasonMatchEventNotFoundError,
+    SeasonMatchEventPlayerNotInMatchError,
+    SeasonMatchInvalidPlayersError,
+    SeasonMatchLineupLockedError,
+    SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
+    SeasonPlayerNotFoundError,
+)
+from fastapi import APIRouter, Depends, Query, status
 
 router = APIRouter()
 
