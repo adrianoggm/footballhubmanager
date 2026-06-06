@@ -5,7 +5,7 @@ from core.application.ports.player_profile_port import (
     PlayerProfilePort,
     PlayerProfileResult,
 )
-from persistence.application.use_cases.profile_image_utils import (
+from core.application.services.profile_image_utils import (
     is_supported_profile_image_data_url,
 )
 from persistence.domain.entity import Pena, PenaPlayer, Player

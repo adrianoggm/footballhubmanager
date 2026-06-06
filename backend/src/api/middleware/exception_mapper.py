@@ -29,6 +29,8 @@ from core.application.use_cases import (
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUserProfileNotFoundError,
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
     UserAlreadyLinkedError,
     UserInvalidNationalityError,
     UserProfileNotFoundError,
@@ -93,10 +95,6 @@ from core.application.use_cases.season_match_insights_errors import (
     PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
 )
 from fastapi import HTTPException, status
-from persistence.application.use_cases import (
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
-)
 
 ExceptionStatus = tuple[int, str]
 ExceptionStatusMap = Mapping[type[Exception], ExceptionStatus]
