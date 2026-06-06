@@ -14,26 +14,7 @@ from core.application.models.season_competition_models import (
     SeasonMatchUpdate,
 )
 from core.application.policies import FieldUpdate, StandingsUpdatePolicy
-from core.application.use_cases.manage_season_matches_usecase import (
-    InvalidSeasonMatchDataError,
-    InvalidSeasonPlayerUpdateDataError,
-    ManageSeasonMatchesUseCase,
-    PenaSeasonAccessDeniedError,
-    PenaSeasonNotFoundError,
-    PenaSeasonPenaNotFoundError,
-    SeasonMatchAlreadyStartedError,
-    SeasonMatchClockNotRunningError,
-    SeasonMatchEventNotFoundError,
-    SeasonMatchEventPlayerNotInMatchError,
-    SeasonMatchInvalidPlayersError,
-    SeasonMatchLineupLockedError,
-    SeasonMatchNotFoundError,
-    SeasonMatchPlayersNotInSeasonError,
-    SeasonMatchReportClosedError,
-    SeasonMatchStatsMismatchError,
-    SeasonPlayerNotFoundError,
-)
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     MatchClockAlreadyStartedError,
@@ -56,8 +37,27 @@ from persistence.application.ports.season_competition_port import (
     SamePlayerMatchError,
     SeasonNotFoundError,
 )
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
+)
+from core.application.use_cases.manage_season_matches_usecase import (
+    InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerUpdateDataError,
+    ManageSeasonMatchesUseCase,
+    PenaSeasonAccessDeniedError,
+    PenaSeasonNotFoundError,
+    PenaSeasonPenaNotFoundError,
+    SeasonMatchAlreadyStartedError,
+    SeasonMatchClockNotRunningError,
+    SeasonMatchEventNotFoundError,
+    SeasonMatchEventPlayerNotInMatchError,
+    SeasonMatchInvalidPlayersError,
+    SeasonMatchLineupLockedError,
+    SeasonMatchNotFoundError,
+    SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
+    SeasonMatchStatsMismatchError,
+    SeasonPlayerNotFoundError,
 )
 
 

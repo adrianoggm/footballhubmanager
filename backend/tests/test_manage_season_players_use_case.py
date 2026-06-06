@@ -8,21 +8,7 @@ from core.application.models.season_competition_models import (
     SeasonPlayerStatsUpdate,
 )
 from core.application.policies import FieldUpdate
-from core.application.use_cases.manage_season_players_usecase import (
-    InvalidSeasonPlayerBatchDataError,
-    InvalidSeasonPlayerUpdateDataError,
-    ManageSeasonPlayersUseCase,
-    PenaSeasonAccessDeniedError,
-    PenaSeasonNotFoundError,
-    PenaSeasonPenaNotFoundError,
-    SeasonPlayerInMatchError,
-    SeasonPlayerNotFoundError,
-    SeasonPlayerNotInPenaError,
-)
-from core.application.use_cases.manage_season_players_usecase import (
-    SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
-)
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     PenaNotFoundError,
@@ -36,8 +22,22 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayerResult,
     SeasonPlayersPageResult,
 )
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
+)
+from core.application.use_cases.manage_season_players_usecase import (
+    InvalidSeasonPlayerBatchDataError,
+    InvalidSeasonPlayerUpdateDataError,
+    ManageSeasonPlayersUseCase,
+    PenaSeasonAccessDeniedError,
+    PenaSeasonNotFoundError,
+    PenaSeasonPenaNotFoundError,
+    SeasonPlayerInMatchError,
+    SeasonPlayerNotFoundError,
+    SeasonPlayerNotInPenaError,
+)
+from core.application.use_cases.manage_season_players_usecase import (
+    SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
 )
 
 

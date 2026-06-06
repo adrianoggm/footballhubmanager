@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     MatchEventCreateData,
     MatchNotFoundError,
     MatchPlayerStatsUpdateData,

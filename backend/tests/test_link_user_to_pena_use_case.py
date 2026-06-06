@@ -1,16 +1,16 @@
 from dataclasses import dataclass
 
 import pytest
+from core.application.ports.pena_link_port import (
+    InvalidOrExpiredLinkTokenError,
+    UserAlreadyLinkedToPenaError,
+    UserPlayerNotFoundError,
+)
 from core.application.use_cases.link_user_to_pena_usecase import (
     InvalidLinkTokenError,
     LinkUserToPenaUseCase,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
-)
-from persistence.application.ports.pena_link_port import (
-    InvalidOrExpiredLinkTokenError,
-    UserAlreadyLinkedToPenaError,
-    UserPlayerNotFoundError,
 )
 
 
