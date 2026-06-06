@@ -11,18 +11,15 @@
 
 The backend follows a hexagonal structure:
 
-- Core domain and application (target structure): `backend/src/core`
+- Core domain and application: `backend/src/core`
 - Domain entities: `backend/src/persistence/domain/entity`
-- Use cases: `backend/src/persistence/application/use_cases`
-- Ports (interfaces): `backend/src/persistence/application/ports`
+- Use cases: `backend/src/core/application/use_cases`
+- Ports (interfaces): `backend/src/core/application/ports`
+- Application services and policies: `backend/src/core/application/services`,
+  `backend/src/core/application/policies`
+- Domain helpers and shared rules: `backend/src/core/domain`
 - Infrastructure adapters: `backend/src/persistence/infrastructure`
 - HTTP controllers: `backend/src/api/interface/controller/v1`
-
-Transitional note:
-
-- New or migrated business slices should move into `backend/src/core/application` and
-  `backend/src/core/domain`.
-- `backend/src/persistence/application` is legacy application placement that should shrink over time.
 
 Controller contract models are organized under:
 
@@ -40,8 +37,8 @@ Dependency wiring is centralized through FastAPI dependencies (for example,
 flowchart LR
     Client["Client / Frontend / Tests"]
     C["HTTP Controllers<br/>api/interface/controller/v1"]
-    UC["Application Use Cases<br/>persistence/application/use_cases"]
-    P["Ports (Protocols)<br/>persistence/application/ports"]
+    UC["Application Use Cases<br/>core/application/use_cases"]
+    P["Ports (Protocols)<br/>core/application/ports"]
     A["Infrastructure Adapters<br/>persistence/infrastructure/repository/db"]
     D[(MySQL)]
     E["Domain Entities<br/>persistence/domain/entity"]
@@ -113,7 +110,8 @@ flowchart LR
 Dependencies should point inward:
 
 - Controllers -> Use Cases -> Ports <- Adapters
-- Domain stays independent and reusable from the outside layers.
+- Application/domain rules in `core` stay independent from infrastructure details.
+- SQLAlchemy entities remain in `persistence/domain/entity` and are consumed through ports/adapters.
 
 This keeps high-level policy stable while allowing infrastructure details to change.
 
