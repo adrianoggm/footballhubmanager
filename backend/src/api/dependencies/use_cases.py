@@ -28,6 +28,9 @@ from core.application.use_cases.manage_pena_profile_usecase import (
 from core.application.use_cases.manage_pena_seasons_usecase import (
     ManagePenaSeasonsUseCase,
 )
+from core.application.use_cases.manage_season_lifecycle_usecase import (
+    ManageSeasonLifecycleUseCase,
+)
 from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
 from core.application.use_cases.register_user_usecase import RegisterUserUseCase
 from core.application.use_cases.update_player_profile_usecase import (
@@ -36,9 +39,6 @@ from core.application.use_cases.update_player_profile_usecase import (
 from fastapi import Depends
 from persistence.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
-)
-from persistence.application.use_cases.manage_season_lifecycle_usecase import (
-    ManageSeasonLifecycleUseCase,
 )
 from persistence.application.use_cases.manage_season_matches_usecase import (
     ManageSeasonMatchesUseCase,

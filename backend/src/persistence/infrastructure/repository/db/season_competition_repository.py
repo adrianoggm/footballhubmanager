@@ -1,6 +1,6 @@
 from datetime import date
 
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     InvalidSeasonDateRangeError,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
