@@ -272,10 +272,10 @@ class MatchInsightsReportBuilder:
 
             top_teammates_by_player.append(
                 {
-                    "guid": player["guid"],
-                    "label": player["label"],
-                    "teammate_guid": best_partner_guid,
-                    "teammate_label": player_labels.get(best_partner_guid, best_partner_guid),
+                    "player_guid": player["guid"],
+                    "player_label": player["label"],
+                    "partner_guid": best_partner_guid,
+                    "partner_label": player_labels.get(best_partner_guid, best_partner_guid),
                     "matches": best_partner["matches"],
                     "wins": best_partner["wins"],
                     "draws": best_partner["draws"],
@@ -298,11 +298,14 @@ class MatchInsightsReportBuilder:
     ) -> list[dict]:
         rows = []
         for left in matrix_players:
-            values = []
+            cells = []
             for right in matrix_players:
                 if left["guid"] == right["guid"]:
-                    values.append(
+                    cells.append(
                         {
+                            "player_guid": left["guid"],
+                            "teammate_guid": right["guid"],
+                            "same_player": True,
                             "matches": left["appearances"],
                             "wins": left["wins"],
                             "draws": left["draws"],
@@ -318,8 +321,11 @@ class MatchInsightsReportBuilder:
                     "draws": 0,
                     "losses": 0,
                 }
-                values.append(
+                cells.append(
                     {
+                        "player_guid": left["guid"],
+                        "teammate_guid": right["guid"],
+                        "same_player": False,
                         "matches": pair["matches"],
                         "wins": pair["wins"],
                         "draws": pair["draws"],
@@ -329,9 +335,12 @@ class MatchInsightsReportBuilder:
                 )
             rows.append(
                 {
-                    "guid": left["guid"],
-                    "label": left["label"],
-                    "values": values,
+                    "player": {
+                        "guid": left["guid"],
+                        "label": left["label"],
+                        "appearances": left["appearances"],
+                    },
+                    "cells": cells,
                 }
             )
         return rows
@@ -342,13 +351,27 @@ class MatchInsightsReportBuilder:
             timeline_raw,
             key=lambda item: (item["match_date"], item["match_guid"]),
         )
-        return [
-            {
-                **item,
-                "label": f"M{index}",
-            }
-            for index, item in enumerate(ordered, start=1)
-        ]
+        timeline: list[dict] = []
+        running_goals = 0
+        running_assists = 0
+        running_saves = 0
+
+        for index, item in enumerate(ordered, start=1):
+            running_goals += cls._safe_int(item.get("goals"))
+            running_assists += cls._safe_int(item.get("assists"))
+            running_saves += cls._safe_int(item.get("saves"))
+            timeline.append(
+                {
+                    **item,
+                    "match_index": index,
+                    "label": f"M{index}",
+                    "running_goals_per_match": cls._rate(running_goals, index),
+                    "running_assists_per_match": cls._rate(running_assists, index),
+                    "running_saves_per_match": cls._rate(running_saves, index),
+                }
+            )
+
+        return timeline
 
     @classmethod
     def _build_season_timeline(

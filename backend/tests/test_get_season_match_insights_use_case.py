@@ -145,11 +145,131 @@ def test_execute_computes_report_from_closed_matches():
     assert report["saves_per_match"] == 1.0
     assert len(report["timeline_by_match"]) == 1
     assert report["timeline_by_match"][0]["label"] == "M1"
+    assert report["timeline_by_match"][0]["match_index"] == 1
+    assert report["timeline_by_match"][0]["running_goals_per_match"] == 3.0
+    assert report["timeline_by_match"][0]["running_assists_per_match"] == 2.0
+    assert report["timeline_by_match"][0]["running_saves_per_match"] == 1.0
+    assert report["top_teammates_by_player"][0]["player_guid"] == "player-a"
+    assert report["top_teammates_by_player"][0]["partner_guid"] == "player-b"
+    assert report["top_teammates_by_player"][0]["player_label"] == "Anita"
+    assert report["top_teammates_by_player"][0]["partner_label"] == "Beto B"
+    assert report["matrix_rows"][0]["player"] == {
+        "guid": "player-a",
+        "label": "Anita",
+        "appearances": 1,
+    }
+    assert report["matrix_rows"][0]["cells"][0] == {
+        "player_guid": "player-a",
+        "teammate_guid": "player-a",
+        "same_player": True,
+        "matches": 1,
+        "wins": 1,
+        "draws": 0,
+        "losses": 0,
+        "win_rate": 1.0,
+    }
+    assert report["matrix_rows"][0]["cells"][1] == {
+        "player_guid": "player-a",
+        "teammate_guid": "player-b",
+        "same_player": False,
+        "matches": 1,
+        "wins": 1,
+        "draws": 0,
+        "losses": 0,
+        "win_rate": 1.0,
+    }
     assert len(report["leaders"]["scorers"]) == 2
     assert repo.last_payload == {
         "pena_guid": "pena-guid",
         "season_guids": ["season-guid"],
     }
+
+
+def test_execute_computes_running_timeline_metrics_across_matches():
+    repo = _FakeRepo(
+        rows=[
+            MatchInsightRow(
+                season_guid="season-a",
+                match_guid="match-a",
+                match_date=date(2024, 3, 1),
+                home_score=1,
+                away_score=0,
+                team_side="home",
+                player_guid="player-a",
+                player_name="Ana",
+                player_surname1="A",
+                player_surname2=None,
+                player_nickname=None,
+                goals=1,
+                assists=0,
+                saves=0,
+            ),
+            MatchInsightRow(
+                season_guid="season-a",
+                match_guid="match-a",
+                match_date=date(2024, 3, 1),
+                home_score=1,
+                away_score=0,
+                team_side="away",
+                player_guid="player-b",
+                player_name="Beto",
+                player_surname1="B",
+                player_surname2=None,
+                player_nickname=None,
+                goals=0,
+                assists=0,
+                saves=1,
+            ),
+            MatchInsightRow(
+                season_guid="season-b",
+                match_guid="match-b",
+                match_date=date(2024, 4, 1),
+                home_score=2,
+                away_score=1,
+                team_side="home",
+                player_guid="player-c",
+                player_name="Cora",
+                player_surname1="C",
+                player_surname2=None,
+                player_nickname=None,
+                goals=2,
+                assists=1,
+                saves=0,
+            ),
+            MatchInsightRow(
+                season_guid="season-b",
+                match_guid="match-b",
+                match_date=date(2024, 4, 1),
+                home_score=2,
+                away_score=1,
+                team_side="away",
+                player_guid="player-d",
+                player_name="Dani",
+                player_surname1="D",
+                player_surname2=None,
+                player_nickname=None,
+                goals=1,
+                assists=0,
+                saves=2,
+            ),
+        ]
+    )
+    use_case = GetSeasonMatchInsightsUseCase(repo)
+
+    report = use_case.execute(
+        pena_guid="pena-guid",
+        season_guids=["season-a", "season-b"],
+    )
+
+    first_match, second_match = report["timeline_by_match"]
+    assert first_match["match_index"] == 1
+    assert first_match["running_goals_per_match"] == 1.0
+    assert first_match["running_assists_per_match"] == 0.0
+    assert first_match["running_saves_per_match"] == 1.0
+    assert second_match["match_index"] == 2
+    assert second_match["running_goals_per_match"] == 2.0
+    assert second_match["running_assists_per_match"] == 0.5
+    assert second_match["running_saves_per_match"] == 1.5
 
 
 def test_collect_match_insight_details_preserves_position_and_rating():
