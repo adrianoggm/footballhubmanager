@@ -28,6 +28,11 @@ from core.application.ports.season_competition_port import (
     SeasonNotFoundError,
 )
 from core.application.ports.season_match_port import SeasonMatchPort
+from core.application.services import (
+    SeasonMatchLineupUpdateMode,
+    SeasonMatchReportService,
+    SeasonMatchReportState,
+)
 from persistence.domain.entity import (
     FootballMatch,
     FootballMatchEvent,
@@ -44,8 +49,13 @@ from sqlalchemy.orm import Session
 
 
 class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
-    def __init__(self, session: Session):
+    def __init__(
+        self,
+        session: Session,
+        report_service: SeasonMatchReportService | None = None,
+    ):
         self.session = session
+        self.report_service = report_service or SeasonMatchReportService()
 
     def create_match_for_admin(
         self,
@@ -263,8 +273,8 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_team_id=home_team.id,
             away_team_id=away_team.id,
         )
-        was_closed = self._match_status(football_match) == "closed"
-        if was_closed:
+        report_state = self._match_report_state(football_match)
+        if self.report_service.should_remove_closed_standings(report_state):
             self._remove_closed_match_standings(
                 pena_id=pena.id,
                 season_id=season.id,
@@ -283,7 +293,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             player_guids=cleaned_away,
         )
 
-        if was_closed:
+        if (
+            self.report_service.lineup_update_mode(report_state)
+            is SeasonMatchLineupUpdateMode.CLOSED_MATCH
+        ):
             self._replace_team_players_for_closed_match(
                 existing_players=home_team_players + away_team_players,
                 home_team_id=home_team.id,
@@ -303,7 +316,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             int(getattr(football_match, "lineup_change_count", 0) or 0) + 1
         )
         football_match.lineup_updated_at_epoch = self._now_epoch()
-        if was_closed:
+        if self.report_service.should_reclose_after_lineup_update(report_state):
             home_team_players, away_team_players = self._load_locked_required_team_players(
                 home_team_id=home_team.id,
                 away_team_id=away_team.id,
@@ -339,7 +352,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             match_guid=match_guid,
             admin_id=admin_id,
         )
-        if self._match_status(football_match) == "closed":
+        if self._match_report_state(football_match) is SeasonMatchReportState.CLOSED:
             self.session.rollback()
             raise MatchReportClosedError()
         if football_match.started_at_epoch is not None:
@@ -382,7 +395,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_team_id=home_team.id,
             away_team_id=away_team.id,
         )
-        if self._match_status(football_match) == "closed":
+        if self.report_service.should_remove_closed_standings(
+            self._match_report_state(football_match)
+        ):
             self._remove_closed_match_standings(
                 pena_id=pena.id,
                 season_id=season.id,
@@ -429,7 +444,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             match_guid=match_guid,
             admin_id=admin_id,
         )
-        if self._match_status(football_match) == "closed":
+        if self._match_report_state(football_match) is SeasonMatchReportState.CLOSED:
             self.session.rollback()
             raise MatchReportClosedError()
         home_team_players, away_team_players = self._load_locked_required_team_players(
@@ -497,7 +512,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             match_id=football_match.id,
             event_guid=event_guid,
         )
-        if self._match_status(football_match) == "closed":
+        if self._match_report_state(football_match) is SeasonMatchReportState.CLOSED:
             self.session.rollback()
             raise MatchReportClosedError()
         if not event:
@@ -550,7 +565,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise MatchStatsMismatchError()
 
-        if self._match_status(football_match) == "closed":
+        if self.report_service.should_remove_closed_standings(
+            self._match_report_state(football_match)
+        ):
             self._remove_closed_match_standings(
                 pena_id=pena.id,
                 season_id=season.id,
@@ -705,7 +722,9 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_team_id=home_team.id,
             away_team_id=away_team.id,
         )
-        if self._match_status(football_match) == "closed":
+        if self.report_service.should_remove_closed_standings(
+            self._match_report_state(football_match)
+        ):
             self._remove_closed_match_standings(
                 pena_id=pena.id,
                 season_id=season.id,
@@ -1390,10 +1409,14 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
 
     @staticmethod
     def _match_status(football_match: FootballMatch) -> str:
-        status = str(getattr(football_match, "status", "") or "").strip().lower()
-        if status in {"open", "closed"}:
-            return status
-        return "closed" if getattr(football_match, "ended_at_epoch", None) is not None else "open"
+        return SqlAlchemySeasonMatchRepository._match_report_state(football_match).value
+
+    @staticmethod
+    def _match_report_state(football_match: FootballMatch) -> SeasonMatchReportState:
+        return SeasonMatchReportService.resolve_state(
+            persisted_status=getattr(football_match, "status", None),
+            ended_at_epoch=getattr(football_match, "ended_at_epoch", None),
+        )
 
     @staticmethod
     def _normalize_team_player_ratings(team_players: list[TeamPlayer]) -> None:
