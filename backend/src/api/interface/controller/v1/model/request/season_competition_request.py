@@ -54,9 +54,7 @@ class UpdateSeasonMatchResultRequest(BaseModel):
 
         if self.update_standings is not None:
             expected_policy = (
-                StandingsUpdatePolicy.APPLY
-                if self.update_standings
-                else StandingsUpdatePolicy.SKIP
+                StandingsUpdatePolicy.APPLY if self.update_standings else StandingsUpdatePolicy.SKIP
             )
             if self.standings_policy is not expected_policy:
                 raise ValueError("Conflicting standings update values")
