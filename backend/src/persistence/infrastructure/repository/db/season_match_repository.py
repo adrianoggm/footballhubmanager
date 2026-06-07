@@ -1407,13 +1407,11 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             if float(team_player.rating) < 0:
                 team_player.rating = 0.0
 
-    @staticmethod
-    def _match_status(football_match: FootballMatch) -> str:
-        return SqlAlchemySeasonMatchRepository._match_report_state(football_match).value
+    def _match_status(self, football_match: FootballMatch) -> str:
+        return self._match_report_state(football_match).value
 
-    @staticmethod
-    def _match_report_state(football_match: FootballMatch) -> SeasonMatchReportState:
-        return SeasonMatchReportService.resolve_state(
+    def _match_report_state(self, football_match: FootballMatch) -> SeasonMatchReportState:
+        return self.report_service.resolve_state(
             persisted_status=getattr(football_match, "status", None),
             ended_at_epoch=getattr(football_match, "ended_at_epoch", None),
         )

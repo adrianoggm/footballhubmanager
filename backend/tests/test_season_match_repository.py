@@ -7,6 +7,7 @@ from core.application.ports.season_competition_port import (
     MatchNotFoundError,
     MatchPlayerStatsUpdateData,
 )
+from core.application.services import SeasonMatchReportState
 from persistence.infrastructure.repository.db.season_match_repository import (
     SqlAlchemySeasonMatchRepository,
 )
@@ -53,6 +54,41 @@ def test_delete_match_for_admin_rolls_back_when_match_bundle_is_missing():
         )
 
     session.rollback.assert_called_once()
+
+
+def test_match_report_state_uses_injected_report_service():
+    session = Mock()
+
+    class _ReportService:
+        def __init__(self):
+            self.calls = []
+
+        def resolve_state(self, *, persisted_status, ended_at_epoch):
+            self.calls.append(
+                {
+                    "persisted_status": persisted_status,
+                    "ended_at_epoch": ended_at_epoch,
+                }
+            )
+            return SeasonMatchReportState.OPEN
+
+    report_service = _ReportService()
+    repo = SqlAlchemySeasonMatchRepository(session, report_service=report_service)
+
+    football_match = SimpleNamespace(status="closed", ended_at_epoch=123)
+
+    assert repo._match_report_state(football_match) is SeasonMatchReportState.OPEN
+    assert repo._match_status(football_match) == "open"
+    assert report_service.calls == [
+        {
+            "persisted_status": "closed",
+            "ended_at_epoch": 123,
+        },
+        {
+            "persisted_status": "closed",
+            "ended_at_epoch": 123,
+        },
+    ]
 
 
 def test_create_match_event_for_admin_uses_team_player_player_ids():
