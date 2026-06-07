@@ -16,41 +16,44 @@ from api.interface.controller.v1.model.request.penas_request import (
 )
 from auth.dependencies import require_user
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.use_cases.generate_pena_link_token_usecase import (
-    PenaAccessDeniedError,
+from core.application.models import (
+    PenaAccountabilityExpenseCreate,
+    PenaAccountabilityExpenseInfo,
+    PenaAccountabilityInfo,
+    PenaAccountabilityMemberAccountInfo,
+    PenaAccountabilityMemberAccountUpsert,
+    PenaInfo,
+    PenaLabelsInfo,
     PenaLinkToken,
+    PenaProfileInfo,
+    PenasPage,
 )
-from persistence.application.use_cases.get_penas_usecase import PenaInfo, PenasPage
-from persistence.application.use_cases.link_user_to_pena_usecase import (
+from core.application.use_cases.generate_pena_link_token_usecase import (
+    PenaAccessDeniedError,
+)
+from core.application.use_cases.link_user_to_pena_usecase import (
     InvalidLinkTokenError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_accountability_usecase import (
+from core.application.use_cases.manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
     PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseCreate,
-    PenaAccountabilityExpenseInfo,
     PenaAccountabilityExpenseNotFoundError,
-    PenaAccountabilityInfo,
-    PenaAccountabilityMemberAccountInfo,
-    PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_labels_usecase import (
+from core.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     PenaLabelsAccessDeniedError,
-    PenaLabelsInfo,
     PenaLabelsPenaNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_profile_usecase import (
+from core.application.use_cases.manage_pena_profile_usecase import (
     InvalidPenaProfileImageError,
     PenaProfileAccessDeniedError,
-    PenaProfileInfo,
     PenaProfileNotFoundError,
 )
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_id: int = 7) -> SessionData:

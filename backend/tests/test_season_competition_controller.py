@@ -21,9 +21,19 @@ from api.interface.controller.v1.model.request.season_competition_request import
     UpdateSeasonPlayerStatsRequest,
 )
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
-from persistence.application.use_cases.manage_season_competition_usecase import (
+from core.application.models.season_competition_models import (
+    SeasonMatchDetailInfo,
+    SeasonMatchesPage,
+    SeasonMatchInfo,
+    SeasonMatchPlayerStatsInfo,
+    SeasonMatchSummaryInfo,
+    SeasonMatchTeamInfo,
+    SeasonPlayerInfo,
+    SeasonPlayersFilters,
+    SeasonPlayersPage,
+)
+from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
@@ -33,28 +43,20 @@ from persistence.application.use_cases.manage_season_competition_usecase import 
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
-    SeasonMatchDetailInfo,
-    SeasonMatchesPage,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
-    SeasonMatchInfo,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
-    SeasonMatchPlayerStatsInfo,
     SeasonMatchReportClosedError,
     SeasonMatchStatsMismatchError,
-    SeasonMatchSummaryInfo,
-    SeasonMatchTeamInfo,
     SeasonPlayerAlreadyRegisteredError,
-    SeasonPlayerInfo,
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    SeasonPlayersFilters,
-    SeasonPlayersPage,
 )
+from fastapi import HTTPException
 
 
 def _admin_session(admin_id: int = 5) -> SessionData:
@@ -564,6 +566,44 @@ def test_update_season_match_result_success():
     assert payload["update"].home_score == 2
     assert payload["update"].away_score == 1
     assert payload["update"].standings_policy is StandingsUpdatePolicy.APPLY
+
+
+def test_update_season_match_result_respects_explicit_standings_policy():
+    use_case = _UseCaseStub()
+    controller.update_season_match_result(
+        "pena-1",
+        "season-1",
+        "match-1",
+        payload=UpdateSeasonMatchResultRequest(
+            home_score=2,
+            away_score=1,
+            standings_policy=StandingsUpdatePolicy.SKIP,
+        ),
+        admin_session=_admin_session(66),
+        use_case=use_case,
+    )
+
+    _, payload = use_case.last_call
+    assert payload["update"].standings_policy is StandingsUpdatePolicy.SKIP
+
+
+def test_update_season_match_result_accepts_legacy_update_standings_flag():
+    use_case = _UseCaseStub()
+    controller.update_season_match_result(
+        "pena-1",
+        "season-1",
+        "match-1",
+        payload=UpdateSeasonMatchResultRequest(
+            home_score=2,
+            away_score=1,
+            update_standings=False,
+        ),
+        admin_session=_admin_session(66),
+        use_case=use_case,
+    )
+
+    _, payload = use_case.last_call
+    assert payload["update"].standings_policy is StandingsUpdatePolicy.SKIP
 
 
 def test_update_season_match_success_and_partial_flags():

@@ -12,7 +12,7 @@ from api.interface.controller.v1.model.response.season_competition_response impo
     SeasonPlayerResponse,
     SeasonPlayersPageResponse,
 )
-from persistence.application.use_cases import (
+from core.application.models.season_competition_models import (
     SeasonMatchDetailInfo,
     SeasonMatchesPage,
     SeasonMatchEventInfo,

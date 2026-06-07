@@ -38,8 +38,11 @@ Use `docs/backend.md` as the main reference.
 - Controllers live in `backend/src/api/interface/controller/v1`
 - Request/response DTOs live beside controllers in `model/request` and `model/response`
 - Dependency wiring lives in `backend/src/api/dependencies`
-- Use cases live in `backend/src/persistence/application/use_cases`
-- Ports live in `backend/src/persistence/application/ports`
+- Use cases live in `backend/src/core/application/use_cases`
+- Ports live in `backend/src/core/application/ports`
+- Application services and policies live in `backend/src/core/application/services` and
+  `backend/src/core/application/policies`
+- Domain helpers/value objects live in `backend/src/core/domain`
 - Repositories/adapters live in `backend/src/persistence/infrastructure/repository/db`
 - Domain entities live in `backend/src/persistence/domain/entity`
 - Tests live in `backend/tests`

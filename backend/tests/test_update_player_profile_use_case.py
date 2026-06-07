@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.player_profile_port import (
+from core.application.ports.player_profile_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
-from persistence.application.ports.player_profile_port import (
+from core.application.ports.player_profile_port import (
     PenaInfoResult,
     PlayerProfileResult,
 )
-from persistence.application.use_cases.update_player_profile_usecase import (
+from core.application.use_cases.update_player_profile_usecase import (
     InvalidNationalityError,
     InvalidPlayerUpdateDataError,
     InvalidProfileImageError,

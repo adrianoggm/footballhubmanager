@@ -1,7 +1,12 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.pena_membership_port import (
+from core.application.models import (
+    PenaGuestPlayerCreate,
+    PenaMembershipUpdate,
+)
+from core.application.policies import FieldUpdate
+from core.application.ports.pena_membership_port import (
     InvalidNationalityError,
     InvalidRoleLabelError,
     PenaMembershipNotFoundError,
@@ -11,20 +16,17 @@ from persistence.application.ports.pena_membership_port import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases.manage_pena_membership_usecase import (
+from core.application.use_cases.manage_pena_membership_usecase import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     ManagePenaMembershipUseCase,
-    PenaGuestPlayerCreate,
     PenaMembershipAccessDeniedError,
     PenaMembershipInvalidNationalityError,
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
-    PenaMembershipUpdate,
     PenaMembershipUserProfileNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_membership_usecase import (
+from core.application.use_cases.manage_pena_membership_usecase import (
     PenaMembershipNotFoundError as UseCasePenaMembershipNotFoundError,
 )
 

@@ -9,24 +9,23 @@ from api.interface.controller.v1.model.request.auth_request import (
 from auth.application.models import AuthAccount
 from auth.application.use_cases.login import InvalidCredentialsError
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.use_cases.register_admin_usecase import (
+from core.application.models import RegisteredAdmin, RegisteredUser
+from core.application.use_cases.register_admin_usecase import (
     InvalidAdminRegistrationDataError,
-    RegisteredAdmin,
 )
-from persistence.application.use_cases.register_admin_usecase import (
+from core.application.use_cases.register_admin_usecase import (
     UsernameAlreadyExistsError as AdminUsernameExistsError,
 )
-from persistence.application.use_cases.register_user_usecase import (
+from core.application.use_cases.register_user_usecase import (
     InvalidNationalityError as UserInvalidNationalityError,
 )
-from persistence.application.use_cases.register_user_usecase import (
+from core.application.use_cases.register_user_usecase import (
     InvalidRegistrationDataError,
-    RegisteredUser,
 )
-from persistence.application.use_cases.register_user_usecase import (
+from core.application.use_cases.register_user_usecase import (
     UsernameAlreadyExistsError as UserUsernameExistsError,
 )
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_guid: str) -> SessionData:

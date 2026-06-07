@@ -1,5 +1,5 @@
 import pytest
-from persistence.domain.label_config import (
+from core.domain.label_config import (
     DEFAULT_LABEL_COLOR,
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_ROLE_LABEL_COLORS,

@@ -2,7 +2,19 @@ from dataclasses import dataclass
 from datetime import date
 
 import pytest
-from persistence.application.ports.season_competition_port import (
+from core.application.models.season_competition_models import (
+    SeasonMatchCreate,
+    SeasonMatchCreateDetailed,
+    SeasonMatchEventCreate,
+    SeasonMatchLineupsUpdate,
+    SeasonMatchPlayerStatsUpdate,
+    SeasonMatchResultUpdate,
+    SeasonMatchStatsUpdate,
+    SeasonMatchTeamCreate,
+    SeasonMatchUpdate,
+)
+from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     MatchClockAlreadyStartedError,
@@ -25,11 +37,10 @@ from persistence.application.ports.season_competition_port import (
     SamePlayerMatchError,
     SeasonNotFoundError,
 )
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     MatchPlayersNotInSeasonError as RepositoryMatchPlayersNotInSeasonError,
 )
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
-from persistence.application.use_cases.manage_season_matches_usecase import (
+from core.application.use_cases.manage_season_matches_usecase import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonMatchesUseCase,
@@ -38,26 +49,15 @@ from persistence.application.use_cases.manage_season_matches_usecase import (
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
-    SeasonMatchCreate,
-    SeasonMatchCreateDetailed,
-    SeasonMatchEventCreate,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
-    SeasonMatchLineupsUpdate,
     SeasonMatchNotFoundError,
     SeasonMatchPlayersNotInSeasonError,
     SeasonMatchReportClosedError,
-    SeasonMatchResultUpdate,
     SeasonMatchStatsMismatchError,
-    SeasonMatchStatsUpdate,
-    SeasonMatchUpdate,
     SeasonPlayerNotFoundError,
-)
-from persistence.application.use_cases.season_competition_models import (
-    SeasonMatchPlayerStatsUpdate,
-    SeasonMatchTeamCreate,
 )
 
 

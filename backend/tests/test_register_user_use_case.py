@@ -2,19 +2,19 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
-from persistence.application.ports.registration_port import (
+from core.application.models import UserRegistration
+from core.application.ports.registration_port import (
     DuplicateUsernameError,
     RegisteredUserResult,
 )
-from persistence.application.ports.registration_port import (
+from core.application.ports.registration_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
-from persistence.application.use_cases.register_user_usecase import (
+from core.application.use_cases.register_user_usecase import (
     InvalidNationalityError,
     InvalidRegistrationDataError,
     RegisterUserUseCase,
     UsernameAlreadyExistsError,
-    UserRegistration,
 )
 
 

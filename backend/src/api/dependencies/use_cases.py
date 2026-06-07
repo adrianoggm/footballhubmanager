@@ -2,52 +2,50 @@ from auth.application.use_cases.login import LoginAdminUseCase, LoginUserUseCase
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
-from fastapi import Depends
-from persistence.application.use_cases.generate_pena_link_token_usecase import (
+from core.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
-from persistence.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
-from persistence.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
-from persistence.application.use_cases.get_penas_usecase import GetPenasUseCase
-from persistence.application.use_cases.get_player_profile_usecase import (
-    GetPlayerProfileUseCase,
-)
-from persistence.application.use_cases.get_season_match_insights_usecase import (
+from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
+from core.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
+from core.application.use_cases.get_penas_usecase import GetPenasUseCase
+from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
+from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
-from persistence.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
-from persistence.application.use_cases.manage_pena_accountability_usecase import (
+from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
+from core.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
 )
-from persistence.application.use_cases.manage_pena_labels_usecase import (
+from core.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
-from persistence.application.use_cases.manage_pena_membership_usecase import (
+from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
 )
-from persistence.application.use_cases.manage_pena_profile_usecase import (
+from core.application.use_cases.manage_pena_profile_usecase import (
     ManagePenaProfileUseCase,
 )
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
+from core.application.use_cases.manage_pena_seasons_usecase import (
     ManagePenaSeasonsUseCase,
 )
-from persistence.application.use_cases.manage_season_competition_usecase import (
+from core.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
 )
-from persistence.application.use_cases.manage_season_lifecycle_usecase import (
+from core.application.use_cases.manage_season_lifecycle_usecase import (
     ManageSeasonLifecycleUseCase,
 )
-from persistence.application.use_cases.manage_season_matches_usecase import (
+from core.application.use_cases.manage_season_matches_usecase import (
     ManageSeasonMatchesUseCase,
 )
-from persistence.application.use_cases.manage_season_players_usecase import (
+from core.application.use_cases.manage_season_players_usecase import (
     ManageSeasonPlayersUseCase,
 )
-from persistence.application.use_cases.register_admin_usecase import RegisterAdminUseCase
-from persistence.application.use_cases.register_user_usecase import RegisterUserUseCase
-from persistence.application.use_cases.update_player_profile_usecase import (
+from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
+from core.application.use_cases.register_user_usecase import RegisterUserUseCase
+from core.application.use_cases.update_player_profile_usecase import (
     UpdatePlayerProfileUseCase,
 )
+from fastapi import Depends
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
 )

@@ -1,16 +1,18 @@
 import pytest
-from persistence.application.ports.pena_profile_port import (
+from core.application.models import (
+    PenaProfileUpdate,
+)
+from core.application.ports.pena_profile_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
-from persistence.application.ports.pena_profile_port import (
+from core.application.ports.pena_profile_port import (
     PenaNotManagedByAdminError as RepositoryPenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.manage_pena_profile_usecase import (
+from core.application.use_cases.manage_pena_profile_usecase import (
     InvalidPenaProfileImageError,
     ManagePenaProfileUseCase,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
-    PenaProfileUpdate,
 )
 
 

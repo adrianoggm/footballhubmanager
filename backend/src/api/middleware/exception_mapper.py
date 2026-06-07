@@ -5,8 +5,7 @@ from functools import wraps
 from typing import Any
 
 from auth.application.use_cases.login import InvalidCredentialsError
-from fastapi import HTTPException, status
-from persistence.application.use_cases import (
+from core.application.use_cases import (
     AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
     InvalidLinkTokenError,
@@ -17,11 +16,6 @@ from persistence.application.use_cases import (
     InvalidPenaProfileImageError,
     InvalidPlayerUpdateDataError,
     InvalidRegistrationDataError,
-    InvalidSeasonDataError,
-    InvalidSeasonInsightsDataError,
-    InvalidSeasonMatchDataError,
-    InvalidSeasonPlayerBatchDataError,
-    InvalidSeasonPlayerUpdateDataError,
     PenaAccessDeniedError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseNotFoundError,
@@ -37,8 +31,41 @@ from persistence.application.use_cases import (
     PenaMembershipUserProfileNotFoundError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
-    PlayerInvalidNationalityError,
-    PlayerInvalidProfileImageError,
+    UserAlreadyLinkedError,
+    UserInvalidNationalityError,
+    UserProfileNotFoundError,
+    UserUsernameExistsError,
+)
+from core.application.use_cases import (
+    InvalidNationalityError as PlayerInvalidNationalityError,
+)
+from core.application.use_cases import (
+    InvalidProfileImageError as PlayerInvalidProfileImageError,
+)
+from core.application.use_cases import (
+    InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
+)
+from core.application.use_cases.manage_pena_seasons_usecase import (
+    InvalidPenaSeasonDataError,
+)
+from core.application.use_cases.manage_pena_seasons_usecase import (
+    PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
+)
+from core.application.use_cases.manage_pena_seasons_usecase import (
+    PenaSeasonDateOverlapError as PenaSeasonsDateOverlapError,
+)
+from core.application.use_cases.manage_pena_seasons_usecase import (
+    PenaSeasonNotFoundError as PenaSeasonsNotFoundError,
+)
+from core.application.use_cases.manage_pena_seasons_usecase import (
+    PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
+)
+from core.application.use_cases.season_competition_errors import (
+    InvalidSeasonDataError,
+    InvalidSeasonInsightsDataError,
+    InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerBatchDataError,
+    InvalidSeasonPlayerUpdateDataError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
@@ -48,38 +75,26 @@ from persistence.application.use_cases import (
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    UserAlreadyLinkedError,
-    UserInvalidNationalityError,
-    UserProfileNotFoundError,
-    UserUsernameExistsError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonAccessDeniedError as CompetitionPenaSeasonAccessDeniedError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonDateOverlapError as CompetitionPenaSeasonDateOverlapError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonNotFoundError as CompetitionPenaSeasonNotFoundError,
 )
-from persistence.application.use_cases import (
+from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError as CompetitionPenaSeasonPenaNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
-    InvalidPenaSeasonDataError,
+from core.application.use_cases.season_match_insights_errors import (
+    PenaSeasonNotFoundError as CoreCompetitionPenaSeasonNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
+from core.application.use_cases.season_match_insights_errors import (
+    PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonDateOverlapError as PenaSeasonsDateOverlapError,
-)
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonNotFoundError as PenaSeasonsNotFoundError,
-)
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
-)
+from fastapi import HTTPException, status
 
 ExceptionStatus = tuple[int, str]
 ExceptionStatusMap = Mapping[type[Exception], ExceptionStatus]
@@ -157,8 +172,20 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         status.HTTP_409_CONFLICT,
         "Season range overlaps an existing season",
     ),
+    CoreCompetitionPenaSeasonPenaNotFoundError: (
+        status.HTTP_404_NOT_FOUND,
+        "Pena not found",
+    ),
+    CoreCompetitionPenaSeasonNotFoundError: (
+        status.HTTP_404_NOT_FOUND,
+        "Season not found",
+    ),
     InvalidSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season data"),
     InvalidSeasonInsightsDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match insights request",
+    ),
+    CoreInvalidSeasonInsightsRequestError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match insights request",
     ),

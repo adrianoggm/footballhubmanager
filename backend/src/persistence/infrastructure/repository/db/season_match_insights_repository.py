@@ -1,9 +1,9 @@
-from persistence.application.ports.season_competition_port import (
-    MatchInsightRowResult,
+from core.application.models import MatchInsightRow
+from core.application.ports.season_competition_port import (
     PenaNotFoundError,
     SeasonNotFoundError,
 )
-from persistence.application.ports.season_match_insights_port import SeasonMatchInsightsPort
+from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
 from persistence.domain.entity import (
     FootballMatch,
     Pena,
@@ -26,7 +26,7 @@ class SqlAlchemySeasonMatchInsightsRepository(SeasonMatchInsightsPort):
         *,
         pena_guid: str,
         season_guids: list[str],
-    ) -> list[MatchInsightRowResult]:
+    ) -> list[MatchInsightRow]:
         pena = self._get_pena(pena_guid)
         season_ids_by_guid = self._get_requested_season_ids(
             pena_id=pena.id,
@@ -146,9 +146,9 @@ class SqlAlchemySeasonMatchInsightsRepository(SeasonMatchInsightsPort):
         )
 
     @staticmethod
-    def _to_match_insight_row(row) -> MatchInsightRowResult:
+    def _to_match_insight_row(row) -> MatchInsightRow:
         team_side = "home" if int(row.team_id) == int(row.home_team_id) else "away"
-        return MatchInsightRowResult(
+        return MatchInsightRow(
             season_guid=str(row.season_guid),
             match_guid=str(row.match_guid),
             match_date=row.match_date,

@@ -8,18 +8,20 @@ from api.interface.controller.v1.model.request.pena_seasons_request import (
     UpdatePenaSeasonRequest,
 )
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
-    InvalidPenaSeasonDataError,
-    PenaSeasonAccessDeniedError,
+from core.application.models import (
     PenaSeasonCreate,
-    PenaSeasonDateOverlapError,
     PenaSeasonInfo,
-    PenaSeasonNotFoundError,
-    PenaSeasonPenaNotFoundError,
     PenaSeasonsPage,
 )
+from core.application.policies import FieldUpdate
+from core.application.use_cases.manage_pena_seasons_usecase import (
+    InvalidPenaSeasonDataError,
+    PenaSeasonAccessDeniedError,
+    PenaSeasonDateOverlapError,
+    PenaSeasonNotFoundError,
+    PenaSeasonPenaNotFoundError,
+)
+from fastapi import HTTPException
 
 
 def _admin_session(admin_id: int = 77) -> SessionData:

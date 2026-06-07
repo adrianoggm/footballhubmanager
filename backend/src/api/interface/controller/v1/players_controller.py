@@ -10,13 +10,13 @@ from api.interface.controller.v1.model.response.players_response import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_player_access, require_user
-from fastapi import APIRouter, Depends, HTTPException, status
-from persistence.application.use_cases import (
-    GetPlayerProfileUseCase,
-    PlayerProfile,
+from core.application.models import PlayerProfile
+from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
+from core.application.use_cases.update_player_profile_usecase import (
     PlayerUpdate,
     UpdatePlayerProfileUseCase,
 )
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter()
 

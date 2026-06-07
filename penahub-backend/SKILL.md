@@ -25,10 +25,11 @@ Read adjacent production/test files before introducing a new pattern.
 - Controllers: `backend/src/api/interface/controller/v1`
   - transport only
   - map inputs/errors/responses
-- Use cases: `backend/src/persistence/application/use_cases`
+- Use cases: `backend/src/core/application/use_cases`
   - own orchestration and business rules
-- Ports: `backend/src/persistence/application/ports`
+- Ports: `backend/src/core/application/ports`
   - define repository/service contracts
+- Policies/services: `backend/src/core/application/policies`, `backend/src/core/application/services`
 - Repositories: `backend/src/persistence/infrastructure/repository/db`
   - implement persistence details only
 

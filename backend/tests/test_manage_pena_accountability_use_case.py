@@ -2,7 +2,12 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 import pytest
-from persistence.application.ports.pena_accountability_port import (
+from core.application.models import (
+    PenaAccountabilityExpenseCreate,
+    PenaAccountabilityMemberAccountUpsert,
+    PenaAccountabilitySettingsUpdate,
+)
+from core.application.ports.pena_accountability_port import (
     PenaAccountabilityExpenseResult,
     PenaAccountabilityMemberAccountResult,
     PenaAccountabilityResult,
@@ -11,16 +16,13 @@ from persistence.application.ports.pena_accountability_port import (
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.manage_pena_accountability_usecase import (
+from core.application.use_cases.manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
     ManagePenaAccountabilityUseCase,
     PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseNotFoundError,
-    PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
-    PenaAccountabilitySettingsUpdate,
 )
 
 
@@ -170,6 +172,31 @@ def test_update_settings_for_admin_normalizes_currency_and_visibility():
     assert repo.last_call["budget_visibility"] == "full"
     assert repo.last_call["expenses_visibility"] == "summary"
     assert repo.last_call["balance_cents"] == 777
+
+
+def test_update_settings_for_admin_allows_negative_balance():
+    repo = _FakeRepo()
+    use_case = ManagePenaAccountabilityUseCase(repo)
+
+    use_case.update_settings_for_admin(
+        pena_guid="pena-guid",
+        admin_id=3,
+        update=PenaAccountabilitySettingsUpdate(balance_cents=-250),
+    )
+
+    assert repo.last_call is not None
+    assert repo.last_call["balance_cents"] == -250
+
+
+def test_update_settings_for_admin_rejects_negative_reserve():
+    use_case = ManagePenaAccountabilityUseCase(_FakeRepo())
+
+    with pytest.raises(InvalidPenaAccountabilityDataError):
+        use_case.update_settings_for_admin(
+            pena_guid="pena-guid",
+            admin_id=3,
+            update=PenaAccountabilitySettingsUpdate(reserve_cents=-1),
+        )
 
 
 def test_update_settings_for_admin_uses_current_values_as_fallbacks():

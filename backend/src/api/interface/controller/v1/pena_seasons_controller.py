@@ -13,15 +13,14 @@ from api.interface.controller.v1.model.response.pena_seasons_response import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
-from fastapi import APIRouter, Depends, Query, Response, status
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases.manage_pena_seasons_usecase import (
+from core.application.models import PenaSeasonCreate, PenaSeasonUpdate
+from core.application.policies import FieldUpdate
+from core.application.use_cases.manage_pena_seasons_usecase import (
     InvalidPenaSeasonDataError,
     ManagePenaSeasonsUseCase,
-    PenaSeasonCreate,
     PenaSeasonNotFoundError,
-    PenaSeasonUpdate,
 )
+from fastapi import APIRouter, Depends, Query, Response, status
 
 router = APIRouter()
 

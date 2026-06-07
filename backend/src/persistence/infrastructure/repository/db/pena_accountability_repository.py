@@ -1,6 +1,6 @@
 from datetime import date
 
-from persistence.application.ports.pena_accountability_port import (
+from core.application.ports.pena_accountability_port import (
     PenaAccountabilityExpenseResult,
     PenaAccountabilityMemberAccountResult,
     PenaAccountabilityPort,

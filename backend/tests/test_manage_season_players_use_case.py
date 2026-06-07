@@ -1,7 +1,14 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.season_competition_port import (
+from core.application.models.season_competition_models import (
+    SeasonPlayersFilters as UseCaseSeasonPlayersFilters,
+)
+from core.application.models.season_competition_models import (
+    SeasonPlayerStatsUpdate,
+)
+from core.application.policies import FieldUpdate
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     InvalidSeasonPlayerStatsError,
     PenaNotFoundError,
@@ -15,11 +22,10 @@ from persistence.application.ports.season_competition_port import (
     SeasonPlayerResult,
     SeasonPlayersPageResult,
 )
-from persistence.application.ports.season_competition_port import (
+from core.application.ports.season_competition_port import (
     SeasonPlayerNotFoundError as RepositorySeasonPlayerNotFoundError,
 )
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases.manage_season_players_usecase import (
+from core.application.use_cases.manage_season_players_usecase import (
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     ManageSeasonPlayersUseCase,
@@ -29,13 +35,9 @@ from persistence.application.use_cases.manage_season_players_usecase import (
     SeasonPlayerInMatchError,
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
-    SeasonPlayerStatsUpdate,
 )
-from persistence.application.use_cases.manage_season_players_usecase import (
+from core.application.use_cases.manage_season_players_usecase import (
     SeasonPlayerAlreadyRegisteredError as UseCaseSeasonPlayerAlreadyRegisteredError,
-)
-from persistence.application.use_cases.manage_season_players_usecase import (
-    SeasonPlayersFilters as UseCaseSeasonPlayersFilters,
 )
 
 

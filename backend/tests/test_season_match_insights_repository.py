@@ -3,8 +3,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from persistence.application.ports.season_competition_port import (
-    MatchInsightRowResult,
+from core.application.models import MatchInsightRow
+from core.application.ports.season_competition_port import (
     SeasonNotFoundError,
 )
 from persistence.infrastructure.repository.db.season_match_insights_repository import (
@@ -90,7 +90,7 @@ def test_list_closed_match_insight_rows_maps_query_rows():
     )
 
     assert result == [
-        MatchInsightRowResult(
+        MatchInsightRow(
             season_guid="season-1",
             match_guid="match-1",
             match_date=date(2024, 3, 1),
@@ -108,7 +108,7 @@ def test_list_closed_match_insight_rows_maps_query_rows():
             player_position="GK",
             rating=7.5,
         ),
-        MatchInsightRowResult(
+        MatchInsightRow(
             season_guid="season-1",
             match_guid="match-1",
             match_date=date(2024, 3, 1),

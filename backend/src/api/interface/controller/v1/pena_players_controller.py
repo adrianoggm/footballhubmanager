@@ -16,17 +16,19 @@ from api.interface.controller.v1.model.response.pena_players_response import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin, require_user
-from fastapi import APIRouter, Depends, Query, Response, status
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases import (
-    GetPenaPlayersUseCase,
-    ManagePenaMembershipUseCase,
+from core.application.models import (
     PenaGuestPlayerCreate,
-    PenaMembershipAccessDeniedError,
-    PenaMembershipNotFoundError,
     PenaMembershipUpdate,
     PenaPlayerFilters,
 )
+from core.application.policies import FieldUpdate
+from core.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
+from core.application.use_cases.manage_pena_membership_usecase import (
+    ManagePenaMembershipUseCase,
+    PenaMembershipAccessDeniedError,
+    PenaMembershipNotFoundError,
+)
+from fastapi import APIRouter, Depends, Query, Response, status
 
 router = APIRouter()
 

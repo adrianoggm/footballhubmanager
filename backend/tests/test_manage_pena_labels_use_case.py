@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 
 import pytest
-from persistence.application.ports.pena_labels_port import (
+from core.application.models import PenaLabelsUpdate
+from core.application.ports.pena_labels_port import (
     PenaLabelsResult,
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.application.use_cases.manage_pena_labels_usecase import (
+from core.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     ManagePenaLabelsUseCase,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
-    PenaLabelsUpdate,
 )
 
 
