@@ -264,13 +264,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_team_id=away_team.id,
         )
         was_closed = self._match_status(football_match) == "closed"
-        self._remove_match_standings(
-            football_match=football_match,
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
+        if was_closed:
+            self._remove_closed_match_standings(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
 
         home_players = self._resolve_match_players(
             pena_id=pena.id,
@@ -382,13 +382,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_team_id=home_team.id,
             away_team_id=away_team.id,
         )
-        self._remove_match_standings(
-            football_match=football_match,
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
+        if self._match_status(football_match) == "closed":
+            self._remove_closed_match_standings(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
         events = self._list_locked_match_events(match_id=football_match.id)
         if events:
             self._apply_tracked_events_to_team_players(
@@ -550,21 +550,12 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise MatchStatsMismatchError()
 
-        old_home_score = sum(row.goals for row in home_team_players)
-        old_away_score = sum(row.goals for row in away_team_players)
         if self._match_status(football_match) == "closed":
-            home_season_players, away_season_players = self._load_match_season_players(
+            self._remove_closed_match_standings(
                 pena_id=pena.id,
                 season_id=season.id,
                 home_team_players=home_team_players,
                 away_team_players=away_team_players,
-            )
-            self._apply_team_outcome_delta(
-                home_team_stats=home_season_players,
-                away_team_stats=away_season_players,
-                home_score=old_home_score,
-                away_score=old_away_score,
-                delta=-1,
             )
 
         self._apply_team_player_stats(home_roster, home_stats_map)
@@ -714,13 +705,13 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_team_id=home_team.id,
             away_team_id=away_team.id,
         )
-        self._remove_match_standings(
-            football_match=football_match,
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
+        if self._match_status(football_match) == "closed":
+            self._remove_closed_match_standings(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
 
         self.session.delete(football_match)
         self.session.flush()
@@ -1239,7 +1230,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             raise MatchClockNotRunningError()
         return max(self._now_epoch() - int(football_match.started_at_epoch), 0)
 
-    def _team_season_players(
+    def _load_locked_team_season_players(
         self,
         *,
         pena_id: int,
@@ -1259,7 +1250,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             rows.append(season_player)
         return rows
 
-    def _load_match_season_players(
+    def _load_locked_match_season_players(
         self,
         *,
         pena_id: int,
@@ -1268,30 +1259,27 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         away_team_players: list[TeamPlayer],
     ) -> tuple[list[SeasonPlayer], list[SeasonPlayer]]:
         return (
-            self._team_season_players(
+            self._load_locked_team_season_players(
                 pena_id=pena_id,
                 season_id=season_id,
                 team_players=home_team_players,
             ),
-            self._team_season_players(
+            self._load_locked_team_season_players(
                 pena_id=pena_id,
                 season_id=season_id,
                 team_players=away_team_players,
             ),
         )
 
-    def _remove_match_standings(
+    def _remove_closed_match_standings(
         self,
         *,
-        football_match: FootballMatch,
         pena_id: int,
         season_id: int,
         home_team_players: list[TeamPlayer],
         away_team_players: list[TeamPlayer],
     ) -> None:
-        if self._match_status(football_match) != "closed":
-            return
-        home_season_players, away_season_players = self._load_match_season_players(
+        home_season_players, away_season_players = self._load_locked_match_season_players(
             pena_id=pena_id,
             season_id=season_id,
             home_team_players=home_team_players,
@@ -1423,7 +1411,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         away_team_players: list[TeamPlayer],
     ) -> None:
         self._normalize_team_player_ratings(home_team_players + away_team_players)
-        home_season_players, away_season_players = self._load_match_season_players(
+        home_season_players, away_season_players = self._load_locked_match_season_players(
             pena_id=pena_id,
             season_id=season_id,
             home_team_players=home_team_players,

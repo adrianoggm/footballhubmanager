@@ -151,8 +151,7 @@ def test_update_match_stats_for_admin_stops_live_tracking_when_closing_match():
             "home-player-guid" if team_players[0] is home_team_player else "away-player-guid"
         ): team_players[0]
     }
-    repo._load_match_season_players = lambda **kwargs: ([], [])
-    repo._apply_team_outcome_delta = lambda **kwargs: None
+    repo._remove_closed_match_standings = Mock()
 
     def _apply_team_player_stats(roster, payload):
         for player_guid, team_player in roster.items():
@@ -163,6 +162,9 @@ def test_update_match_stats_for_admin_stops_live_tracking_when_closing_match():
             team_player.rating = stats.rating
 
     repo._apply_team_player_stats = _apply_team_player_stats
+    repo._close_match_report = Mock(
+        side_effect=lambda **kwargs: setattr(kwargs["football_match"], "status", "closed")
+    )
     repo._build_match_detail_result = lambda **kwargs: "detail-result"
     repo._now_epoch = lambda: 777
 
@@ -194,6 +196,8 @@ def test_update_match_stats_for_admin_stops_live_tracking_when_closing_match():
     assert football_match.ended_at_epoch == 777
     assert football_match.status == "closed"
     assert result == "detail-result"
+    repo._remove_closed_match_standings.assert_not_called()
+    repo._close_match_report.assert_called_once()
     session.commit.assert_called_once()
 
 
@@ -244,9 +248,10 @@ def test_stop_match_for_admin_finalizes_tracked_stats_when_events_exist():
         SimpleNamespace(id_player=22, event_type="save", value_delta=-1),
         SimpleNamespace(id_player=22, event_type="yellow_card", value_delta=1),
     ]
-    repo._load_match_season_players = lambda **kwargs: ([], [])
-    apply_outcome_delta = Mock()
-    repo._apply_team_outcome_delta = apply_outcome_delta
+    repo._remove_closed_match_standings = Mock()
+    repo._close_match_report = Mock(
+        side_effect=lambda **kwargs: setattr(kwargs["football_match"], "status", "closed")
+    )
     repo._build_match_detail_result = lambda **kwargs: "detail-result"
     repo._now_epoch = lambda: 777
 
@@ -268,6 +273,8 @@ def test_stop_match_for_admin_finalizes_tracked_stats_when_events_exist():
     assert football_match.ended_at_epoch == 777
     assert football_match.status == "closed"
     assert result == "detail-result"
+    repo._remove_closed_match_standings.assert_not_called()
+    repo._close_match_report.assert_called_once()
 
 
 def test_update_match_lineups_for_admin_keeps_closed_match_closed_and_records_audit():
@@ -304,7 +311,7 @@ def test_update_match_lineups_for_admin_keeps_closed_match_closed_and_records_au
             (updated_home_players, updated_away_players),
         ]
     )
-    repo._remove_match_standings = Mock()
+    repo._remove_closed_match_standings = Mock()
     repo._resolve_match_players = Mock(
         side_effect=[
             [SimpleNamespace(id=11, guid="home-player-guid")],
@@ -330,6 +337,7 @@ def test_update_match_lineups_for_admin_keeps_closed_match_closed_and_records_au
     assert football_match.lineup_change_count == 2
     assert football_match.lineup_updated_at_epoch == 777
     assert result == "detail-result"
+    repo._remove_closed_match_standings.assert_called_once()
     repo._replace_team_players_for_closed_match.assert_called_once()
     repo._replace_team_players_for_open_match.assert_not_called()
     repo._close_match_report.assert_called_once()
@@ -365,7 +373,7 @@ def test_update_match_lineups_for_admin_uses_open_replacement_path_for_open_matc
     repo._load_locked_required_team_players = Mock(
         return_value=(initial_home_players, initial_away_players)
     )
-    repo._remove_match_standings = Mock()
+    repo._remove_closed_match_standings = Mock()
     repo._resolve_match_players = Mock(
         side_effect=[
             [SimpleNamespace(id=11, guid="home-player-guid")],
@@ -391,7 +399,98 @@ def test_update_match_lineups_for_admin_uses_open_replacement_path_for_open_matc
     assert football_match.lineup_change_count == 1
     assert football_match.lineup_updated_at_epoch == 777
     assert result == "detail-result"
+    repo._remove_closed_match_standings.assert_not_called()
     repo._replace_team_players_for_open_match.assert_called_once()
     repo._replace_team_players_for_closed_match.assert_not_called()
     repo._close_match_report.assert_not_called()
+    session.commit.assert_called_once()
+
+
+def test_update_match_stats_for_admin_reverts_closed_match_before_reclosing():
+    session = Mock()
+    repo = SqlAlchemySeasonMatchRepository(session)
+    football_match = SimpleNamespace(
+        id=33,
+        started_at_epoch=100,
+        ended_at_epoch=150,
+        guid="match-guid",
+        status="closed",
+    )
+    pena = SimpleNamespace(id=44)
+    season = SimpleNamespace(id=55, guid="season-guid")
+    home_team = SimpleNamespace(id=1)
+    away_team = SimpleNamespace(id=2)
+    home_team_player = SimpleNamespace(
+        guid="home-team-player-guid",
+        goals=2,
+        assists=1,
+        saves=0,
+        rating=8.0,
+    )
+    away_team_player = SimpleNamespace(
+        guid="away-team-player-guid",
+        goals=1,
+        assists=0,
+        saves=3,
+        rating=7.0,
+    )
+
+    repo._get_locked_admin_match_bundle = lambda **kwargs: (
+        pena,
+        season,
+        football_match,
+        home_team,
+        away_team,
+    )
+    repo._load_locked_required_team_players = lambda **kwargs: (
+        [home_team_player],
+        [away_team_player],
+    )
+    repo._team_player_guid_map = lambda team_players: {
+        (
+            "home-player-guid" if team_players[0] is home_team_player else "away-player-guid"
+        ): team_players[0]
+    }
+    repo._remove_closed_match_standings = Mock()
+
+    def _apply_team_player_stats(roster, payload):
+        for player_guid, team_player in roster.items():
+            stats = payload[player_guid]
+            team_player.goals = stats.goals
+            team_player.assists = stats.assists
+            team_player.saves = stats.saves
+            team_player.rating = stats.rating
+
+    repo._apply_team_player_stats = _apply_team_player_stats
+    repo._close_match_report = Mock()
+    repo._build_match_detail_result = lambda **kwargs: "detail-result"
+
+    result = repo.update_match_stats_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=7,
+        home_players_stats=[
+            MatchPlayerStatsUpdateData(
+                player_guid="home-player-guid",
+                goals=3,
+                assists=1,
+                saves=0,
+                rating=8.5,
+            )
+        ],
+        away_players_stats=[
+            MatchPlayerStatsUpdateData(
+                player_guid="away-player-guid",
+                goals=0,
+                assists=0,
+                saves=2,
+                rating=6.5,
+            )
+        ],
+    )
+
+    assert result == "detail-result"
+    repo._remove_closed_match_standings.assert_called_once()
+    repo._close_match_report.assert_called_once()
     session.commit.assert_called_once()
