@@ -2,12 +2,11 @@ import math
 from dataclasses import asdict
 
 from api.dependencies.use_cases import (
-    get_generate_pena_link_token_use_case,
-    get_link_user_to_pena_use_case,
     get_pena_accountability_use_case,
     get_pena_command_bus,
     get_pena_labels_command_bus,
     get_pena_labels_query_bus,
+    get_pena_link_command_bus,
     get_pena_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
@@ -40,6 +39,10 @@ from auth.dependencies import (
     require_user,
 )
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
+from core.application.commands.pena_link_commands import (
+    GeneratePenaLinkTokenCommand,
+    LinkUserToPenaCommand,
+)
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.models import (
     PenaAccountabilityExpenseCreate,
@@ -56,10 +59,6 @@ from core.application.queries.pena_queries import (
     ListPenasForAdminQuery,
     ListPenasForUserQuery,
 )
-from core.application.use_cases.generate_pena_link_token_usecase import (
-    GeneratePenaLinkTokenUseCase,
-)
-from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
 )
@@ -259,12 +258,14 @@ def update_pena_labels(
 def create_link_token(
     pena_guid: str,
     admin_session=Depends(require_admin),
-    use_case: GeneratePenaLinkTokenUseCase = Depends(get_generate_pena_link_token_use_case),
+    command_bus: CommandBus = Depends(get_pena_link_command_bus),
 ):
-    created = use_case.execute(
-        admin_id=admin_session.user_id,
-        pena_guid=pena_guid,
-        ttl_seconds=app_config.LINK_TOKEN_TTL_SECONDS,
+    created = command_bus.dispatch(
+        GeneratePenaLinkTokenCommand(
+            admin_id=admin_session.user_id,
+            pena_guid=pena_guid,
+            ttl_seconds=app_config.LINK_TOKEN_TTL_SECONDS,
+        )
     )
     return LinkTokenResponse(
         token=created.token, pena_guid=created.pena_guid, expires_at=created.expires_at
@@ -426,12 +427,14 @@ def delete_pena_expense(
 def consume_link_token(
     payload: ConsumeLinkTokenRequest,
     session=Depends(require_user),
-    use_case: LinkUserToPenaUseCase = Depends(get_link_user_to_pena_use_case),
+    command_bus: CommandBus = Depends(get_pena_link_command_bus),
 ):
-    use_case.execute(
-        token=payload.token,
-        account_id=session.user_id,
-        nickname=payload.nickname,
-        position=payload.position,
+    command_bus.dispatch(
+        LinkUserToPenaCommand(
+            token=payload.token,
+            account_id=session.user_id,
+            nickname=payload.nickname,
+            position=payload.position,
+        )
     )
     return {"status": "ok"}

@@ -8,12 +8,10 @@ from auth.domain.errors import InvalidCredentialsError
 from core.application.use_cases import (
     AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
-    InvalidLinkTokenError,
     InvalidPenaAccountabilityDataError,
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
     InvalidRegistrationDataError,
-    PenaAccessDeniedError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
@@ -24,9 +22,7 @@ from core.application.use_cases import (
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUserProfileNotFoundError,
-    UserAlreadyLinkedError,
     UserInvalidNationalityError,
-    UserProfileNotFoundError,
     UserUsernameExistsError,
 )
 from core.application.use_cases import (
@@ -67,6 +63,7 @@ from core.application.use_cases.season_match_insights_errors import (
     PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
 )
 from core.domain.errors import (
+    InvalidLinkTokenError,
     InvalidPenaLabelsDataError,
     InvalidPenaSeasonDataError,
     InvalidPlayerNationalityError,
@@ -74,8 +71,11 @@ from core.domain.errors import (
     InvalidProfileImageError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
+    PenaLinkAccessDeniedError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
 )
 from core.domain.errors import (
     PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
@@ -110,7 +110,7 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     InvalidLinkTokenError: (status.HTTP_400_BAD_REQUEST, "Invalid or expired link token"),
     UserAlreadyLinkedError: (status.HTTP_409_CONFLICT, "User is already linked to this pena"),
     UserProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "User player profile not found"),
-    PenaAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
+    PenaLinkAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
     InvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
