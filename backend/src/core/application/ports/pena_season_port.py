@@ -23,26 +23,6 @@ class PenaSeasonsPageResult:
     total: int
 
 
-class PenaNotFoundError(Exception):
-    pass
-
-
-class PenaNotManagedByAdminError(Exception):
-    pass
-
-
-class SeasonDateRangeOverlapError(Exception):
-    pass
-
-
-class SeasonNotFoundError(Exception):
-    pass
-
-
-class InvalidSeasonDateRangeError(Exception):
-    pass
-
-
 class PenaSeasonPort(Protocol):
     def find_for_pena(
         self, *, pena_guid: str, page: int, page_size: int
