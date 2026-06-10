@@ -135,20 +135,15 @@ def test_create_guest_player_for_admin_maps_errors(error, status_code, detail):
 
 
 def test_get_pena_players_builds_clean_filters_and_total_pages():
-    class _UseCase:
+    class _QueryBus:
         def __init__(self):
-            self.last_call: dict | None = None
+            self.last_query = None
 
-        def execute(self, pena_guid: str, *, filters, page: int, page_size: int):
-            self.last_call = {
-                "pena_guid": pena_guid,
-                "filters": filters,
-                "page": page,
-                "page_size": page_size,
-            }
-            return _players_page(total=21, page=page, page_size=page_size)
+        def ask(self, query):
+            self.last_query = query
+            return _players_page(total=21, page=query.page, page_size=query.page_size)
 
-    use_case = _UseCase()
+    query_bus = _QueryBus()
     response = pena_players_controller.get_pena_players(
         "pena-1",
         page=2,
@@ -160,15 +155,16 @@ def test_get_pena_players_builds_clean_filters_and_total_pages():
         nickname=" Nani ",
         position=" MID ",
         search=" team ",
-        use_case=use_case,
+        query_bus=query_bus,
         _session=object(),
     )
 
     assert response.page == 2
     assert response.total_pages == 2
     assert response.items[0].guid == "player-1"
-    assert use_case.last_call is not None
-    filters = use_case.last_call["filters"]
+    assert query_bus.last_query is not None
+    assert query_bus.last_query.pena_guid == "pena-1"
+    filters = query_bus.last_query.filters
     assert filters.name == "Ana"
     assert filters.surname1 is None
     assert filters.nationality == "ES"
