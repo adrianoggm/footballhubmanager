@@ -15,3 +15,26 @@ class PenaProfileNotFoundError(DomainError):
 
 class PenaProfileAccessDeniedError(DomainError):
     code = "pena_profile_access_denied"
+
+
+# --- Pena seasons ---
+
+
+class InvalidPenaSeasonDataError(DomainError):
+    code = "invalid_pena_season_data"
+
+
+class PenaSeasonPenaNotFoundError(DomainError):
+    code = "pena_season_pena_not_found"
+
+
+class PenaSeasonAccessDeniedError(DomainError):
+    code = "pena_season_access_denied"
+
+
+class PenaSeasonNotFoundError(DomainError):
+    code = "pena_season_not_found"
+
+
+class PenaSeasonDateOverlapError(DomainError):
+    code = "pena_season_date_overlap"
