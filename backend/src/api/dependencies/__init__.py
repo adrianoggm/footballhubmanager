@@ -1,6 +1,5 @@
 from .use_cases import (
-    get_generate_pena_link_token_use_case,
-    get_link_user_to_pena_use_case,
+    get_pena_link_command_bus,
     get_login_admin_use_case,
     get_login_user_use_case,
     get_nationalities_use_case,
@@ -25,8 +24,7 @@ __all__ = [
     "get_register_admin_use_case",
     "get_nationalities_use_case",
     "get_pena_query_bus",
-    "get_generate_pena_link_token_use_case",
-    "get_link_user_to_pena_use_case",
+    "get_pena_link_command_bus",
     "get_pena_labels_command_bus",
     "get_pena_labels_query_bus",
     "get_pena_membership_use_case",

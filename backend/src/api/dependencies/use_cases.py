@@ -56,14 +56,18 @@ from core.application.queries.player_profile_query_handlers import (
     GetPlayerProfileByAccountIdHandler,
     GetPlayerProfileByGuidHandler,
 )
-from core.application.use_cases.generate_pena_link_token_usecase import (
-    GeneratePenaLinkTokenUseCase,
+from core.application.commands.pena_link_commands import (
+    GeneratePenaLinkTokenCommand,
+    LinkUserToPenaCommand,
+)
+from core.application.commands.pena_link_command_handlers import (
+    GeneratePenaLinkTokenHandler,
+    LinkUserToPenaHandler,
 )
 from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
-from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
 )
@@ -164,14 +168,12 @@ def get_pena_query_bus(db: Session = Depends(get_db)) -> QueryBus:
     return bus
 
 
-def get_generate_pena_link_token_use_case(
-    db: Session = Depends(get_db),
-) -> GeneratePenaLinkTokenUseCase:
-    return GeneratePenaLinkTokenUseCase(SqlAlchemyPenaLinkRepository(db))
-
-
-def get_link_user_to_pena_use_case(db: Session = Depends(get_db)) -> LinkUserToPenaUseCase:
-    return LinkUserToPenaUseCase(SqlAlchemyPenaLinkRepository(db))
+def get_pena_link_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyPenaLinkRepository(db)
+    bus = CommandBus()
+    bus.register(GeneratePenaLinkTokenCommand, GeneratePenaLinkTokenHandler(repository))
+    bus.register(LinkUserToPenaCommand, LinkUserToPenaHandler(repository))
+    return bus
 
 
 def get_pena_labels_command_bus(db: Session = Depends(get_db)) -> CommandBus:

@@ -64,3 +64,22 @@ class InvalidPlayerUpdateDataError(DomainError):
 
 class InvalidPlayerNationalityError(DomainError):
     code = "invalid_player_nationality"
+
+
+# --- Pena link tokens ---
+
+
+class PenaLinkAccessDeniedError(DomainError):
+    code = "pena_link_access_denied"
+
+
+class InvalidLinkTokenError(DomainError):
+    code = "invalid_link_token"
+
+
+class UserAlreadyLinkedError(DomainError):
+    code = "user_already_linked"
+
+
+class UserProfileNotFoundError(DomainError):
+    code = "user_profile_not_found"
