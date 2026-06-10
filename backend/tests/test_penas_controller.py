@@ -36,13 +36,9 @@ from core.application.queries.pena_queries import (
     ListPenasForAdminQuery,
     ListPenasForUserQuery,
 )
-from core.application.use_cases.generate_pena_link_token_usecase import (
-    PenaAccessDeniedError,
-)
-from core.application.use_cases.link_user_to_pena_usecase import (
-    InvalidLinkTokenError,
-    UserAlreadyLinkedError,
-    UserProfileNotFoundError,
+from core.application.commands.pena_link_commands import (
+    GeneratePenaLinkTokenCommand,
+    LinkUserToPenaCommand,
 )
 from core.application.use_cases.manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
@@ -52,12 +48,16 @@ from core.application.use_cases.manage_pena_accountability_usecase import (
     PenaAccountabilityPenaNotFoundError,
 )
 from core.domain.errors import (
+    InvalidLinkTokenError,
     InvalidPenaLabelsDataError,
     InvalidProfileImageError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
+    PenaLinkAccessDeniedError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
 )
 from fastapi import HTTPException
 
