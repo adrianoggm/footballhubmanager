@@ -106,3 +106,26 @@ class UserUsernameExistsError(DomainError):
 
 class UserInvalidNationalityError(DomainError):
     code = "user_invalid_nationality"
+
+
+# --- Pena accountability ---
+
+
+class InvalidPenaAccountabilityDataError(DomainError):
+    code = "invalid_pena_accountability_data"
+
+
+class PenaAccountabilityPenaNotFoundError(DomainError):
+    code = "pena_accountability_pena_not_found"
+
+
+class PenaAccountabilityAccessDeniedError(DomainError):
+    code = "pena_accountability_access_denied"
+
+
+class PenaAccountabilityMemberNotFoundError(DomainError):
+    code = "pena_accountability_member_not_found"
+
+
+class PenaAccountabilityExpenseNotFoundError(DomainError):
+    code = "pena_accountability_expense_not_found"

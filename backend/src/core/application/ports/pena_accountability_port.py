@@ -37,22 +37,6 @@ class PenaAccountabilityResult:
     updated_at: datetime | None
 
 
-class PenaNotFoundError(Exception):
-    pass
-
-
-class PenaNotManagedByAdminError(Exception):
-    pass
-
-
-class PenaMemberNotFoundError(Exception):
-    pass
-
-
-class PenaExpenseNotFoundError(Exception):
-    pass
-
-
 class PenaAccountabilityPort(Protocol):
     def get_for_pena(self, *, pena_guid: str) -> PenaAccountabilityResult: ...
 
