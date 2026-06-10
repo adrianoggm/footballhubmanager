@@ -38,3 +38,18 @@ class PenaSeasonNotFoundError(DomainError):
 
 class PenaSeasonDateOverlapError(DomainError):
     code = "pena_season_date_overlap"
+
+
+# --- Pena labels ---
+
+
+class InvalidPenaLabelsDataError(DomainError):
+    code = "invalid_pena_labels_data"
+
+
+class PenaLabelsPenaNotFoundError(DomainError):
+    code = "pena_labels_pena_not_found"
+
+
+class PenaLabelsAccessDeniedError(DomainError):
+    code = "pena_labels_access_denied"
