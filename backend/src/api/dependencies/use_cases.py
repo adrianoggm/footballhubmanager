@@ -4,6 +4,14 @@ from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import 
 )
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.pena_labels_command_handler import UpdatePenaLabelsHandler
+from core.application.commands.pena_link_command_handlers import (
+    GeneratePenaLinkTokenHandler,
+    LinkUserToPenaHandler,
+)
+from core.application.commands.pena_link_commands import (
+    GeneratePenaLinkTokenCommand,
+    LinkUserToPenaCommand,
+)
 from core.application.commands.pena_season_command_handlers import (
     CreatePenaSeasonHandler,
     DeletePenaSeasonHandler,
@@ -55,14 +63,6 @@ from core.application.queries.player_profile_queries import (
 from core.application.queries.player_profile_query_handlers import (
     GetPlayerProfileByAccountIdHandler,
     GetPlayerProfileByGuidHandler,
-)
-from core.application.commands.pena_link_commands import (
-    GeneratePenaLinkTokenCommand,
-    LinkUserToPenaCommand,
-)
-from core.application.commands.pena_link_command_handlers import (
-    GeneratePenaLinkTokenHandler,
-    LinkUserToPenaHandler,
 )
 from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (

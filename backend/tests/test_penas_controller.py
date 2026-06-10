@@ -17,6 +17,10 @@ from api.interface.controller.v1.model.request.penas_request import (
 from auth.dependencies import require_user
 from auth.session import SessionData
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
+from core.application.commands.pena_link_commands import (
+    GeneratePenaLinkTokenCommand,
+    LinkUserToPenaCommand,
+)
 from core.application.models import (
     PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,
@@ -35,10 +39,6 @@ from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
     ListPenasForUserQuery,
-)
-from core.application.commands.pena_link_commands import (
-    GeneratePenaLinkTokenCommand,
-    LinkUserToPenaCommand,
 )
 from core.application.use_cases.manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
@@ -511,46 +511,22 @@ def test_get_pena_query_bus_builds_expected_dependencies(monkeypatch):
     assert bus.ask(GetPenaByGuidQuery(pena_guid="x")) is None
 
 
-def test_get_generate_pena_link_token_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_pena_link_command_bus_builds_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import CommandBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
 
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "GeneratePenaLinkTokenUseCase", _UseCase)
 
-    use_case = penas_controller.get_generate_pena_link_token_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    bus = penas_controller.get_pena_link_command_bus(db="db-session")
+    assert isinstance(bus, CommandBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
-
-
-def test_get_link_user_to_pena_use_case_builds_expected_dependencies(monkeypatch):
-    captured: dict[str, object] = {}
-
-    class _Repo:
-        def __init__(self, db):
-            captured["db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
-    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "LinkUserToPenaUseCase", _UseCase)
-
-    use_case = penas_controller.get_link_user_to_pena_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
-    assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    assert GeneratePenaLinkTokenCommand in bus._handlers
+    assert LinkUserToPenaCommand in bus._handlers
 
 
 def test_get_pena_labels_buses_build_expected_dependencies(monkeypatch):
