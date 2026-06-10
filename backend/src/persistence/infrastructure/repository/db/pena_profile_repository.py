@@ -18,9 +18,7 @@ class SqlAlchemyPenaProfileRepository(PenaProfileRepositoryPort):
     def update_for_admin(
         self, *, pena_guid: str, admin_id: int, image_url: str | None
     ) -> PenaProfileResult:
-        pena = self.session.execute(
-            select(Pena).where(Pena.guid == pena_guid)
-        ).scalar_one_or_none()
+        pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
         if pena is None:
             raise PenaProfileNotFoundError()
         if pena.id_admin != admin_id:
