@@ -2,6 +2,20 @@ from auth.application.use_cases.login import LoginAdminUseCase, LoginUserUseCase
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
+from core.application.commands.pena_accountability_command_handlers import (
+    CreateExpenseHandler,
+    RemoveExpenseHandler,
+    RemoveMemberAccountHandler,
+    UpdateAccountabilitySettingsHandler,
+    UpsertMemberAccountHandler,
+)
+from core.application.commands.pena_accountability_commands import (
+    CreateExpenseCommand,
+    RemoveExpenseCommand,
+    RemoveMemberAccountCommand,
+    UpdateAccountabilitySettingsCommand,
+    UpsertMemberAccountCommand,
+)
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.pena_labels_command_handler import UpdatePenaLabelsHandler
 from core.application.commands.pena_link_command_handlers import (
@@ -42,6 +56,14 @@ from core.application.commands.update_pena_profile_command import UpdatePenaProf
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
 from core.application.queries.nationality_query import GetNationalitiesQuery
 from core.application.queries.nationality_query_handler import GetNationalitiesHandler
+from core.application.queries.pena_accountability_queries import (
+    GetPenaAccountabilityQuery,
+    GetPlayerGuidForAccountQuery,
+)
+from core.application.queries.pena_accountability_query_handlers import (
+    GetPenaAccountabilityHandler,
+    GetPlayerGuidForAccountHandler,
+)
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_labels_query_handler import GetPenaLabelsHandler
 from core.application.queries.pena_players_query import GetPenaPlayersQuery
@@ -76,28 +98,6 @@ from core.application.queries.player_profile_query_handlers import (
 )
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
-)
-from core.application.commands.pena_accountability_commands import (
-    CreateExpenseCommand,
-    RemoveExpenseCommand,
-    RemoveMemberAccountCommand,
-    UpdateAccountabilitySettingsCommand,
-    UpsertMemberAccountCommand,
-)
-from core.application.commands.pena_accountability_command_handlers import (
-    CreateExpenseHandler,
-    RemoveExpenseHandler,
-    RemoveMemberAccountHandler,
-    UpdateAccountabilitySettingsHandler,
-    UpsertMemberAccountHandler,
-)
-from core.application.queries.pena_accountability_queries import (
-    GetPenaAccountabilityQuery,
-    GetPlayerGuidForAccountQuery,
-)
-from core.application.queries.pena_accountability_query_handlers import (
-    GetPenaAccountabilityHandler,
-    GetPlayerGuidForAccountHandler,
 )
 from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
@@ -231,7 +231,9 @@ def get_pena_accountability_query_bus(db: Session = Depends(get_db)) -> QueryBus
 def get_pena_accountability_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     repository = SqlAlchemyPenaAccountabilityRepository(db)
     bus = CommandBus()
-    bus.register(UpdateAccountabilitySettingsCommand, UpdateAccountabilitySettingsHandler(repository))
+    bus.register(
+        UpdateAccountabilitySettingsCommand, UpdateAccountabilitySettingsHandler(repository)
+    )
     bus.register(UpsertMemberAccountCommand, UpsertMemberAccountHandler(repository))
     bus.register(RemoveMemberAccountCommand, RemoveMemberAccountHandler(repository))
     bus.register(CreateExpenseCommand, CreateExpenseHandler(repository))
