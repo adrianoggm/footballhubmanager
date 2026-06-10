@@ -10,7 +10,7 @@ from core.application.ports.pena_link_port import (
     UserPlayerNotFoundError,
 )
 from core.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
-from persistence.domain.entity import Pena, PenaLinkToken, PenaPlayer, PenaRole, Player
+from persistence.infrastructure.entity import Pena, PenaLinkToken, PenaPlayer, PenaRole, Player
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session

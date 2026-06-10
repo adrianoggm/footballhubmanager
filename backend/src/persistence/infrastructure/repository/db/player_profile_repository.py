@@ -8,7 +8,7 @@ from core.application.ports.player_profile_port import (
 from core.application.services.profile_image_utils import (
     is_supported_profile_image_data_url,
 )
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from persistence.infrastructure.entity import Pena, PenaPlayer, Player
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session

@@ -10,7 +10,7 @@ from core.application.ports.pena_accountability_port import (
     PenaNotFoundError,
     PenaNotManagedByAdminError,
 )
-from persistence.domain.entity import (
+from persistence.infrastructure.entity import (
     Pena,
     PenaAccountability,
     PenaExpense,

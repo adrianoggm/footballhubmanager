@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterator
 
-from persistence.domain.entity import UserSession
+from persistence.infrastructure.entity import UserSession
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 

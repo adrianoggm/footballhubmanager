@@ -5,8 +5,8 @@ from api.dependencies.use_cases import (
     get_generate_pena_link_token_use_case,
     get_link_user_to_pena_use_case,
     get_pena_accountability_use_case,
+    get_pena_command_bus,
     get_pena_labels_use_case,
-    get_pena_profile_use_case,
     get_penas_use_case,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
@@ -46,9 +46,9 @@ from core.application.models import (
     PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilitySettingsUpdate,
     PenaLabelsUpdate,
-    PenaProfileUpdate,
     PenasPage,
 )
+from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
@@ -60,10 +60,8 @@ from core.application.use_cases.manage_pena_accountability_usecase import (
 from core.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
-from core.application.use_cases.manage_pena_profile_usecase import (
-    ManagePenaProfileUseCase,
-)
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from shared.application.bus.buses import CommandBus
 
 router = APIRouter()
 
@@ -195,12 +193,14 @@ def update_pena_profile(
     pena_guid: str,
     payload: UpdatePenaProfileRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaProfileUseCase = Depends(get_pena_profile_use_case),
+    command_bus: CommandBus = Depends(get_pena_command_bus),
 ):
-    pena = use_case.update_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        update=PenaProfileUpdate(image_url=payload.image_url),
+    pena = command_bus.dispatch(
+        UpdatePenaProfileCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            image_url=payload.image_url,
+        )
     )
     return PenaResponse(**asdict(pena))
 

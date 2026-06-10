@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping
 from functools import wraps
 from typing import Any
 
-from auth.application.use_cases.login import InvalidCredentialsError
+from auth.domain.errors import InvalidCredentialsError
 from core.application.use_cases import (
     AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
@@ -13,7 +13,6 @@ from core.application.use_cases import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
-    InvalidPenaProfileImageError,
     InvalidPlayerUpdateDataError,
     InvalidRegistrationDataError,
     PenaAccessDeniedError,
@@ -29,12 +28,17 @@ from core.application.use_cases import (
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUserProfileNotFoundError,
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
     UserAlreadyLinkedError,
     UserInvalidNationalityError,
     UserProfileNotFoundError,
     UserUsernameExistsError,
+)
+from core.domain.errors import (
+    InvalidProfileImageError as PenaInvalidProfileImageError,
+)
+from core.domain.errors import (
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
 )
 from core.application.use_cases import (
     InvalidNationalityError as PlayerInvalidNationalityError,
@@ -118,7 +122,7 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     UserProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "User player profile not found"),
     PenaAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
-    InvalidPenaProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
+    PenaInvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaLabelsAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     PenaProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),

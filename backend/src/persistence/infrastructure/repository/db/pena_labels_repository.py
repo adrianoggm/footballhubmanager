@@ -17,7 +17,7 @@ from core.domain.label_config import (
     parse_labels_payload,
     pick_preferred_label,
 )
-from persistence.domain.entity import Pena, PenaPlayer, PenaRole
+from persistence.infrastructure.entity import Pena, PenaPlayer, PenaRole
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 

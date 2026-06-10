@@ -8,7 +8,7 @@ from core.application.ports.season_competition_port import (
     SeasonDateRangeOverlapError,
     SeasonResult,
 )
-from persistence.domain.entity import Pena, Season
+from persistence.infrastructure.entity import Pena, Season
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

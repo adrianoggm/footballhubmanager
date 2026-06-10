@@ -11,7 +11,7 @@ from core.application.ports.pena_season_port import (
     SeasonDateRangeOverlapError,
     SeasonNotFoundError,
 )
-from persistence.domain.entity import Pena, Season
+from persistence.infrastructure.entity import Pena, Season
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 

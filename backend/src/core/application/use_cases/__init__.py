@@ -38,12 +38,6 @@ from .manage_pena_membership_usecase import (
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUserProfileNotFoundError,
 )
-from .manage_pena_profile_usecase import (
-    InvalidPenaProfileImageError,
-    ManagePenaProfileUseCase,
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
-)
 from .register_admin_usecase import (
     InvalidAdminRegistrationDataError,
     RegisterAdminUseCase,
@@ -87,7 +81,6 @@ __all__ = [
     "InvalidPenaGuestPlayerDataError",
     "InvalidPenaLabelsDataError",
     "InvalidPenaMembershipUpdateDataError",
-    "InvalidPenaProfileImageError",
     "InvalidNationalityError",
     "InvalidPlayerUpdateDataError",
     "InvalidProfileImageError",
@@ -97,7 +90,6 @@ __all__ = [
     "ManagePenaAccountabilityUseCase",
     "ManagePenaLabelsUseCase",
     "ManagePenaMembershipUseCase",
-    "ManagePenaProfileUseCase",
     "AdminUsernameExistsError",
     "PenaAccessDeniedError",
     "PenaAccountabilityAccessDeniedError",
@@ -112,8 +104,6 @@ __all__ = [
     "PenaMembershipPenaNotFoundError",
     "PenaMembershipPlayerNotFoundError",
     "PenaMembershipUserProfileNotFoundError",
-    "PenaProfileAccessDeniedError",
-    "PenaProfileNotFoundError",
     "PenaSeasonNotFoundError",
     "PenaSeasonPenaNotFoundError",
     "PlayerUpdate",

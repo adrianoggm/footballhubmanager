@@ -15,7 +15,7 @@ from core.domain.label_config import (
     dump_label_colors_payload,
     dump_labels_payload,
 )
-from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
+from persistence.infrastructure.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 

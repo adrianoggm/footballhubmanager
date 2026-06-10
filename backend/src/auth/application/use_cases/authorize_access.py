@@ -1,17 +1,19 @@
-from auth.application.ports import AccessRepository
+from auth.domain.errors import AccessDeniedError, InvalidSessionTypeError
+from auth.domain.ports.access_repository_port import AccessRepositoryPort
 from auth.session import SessionData
 
-
-class InvalidSessionTypeError(Exception):
-    pass
-
-
-class AccessDeniedError(Exception):
-    pass
+# Re-exportados por conveniencia: el use case los lanza, pero su hogar canónico
+# es auth.domain.errors.
+__all__ = [
+    "AccessDeniedError",
+    "InvalidSessionTypeError",
+    "AuthorizePenaAccessUseCase",
+    "AuthorizePlayerAccessUseCase",
+]
 
 
 class AuthorizePenaAccessUseCase:
-    def __init__(self, repository: AccessRepository):
+    def __init__(self, repository: AccessRepositoryPort):
         self.repository = repository
 
     def execute(self, *, pena_guid: str, session: SessionData) -> None:
@@ -31,7 +33,7 @@ class AuthorizePenaAccessUseCase:
 
 
 class AuthorizePlayerAccessUseCase:
-    def __init__(self, repository: AccessRepository):
+    def __init__(self, repository: AccessRepositoryPort):
         self.repository = repository
 
     def execute(self, *, player_guid: str, session: SessionData) -> None:

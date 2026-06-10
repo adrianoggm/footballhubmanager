@@ -22,9 +22,9 @@ from core.application.use_cases.manage_pena_labels_usecase import (
 from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
 )
-from core.application.use_cases.manage_pena_profile_usecase import (
-    ManagePenaProfileUseCase,
-)
+from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
+from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
+from shared.application.bus.buses import CommandBus
 from core.application.use_cases.manage_pena_seasons_usecase import (
     ManagePenaSeasonsUseCase,
 )
@@ -146,8 +146,11 @@ def get_pena_players_use_case(db: Session = Depends(get_db)) -> GetPenaPlayersUs
     return GetPenaPlayersUseCase(SqlAlchemyPenaPlayerQueryRepository(db))
 
 
-def get_pena_profile_use_case(db: Session = Depends(get_db)) -> ManagePenaProfileUseCase:
-    return ManagePenaProfileUseCase(SqlAlchemyPenaQueryRepository(db))
+def get_pena_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyPenaQueryRepository(db)
+    bus = CommandBus()
+    bus.register(UpdatePenaProfileCommand, UpdatePenaProfileHandler(repository))
+    return bus
 
 
 def get_manage_pena_seasons_use_case(

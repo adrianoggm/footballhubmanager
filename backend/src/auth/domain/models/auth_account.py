@@ -1,3 +1,7 @@
+"""Modelo de dominio que representa una cuenta autenticable (user o admin)."""
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 

@@ -1,5 +1,5 @@
 from core.application.ports.nationality_query_port import NationalityQueryPort
-from persistence.domain.entity import Nationality
+from persistence.infrastructure.entity import Nationality
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

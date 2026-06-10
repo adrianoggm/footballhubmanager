@@ -1,15 +1,11 @@
+"""Puerto de repositorio para resolver autorizaciones de acceso a recursos."""
+
+from __future__ import annotations
+
 from typing import Protocol
 
-from auth.application.models import AuthAccount
 
-
-class AuthAccountRepository(Protocol):
-    def find_user_by_username(self, username: str) -> AuthAccount | None: ...
-
-    def find_admin_by_username(self, username: str) -> AuthAccount | None: ...
-
-
-class AccessRepository(Protocol):
+class AccessRepositoryPort(Protocol):
     def admin_manages_pena(self, *, admin_id: int, pena_guid: str) -> bool: ...
 
     def user_belongs_to_pena(self, *, account_id: int, pena_guid: str) -> bool: ...
