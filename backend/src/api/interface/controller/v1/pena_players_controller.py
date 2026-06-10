@@ -3,7 +3,7 @@ from dataclasses import asdict
 
 from api.dependencies.use_cases import (
     get_pena_membership_use_case,
-    get_pena_players_use_case,
+    get_pena_players_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_players_request import (
     CreateGuestPlayerRequest,
@@ -22,13 +22,14 @@ from core.application.models import (
     PenaPlayerFilters,
 )
 from core.application.policies import FieldUpdate
-from core.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
+from core.application.queries.pena_players_query import GetPenaPlayersQuery
 from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
     PenaMembershipAccessDeniedError,
     PenaMembershipNotFoundError,
 )
 from fastapi import APIRouter, Depends, Query, Response, status
+from shared.application.bus.buses import QueryBus
 
 router = APIRouter()
 
@@ -105,7 +106,7 @@ def get_pena_players(
     role: str | None = Query(default=None),
     position: str | None = Query(default=None),
     search: str | None = Query(default=None),
-    use_case: GetPenaPlayersUseCase = Depends(get_pena_players_use_case),
+    query_bus: QueryBus = Depends(get_pena_players_query_bus),
     _session=Depends(authorize_pena_access),
 ):
     filters = PenaPlayerFilters(
@@ -118,7 +119,9 @@ def get_pena_players(
         position=_clean(position),
         search=_clean(search),
     )
-    result = use_case.execute(pena_guid, filters=filters, page=page, page_size=page_size)
+    result = query_bus.ask(
+        GetPenaPlayersQuery(pena_guid=pena_guid, filters=filters, page=page, page_size=page_size)
+    )
 
     total_pages = math.ceil(result.total / page_size) if result.total else 0
     return PenaPlayersPageResponse(

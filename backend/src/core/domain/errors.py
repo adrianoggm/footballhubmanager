@@ -53,3 +53,14 @@ class PenaLabelsPenaNotFoundError(DomainError):
 
 class PenaLabelsAccessDeniedError(DomainError):
     code = "pena_labels_access_denied"
+
+
+# --- Player profile ---
+
+
+class InvalidPlayerUpdateDataError(DomainError):
+    code = "invalid_player_update_data"
+
+
+class InvalidPlayerNationalityError(DomainError):
+    code = "invalid_player_nationality"

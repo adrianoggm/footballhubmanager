@@ -41,13 +41,22 @@ def test_get_pena_membership_use_case_builds_expected_dependencies(monkeypatch):
     )
 
 
-def test_get_pena_players_use_case_builds_expected_dependencies(monkeypatch):
-    _assert_single_repository_factory(
-        monkeypatch,
-        repo_attr="SqlAlchemyPenaPlayerQueryRepository",
-        use_case_attr="GetPenaPlayersUseCase",
-        factory=use_case_dependencies.get_pena_players_use_case,
-    )
+def test_get_pena_players_query_bus_builds_expected_dependencies(monkeypatch):
+    from core.application.queries.pena_players_query import GetPenaPlayersQuery
+    from shared.application.bus.buses import QueryBus
+
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaPlayerQueryRepository", _Repo)
+
+    bus = use_case_dependencies.get_pena_players_query_bus(db="db-session")
+    assert isinstance(bus, QueryBus)
+    assert captured["db"] == "db-session"
+    assert GetPenaPlayersQuery in bus._handlers
 
 
 def test_get_pena_season_command_bus_builds_expected_dependencies(monkeypatch):
@@ -118,22 +127,35 @@ def test_get_pena_season_query_bus_builds_expected_dependencies(monkeypatch):
     assert bus.ask(ListPenaSeasonsQuery(pena_guid="p")).total == 0
 
 
-def test_get_player_profile_use_case_builds_expected_dependencies(monkeypatch):
-    _assert_single_repository_factory(
-        monkeypatch,
-        repo_attr="SqlAlchemyPlayerProfileRepository",
-        use_case_attr="GetPlayerProfileUseCase",
-        factory=use_case_dependencies.get_player_profile_use_case,
+def test_get_player_profile_buses_build_expected_dependencies(monkeypatch):
+    from core.application.commands.player_profile_commands import (
+        UpdatePlayerProfileByAccountIdCommand,
+        UpdatePlayerProfileByGuidCommand,
     )
-
-
-def test_get_update_player_profile_use_case_builds_expected_dependencies(monkeypatch):
-    _assert_single_repository_factory(
-        monkeypatch,
-        repo_attr="SqlAlchemyPlayerProfileRepository",
-        use_case_attr="UpdatePlayerProfileUseCase",
-        factory=use_case_dependencies.get_update_player_profile_use_case,
+    from core.application.queries.player_profile_queries import (
+        GetPlayerProfileByAccountIdQuery,
+        GetPlayerProfileByGuidQuery,
     )
+    from shared.application.bus.buses import CommandBus, QueryBus
+
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPlayerProfileRepository", _Repo)
+
+    query_bus = use_case_dependencies.get_player_profile_query_bus(db="db-session")
+    command_bus = use_case_dependencies.get_player_profile_command_bus(db="db-session")
+
+    assert isinstance(query_bus, QueryBus)
+    assert isinstance(command_bus, CommandBus)
+    assert captured["db"] == "db-session"
+    assert GetPlayerProfileByGuidQuery in query_bus._handlers
+    assert GetPlayerProfileByAccountIdQuery in query_bus._handlers
+    assert UpdatePlayerProfileByGuidCommand in command_bus._handlers
+    assert UpdatePlayerProfileByAccountIdCommand in command_bus._handlers
 
 
 def test_get_manage_season_lifecycle_use_case_builds_expected_dependencies(monkeypatch):
