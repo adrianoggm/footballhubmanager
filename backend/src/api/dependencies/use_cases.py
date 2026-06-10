@@ -7,7 +7,6 @@ from core.application.use_cases.generate_pena_link_token_usecase import (
 )
 from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
-from core.application.use_cases.get_penas_usecase import GetPenasUseCase
 from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
@@ -24,7 +23,17 @@ from core.application.use_cases.manage_pena_membership_usecase import (
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
-from shared.application.bus.buses import CommandBus
+from core.application.queries.pena_queries import (
+    GetPenaByGuidQuery,
+    ListPenasForAdminQuery,
+    ListPenasForUserQuery,
+)
+from core.application.queries.pena_query_handlers import (
+    GetPenaByGuidHandler,
+    ListPenasForAdminHandler,
+    ListPenasForUserHandler,
+)
+from shared.application.bus.buses import CommandBus, QueryBus
 from core.application.use_cases.manage_pena_seasons_usecase import (
     ManagePenaSeasonsUseCase,
 )
@@ -63,6 +72,9 @@ from persistence.infrastructure.repository.db.pena_membership_repository import 
 )
 from persistence.infrastructure.repository.db.pena_player_query_repository import (
     SqlAlchemyPenaPlayerQueryRepository,
+)
+from persistence.infrastructure.repository.db.pena_profile_repository import (
+    SqlAlchemyPenaProfileRepository,
 )
 from persistence.infrastructure.repository.db.pena_query_repository import (
     SqlAlchemyPenaQueryRepository,
@@ -112,8 +124,13 @@ def get_nationalities_use_case(db: Session = Depends(get_db)) -> GetNationalitie
     return GetNationalitiesUseCase(SqlAlchemyNationalityQueryRepository(db))
 
 
-def get_penas_use_case(db: Session = Depends(get_db)) -> GetPenasUseCase:
-    return GetPenasUseCase(SqlAlchemyPenaQueryRepository(db))
+def get_pena_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemyPenaQueryRepository(db)
+    bus = QueryBus()
+    bus.register(ListPenasForAdminQuery, ListPenasForAdminHandler(repository))
+    bus.register(ListPenasForUserQuery, ListPenasForUserHandler(repository))
+    bus.register(GetPenaByGuidQuery, GetPenaByGuidHandler(repository))
+    return bus
 
 
 def get_generate_pena_link_token_use_case(
@@ -147,9 +164,11 @@ def get_pena_players_use_case(db: Session = Depends(get_db)) -> GetPenaPlayersUs
 
 
 def get_pena_command_bus(db: Session = Depends(get_db)) -> CommandBus:
-    repository = SqlAlchemyPenaQueryRepository(db)
     bus = CommandBus()
-    bus.register(UpdatePenaProfileCommand, UpdatePenaProfileHandler(repository))
+    bus.register(
+        UpdatePenaProfileCommand,
+        UpdatePenaProfileHandler(SqlAlchemyPenaProfileRepository(db)),
+    )
     return bus
 
 

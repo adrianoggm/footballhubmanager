@@ -27,6 +27,7 @@ from core.application.models import (
     PenaLinkToken,
     PenaProfileInfo,
     PenasPage,
+    PenasPageResult,
 )
 from core.application.use_cases.generate_pena_link_token_usecase import (
     PenaAccessDeniedError,
@@ -47,6 +48,11 @@ from core.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
+)
+from core.application.queries.pena_queries import (
+    GetPenaByGuidQuery,
+    ListPenasForAdminQuery,
+    ListPenasForUserQuery,
 )
 from core.domain.errors import (
     InvalidProfileImageError,
@@ -135,60 +141,60 @@ def test_page_response_rounds_up_total_pages():
 
 
 @dataclass
-class _GetPenasUseCaseStub:
+class _PenaQueryBusStub:
     page_result: PenasPage
     last_admin_call: dict | None = None
     last_user_call: dict | None = None
 
-    def execute_for_admin(self, admin_id: int, *, page: int, page_size: int, search: str | None):
-        self.last_admin_call = {
-            "admin_id": admin_id,
-            "page": page,
-            "page_size": page_size,
-            "search": search,
-        }
-        return PenasPage(
-            items=self.page_result.items,
-            page=page,
-            page_size=page_size,
-            total=self.page_result.total,
-        )
-
-    def execute_for_user(self, account_id: int, *, page: int, page_size: int, search: str | None):
-        self.last_user_call = {
-            "account_id": account_id,
-            "page": page,
-            "page_size": page_size,
-            "search": search,
-        }
-        return PenasPage(
-            items=self.page_result.items,
-            page=page,
-            page_size=page_size,
-            total=self.page_result.total,
-        )
-
-    def execute_by_guid(self, pena_guid: str):
-        if pena_guid == "pena-missing":
-            return None
-        return PenaInfo(guid=pena_guid, name="Pena Found")
+    def ask(self, query):
+        if isinstance(query, ListPenasForAdminQuery):
+            self.last_admin_call = {
+                "admin_id": query.admin_id,
+                "page": query.page,
+                "page_size": query.page_size,
+                "search": query.search,
+            }
+            return PenasPage(
+                items=self.page_result.items,
+                page=query.page,
+                page_size=query.page_size,
+                total=self.page_result.total,
+            )
+        if isinstance(query, ListPenasForUserQuery):
+            self.last_user_call = {
+                "account_id": query.account_id,
+                "page": query.page,
+                "page_size": query.page_size,
+                "search": query.search,
+            }
+            return PenasPage(
+                items=self.page_result.items,
+                page=query.page,
+                page_size=query.page_size,
+                total=self.page_result.total,
+            )
+        if isinstance(query, GetPenaByGuidQuery):
+            if query.pena_guid == "pena-missing":
+                return None
+            return PenaInfo(guid=query.pena_guid, name="Pena Found")
+        raise AssertionError(f"unexpected query {type(query)!r}")
 
 
 def test_list_penas_for_admin_returns_page_data():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=21))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=21))
 
     response = penas_controller.list_penas(
         page=2,
         page_size=20,
         search=" madrid ",
         session=_session(user_type="admin", user_id=99),
-        use_case=use_case,
+        query_bus=bus,
     )
 
     assert response.total_pages == 2
     assert response.page == 2
     assert response.items[0].guid == "pena-1"
-    assert use_case.last_admin_call == {
+    assert bus.last_admin_call == {
         "admin_id": 99,
         "page": 2,
         "page_size": 20,
@@ -197,22 +203,22 @@ def test_list_penas_for_admin_returns_page_data():
 
 
 def test_list_penas_for_user_returns_page_data():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
     response = penas_controller.list_penas(
         page=1,
         page_size=20,
         search=None,
         session=_session(user_type="user", user_id=11),
-        use_case=use_case,
+        query_bus=bus,
     )
 
     assert response.total_pages == 1
-    assert use_case.last_user_call == {"account_id": 11, "page": 1, "page_size": 20, "search": None}
+    assert bus.last_user_call == {"account_id": 11, "page": 1, "page_size": 20, "search": None}
 
 
 def test_list_penas_rejects_invalid_session_type():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
     with pytest.raises(HTTPException) as exc:
         penas_controller.list_penas(
@@ -220,25 +226,25 @@ def test_list_penas_rejects_invalid_session_type():
             page_size=20,
             search=None,
             session=_session(user_type="service"),
-            use_case=use_case,
+            query_bus=bus,
         )
     assert exc.value.status_code == 403
     assert exc.value.detail == "Invalid session type"
 
 
 def test_get_pena_returns_404_when_missing():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
     with pytest.raises(HTTPException) as exc:
-        penas_controller.get_pena("pena-missing", _session=object(), use_case=use_case)
+        penas_controller.get_pena("pena-missing", _session=object(), query_bus=bus)
     assert exc.value.status_code == 404
     assert exc.value.detail == "Pena not found"
 
 
 def test_get_pena_returns_pena_when_found():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
-    response = penas_controller.get_pena("pena-xyz", _session=object(), use_case=use_case)
+    response = penas_controller.get_pena("pena-xyz", _session=object(), query_bus=bus)
 
     assert response.guid == "pena-xyz"
     assert response.name == "Pena Found"
@@ -499,25 +505,33 @@ def test_consume_link_token_maps_domain_errors_to_http(error, status_code, detai
     assert exc.value.detail == detail
 
 
-def test_get_penas_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_pena_query_bus_builds_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import QueryBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
 
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
+        def find_for_admin(self, admin_id, *, page, page_size, search):
+            return PenasPageResult(items=[], page=page, page_size=page_size, total=0)
+
+        def find_for_user(self, account_id, *, page, page_size, search):
+            return PenasPageResult(items=[], page=page, page_size=page_size, total=0)
+
+        def find_by_guid(self, pena_guid):
+            return None
 
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaQueryRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "GetPenasUseCase", _UseCase)
 
-    use_case = penas_controller.get_penas_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    bus = penas_controller.get_pena_query_bus(db="db-session")
+    assert isinstance(bus, QueryBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    # Las tres queries de lectura están registradas y enrutan al handler.
+    assert bus.ask(ListPenasForAdminQuery(admin_id=1)).total == 0
+    assert bus.ask(ListPenasForUserQuery(account_id=1)).total == 0
+    assert bus.ask(GetPenaByGuidQuery(pena_guid="x")) is None
 
 
 def test_get_generate_pena_link_token_use_case_builds_expected_dependencies(monkeypatch):

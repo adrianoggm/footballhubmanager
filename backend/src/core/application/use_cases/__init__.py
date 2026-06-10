@@ -4,7 +4,6 @@ from .generate_pena_link_token_usecase import (
 )
 from .get_nationalities_usecase import GetNationalitiesUseCase
 from .get_pena_players_usecase import GetPenaPlayersUseCase
-from .get_penas_usecase import GetPenasUseCase
 from .get_player_profile_usecase import GetPlayerProfileUseCase
 from .get_season_match_insights_usecase import GetSeasonMatchInsightsUseCase
 from .link_user_to_pena_usecase import (
@@ -72,7 +71,6 @@ __all__ = [
     "GeneratePenaLinkTokenUseCase",
     "GetNationalitiesUseCase",
     "GetPenaPlayersUseCase",
-    "GetPenasUseCase",
     "GetPlayerProfileUseCase",
     "GetSeasonMatchInsightsUseCase",
     "InvalidAdminRegistrationDataError",

@@ -1,20 +1,11 @@
 from core.application.models import PenasPageResult, PenaSummary
 from core.application.ports.pena_query_port import PenaQueryPort
-from core.application.services.profile_image_utils import (
-    is_supported_profile_image_data_url,
-)
-from core.domain.errors import (
-    InvalidProfileImageError,
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
-)
-from core.domain.ports.pena_profile_repository_port import PenaProfileRepositoryPort
 from persistence.infrastructure.entity import Pena, PenaPlayer, Player
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyPenaQueryRepository(PenaQueryPort, PenaProfileRepositoryPort):
+class SqlAlchemyPenaQueryRepository(PenaQueryPort):
     def __init__(self, session: Session):
         self.session = session
 
@@ -82,17 +73,4 @@ class SqlAlchemyPenaQueryRepository(PenaQueryPort, PenaProfileRepositoryPort):
         pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
         if not pena:
             return None
-        return PenaSummary(guid=pena.guid, name=pena.name, image_url=pena.image_url)
-
-    def update_for_admin(self, *, pena_guid: str, admin_id: int, image_url: str | None):
-        pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
-        if pena is None:
-            raise PenaProfileNotFoundError()
-        if pena.id_admin != admin_id:
-            raise PenaProfileAccessDeniedError()
-        if image_url and not is_supported_profile_image_data_url(image_url):
-            raise InvalidProfileImageError()
-        pena.image_url = image_url or None
-        self.session.commit()
-        self.session.refresh(pena)
         return PenaSummary(guid=pena.guid, name=pena.name, image_url=pena.image_url)

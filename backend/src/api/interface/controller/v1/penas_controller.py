@@ -7,7 +7,7 @@ from api.dependencies.use_cases import (
     get_pena_accountability_use_case,
     get_pena_command_bus,
     get_pena_labels_use_case,
-    get_penas_use_case,
+    get_pena_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
     CreatePenaExpenseRequest,
@@ -49,10 +49,14 @@ from core.application.models import (
     PenasPage,
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
+from core.application.queries.pena_queries import (
+    GetPenaByGuidQuery,
+    ListPenasForAdminQuery,
+    ListPenasForUserQuery,
+)
 from core.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
-from core.application.use_cases.get_penas_usecase import GetPenasUseCase
 from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
@@ -61,7 +65,7 @@ from core.application.use_cases.manage_pena_labels_usecase import (
     ManagePenaLabelsUseCase,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from shared.application.bus.buses import CommandBus
+from shared.application.bus.buses import CommandBus, QueryBus
 
 router = APIRouter()
 
@@ -160,16 +164,20 @@ def list_penas(
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = Query(default=None),
     session=Depends(get_current_session),
-    use_case: GetPenasUseCase = Depends(get_penas_use_case),
+    query_bus: QueryBus = Depends(get_pena_query_bus),
 ):
     if session.user_type == "admin":
-        result = use_case.execute_for_admin(
-            session.user_id, page=page, page_size=page_size, search=search
+        result = query_bus.ask(
+            ListPenasForAdminQuery(
+                admin_id=session.user_id, page=page, page_size=page_size, search=search
+            )
         )
         return _page_response(result)
     if session.user_type == "user":
-        result = use_case.execute_for_user(
-            session.user_id, page=page, page_size=page_size, search=search
+        result = query_bus.ask(
+            ListPenasForUserQuery(
+                account_id=session.user_id, page=page, page_size=page_size, search=search
+            )
         )
         return _page_response(result)
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid session type")
@@ -179,9 +187,9 @@ def list_penas(
 def get_pena(
     pena_guid: str,
     _session=Depends(authorize_pena_access),
-    use_case: GetPenasUseCase = Depends(get_penas_use_case),
+    query_bus: QueryBus = Depends(get_pena_query_bus),
 ):
-    pena = use_case.execute_by_guid(pena_guid)
+    pena = query_bus.ask(GetPenaByGuidQuery(pena_guid=pena_guid))
     if not pena:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pena not found")
     return PenaResponse(**asdict(pena))
