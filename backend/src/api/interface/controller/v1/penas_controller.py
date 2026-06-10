@@ -2,7 +2,8 @@ import math
 from dataclasses import asdict
 
 from api.dependencies.use_cases import (
-    get_pena_accountability_use_case,
+    get_pena_accountability_command_bus,
+    get_pena_accountability_query_bus,
     get_pena_command_bus,
     get_pena_labels_command_bus,
     get_pena_labels_query_bus,
@@ -38,6 +39,13 @@ from auth.dependencies import (
     require_admin,
     require_user,
 )
+from core.application.commands.pena_accountability_commands import (
+    CreateExpenseCommand,
+    RemoveExpenseCommand,
+    RemoveMemberAccountCommand,
+    UpdateAccountabilitySettingsCommand,
+    UpsertMemberAccountCommand,
+)
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.pena_link_commands import (
     GeneratePenaLinkTokenCommand,
@@ -45,22 +53,20 @@ from core.application.commands.pena_link_commands import (
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.models import (
-    PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
-    PenaAccountabilityMemberAccountUpsert,
-    PenaAccountabilitySettingsUpdate,
     PenasPage,
+)
+from core.application.queries.pena_accountability_queries import (
+    GetPenaAccountabilityQuery,
+    GetPlayerGuidForAccountQuery,
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
     ListPenasForUserQuery,
-)
-from core.application.use_cases.manage_pena_accountability_usecase import (
-    ManagePenaAccountabilityUseCase,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from shared.application.bus.buses import CommandBus, QueryBus
@@ -277,13 +283,15 @@ def create_link_token(
 def get_pena_accountability(
     pena_guid: str,
     session=Depends(authorize_pena_access),
-    use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
+    query_bus: QueryBus = Depends(get_pena_accountability_query_bus),
 ):
-    info = use_case.get_for_pena(pena_guid=pena_guid)
+    info = query_bus.ask(GetPenaAccountabilityQuery(pena_guid=pena_guid))
 
     current_player_guid = None
     if session.user_type == "user":
-        current_player_guid = use_case.get_player_guid_for_account(account_id=session.user_id)
+        current_player_guid = query_bus.ask(
+            GetPlayerGuidForAccountQuery(account_id=session.user_id)
+        )
 
     return _accountability_response(
         info=info,
@@ -298,18 +306,18 @@ def update_pena_accountability(
     pena_guid: str,
     payload: UpdatePenaAccountabilityRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
+    command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
-    info = use_case.update_settings_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        update=PenaAccountabilitySettingsUpdate(
+    info = command_bus.dispatch(
+        UpdateAccountabilitySettingsCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
             currency=payload.currency,
             balance_cents=payload.balance_cents,
             reserve_cents=payload.reserve_cents,
             budget_visibility=payload.budget_visibility,
             expenses_visibility=payload.expenses_visibility,
-        ),
+        )
     )
     return _accountability_response(
         info=info,
@@ -328,17 +336,17 @@ def upsert_member_accountability(
     player_guid: str,
     payload: UpsertPenaMemberAccountRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
+    command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
-    info = use_case.upsert_member_account_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        data=PenaAccountabilityMemberAccountUpsert(
+    info = command_bus.dispatch(
+        UpsertMemberAccountCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
             player_guid=player_guid,
             debt_cents=payload.debt_cents,
             contribution_cents=payload.contribution_cents,
             note=payload.note,
-        ),
+        )
     )
     return _accountability_response(
         info=info,
@@ -356,12 +364,14 @@ def delete_member_accountability(
     pena_guid: str,
     player_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
+    command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
-    info = use_case.remove_member_account_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        player_guid=player_guid,
+    info = command_bus.dispatch(
+        RemoveMemberAccountCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            player_guid=player_guid,
+        )
     )
     return _accountability_response(
         info=info,
@@ -379,18 +389,18 @@ def create_pena_expense(
     pena_guid: str,
     payload: CreatePenaExpenseRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
+    command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
-    info = use_case.create_expense_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        data=PenaAccountabilityExpenseCreate(
+    info = command_bus.dispatch(
+        CreateExpenseCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
             title=payload.title,
             category=payload.category,
             amount_cents=payload.amount_cents,
             occurred_on=payload.occurred_on,
             note=payload.note,
-        ),
+        )
     )
     return _accountability_response(
         info=info,
@@ -408,12 +418,14 @@ def delete_pena_expense(
     pena_guid: str,
     expense_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaAccountabilityUseCase = Depends(get_pena_accountability_use_case),
+    command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
-    info = use_case.remove_expense_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        expense_guid=expense_guid,
+    info = command_bus.dispatch(
+        RemoveExpenseCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            expense_guid=expense_guid,
+        )
     )
     return _accountability_response(
         info=info,

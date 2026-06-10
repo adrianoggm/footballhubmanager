@@ -77,8 +77,27 @@ from core.application.queries.player_profile_query_handlers import (
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
-from core.application.use_cases.manage_pena_accountability_usecase import (
-    ManagePenaAccountabilityUseCase,
+from core.application.commands.pena_accountability_commands import (
+    CreateExpenseCommand,
+    RemoveExpenseCommand,
+    RemoveMemberAccountCommand,
+    UpdateAccountabilitySettingsCommand,
+    UpsertMemberAccountCommand,
+)
+from core.application.commands.pena_accountability_command_handlers import (
+    CreateExpenseHandler,
+    RemoveExpenseHandler,
+    RemoveMemberAccountHandler,
+    UpdateAccountabilitySettingsHandler,
+    UpsertMemberAccountHandler,
+)
+from core.application.queries.pena_accountability_queries import (
+    GetPenaAccountabilityQuery,
+    GetPlayerGuidForAccountQuery,
+)
+from core.application.queries.pena_accountability_query_handlers import (
+    GetPenaAccountabilityHandler,
+    GetPlayerGuidForAccountHandler,
 )
 from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
@@ -201,10 +220,23 @@ def get_pena_labels_query_bus(db: Session = Depends(get_db)) -> QueryBus:
     return bus
 
 
-def get_pena_accountability_use_case(
-    db: Session = Depends(get_db),
-) -> ManagePenaAccountabilityUseCase:
-    return ManagePenaAccountabilityUseCase(SqlAlchemyPenaAccountabilityRepository(db))
+def get_pena_accountability_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemyPenaAccountabilityRepository(db)
+    bus = QueryBus()
+    bus.register(GetPenaAccountabilityQuery, GetPenaAccountabilityHandler(repository))
+    bus.register(GetPlayerGuidForAccountQuery, GetPlayerGuidForAccountHandler(repository))
+    return bus
+
+
+def get_pena_accountability_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyPenaAccountabilityRepository(db)
+    bus = CommandBus()
+    bus.register(UpdateAccountabilitySettingsCommand, UpdateAccountabilitySettingsHandler(repository))
+    bus.register(UpsertMemberAccountCommand, UpsertMemberAccountHandler(repository))
+    bus.register(RemoveMemberAccountCommand, RemoveMemberAccountHandler(repository))
+    bus.register(CreateExpenseCommand, CreateExpenseHandler(repository))
+    bus.register(RemoveExpenseCommand, RemoveExpenseHandler(repository))
+    return bus
 
 
 def get_pena_membership_use_case(
