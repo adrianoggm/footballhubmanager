@@ -14,6 +14,14 @@ from core.application.commands.pena_season_commands import (
     DeletePenaSeasonCommand,
     UpdatePenaSeasonCommand,
 )
+from core.application.commands.player_profile_command_handlers import (
+    UpdatePlayerProfileByAccountIdHandler,
+    UpdatePlayerProfileByGuidHandler,
+)
+from core.application.commands.player_profile_commands import (
+    UpdatePlayerProfileByAccountIdCommand,
+    UpdatePlayerProfileByGuidCommand,
+)
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
@@ -38,12 +46,20 @@ from core.application.queries.pena_season_query_handlers import (
     GetPenaSeasonHandler,
     ListPenaSeasonsHandler,
 )
+from core.application.queries.player_profile_queries import (
+    GetPlayerProfileByAccountIdQuery,
+    GetPlayerProfileByGuidQuery,
+)
+from core.application.queries.player_profile_query_handlers import (
+    GetPlayerProfileByAccountIdHandler,
+    GetPlayerProfileByGuidHandler,
+)
 from core.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
+from core.application.queries.pena_players_query import GetPenaPlayersQuery
+from core.application.queries.pena_players_query_handler import GetPenaPlayersHandler
 from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
-from core.application.use_cases.get_pena_players_usecase import GetPenaPlayersUseCase
-from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
@@ -68,9 +84,6 @@ from core.application.use_cases.manage_season_players_usecase import (
 )
 from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
 from core.application.use_cases.register_user_usecase import RegisterUserUseCase
-from core.application.use_cases.update_player_profile_usecase import (
-    UpdatePlayerProfileUseCase,
-)
 from fastapi import Depends
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
@@ -187,8 +200,10 @@ def get_pena_membership_use_case(
     return ManagePenaMembershipUseCase(SqlAlchemyPenaMembershipRepository(db))
 
 
-def get_pena_players_use_case(db: Session = Depends(get_db)) -> GetPenaPlayersUseCase:
-    return GetPenaPlayersUseCase(SqlAlchemyPenaPlayerQueryRepository(db))
+def get_pena_players_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    bus = QueryBus()
+    bus.register(GetPenaPlayersQuery, GetPenaPlayersHandler(SqlAlchemyPenaPlayerQueryRepository(db)))
+    return bus
 
 
 def get_pena_command_bus(db: Session = Depends(get_db)) -> CommandBus:
@@ -218,12 +233,22 @@ def get_pena_season_query_bus(db: Session = Depends(get_db)) -> QueryBus:
     return bus
 
 
-def get_player_profile_use_case(db: Session = Depends(get_db)) -> GetPlayerProfileUseCase:
-    return GetPlayerProfileUseCase(SqlAlchemyPlayerProfileRepository(db))
+def get_player_profile_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemyPlayerProfileRepository(db)
+    bus = QueryBus()
+    bus.register(GetPlayerProfileByGuidQuery, GetPlayerProfileByGuidHandler(repository))
+    bus.register(GetPlayerProfileByAccountIdQuery, GetPlayerProfileByAccountIdHandler(repository))
+    return bus
 
 
-def get_update_player_profile_use_case(db: Session = Depends(get_db)) -> UpdatePlayerProfileUseCase:
-    return UpdatePlayerProfileUseCase(SqlAlchemyPlayerProfileRepository(db))
+def get_player_profile_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyPlayerProfileRepository(db)
+    bus = CommandBus()
+    bus.register(UpdatePlayerProfileByGuidCommand, UpdatePlayerProfileByGuidHandler(repository))
+    bus.register(
+        UpdatePlayerProfileByAccountIdCommand, UpdatePlayerProfileByAccountIdHandler(repository)
+    )
+    return bus
 
 
 def get_season_competition_use_case(

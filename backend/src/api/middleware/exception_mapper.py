@@ -12,7 +12,6 @@ from core.application.use_cases import (
     InvalidPenaAccountabilityDataError,
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
-    InvalidPlayerUpdateDataError,
     InvalidRegistrationDataError,
     PenaAccessDeniedError,
     PenaAccountabilityAccessDeniedError,
@@ -29,12 +28,6 @@ from core.application.use_cases import (
     UserInvalidNationalityError,
     UserProfileNotFoundError,
     UserUsernameExistsError,
-)
-from core.application.use_cases import (
-    InvalidNationalityError as PlayerInvalidNationalityError,
-)
-from core.application.use_cases import (
-    InvalidProfileImageError as PlayerInvalidProfileImageError,
 )
 from core.application.use_cases import (
     InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
@@ -76,13 +69,13 @@ from core.application.use_cases.season_match_insights_errors import (
 from core.domain.errors import (
     InvalidPenaLabelsDataError,
     InvalidPenaSeasonDataError,
+    InvalidPlayerNationalityError,
+    InvalidPlayerUpdateDataError,
+    InvalidProfileImageError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
-)
-from core.domain.errors import (
-    InvalidProfileImageError as PenaInvalidProfileImageError,
 )
 from core.domain.errors import (
     PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
@@ -112,15 +105,14 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Invalid admin registration data",
     ),
     UserInvalidNationalityError: (status.HTTP_400_BAD_REQUEST, "Invalid nationality"),
-    PlayerInvalidNationalityError: (status.HTTP_400_BAD_REQUEST, "Invalid nationality"),
+    InvalidPlayerNationalityError: (status.HTTP_400_BAD_REQUEST, "Invalid nationality"),
     InvalidPlayerUpdateDataError: (status.HTTP_400_BAD_REQUEST, "Invalid player update data"),
-    PlayerInvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     InvalidLinkTokenError: (status.HTTP_400_BAD_REQUEST, "Invalid or expired link token"),
     UserAlreadyLinkedError: (status.HTTP_409_CONFLICT, "User is already linked to this pena"),
     UserProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "User player profile not found"),
     PenaAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
-    PenaInvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
+    InvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaLabelsAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     PenaProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),

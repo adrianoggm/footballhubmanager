@@ -7,15 +7,15 @@ from .use_cases import (
     get_pena_labels_command_bus,
     get_pena_labels_query_bus,
     get_pena_membership_use_case,
-    get_pena_players_use_case,
+    get_pena_players_query_bus,
     get_pena_query_bus,
     get_pena_season_command_bus,
     get_pena_season_query_bus,
-    get_player_profile_use_case,
+    get_player_profile_command_bus,
+    get_player_profile_query_bus,
     get_register_admin_use_case,
     get_register_user_use_case,
     get_season_competition_use_case,
-    get_update_player_profile_use_case,
 )
 
 __all__ = [
@@ -30,10 +30,10 @@ __all__ = [
     "get_pena_labels_command_bus",
     "get_pena_labels_query_bus",
     "get_pena_membership_use_case",
-    "get_pena_players_use_case",
+    "get_pena_players_query_bus",
     "get_pena_season_command_bus",
     "get_pena_season_query_bus",
-    "get_player_profile_use_case",
-    "get_update_player_profile_use_case",
+    "get_player_profile_command_bus",
+    "get_player_profile_query_bus",
     "get_season_competition_use_case",
 ]
