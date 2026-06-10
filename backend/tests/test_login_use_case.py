@@ -1,5 +1,5 @@
 import pytest
-from auth.application.models import AuthAccount
+from auth.domain.models.auth_account import AuthAccount
 from auth.application.use_cases import login as login_module
 
 

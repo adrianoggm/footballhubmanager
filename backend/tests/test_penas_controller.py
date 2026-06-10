@@ -48,8 +48,8 @@ from core.application.use_cases.manage_pena_labels_usecase import (
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
 )
-from core.application.use_cases.manage_pena_profile_usecase import (
-    InvalidPenaProfileImageError,
+from core.domain.errors import (
+    InvalidProfileImageError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
 )
@@ -245,37 +245,31 @@ def test_get_pena_returns_pena_when_found():
 
 
 def test_update_pena_profile_success():
-    class _UseCase:
+    class _Bus:
         def __init__(self):
-            self.last_call: dict | None = None
+            self.last_command = None
 
-        def update_for_admin(self, *, pena_guid: str, admin_id: int, update):
-            self.last_call = {
-                "pena_guid": pena_guid,
-                "admin_id": admin_id,
-                "image_url": update.image_url,
-            }
+        def dispatch(self, command):
+            self.last_command = command
             return PenaProfileInfo(
-                guid=pena_guid,
+                guid=command.pena_guid,
                 name="Pena Uno",
-                image_url=update.image_url,
+                image_url=command.image_url,
             )
 
-    use_case = _UseCase()
+    bus = _Bus()
     response = penas_controller.update_pena_profile(
         "pena-1",
         UpdatePenaProfileRequest(image_url="data:image/jpeg;base64,QQ=="),
         admin_session=_session(user_type="admin", user_id=99),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.guid == "pena-1"
     assert response.image_url == "data:image/jpeg;base64,QQ=="
-    assert use_case.last_call == {
-        "pena_guid": "pena-1",
-        "admin_id": 99,
-        "image_url": "data:image/jpeg;base64,QQ==",
-    }
+    assert bus.last_command.pena_guid == "pena-1"
+    assert bus.last_command.admin_id == 99
+    assert bus.last_command.image_url == "data:image/jpeg;base64,QQ=="
 
 
 @pytest.mark.parametrize(
@@ -283,12 +277,12 @@ def test_update_pena_profile_success():
     [
         (PenaProfileNotFoundError(), 404, "Pena not found"),
         (PenaProfileAccessDeniedError(), 403, "Admin does not manage this pena"),
-        (InvalidPenaProfileImageError(), 400, "Invalid profile image"),
+        (InvalidProfileImageError(), 400, "Invalid profile image"),
     ],
 )
 def test_update_pena_profile_maps_domain_errors(error, status_code, detail):
-    class _UseCase:
-        def update_for_admin(self, **_kwargs):
+    class _Bus:
+        def dispatch(self, _command):
             raise error
 
     with pytest.raises(HTTPException) as exc:
@@ -296,7 +290,7 @@ def test_update_pena_profile_maps_domain_errors(error, status_code, detail):
             "pena-1",
             UpdatePenaProfileRequest(image_url="data:image/jpeg;base64,QQ=="),
             admin_session=_session(user_type="admin", user_id=99),
-            use_case=_UseCase(),
+            command_bus=_Bus(),
         )
 
     assert exc.value.status_code == status_code

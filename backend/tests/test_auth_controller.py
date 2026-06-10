@@ -6,8 +6,8 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterAdminRequest,
     RegisterUserRequest,
 )
-from auth.application.models import AuthAccount
 from auth.application.use_cases.login import InvalidCredentialsError
+from auth.domain.models.auth_account import AuthAccount
 from auth.session import SessionData
 from core.application.models import RegisteredAdmin, RegisteredUser
 from core.application.use_cases.register_admin_usecase import (

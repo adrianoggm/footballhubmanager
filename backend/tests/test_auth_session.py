@@ -1,8 +1,8 @@
 import time
 
 from auth.session import create_session, get_session
-from persistence.domain.entity.base_entity import Base
-from persistence.domain.entity.user_session_entity import UserSession
+from persistence.infrastructure.entity.base_entity import Base
+from persistence.infrastructure.entity.user_session_entity import UserSession
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
