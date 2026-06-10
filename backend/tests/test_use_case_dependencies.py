@@ -50,13 +50,72 @@ def test_get_pena_players_use_case_builds_expected_dependencies(monkeypatch):
     )
 
 
-def test_get_manage_pena_seasons_use_case_builds_expected_dependencies(monkeypatch):
-    _assert_single_repository_factory(
-        monkeypatch,
-        repo_attr="SqlAlchemyPenaSeasonRepository",
-        use_case_attr="ManagePenaSeasonsUseCase",
-        factory=use_case_dependencies.get_manage_pena_seasons_use_case,
+def test_get_pena_season_command_bus_builds_expected_dependencies(monkeypatch):
+    from datetime import date
+
+    from core.application.commands.pena_season_commands import (
+        CreatePenaSeasonCommand,
+        DeletePenaSeasonCommand,
     )
+    from core.application.ports.pena_season_port import PenaSeasonResult
+    from shared.application.bus.buses import CommandBus
+
+    captured: dict[str, object] = {}
+    sample = PenaSeasonResult(
+        guid="s",
+        start_date=date(2024, 9, 1),
+        end_date=date(2025, 6, 30),
+        points_win=3,
+        points_draw=1,
+        points_loss=0,
+    )
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+        def create_for_admin(self, **_kwargs):
+            return sample
+
+        def delete_for_admin(self, **_kwargs):
+            captured["deleted"] = True
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaSeasonRepository", _Repo)
+
+    bus = use_case_dependencies.get_pena_season_command_bus(db="db-session")
+    assert isinstance(bus, CommandBus)
+    assert captured["db"] == "db-session"
+    created = bus.dispatch(
+        CreatePenaSeasonCommand(
+            pena_guid="p", admin_id=1, start_date=date(2024, 9, 1), end_date=date(2025, 6, 30)
+        )
+    )
+    assert created.guid == "s"
+    bus.dispatch(DeletePenaSeasonCommand(pena_guid="p", season_guid="s", admin_id=1))
+    assert captured["deleted"] is True
+
+
+def test_get_pena_season_query_bus_builds_expected_dependencies(monkeypatch):
+
+    from core.application.ports.pena_season_port import PenaSeasonsPageResult
+    from core.application.queries.pena_season_queries import ListPenaSeasonsQuery
+    from shared.application.bus.buses import QueryBus
+
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+        def find_for_pena(self, *, pena_guid, page, page_size):
+            return PenaSeasonsPageResult(items=[], page=page, page_size=page_size, total=0)
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaSeasonRepository", _Repo)
+
+    bus = use_case_dependencies.get_pena_season_query_bus(db="db-session")
+    assert isinstance(bus, QueryBus)
+    assert captured["db"] == "db-session"
+    assert bus.ask(ListPenaSeasonsQuery(pena_guid="p")).total == 0
 
 
 def test_get_player_profile_use_case_builds_expected_dependencies(monkeypatch):

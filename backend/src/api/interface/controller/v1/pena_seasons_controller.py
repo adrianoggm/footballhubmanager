@@ -2,7 +2,10 @@ import math
 from dataclasses import asdict
 from datetime import date
 
-from api.dependencies.use_cases import get_manage_pena_seasons_use_case
+from api.dependencies.use_cases import (
+    get_pena_season_command_bus,
+    get_pena_season_query_bus,
+)
 from api.interface.controller.v1.model.request.pena_seasons_request import (
     CreatePenaSeasonRequest,
     UpdatePenaSeasonRequest,
@@ -13,14 +16,20 @@ from api.interface.controller.v1.model.response.pena_seasons_response import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
-from core.application.models import PenaSeasonCreate, PenaSeasonUpdate
-from core.application.policies import FieldUpdate
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    InvalidPenaSeasonDataError,
-    ManagePenaSeasonsUseCase,
-    PenaSeasonNotFoundError,
+from core.application.commands.pena_season_commands import (
+    CreatePenaSeasonCommand,
+    DeletePenaSeasonCommand,
+    UpdatePenaSeasonCommand,
 )
+from core.application.policies import FieldUpdate
+from core.application.queries.pena_season_queries import (
+    GetActivePenaSeasonQuery,
+    GetPenaSeasonQuery,
+    ListPenaSeasonsQuery,
+)
+from core.domain.errors import InvalidPenaSeasonDataError, PenaSeasonNotFoundError
 from fastapi import APIRouter, Depends, Query, Response, status
+from shared.application.bus.buses import CommandBus, QueryBus
 
 router = APIRouter()
 
@@ -40,16 +49,24 @@ UPDATE_PENA_SEASON_OVERRIDES = {
 }
 
 
+def _field_update(payload, name: str) -> FieldUpdate:
+    if name in payload.model_fields_set:
+        return FieldUpdate.set(getattr(payload, name))
+    return FieldUpdate.keep()
+
+
 @router.get("/penas/{pena_guid}/seasons", response_model=PenaSeasonsPageResponse)
 @map_exceptions
 def list_pena_seasons(
     pena_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
+    query_bus: QueryBus = Depends(get_pena_season_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    result = use_case.list_for_pena(pena_guid=pena_guid, page=page, page_size=page_size)
+    result = query_bus.ask(
+        ListPenaSeasonsQuery(pena_guid=pena_guid, page=page, page_size=page_size)
+    )
 
     total_pages = math.ceil(result.total / result.page_size) if result.total else 0
     return PenaSeasonsPageResponse(
@@ -66,10 +83,10 @@ def list_pena_seasons(
 def get_active_pena_season(
     pena_guid: str,
     at_date: date | None = Query(default=None),
-    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
+    query_bus: QueryBus = Depends(get_pena_season_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    season = use_case.get_active_for_pena(pena_guid=pena_guid, reference_date=at_date)
+    season = query_bus.ask(GetActivePenaSeasonQuery(pena_guid=pena_guid, reference_date=at_date))
     return PenaSeasonResponse(**asdict(season))
 
 
@@ -78,10 +95,10 @@ def get_active_pena_season(
 def get_pena_season(
     pena_guid: str,
     season_guid: str,
-    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
+    query_bus: QueryBus = Depends(get_pena_season_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    season = use_case.get_by_guid(pena_guid=pena_guid, season_guid=season_guid)
+    season = query_bus.ask(GetPenaSeasonQuery(pena_guid=pena_guid, season_guid=season_guid))
     return PenaSeasonResponse(**asdict(season))
 
 
@@ -95,18 +112,18 @@ def create_pena_season(
     pena_guid: str,
     payload: CreatePenaSeasonRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
+    command_bus: CommandBus = Depends(get_pena_season_command_bus),
 ):
-    created = use_case.create_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        data=PenaSeasonCreate(
+    created = command_bus.dispatch(
+        CreatePenaSeasonCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
             start_date=payload.start_date,
             end_date=payload.end_date,
             points_win=payload.points_win,
             points_draw=payload.points_draw,
             points_loss=payload.points_loss,
-        ),
+        )
     )
     return PenaSeasonResponse(**asdict(created))
 
@@ -118,39 +135,19 @@ def update_pena_season(
     season_guid: str,
     payload: UpdatePenaSeasonRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
+    command_bus: CommandBus = Depends(get_pena_season_command_bus),
 ):
-    updated = use_case.update_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        admin_id=admin_session.user_id,
-        update=PenaSeasonUpdate(
-            start_date=(
-                FieldUpdate.set(payload.start_date)
-                if "start_date" in payload.model_fields_set
-                else FieldUpdate.keep()
-            ),
-            end_date=(
-                FieldUpdate.set(payload.end_date)
-                if "end_date" in payload.model_fields_set
-                else FieldUpdate.keep()
-            ),
-            points_win=(
-                FieldUpdate.set(payload.points_win)
-                if "points_win" in payload.model_fields_set
-                else FieldUpdate.keep()
-            ),
-            points_draw=(
-                FieldUpdate.set(payload.points_draw)
-                if "points_draw" in payload.model_fields_set
-                else FieldUpdate.keep()
-            ),
-            points_loss=(
-                FieldUpdate.set(payload.points_loss)
-                if "points_loss" in payload.model_fields_set
-                else FieldUpdate.keep()
-            ),
-        ),
+    updated = command_bus.dispatch(
+        UpdatePenaSeasonCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            start_date=_field_update(payload, "start_date"),
+            end_date=_field_update(payload, "end_date"),
+            points_win=_field_update(payload, "points_win"),
+            points_draw=_field_update(payload, "points_draw"),
+            points_loss=_field_update(payload, "points_loss"),
+        )
     )
     return PenaSeasonResponse(**asdict(updated))
 
@@ -161,11 +158,13 @@ def delete_pena_season(
     pena_guid: str,
     season_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaSeasonsUseCase = Depends(get_manage_pena_seasons_use_case),
+    command_bus: CommandBus = Depends(get_pena_season_command_bus),
 ):
-    use_case.delete_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        admin_id=admin_session.user_id,
+    command_bus.dispatch(
+        DeletePenaSeasonCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+        )
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

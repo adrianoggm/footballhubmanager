@@ -33,13 +33,6 @@ from core.application.use_cases import (
     UserProfileNotFoundError,
     UserUsernameExistsError,
 )
-from core.domain.errors import (
-    InvalidProfileImageError as PenaInvalidProfileImageError,
-)
-from core.domain.errors import (
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
-)
 from core.application.use_cases import (
     InvalidNationalityError as PlayerInvalidNationalityError,
 )
@@ -48,21 +41,6 @@ from core.application.use_cases import (
 )
 from core.application.use_cases import (
     InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    InvalidPenaSeasonDataError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonDateOverlapError as PenaSeasonsDateOverlapError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonNotFoundError as PenaSeasonsNotFoundError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
 )
 from core.application.use_cases.season_competition_errors import (
     InvalidSeasonDataError,
@@ -97,6 +75,26 @@ from core.application.use_cases.season_match_insights_errors import (
 )
 from core.application.use_cases.season_match_insights_errors import (
     PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
+)
+from core.domain.errors import (
+    InvalidPenaSeasonDataError,
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
+)
+from core.domain.errors import (
+    InvalidProfileImageError as PenaInvalidProfileImageError,
+)
+from core.domain.errors import (
+    PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
+)
+from core.domain.errors import (
+    PenaSeasonDateOverlapError as PenaSeasonsDateOverlapError,
+)
+from core.domain.errors import (
+    PenaSeasonNotFoundError as PenaSeasonsNotFoundError,
+)
+from core.domain.errors import (
+    PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
 )
 from fastapi import HTTPException, status
 

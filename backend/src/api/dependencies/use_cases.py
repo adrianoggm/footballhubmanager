@@ -2,6 +2,38 @@ from auth.application.use_cases.login import LoginAdminUseCase, LoginUserUseCase
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
+from core.application.commands.pena_season_command_handlers import (
+    CreatePenaSeasonHandler,
+    DeletePenaSeasonHandler,
+    UpdatePenaSeasonHandler,
+)
+from core.application.commands.pena_season_commands import (
+    CreatePenaSeasonCommand,
+    DeletePenaSeasonCommand,
+    UpdatePenaSeasonCommand,
+)
+from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
+from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
+from core.application.queries.pena_queries import (
+    GetPenaByGuidQuery,
+    ListPenasForAdminQuery,
+    ListPenasForUserQuery,
+)
+from core.application.queries.pena_query_handlers import (
+    GetPenaByGuidHandler,
+    ListPenasForAdminHandler,
+    ListPenasForUserHandler,
+)
+from core.application.queries.pena_season_queries import (
+    GetActivePenaSeasonQuery,
+    GetPenaSeasonQuery,
+    ListPenaSeasonsQuery,
+)
+from core.application.queries.pena_season_query_handlers import (
+    GetActivePenaSeasonHandler,
+    GetPenaSeasonHandler,
+    ListPenaSeasonsHandler,
+)
 from core.application.use_cases.generate_pena_link_token_usecase import (
     GeneratePenaLinkTokenUseCase,
 )
@@ -20,22 +52,6 @@ from core.application.use_cases.manage_pena_labels_usecase import (
 )
 from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
-)
-from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
-from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
-from core.application.queries.pena_queries import (
-    GetPenaByGuidQuery,
-    ListPenasForAdminQuery,
-    ListPenasForUserQuery,
-)
-from core.application.queries.pena_query_handlers import (
-    GetPenaByGuidHandler,
-    ListPenasForAdminHandler,
-    ListPenasForUserHandler,
-)
-from shared.application.bus.buses import CommandBus, QueryBus
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    ManagePenaSeasonsUseCase,
 )
 from core.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
@@ -101,6 +117,7 @@ from persistence.infrastructure.repository.db.season_player_repository import (
     SqlAlchemySeasonPlayerRepository,
 )
 from persistence.module import get_db
+from shared.application.bus.buses import CommandBus, QueryBus
 from sqlalchemy.orm import Session
 
 
@@ -172,10 +189,22 @@ def get_pena_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     return bus
 
 
-def get_manage_pena_seasons_use_case(
-    db: Session = Depends(get_db),
-) -> ManagePenaSeasonsUseCase:
-    return ManagePenaSeasonsUseCase(SqlAlchemyPenaSeasonRepository(db))
+def get_pena_season_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyPenaSeasonRepository(db)
+    bus = CommandBus()
+    bus.register(CreatePenaSeasonCommand, CreatePenaSeasonHandler(repository))
+    bus.register(UpdatePenaSeasonCommand, UpdatePenaSeasonHandler(repository))
+    bus.register(DeletePenaSeasonCommand, DeletePenaSeasonHandler(repository))
+    return bus
+
+
+def get_pena_season_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemyPenaSeasonRepository(db)
+    bus = QueryBus()
+    bus.register(ListPenaSeasonsQuery, ListPenaSeasonsHandler(repository))
+    bus.register(GetPenaSeasonQuery, GetPenaSeasonHandler(repository))
+    bus.register(GetActivePenaSeasonQuery, GetActivePenaSeasonHandler(repository))
+    return bus
 
 
 def get_player_profile_use_case(db: Session = Depends(get_db)) -> GetPlayerProfileUseCase:
