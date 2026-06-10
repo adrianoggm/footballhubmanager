@@ -40,6 +40,8 @@ from core.application.commands.registration_commands import (
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
+from core.application.queries.nationality_query import GetNationalitiesQuery
+from core.application.queries.nationality_query_handler import GetNationalitiesHandler
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_labels_query_handler import GetPenaLabelsHandler
 from core.application.queries.pena_players_query import GetPenaPlayersQuery
@@ -72,7 +74,6 @@ from core.application.queries.player_profile_query_handlers import (
     GetPlayerProfileByAccountIdHandler,
     GetPlayerProfileByGuidHandler,
 )
-from core.application.use_cases.get_nationalities_usecase import GetNationalitiesUseCase
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
 )
@@ -161,8 +162,12 @@ def get_registration_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     return bus
 
 
-def get_nationalities_use_case(db: Session = Depends(get_db)) -> GetNationalitiesUseCase:
-    return GetNationalitiesUseCase(SqlAlchemyNationalityQueryRepository(db))
+def get_nationalities_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    bus = QueryBus()
+    bus.register(
+        GetNationalitiesQuery, GetNationalitiesHandler(SqlAlchemyNationalityQueryRepository(db))
+    )
+    return bus
 
 
 def get_pena_query_bus(db: Session = Depends(get_db)) -> QueryBus:

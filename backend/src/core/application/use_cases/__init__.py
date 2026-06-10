@@ -1,4 +1,3 @@
-from .get_nationalities_usecase import GetNationalitiesUseCase
 from .get_season_match_insights_usecase import GetSeasonMatchInsightsUseCase
 from .manage_pena_accountability_usecase import (
     InvalidPenaAccountabilityDataError,
@@ -26,7 +25,6 @@ from .season_match_insights_errors import (
 )
 
 __all__ = [
-    "GetNationalitiesUseCase",
     "GetSeasonMatchInsightsUseCase",
     "InvalidPenaAccountabilityDataError",
     "InvalidPenaGuestPlayerDataError",

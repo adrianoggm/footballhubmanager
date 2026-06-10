@@ -1,7 +1,7 @@
 from .use_cases import (
     get_login_admin_use_case,
     get_login_user_use_case,
-    get_nationalities_use_case,
+    get_nationalities_query_bus,
     get_pena_labels_command_bus,
     get_pena_labels_query_bus,
     get_pena_link_command_bus,
@@ -20,7 +20,7 @@ __all__ = [
     "get_login_user_use_case",
     "get_login_admin_use_case",
     "get_registration_command_bus",
-    "get_nationalities_use_case",
+    "get_nationalities_query_bus",
     "get_pena_query_bus",
     "get_pena_link_command_bus",
     "get_pena_labels_command_bus",
