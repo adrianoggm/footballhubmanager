@@ -398,43 +398,40 @@ def test_update_pena_labels_maps_domain_errors(error, status_code, detail):
     assert exc.value.detail == detail
 
 
+class _LinkCommandBus:
+    def __init__(self, result=None):
+        self._result = result
+        self.last_command = None
+
+    def dispatch(self, command):
+        self.last_command = command
+        return self._result
+
+
 def test_create_link_token_success():
-    class _UseCase:
-        def __init__(self):
-            self.last_call: dict | None = None
-
-        def execute(self, *, admin_id: int, pena_guid: str, ttl_seconds: int) -> PenaLinkToken:
-            self.last_call = {
-                "admin_id": admin_id,
-                "pena_guid": pena_guid,
-                "ttl_seconds": ttl_seconds,
-            }
-            return PenaLinkToken(token="t-1", pena_guid=pena_guid, expires_at=12345)
-
-    use_case = _UseCase()
+    bus = _LinkCommandBus(PenaLinkToken(token="t-1", pena_guid="pena-1", expires_at=12345))
     response = penas_controller.create_link_token(
         "pena-1",
         admin_session=_session(user_type="admin", user_id=5),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.token == "t-1"
     assert response.pena_guid == "pena-1"
     assert response.expires_at == 12345
-    assert use_case.last_call is not None
-    assert use_case.last_call["ttl_seconds"] == penas_controller.app_config.LINK_TOKEN_TTL_SECONDS
+    command = bus.last_command
+    assert isinstance(command, GeneratePenaLinkTokenCommand)
+    assert command.admin_id == 5
+    assert command.pena_guid == "pena-1"
+    assert command.ttl_seconds == penas_controller.app_config.LINK_TOKEN_TTL_SECONDS
 
 
 def test_create_link_token_maps_access_denied_to_403():
-    class _UseCase:
-        def execute(self, **_kwargs):
-            raise PenaAccessDeniedError()
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.create_link_token(
             "pena-1",
             admin_session=_session(user_type="admin", user_id=5),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(PenaLinkAccessDeniedError()),
         )
     assert exc.value.status_code == 403
     assert exc.value.detail == "Admin does not manage this pena"
@@ -448,40 +445,21 @@ def test_consume_link_token_rejects_non_user_sessions():
 
 
 def test_consume_link_token_success():
-    class _UseCase:
-        def __init__(self):
-            self.last_call: dict | None = None
-
-        def execute(
-            self,
-            *,
-            token: str,
-            account_id: int,
-            nickname: str | None,
-            position: str | None,
-        ):
-            self.last_call = {
-                "token": token,
-                "account_id": account_id,
-                "nickname": nickname,
-                "position": position,
-            }
-
-    use_case = _UseCase()
+    bus = _LinkCommandBus()
     payload = ConsumeLinkTokenRequest(token="tok-1", nickname="nick", position="mid")
     response = penas_controller.consume_link_token(
         payload,
         session=_session(user_type="user", user_id=88),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response == {"status": "ok"}
-    assert use_case.last_call == {
-        "token": "tok-1",
-        "account_id": 88,
-        "nickname": "nick",
-        "position": "mid",
-    }
+    command = bus.last_command
+    assert isinstance(command, LinkUserToPenaCommand)
+    assert command.token == "tok-1"
+    assert command.account_id == 88
+    assert command.nickname == "nick"
+    assert command.position == "mid"
 
 
 @pytest.mark.parametrize(
@@ -493,15 +471,11 @@ def test_consume_link_token_success():
     ],
 )
 def test_consume_link_token_maps_domain_errors_to_http(error, status_code, detail):
-    class _UseCase:
-        def execute(self, **_kwargs):
-            raise error
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.consume_link_token(
             ConsumeLinkTokenRequest(token="tok-1", nickname=None, position=None),
             session=_session(user_type="user", user_id=88),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(error),
         )
 
     assert exc.value.status_code == status_code
