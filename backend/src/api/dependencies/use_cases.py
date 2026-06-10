@@ -2,6 +2,8 @@ from auth.application.use_cases.login import LoginAdminUseCase, LoginUserUseCase
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
+from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
+from core.application.commands.pena_labels_command_handler import UpdatePenaLabelsHandler
 from core.application.commands.pena_season_command_handlers import (
     CreatePenaSeasonHandler,
     DeletePenaSeasonHandler,
@@ -14,6 +16,8 @@ from core.application.commands.pena_season_commands import (
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
+from core.application.queries.pena_labels_query import GetPenaLabelsQuery
+from core.application.queries.pena_labels_query_handler import GetPenaLabelsHandler
 from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
@@ -46,9 +50,6 @@ from core.application.use_cases.get_season_match_insights_usecase import (
 from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
-)
-from core.application.use_cases.manage_pena_labels_usecase import (
-    ManagePenaLabelsUseCase,
 )
 from core.application.use_cases.manage_pena_membership_usecase import (
     ManagePenaMembershipUseCase,
@@ -160,8 +161,18 @@ def get_link_user_to_pena_use_case(db: Session = Depends(get_db)) -> LinkUserToP
     return LinkUserToPenaUseCase(SqlAlchemyPenaLinkRepository(db))
 
 
-def get_pena_labels_use_case(db: Session = Depends(get_db)) -> ManagePenaLabelsUseCase:
-    return ManagePenaLabelsUseCase(SqlAlchemyPenaLabelsRepository(db))
+def get_pena_labels_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    bus = CommandBus()
+    bus.register(
+        UpdatePenaLabelsCommand, UpdatePenaLabelsHandler(SqlAlchemyPenaLabelsRepository(db))
+    )
+    return bus
+
+
+def get_pena_labels_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    bus = QueryBus()
+    bus.register(GetPenaLabelsQuery, GetPenaLabelsHandler(SqlAlchemyPenaLabelsRepository(db)))
+    return bus
 
 
 def get_pena_accountability_use_case(

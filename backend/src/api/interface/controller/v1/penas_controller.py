@@ -6,7 +6,8 @@ from api.dependencies.use_cases import (
     get_link_user_to_pena_use_case,
     get_pena_accountability_use_case,
     get_pena_command_bus,
-    get_pena_labels_use_case,
+    get_pena_labels_command_bus,
+    get_pena_labels_query_bus,
     get_pena_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
@@ -38,6 +39,7 @@ from auth.dependencies import (
     require_admin,
     require_user,
 )
+from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.models import (
     PenaAccountabilityExpenseCreate,
@@ -46,9 +48,9 @@ from core.application.models import (
     PenaAccountabilityMemberAccountInfo,
     PenaAccountabilityMemberAccountUpsert,
     PenaAccountabilitySettingsUpdate,
-    PenaLabelsUpdate,
     PenasPage,
 )
+from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
@@ -60,9 +62,6 @@ from core.application.use_cases.generate_pena_link_token_usecase import (
 from core.application.use_cases.link_user_to_pena_usecase import LinkUserToPenaUseCase
 from core.application.use_cases.manage_pena_accountability_usecase import (
     ManagePenaAccountabilityUseCase,
-)
-from core.application.use_cases.manage_pena_labels_usecase import (
-    ManagePenaLabelsUseCase,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from shared.application.bus.buses import CommandBus, QueryBus
@@ -218,9 +217,9 @@ def update_pena_profile(
 def get_pena_labels(
     pena_guid: str,
     _session=Depends(authorize_pena_access),
-    use_case: ManagePenaLabelsUseCase = Depends(get_pena_labels_use_case),
+    query_bus: QueryBus = Depends(get_pena_labels_query_bus),
 ):
-    labels = use_case.get_for_pena(pena_guid=pena_guid)
+    labels = query_bus.ask(GetPenaLabelsQuery(pena_guid=pena_guid))
     return PenaLabelsResponse(
         role_labels=labels.role_labels,
         position_labels=labels.position_labels,
@@ -235,17 +234,17 @@ def update_pena_labels(
     pena_guid: str,
     payload: UpdatePenaLabelsRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaLabelsUseCase = Depends(get_pena_labels_use_case),
+    command_bus: CommandBus = Depends(get_pena_labels_command_bus),
 ):
-    labels = use_case.update_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        update=PenaLabelsUpdate(
+    labels = command_bus.dispatch(
+        UpdatePenaLabelsCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
             role_labels=payload.role_labels,
             position_labels=payload.position_labels,
             role_colors=payload.role_colors,
             position_colors=payload.position_colors,
-        ),
+        )
     )
     return PenaLabelsResponse(
         role_labels=labels.role_labels,

@@ -11,7 +11,6 @@ from core.application.use_cases import (
     InvalidLinkTokenError,
     InvalidPenaAccountabilityDataError,
     InvalidPenaGuestPlayerDataError,
-    InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
     InvalidPlayerUpdateDataError,
     InvalidRegistrationDataError,
@@ -20,8 +19,6 @@ from core.application.use_cases import (
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsPenaNotFoundError,
     PenaMembershipAccessDeniedError,
     PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
@@ -77,7 +74,10 @@ from core.application.use_cases.season_match_insights_errors import (
     PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
 )
 from core.domain.errors import (
+    InvalidPenaLabelsDataError,
     InvalidPenaSeasonDataError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
 )

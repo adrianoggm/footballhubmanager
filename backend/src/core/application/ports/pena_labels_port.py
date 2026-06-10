@@ -10,14 +10,6 @@ class PenaLabelsResult:
     position_colors: dict[str, str]
 
 
-class PenaNotFoundError(Exception):
-    pass
-
-
-class PenaNotManagedByAdminError(Exception):
-    pass
-
-
 class PenaLabelsPort(Protocol):
     def get_by_pena_guid(self, *, pena_guid: str) -> PenaLabelsResult: ...
 

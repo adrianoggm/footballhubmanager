@@ -1,8 +1,10 @@
 from core.application.ports.pena_labels_port import (
     PenaLabelsPort,
     PenaLabelsResult,
-    PenaNotFoundError,
-    PenaNotManagedByAdminError,
+)
+from core.domain.errors import (
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
 )
 from core.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
@@ -44,7 +46,7 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
         pena = self._lock_pena(pena_guid)
         if pena.id_admin != admin_id:
             self.session.rollback()
-            raise PenaNotManagedByAdminError()
+            raise PenaLabelsAccessDeniedError()
 
         current_roles = self._lock_roles_for_pena(pena.id)
         updated_roles = self._sync_roles(
@@ -63,7 +65,7 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
         pena = self.session.execute(stmt).scalar_one_or_none()
         if not pena:
             self.session.rollback()
-            raise PenaNotFoundError()
+            raise PenaLabelsPenaNotFoundError()
         return pena
 
     def _lock_pena(self, pena_guid: str) -> Pena:
@@ -72,7 +74,7 @@ class SqlAlchemyPenaLabelsRepository(PenaLabelsPort):
         ).scalar_one_or_none()
         if not pena:
             self.session.rollback()
-            raise PenaNotFoundError()
+            raise PenaLabelsPenaNotFoundError()
         return pena
 
     @staticmethod
