@@ -53,9 +53,7 @@ def test_list_penas_for_admin_handler_maps_page():
     repo = _Repo()
     handler = ListPenasForAdminHandler(repo)
 
-    page = handler.handle(
-        ListPenasForAdminQuery(admin_id=7, page=2, page_size=10, search="madrid")
-    )
+    page = handler.handle(ListPenasForAdminQuery(admin_id=7, page=2, page_size=10, search="madrid"))
 
     assert page.items[0].guid == "pena-a"
     assert page.total == 1

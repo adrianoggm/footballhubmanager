@@ -2,7 +2,14 @@ from auth.infrastructure.repositories.sqlalchemy_access_repository import SqlAlc
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
-from persistence.infrastructure.entity import AdminAccounts, Base, Pena, PenaPlayer, Player, PlayerAccount
+from persistence.infrastructure.entity import (
+    AdminAccounts,
+    Base,
+    Pena,
+    PenaPlayer,
+    Player,
+    PlayerAccount,
+)
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 

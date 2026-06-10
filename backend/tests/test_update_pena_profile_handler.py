@@ -71,9 +71,7 @@ def test_handler_propagates_not_found():
     handler = UpdatePenaProfileHandler(repo)
 
     with pytest.raises(PenaProfileNotFoundError):
-        handler.handle(
-            UpdatePenaProfileCommand(pena_guid="pena-1", admin_id=8, image_url=None)
-        )
+        handler.handle(UpdatePenaProfileCommand(pena_guid="pena-1", admin_id=8, image_url=None))
 
 
 def test_handler_propagates_access_denied():
@@ -82,6 +80,4 @@ def test_handler_propagates_access_denied():
     handler = UpdatePenaProfileHandler(repo)
 
     with pytest.raises(PenaProfileAccessDeniedError):
-        handler.handle(
-            UpdatePenaProfileCommand(pena_guid="pena-1", admin_id=8, image_url=None)
-        )
+        handler.handle(UpdatePenaProfileCommand(pena_guid="pena-1", admin_id=8, image_url=None))

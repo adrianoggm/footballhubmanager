@@ -29,6 +29,11 @@ from core.application.models import (
     PenasPage,
     PenasPageResult,
 )
+from core.application.queries.pena_queries import (
+    GetPenaByGuidQuery,
+    ListPenasForAdminQuery,
+    ListPenasForUserQuery,
+)
 from core.application.use_cases.generate_pena_link_token_usecase import (
     PenaAccessDeniedError,
 )
@@ -48,11 +53,6 @@ from core.application.use_cases.manage_pena_labels_usecase import (
     InvalidPenaLabelsDataError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
-)
-from core.application.queries.pena_queries import (
-    GetPenaByGuidQuery,
-    ListPenasForAdminQuery,
-    ListPenasForUserQuery,
 )
 from core.domain.errors import (
     InvalidProfileImageError,

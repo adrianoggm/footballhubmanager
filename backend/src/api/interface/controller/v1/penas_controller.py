@@ -38,6 +38,7 @@ from auth.dependencies import (
     require_admin,
     require_user,
 )
+from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.models import (
     PenaAccountabilityExpenseCreate,
     PenaAccountabilityExpenseInfo,
@@ -48,7 +49,6 @@ from core.application.models import (
     PenaLabelsUpdate,
     PenasPage,
 )
-from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
