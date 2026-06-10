@@ -12,16 +12,14 @@ from .use_cases import (
     get_pena_season_query_bus,
     get_player_profile_command_bus,
     get_player_profile_query_bus,
-    get_register_admin_use_case,
-    get_register_user_use_case,
+    get_registration_command_bus,
     get_season_competition_use_case,
 )
 
 __all__ = [
     "get_login_user_use_case",
     "get_login_admin_use_case",
-    "get_register_user_use_case",
-    "get_register_admin_use_case",
+    "get_registration_command_bus",
     "get_nationalities_use_case",
     "get_pena_query_bus",
     "get_pena_link_command_bus",

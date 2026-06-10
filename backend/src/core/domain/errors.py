@@ -83,3 +83,26 @@ class UserAlreadyLinkedError(DomainError):
 
 class UserProfileNotFoundError(DomainError):
     code = "user_profile_not_found"
+
+
+# --- Registration ---
+
+
+class InvalidAdminRegistrationDataError(DomainError):
+    code = "invalid_admin_registration_data"
+
+
+class InvalidRegistrationDataError(DomainError):
+    code = "invalid_registration_data"
+
+
+class AdminUsernameExistsError(DomainError):
+    code = "admin_username_exists"
+
+
+class UserUsernameExistsError(DomainError):
+    code = "user_username_exists"
+
+
+class UserInvalidNationalityError(DomainError):
+    code = "user_invalid_nationality"

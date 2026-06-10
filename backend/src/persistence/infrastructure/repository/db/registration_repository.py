@@ -1,10 +1,13 @@
 from core.application.ports.registration_port import (
     AdminRegistrationPort,
-    DuplicateUsernameError,
-    InvalidNationalityError,
     RegisteredAdminResult,
     RegisteredUserResult,
     UserRegistrationPort,
+)
+from core.domain.errors import (
+    AdminUsernameExistsError,
+    UserInvalidNationalityError,
+    UserUsernameExistsError,
 )
 from core.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
@@ -62,8 +65,8 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
         except IntegrityError as exc:
             self.session.rollback()
             if "fk_player_nationality" in str(exc.orig).lower():
-                raise InvalidNationalityError() from exc
-            raise DuplicateUsernameError() from exc
+                raise UserInvalidNationalityError() from exc
+            raise UserUsernameExistsError() from exc
 
     def register_admin(
         self, *, username: str, password_hash: str, name: str
@@ -113,4 +116,4 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
         except IntegrityError as exc:
             self.session.rollback()
-            raise DuplicateUsernameError() from exc
+            raise AdminUsernameExistsError() from exc

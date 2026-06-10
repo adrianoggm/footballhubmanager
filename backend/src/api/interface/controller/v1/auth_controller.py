@@ -3,8 +3,7 @@ import logging
 from api.dependencies.use_cases import (
     get_login_admin_use_case,
     get_login_user_use_case,
-    get_register_admin_use_case,
-    get_register_user_use_case,
+    get_registration_command_bus,
 )
 from api.interface.controller.v1.model.request.auth_request import (
     LoginRequest,
@@ -21,11 +20,13 @@ from auth.application.use_cases.login import (
 )
 from auth.dependencies import get_current_session
 from auth.session import create_session, invalidate_session
-from core.application.models import AdminRegistration, UserRegistration
-from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
-from core.application.use_cases.register_user_usecase import RegisterUserUseCase
+from core.application.commands.registration_commands import (
+    RegisterAdminCommand,
+    RegisterUserCommand,
+)
 from fastapi import APIRouter, Depends
 from persistence.module import get_db
+from shared.application.bus.buses import CommandBus
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -84,12 +85,12 @@ def login_admin(
 @map_exceptions
 def register_user(
     payload: RegisterUserRequest,
-    use_case: RegisterUserUseCase = Depends(get_register_user_use_case),
+    command_bus: CommandBus = Depends(get_registration_command_bus),
     db: Session = Depends(get_db),
 ):
     logger.info("User register attempt: %s", payload.username)
-    registered = use_case.execute(
-        UserRegistration(
+    registered = command_bus.dispatch(
+        RegisterUserCommand(
             username=payload.username,
             password=payload.password,
             name=payload.name,
@@ -122,12 +123,12 @@ def register_user(
 @map_exceptions
 def register_admin(
     payload: RegisterAdminRequest,
-    use_case: RegisterAdminUseCase = Depends(get_register_admin_use_case),
+    command_bus: CommandBus = Depends(get_registration_command_bus),
     db: Session = Depends(get_db),
 ):
     logger.info("Admin register attempt: %s", payload.username)
-    registered = use_case.execute(
-        AdminRegistration(
+    registered = command_bus.dispatch(
+        RegisterAdminCommand(
             username=payload.username,
             password=payload.password,
             name=payload.name,

@@ -6,12 +6,9 @@ from typing import Any
 
 from auth.domain.errors import InvalidCredentialsError
 from core.application.use_cases import (
-    AdminUsernameExistsError,
-    InvalidAdminRegistrationDataError,
     InvalidPenaAccountabilityDataError,
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
-    InvalidRegistrationDataError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
@@ -22,8 +19,6 @@ from core.application.use_cases import (
     PenaMembershipPenaNotFoundError,
     PenaMembershipPlayerNotFoundError,
     PenaMembershipUserProfileNotFoundError,
-    UserInvalidNationalityError,
-    UserUsernameExistsError,
 )
 from core.application.use_cases import (
     InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
@@ -63,19 +58,24 @@ from core.application.use_cases.season_match_insights_errors import (
     PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
 )
 from core.domain.errors import (
+    AdminUsernameExistsError,
+    InvalidAdminRegistrationDataError,
     InvalidLinkTokenError,
     InvalidPenaLabelsDataError,
     InvalidPenaSeasonDataError,
     InvalidPlayerNationalityError,
     InvalidPlayerUpdateDataError,
     InvalidProfileImageError,
+    InvalidRegistrationDataError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
     PenaLinkAccessDeniedError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
     UserAlreadyLinkedError,
+    UserInvalidNationalityError,
     UserProfileNotFoundError,
+    UserUsernameExistsError,
 )
 from core.domain.errors import (
     PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,

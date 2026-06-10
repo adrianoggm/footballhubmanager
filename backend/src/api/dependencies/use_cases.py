@@ -30,6 +30,14 @@ from core.application.commands.player_profile_commands import (
     UpdatePlayerProfileByAccountIdCommand,
     UpdatePlayerProfileByGuidCommand,
 )
+from core.application.commands.registration_command_handlers import (
+    RegisterAdminHandler,
+    RegisterUserHandler,
+)
+from core.application.commands.registration_commands import (
+    RegisterAdminCommand,
+    RegisterUserCommand,
+)
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
@@ -86,8 +94,6 @@ from core.application.use_cases.manage_season_matches_usecase import (
 from core.application.use_cases.manage_season_players_usecase import (
     ManageSeasonPlayersUseCase,
 )
-from core.application.use_cases.register_admin_usecase import RegisterAdminUseCase
-from core.application.use_cases.register_user_usecase import RegisterUserUseCase
 from fastapi import Depends
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
@@ -147,12 +153,12 @@ def get_login_admin_use_case(db: Session = Depends(get_db)) -> LoginAdminUseCase
     return LoginAdminUseCase(SqlAlchemyAuthAccountRepository(db))
 
 
-def get_register_user_use_case(db: Session = Depends(get_db)) -> RegisterUserUseCase:
-    return RegisterUserUseCase(SqlAlchemyRegistrationRepository(db))
-
-
-def get_register_admin_use_case(db: Session = Depends(get_db)) -> RegisterAdminUseCase:
-    return RegisterAdminUseCase(SqlAlchemyRegistrationRepository(db))
+def get_registration_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyRegistrationRepository(db)
+    bus = CommandBus()
+    bus.register(RegisterUserCommand, RegisterUserHandler(repository))
+    bus.register(RegisterAdminCommand, RegisterAdminHandler(repository))
+    return bus
 
 
 def get_nationalities_use_case(db: Session = Depends(get_db)) -> GetNationalitiesUseCase:
