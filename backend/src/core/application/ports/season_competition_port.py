@@ -1,16 +1,5 @@
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Protocol
-
-
-@dataclass(frozen=True)
-class SeasonResult:
-    guid: str
-    start_date: date
-    end_date: date
-    points_win: int
-    points_draw: int
-    points_loss: int
 
 
 @dataclass(frozen=True)
@@ -288,21 +277,3 @@ class MatchReportClosedError(Exception):
 
 class SeasonPlayerHasMatchesError(Exception):
     pass
-
-
-class SeasonCompetitionPort(Protocol):
-    def find_active_for_pena(
-        self, *, pena_guid: str, reference_date: date
-    ) -> SeasonResult | None: ...
-
-    def create_season_for_admin(
-        self,
-        *,
-        pena_guid: str,
-        admin_id: int,
-        start_date: date,
-        end_date: date,
-        points_win: int,
-        points_draw: int,
-        points_loss: int,
-    ) -> SeasonResult: ...
