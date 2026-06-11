@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { userService } from '../../services/userService.js'
+import { LoadingState } from '../common'
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -107,7 +108,7 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
   return (
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
-      {loading && <Alert severity="info">{t('dashboard.common.refreshData')}</Alert>}
+      {loading && <LoadingState />}
 
       <Card variant="outlined">
         <CardContent>

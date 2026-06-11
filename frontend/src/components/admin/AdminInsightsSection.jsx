@@ -35,6 +35,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { EmptyState, LoadingState } from '../common'
 import { INSIGHT_ACCENTS, MATRIX_CELL_TEXT_COLOR } from '../../theme/tokens.js'
 
 const getDashboardGeometry = (theme) => ({
@@ -499,28 +500,18 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
         </Stack>
       </Stack>
 
-      {insightsLoading && <LinearProgress />}
+      {insightsLoading && <LoadingState />}
 
       {!insightsLoading && !insightsReport && (
-        <Card
-          variant="outlined"
-          sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.matches, { dashed: true })}
-        >
-          <CardContent sx={buildInsightContentSx}>
-            <Stack spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.standings.insightsEmpty')}
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={onRefreshInsights}
-                disabled={!selectedSeasonGuid}
-              >
-                {t('dashboard.admin.standings.refreshInsights')}
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
+        <EmptyState
+          dense
+          description={t('dashboard.admin.standings.insightsEmpty')}
+          action={
+            <Button variant="contained" onClick={onRefreshInsights} disabled={!selectedSeasonGuid}>
+              {t('dashboard.admin.standings.refreshInsights')}
+            </Button>
+          }
+        />
       )}
 
       {!insightsLoading && insightsReport && (
