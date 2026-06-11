@@ -128,6 +128,16 @@ run(async ({ isStale }) => {
 
 ## 5. Migration status
 
-Phase 0 introduces the tokens, primitives, and hooks. Existing feature components still contain
-their original inline implementations; they are migrated to these primitives in Phases 2–3 of the
-redesign plan. Track progress in [frontend-redesign-plan.md](frontend-redesign-plan.md).
+Phase 0 introduced the tokens, primitives, and hooks. Migration of feature components onto them is
+in progress (Phases 2–3):
+
+- ✅ **Label colors** (role/position) — `AdminDashboard`, `UserDashboard`, `AdminPlayersSection` now
+  import from `theme/tokens.js`; no duplicated maps remain.
+- ✅ **Insight accents + matrix text color** — `AdminInsightsSection` imports `INSIGHT_ACCENTS` /
+  `MATRIX_CELL_TEXT_COLOR` from `theme/tokens.js`.
+- ⏳ **Shared state primitives** (`EmptyState`/`ErrorState`/`LoadingState`/`PaginatedTable`) — adopted
+  for new surfaces (e.g. admin no-peña empty state); per-section migration of the remaining ad-hoc
+  alerts/empties is ongoing.
+
+There are **no remaining raw token hex values in `src/components`** (verified). Track progress in
+[frontend-redesign-plan.md](frontend-redesign-plan.md).
