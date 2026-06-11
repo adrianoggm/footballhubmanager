@@ -41,8 +41,9 @@ import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import AdminOverviewSection from './admin/AdminOverviewSection.jsx'
+import { EditMembershipDialog, EditSeasonPlayerDialog } from './admin/PlayerEditDialogs.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
-import { EmptyState } from './common'
+import { ConfirmDialog, EmptyState } from './common'
 import { DashboardContext } from '../context/dashboardContext.js'
 import {
   DEFAULT_LABEL_COLOR,
@@ -2939,312 +2940,104 @@ export default function AdminDashboard({
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <ConfirmDialog
         open={Boolean(pendingDeleteSeason)}
-        onClose={handleCancelDeleteSeason}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{t('dashboard.admin.seasons.deleteSeasonTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {pendingDeleteSeason
-              ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
-                  season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
-                })
-              : ''}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDeleteSeason} disabled={loading}>
-            {t('dashboard.admin.seasons.cancelDeleteSeason')}
-          </Button>
-          <Button onClick={handleDeleteSeason} color="error" variant="contained" disabled={loading}>
-            {t('dashboard.admin.seasons.deleteSelectedSeason')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onCancel={handleCancelDeleteSeason}
+        onConfirm={handleDeleteSeason}
+        title={t('dashboard.admin.seasons.deleteSeasonTitle')}
+        description={
+          pendingDeleteSeason
+            ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
+                season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
+              })
+            : ''
+        }
+        cancelLabel={t('dashboard.admin.seasons.cancelDeleteSeason')}
+        confirmLabel={t('dashboard.admin.seasons.deleteSelectedSeason')}
+        loading={loading}
+      />
 
-      <Dialog
-        open={Boolean(editingSeasonPlayer)}
+      <EditSeasonPlayerDialog
+        player={editingSeasonPlayer}
+        draft={seasonPlayerDraft}
+        onField={onSeasonPlayerDraftField}
         onClose={handleCloseEditSeasonPlayer}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>{t('dashboard.admin.players.editSeasonPlayerTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            {editingSeasonPlayer
-              ? t('dashboard.admin.players.editSeasonPlayerDescription', {
-                  player: formatPlayerDisplayName(editingSeasonPlayer),
-                })
-              : ''}
-          </DialogContentText>
-          <Stack spacing={1.5}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <TextField
-                select
-                label={t('dashboard.admin.members.role')}
-                value={seasonPlayerDraft.role}
-                onChange={onSeasonPlayerDraftField('role')}
-                fullWidth
-              >
-                <MenuItem value="">{t('dashboard.admin.members.roleNone')}</MenuItem>
-                {seasonPlayerDraft.role &&
-                  !hasLabel(penaLabels.role_labels, seasonPlayerDraft.role) && (
-                    <MenuItem value={seasonPlayerDraft.role}>{seasonPlayerDraft.role}</MenuItem>
-                  )}
-                {penaLabels.role_labels.map((roleLabel) => (
-                  <MenuItem key={roleLabel} value={roleLabel}>
-                    {roleLabel}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label={t('dashboard.admin.members.position')}
-                value={seasonPlayerDraft.position}
-                onChange={onSeasonPlayerDraftField('position')}
-                fullWidth
-              >
-                <MenuItem value="">{t('dashboard.admin.members.positionNone')}</MenuItem>
-                {seasonPlayerDraft.position &&
-                  !hasLabel(penaLabels.position_labels, seasonPlayerDraft.position) && (
-                    <MenuItem value={seasonPlayerDraft.position}>
-                      {seasonPlayerDraft.position}
-                    </MenuItem>
-                  )}
-                {penaLabels.position_labels.map((positionLabel) => (
-                  <MenuItem key={positionLabel} value={positionLabel}>
-                    {positionLabel}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <TextField
-                type="number"
-                label={t('dashboard.admin.table.w')}
-                value={seasonPlayerDraft.wins}
-                onChange={onSeasonPlayerDraftField('wins')}
-                inputProps={{ min: 0 }}
-                fullWidth
-              />
-              <TextField
-                type="number"
-                label={t('dashboard.admin.table.d')}
-                value={seasonPlayerDraft.draws}
-                onChange={onSeasonPlayerDraftField('draws')}
-                inputProps={{ min: 0 }}
-                fullWidth
-              />
-              <TextField
-                type="number"
-                label={t('dashboard.admin.table.l')}
-                value={seasonPlayerDraft.losses}
-                onChange={onSeasonPlayerDraftField('losses')}
-                inputProps={{ min: 0 }}
-                fullWidth
-              />
-            </Stack>
-            <TextField
-              type="number"
-              label={t('dashboard.admin.players.qualityLevel')}
-              value={seasonPlayerDraft.quality_level}
-              onChange={onSeasonPlayerDraftField('quality_level')}
-              inputProps={{ min: 0, step: 0.1 }}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseEditSeasonPlayer} disabled={loading}>
-            {t('dashboard.admin.players.cancelEditSeasonPlayer')}
-          </Button>
-          <Button onClick={handleSaveSeasonPlayer} variant="contained" disabled={loading}>
-            {t('dashboard.admin.players.saveSeasonPlayer')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={handleSaveSeasonPlayer}
+        penaLabels={penaLabels}
+        loading={loading}
+        t={t}
+        formatPlayerDisplayName={formatPlayerDisplayName}
+      />
 
-      <Dialog
+      <ConfirmDialog
         open={Boolean(pendingRemoveSeasonPlayer)}
-        onClose={handleCancelRemoveSeasonPlayer}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{t('dashboard.admin.players.removeSeasonPlayerTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {pendingRemoveSeasonPlayer
-              ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
-                  player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
-                })
-              : ''}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelRemoveSeasonPlayer} disabled={loading}>
-            {t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
-          </Button>
-          <Button
-            onClick={handleRemoveSeasonPlayer}
-            variant="contained"
-            color="error"
-            disabled={loading}
-          >
-            {t('dashboard.admin.players.removeFromSeason')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onCancel={handleCancelRemoveSeasonPlayer}
+        onConfirm={handleRemoveSeasonPlayer}
+        title={t('dashboard.admin.players.removeSeasonPlayerTitle')}
+        description={
+          pendingRemoveSeasonPlayer
+            ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
+                player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
+              })
+            : ''
+        }
+        cancelLabel={t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
+        confirmLabel={t('dashboard.admin.players.removeFromSeason')}
+        loading={loading}
+      />
 
-      <Dialog
-        open={Boolean(editingMembershipPlayer)}
+      <EditMembershipDialog
+        player={editingMembershipPlayer}
+        draft={membershipDraft}
+        onField={onMembershipDraftField}
         onClose={handleCloseEditMembershipPlayer}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>{t('dashboard.admin.members.editTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            {editingMembershipPlayer
-              ? t('dashboard.admin.members.editDescription', {
-                  player: [
-                    editingMembershipPlayer.name,
-                    editingMembershipPlayer.surname1,
-                    editingMembershipPlayer.surname2,
-                  ]
-                    .filter(Boolean)
-                    .join(' '),
-                })
-              : ''}
-          </DialogContentText>
-          <Stack spacing={1.5}>
-            <TextField
-              label={t('dashboard.admin.members.nickname')}
-              value={membershipDraft.nickname}
-              onChange={onMembershipDraftField('nickname')}
-              fullWidth
-            />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <TextField
-                select
-                label={t('dashboard.admin.members.role')}
-                value={membershipDraft.role}
-                onChange={onMembershipDraftField('role')}
-                fullWidth
-              >
-                <MenuItem value="">{t('dashboard.admin.members.roleNone')}</MenuItem>
-                {membershipDraft.role &&
-                  !hasLabel(penaLabels.role_labels, membershipDraft.role) && (
-                    <MenuItem value={membershipDraft.role}>{membershipDraft.role}</MenuItem>
-                  )}
-                {penaLabels.role_labels.map((roleLabel) => (
-                  <MenuItem key={roleLabel} value={roleLabel}>
-                    {roleLabel}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label={t('dashboard.admin.members.position')}
-                value={membershipDraft.position}
-                onChange={onMembershipDraftField('position')}
-                fullWidth
-              >
-                <MenuItem value="">{t('dashboard.admin.members.positionNone')}</MenuItem>
-                {membershipDraft.position &&
-                  !hasLabel(penaLabels.position_labels, membershipDraft.position) && (
-                    <MenuItem value={membershipDraft.position}>{membershipDraft.position}</MenuItem>
-                  )}
-                {penaLabels.position_labels.map((positionLabel) => (
-                  <MenuItem key={positionLabel} value={positionLabel}>
-                    {positionLabel}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseEditMembershipPlayer} disabled={loading}>
-            {t('dashboard.admin.members.cancelEdit')}
-          </Button>
-          <Button onClick={handleSaveMembershipPlayer} variant="contained" disabled={loading}>
-            {t('dashboard.admin.members.saveEdit')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={handleSaveMembershipPlayer}
+        penaLabels={penaLabels}
+        loading={loading}
+        t={t}
+      />
 
-      <Dialog
+      <ConfirmDialog
         open={Boolean(pendingRemoveMembershipPlayer)}
-        onClose={handleCancelRemoveMembershipPlayer}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{t('dashboard.admin.members.removeTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {pendingRemoveMembershipPlayer
-              ? t('dashboard.admin.members.removeConfirm', {
-                  player: [
-                    pendingRemoveMembershipPlayer.name,
-                    pendingRemoveMembershipPlayer.surname1,
-                    pendingRemoveMembershipPlayer.surname2,
-                  ]
-                    .filter(Boolean)
-                    .join(' '),
-                })
-              : ''}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelRemoveMembershipPlayer} disabled={loading}>
-            {t('dashboard.admin.members.cancelRemove')}
-          </Button>
-          <Button
-            onClick={handleRemoveMembershipPlayer}
-            variant="contained"
-            color="error"
-            disabled={loading}
-          >
-            {t('dashboard.admin.members.remove')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onCancel={handleCancelRemoveMembershipPlayer}
+        onConfirm={handleRemoveMembershipPlayer}
+        title={t('dashboard.admin.members.removeTitle')}
+        description={
+          pendingRemoveMembershipPlayer
+            ? t('dashboard.admin.members.removeConfirm', {
+                player: [
+                  pendingRemoveMembershipPlayer.name,
+                  pendingRemoveMembershipPlayer.surname1,
+                  pendingRemoveMembershipPlayer.surname2,
+                ]
+                  .filter(Boolean)
+                  .join(' '),
+              })
+            : ''
+        }
+        cancelLabel={t('dashboard.admin.members.cancelRemove')}
+        confirmLabel={t('dashboard.admin.members.remove')}
+        loading={loading}
+      />
 
-      <Dialog
+      <ConfirmDialog
         open={Boolean(pendingDeleteMatch)}
-        onClose={handleCancelDeleteSeasonMatch}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{t('dashboard.admin.matches.deleteMatchTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {pendingDeleteMatch
-              ? t('dashboard.admin.matches.deleteMatchConfirm', {
-                  home: pendingDeleteMatch.home_team_name,
-                  away: pendingDeleteMatch.away_team_name,
-                  date: formatDate(pendingDeleteMatch.match_date),
-                })
-              : ''}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDeleteSeasonMatch} disabled={Boolean(deletingMatchGuid)}>
-            {t('dashboard.admin.matches.cancelDelete')}
-          </Button>
-          <Button
-            onClick={handleDeleteSeasonMatch}
-            color="error"
-            variant="contained"
-            disabled={Boolean(deletingMatchGuid)}
-          >
-            {t('dashboard.admin.matches.deleteMatch')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onCancel={handleCancelDeleteSeasonMatch}
+        onConfirm={handleDeleteSeasonMatch}
+        title={t('dashboard.admin.matches.deleteMatchTitle')}
+        description={
+          pendingDeleteMatch
+            ? t('dashboard.admin.matches.deleteMatchConfirm', {
+                home: pendingDeleteMatch.home_team_name,
+                away: pendingDeleteMatch.away_team_name,
+                date: formatDate(pendingDeleteMatch.match_date),
+              })
+            : ''
+        }
+        cancelLabel={t('dashboard.admin.matches.cancelDelete')}
+        confirmLabel={t('dashboard.admin.matches.deleteMatch')}
+        loading={Boolean(deletingMatchGuid)}
+      />
     </DashboardShell>
     </DashboardContext.Provider>
   )
