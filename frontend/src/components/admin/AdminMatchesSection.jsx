@@ -22,6 +22,16 @@ import {
 import { useEffect, useState } from 'react'
 import LineupDragBuilder from '../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../MatchDetailViewer.jsx'
+import MatchCreateCard from './matches/MatchCreateCard.jsx'
+import MatchListCard from './matches/MatchListCard.jsx'
+import {
+  buildTrackedTeamScore,
+  clampTrackedValue,
+  isLiveTrackingStatus,
+  resolveDisplayedElapsed,
+  trackingChipColor,
+  trackingLabel,
+} from './matches/trackingHelpers.js'
 
 const MATCH_EVENT_TYPES = [
   'goal',
@@ -43,25 +53,6 @@ const QUICK_TRACKING_EVENT_CONFIG = [
   { eventType: 'yellow_card', color: 'warning' },
   { eventType: 'red_card', color: 'error' },
 ]
-
-const isLiveTrackingStatus = (value) => {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-  return normalized === 'live' || normalized === 'in_progress'
-}
-
-const clampTrackedValue = (value) => Math.max(0, Number(value || 0))
-
-const resolveDisplayedElapsed = (matchDetail, nowEpoch) => {
-  if (!matchDetail) {
-    return 0
-  }
-  if (!isLiveTrackingStatus(matchDetail.tracking_status) || !matchDetail.started_at_epoch) {
-    return Number(matchDetail.elapsed_seconds || 0)
-  }
-  return Math.max(Number(matchDetail.elapsed_seconds || 0), nowEpoch - matchDetail.started_at_epoch)
-}
 
 const buildPlayerEventCounts = (events) => {
   const byPlayer = new Map()
@@ -87,52 +78,6 @@ const buildPlayerEventCounts = (events) => {
   return byPlayer
 }
 
-const buildTrackedTeamScore = (detail) => {
-  if (!detail || detail.status === 'closed' || !(detail.events || []).length) {
-    return null
-  }
-
-  const totals = { home: 0, away: 0 }
-  ;(detail.events || []).forEach((event) => {
-    if (String(event?.event_type || '').toLowerCase() !== 'goal') {
-      return
-    }
-    const teamSide = String(event?.team_side || '').toLowerCase()
-    if (!['home', 'away'].includes(teamSide)) {
-      return
-    }
-    totals[teamSide] += Number(event?.value_delta || 1)
-  })
-
-  return {
-    home: clampTrackedValue(totals.home),
-    away: clampTrackedValue(totals.away),
-  }
-}
-
-const trackingChipColor = (status) => {
-  switch (String(status || '').toLowerCase()) {
-    case 'live':
-    case 'in_progress':
-      return 'success'
-    case 'finished':
-      return 'info'
-    default:
-      return 'default'
-  }
-}
-
-const trackingLabel = (status, t) => {
-  switch (String(status || '').toLowerCase()) {
-    case 'live':
-    case 'in_progress':
-      return t('dashboard.common.matchDetail.trackingLive')
-    case 'finished':
-      return t('dashboard.common.matchDetail.trackingFinished')
-    default:
-      return t('dashboard.common.matchDetail.trackingNotStarted')
-  }
-}
 
 function TrackingMetricControl({ label, value, color, disabled, onDecrease, onIncrease }) {
   return (
@@ -430,222 +375,27 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   return (
     <Grid container spacing={2.5} sx={{ width: '100%' }}>
       <Grid item xs={12}>
-        <Card>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">{t('dashboard.admin.matches.title')}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.matches.description')}
-              </Typography>
-              <TextField
-                type="date"
-                label={t('dashboard.admin.matches.matchDate')}
-                InputLabelProps={{ shrink: true }}
-                value={matchForm.match_date}
-                onChange={onMatchField('match_date')}
-                disabled={!selectedSeasonGuid}
-              />
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <TextField
-                  label={t('dashboard.admin.matches.homeTeam')}
-                  value={matchForm.home_team_name}
-                  onChange={onMatchField('home_team_name')}
-                  placeholder={t('dashboard.admin.matches.homeTeamPlaceholder')}
-                  disabled={!selectedSeasonGuid}
-                  fullWidth
-                />
-                <TextField
-                  label={t('dashboard.admin.matches.awayTeam')}
-                  value={matchForm.away_team_name}
-                  onChange={onMatchField('away_team_name')}
-                  placeholder={t('dashboard.admin.matches.awayTeamPlaceholder')}
-                  disabled={!selectedSeasonGuid}
-                  fullWidth
-                />
-              </Stack>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t('dashboard.admin.matches.lineupHelperTitle')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.matches.lineupHelperDescription')}
-              </Typography>
-              {!selectedSeasonGuid && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.matches.lineupHelperSelectSeason')}
-                </Typography>
-              )}
-              {selectedSeasonGuid && seasonRosterLoading && <LinearProgress />}
-              {selectedSeasonGuid && !seasonRosterLoading && !seasonRoster.length && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.matches.noPlayersAvailable')}
-                </Typography>
-              )}
-              {selectedSeasonGuid && !seasonRosterLoading && seasonRoster.length > 0 && (
-                <LineupDragBuilder
-                  players={createMatchLineupPlayers}
-                  homeGuids={matchFormHomeGuids}
-                  awayGuids={matchFormAwayGuids}
-                  onChange={onMatchFormLineupsChange}
-                  availableTitle={t('dashboard.admin.matches.availablePlayers')}
-                  homeTitle={matchForm.home_team_name || t('dashboard.admin.matches.homeLineup')}
-                  awayTitle={matchForm.away_team_name || t('dashboard.admin.matches.awayLineup')}
-                  helperText={t('dashboard.admin.matches.lineupBoardHint')}
-                  emptyText={t('dashboard.admin.matches.lineupEmpty')}
-                  addHomeText={t('dashboard.admin.matches.addToHome')}
-                  addAwayText={t('dashboard.admin.matches.addToAway')}
-                  moveHomeText={t('dashboard.admin.matches.moveToHome')}
-                  moveAwayText={t('dashboard.admin.matches.moveToAway')}
-                  removeText={t('dashboard.admin.matches.removeFromLineup')}
-                  disabled={loading || !selectedSeasonGuid}
-                />
-              )}
-              <Button
-                variant="contained"
-                onClick={handleCreateDetailedMatch}
-                disabled={loading || !selectedSeasonGuid}
-              >
-                {t('dashboard.admin.matches.createDetailedMatch')}
-              </Button>
-              {lastCreatedMatch && (
-                <Alert severity="success">
-                  {t('dashboard.admin.matches.matchCreated', {
-                    guid: lastCreatedMatch.guid,
-                    date: formatDate(lastCreatedMatch.match_date),
-                  })}
-                </Alert>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
+        <MatchCreateCard state={state} actions={actions} helpers={helpers} />
       </Grid>
 
       <Grid item xs={12}>
         <Card>
           <CardContent>
             <Stack spacing={2}>
-              <Typography variant="h6">
-                {t('dashboard.admin.matches.seasonMatchesTitle')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.matches.seasonMatchesDescription')}
-              </Typography>
-              {seasonMatchesLoading && <LinearProgress />}
-              {!selectedSeasonGuid && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.overview.selectSeasonToLoad')}
-                </Typography>
-              )}
-              {selectedSeasonGuid && !seasonMatchesLoading && !visibleSeasonMatches.length && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.matches.noMatchesYet')}
-                </Typography>
-              )}
-              {selectedSeasonGuid && !seasonMatchesLoading && visibleSeasonMatches.length > 0 && (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.tracking')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.resultSource')}</TableCell>
-                        <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {visibleSeasonMatches.map((match) => {
-                        const status = String(match.status || 'open').toLowerCase()
-                        const isClosed = status === 'closed'
-                        const trackedScore =
-                          selectedMatchGuid === match.guid ? selectedTrackedScore : null
-
-                        return (
-                          <TableRow key={match.guid}>
-                            <TableCell>{formatDate(match.match_date)}</TableCell>
-                            <TableCell>{match.home_team_name}</TableCell>
-                            <TableCell>{match.away_team_name}</TableCell>
-                            <TableCell>
-                              <Stack spacing={0.75}>
-                                <Chip
-                                  size="small"
-                                  color={isClosed ? 'success' : 'warning'}
-                                  label={
-                                    isClosed
-                                      ? t('dashboard.admin.matches.statusClosed')
-                                      : t('dashboard.admin.matches.statusOpen')
-                                  }
-                                />
-                                {Number(match.lineup_change_count || 0) > 0 ? (
-                                  <Chip
-                                    size="small"
-                                    variant="outlined"
-                                    label={t('dashboard.admin.matches.lineupAuditBadge', {
-                                      count: match.lineup_change_count,
-                                    })}
-                                  />
-                                ) : null}
-                              </Stack>
-                            </TableCell>
-                            <TableCell>
-                              <Stack spacing={0.75}>
-                                <Chip
-                                  size="small"
-                                  color={trackingChipColor(match.tracking_status)}
-                                  label={trackingLabel(match.tracking_status, t)}
-                                />
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatElapsedDuration(match.elapsed_seconds)}
-                                </Typography>
-                              </Stack>
-                            </TableCell>
-                            <TableCell>
-                              {trackedScore?.home ?? match.home_score ?? 0} -{' '}
-                              {trackedScore?.away ?? match.away_score ?? 0}
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">
-                                {trackedScore && status !== 'closed'
-                                  ? t('dashboard.admin.matches.scoreFromTracking')
-                                  : t('dashboard.admin.matches.scoreFromStats')}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                <Button
-                                  variant={selectedMatchGuid === match.guid ? 'contained' : 'text'}
-                                  size="small"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    handleOpenMatchStats(match.guid)
-                                  }}
-                                  disabled={matchStatsLoading || deletingMatchGuid === match.guid}
-                                >
-                                  {t('dashboard.admin.matches.manageMatch')}
-                                </Button>
-                                <Button
-                                  variant="text"
-                                  color="error"
-                                  size="small"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    handleRequestDeleteSeasonMatch(match)
-                                  }}
-                                  disabled={deletingMatchGuid === match.guid}
-                                >
-                                  {t('dashboard.admin.matches.deleteMatch')}
-                                </Button>
-                              </Stack>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
+              <MatchListCard
+                selectedSeasonGuid={selectedSeasonGuid}
+                seasonMatchesLoading={seasonMatchesLoading}
+                visibleSeasonMatches={visibleSeasonMatches}
+                selectedMatchGuid={selectedMatchGuid}
+                selectedTrackedScore={selectedTrackedScore}
+                deletingMatchGuid={deletingMatchGuid}
+                matchStatsLoading={matchStatsLoading}
+                onManageMatch={handleOpenMatchStats}
+                onRequestDeleteMatch={handleRequestDeleteSeasonMatch}
+                t={t}
+                formatDate={formatDate}
+                formatElapsedDuration={formatElapsedDuration}
+              />
 
               {selectedSeasonGuid && matchStatsLoading && <LinearProgress />}
               {selectedSeasonGuid &&
