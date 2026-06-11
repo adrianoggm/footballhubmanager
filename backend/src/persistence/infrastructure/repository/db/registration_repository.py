@@ -1,13 +1,15 @@
-from persistence.application.ports.registration_port import (
+from core.application.ports.registration_port import (
     AdminRegistrationPort,
-    DuplicateUsernameError,
-    InvalidNationalityError,
     RegisteredAdminResult,
     RegisteredUserResult,
     UserRegistrationPort,
 )
-from persistence.domain.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
-from persistence.domain.label_config import (
+from core.domain.errors import (
+    AdminUsernameExistsError,
+    UserInvalidNationalityError,
+    UserUsernameExistsError,
+)
+from core.domain.label_config import (
     DEFAULT_POSITION_LABEL_COLORS,
     DEFAULT_POSITION_LABELS,
     DEFAULT_ROLE_LABEL_COLORS,
@@ -16,6 +18,7 @@ from persistence.domain.label_config import (
     dump_label_colors_payload,
     dump_labels_payload,
 )
+from persistence.infrastructure.entity import AdminAccounts, Pena, PenaRole, Player, PlayerAccount
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -62,8 +65,8 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
         except IntegrityError as exc:
             self.session.rollback()
             if "fk_player_nationality" in str(exc.orig).lower():
-                raise InvalidNationalityError() from exc
-            raise DuplicateUsernameError() from exc
+                raise UserInvalidNationalityError() from exc
+            raise UserUsernameExistsError() from exc
 
     def register_admin(
         self, *, username: str, password_hash: str, name: str
@@ -113,4 +116,4 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
         except IntegrityError as exc:
             self.session.rollback()
-            raise DuplicateUsernameError() from exc
+            raise AdminUsernameExistsError() from exc

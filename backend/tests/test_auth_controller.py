@@ -6,27 +6,22 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterAdminRequest,
     RegisterUserRequest,
 )
-from auth.application.models import AuthAccount
 from auth.application.use_cases.login import InvalidCredentialsError
+from auth.domain.models.auth_account import AuthAccount
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.use_cases.register_admin_usecase import (
+from core.application.commands.registration_commands import (
+    RegisterAdminCommand,
+    RegisterUserCommand,
+)
+from core.application.models import RegisteredAdmin, RegisteredUser
+from core.domain.errors import (
+    AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
-    RegisteredAdmin,
-)
-from persistence.application.use_cases.register_admin_usecase import (
-    UsernameAlreadyExistsError as AdminUsernameExistsError,
-)
-from persistence.application.use_cases.register_user_usecase import (
-    InvalidNationalityError as UserInvalidNationalityError,
-)
-from persistence.application.use_cases.register_user_usecase import (
     InvalidRegistrationDataError,
-    RegisteredUser,
+    UserInvalidNationalityError,
+    UserUsernameExistsError,
 )
-from persistence.application.use_cases.register_user_usecase import (
-    UsernameAlreadyExistsError as UserUsernameExistsError,
-)
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_guid: str) -> SessionData:
@@ -81,46 +76,22 @@ def test_get_login_admin_use_case_builds_expected_dependencies(monkeypatch):
     assert captured["repo_type"] is _Repo
 
 
-def test_get_register_user_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_registration_command_bus_builds_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import CommandBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
 
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyRegistrationRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "RegisterUserUseCase", _UseCase)
 
-    use_case = auth_controller.get_register_user_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    bus = auth_controller.get_registration_command_bus(db="db-session")
+    assert isinstance(bus, CommandBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
-
-
-def test_get_register_admin_use_case_builds_expected_dependencies(monkeypatch):
-    captured: dict[str, object] = {}
-
-    class _Repo:
-        def __init__(self, db):
-            captured["db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
-    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyRegistrationRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "RegisterAdminUseCase", _UseCase)
-
-    use_case = auth_controller.get_register_admin_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
-    assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    assert RegisterUserCommand in bus._handlers
+    assert RegisterAdminCommand in bus._handlers
 
 
 def test_login_user_returns_session_response(monkeypatch):
@@ -219,20 +190,25 @@ def test_login_admin_maps_invalid_credentials():
     assert exc.value.detail == "Invalid credentials"
 
 
-def test_register_user_returns_session_response(monkeypatch):
-    class _UseCase:
-        def __init__(self):
-            self.last_registration = None
+class _RegistrationCommandBus:
+    def __init__(self, result=None):
+        self._result = result
+        self.last_command = None
 
-        def execute(self, registration):
-            self.last_registration = registration
-            return RegisteredUser(
-                account_id=17,
-                account_guid="user-guid-17",
-                player_guid="player-guid-17",
-            )
+    def dispatch(self, command):
+        self.last_command = command
+        return self._result
 
-    use_case = _UseCase()
+
+class _RaisingCommandBus:
+    def __init__(self, error):
+        self._error = error
+
+    def dispatch(self, _command):
+        raise self._error
+
+
+def _stub_create_session(monkeypatch):
     monkeypatch.setattr(
         auth_controller,
         "create_session",
@@ -240,6 +216,13 @@ def test_register_user_returns_session_response(monkeypatch):
             user_type=user_type, user_guid=user_guid
         ),
     )
+
+
+def test_register_user_returns_session_response(monkeypatch):
+    bus = _RegistrationCommandBus(
+        RegisteredUser(account_id=17, account_guid="user-guid-17", player_guid="player-guid-17")
+    )
+    _stub_create_session(monkeypatch)
 
     response = auth_controller.register_user(
         RegisterUserRequest(
@@ -250,23 +233,20 @@ def test_register_user_returns_session_response(monkeypatch):
             surname2=None,
             nationality="ES",
         ),
-        use_case=use_case,
+        command_bus=bus,
         db=object(),
     )
 
-    assert use_case.last_registration.username == "u17"
+    assert isinstance(bus.last_command, RegisterUserCommand)
+    assert bus.last_command.username == "u17"
     assert response.user_guid == "user-guid-17"
     assert response.user_type == "user"
 
 
 def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
-    class _UseCase:
-        def execute(self, _registration):
-            return RegisteredUser(
-                account_id=17,
-                account_guid="user-guid-17",
-                player_guid="player-guid-17",
-            )
+    bus = _RegistrationCommandBus(
+        RegisteredUser(account_id=17, account_guid="user-guid-17", player_guid="player-guid-17")
+    )
 
     class _Db:
         def __init__(self):
@@ -292,7 +272,7 @@ def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
                 surname2=None,
                 nationality="ES",
             ),
-            use_case=_UseCase(),
+            command_bus=bus,
             db=db,
         )
 
@@ -308,10 +288,6 @@ def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
     ],
 )
 def test_register_user_maps_errors(error, status_code, detail):
-    class _UseCase:
-        def execute(self, _registration):
-            raise error
-
     with pytest.raises(HTTPException) as exc:
         auth_controller.register_user(
             RegisterUserRequest(
@@ -322,7 +298,7 @@ def test_register_user_maps_errors(error, status_code, detail):
                 surname2=None,
                 nationality="ES",
             ),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(error),
             db=object(),
         )
     assert exc.value.status_code == status_code
@@ -330,38 +306,23 @@ def test_register_user_maps_errors(error, status_code, detail):
 
 
 def test_register_admin_returns_session_response(monkeypatch):
-    class _UseCase:
-        def __init__(self):
-            self.last_registration = None
-
-        def execute(self, registration):
-            self.last_registration = registration
-            return RegisteredAdmin(admin_id=23, admin_guid="admin-guid-23")
-
-    use_case = _UseCase()
-    monkeypatch.setattr(
-        auth_controller,
-        "create_session",
-        lambda _db, *, user_id, user_guid, user_type: _session(
-            user_type=user_type, user_guid=user_guid
-        ),
-    )
+    bus = _RegistrationCommandBus(RegisteredAdmin(admin_id=23, admin_guid="admin-guid-23"))
+    _stub_create_session(monkeypatch)
 
     response = auth_controller.register_admin(
         RegisterAdminRequest(username="a23", password="secret", name="Admin"),
-        use_case=use_case,
+        command_bus=bus,
         db=object(),
     )
 
-    assert use_case.last_registration.username == "a23"
+    assert isinstance(bus.last_command, RegisterAdminCommand)
+    assert bus.last_command.username == "a23"
     assert response.user_guid == "admin-guid-23"
     assert response.user_type == "admin"
 
 
 def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
-    class _UseCase:
-        def execute(self, _registration):
-            return RegisteredAdmin(admin_id=23, admin_guid="admin-guid-23")
+    bus = _RegistrationCommandBus(RegisteredAdmin(admin_id=23, admin_guid="admin-guid-23"))
 
     class _Db:
         def __init__(self):
@@ -380,7 +341,7 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
     with pytest.raises(RuntimeError):
         auth_controller.register_admin(
             RegisterAdminRequest(username="a23", password="secret", name="Admin"),
-            use_case=_UseCase(),
+            command_bus=bus,
             db=db,
         )
 
@@ -395,14 +356,10 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
     ],
 )
 def test_register_admin_maps_errors(error, status_code, detail):
-    class _UseCase:
-        def execute(self, _registration):
-            raise error
-
     with pytest.raises(HTTPException) as exc:
         auth_controller.register_admin(
             RegisterAdminRequest(username="a23", password="secret", name="Admin"),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(error),
             db=object(),
         )
     assert exc.value.status_code == status_code

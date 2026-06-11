@@ -1,0 +1,17 @@
+# Normalize line endings: store LF in the repo and check out LF on every OS.
+# `text=auto` lets git auto-detect binary files and leave them untouched.
+* text=auto eol=lf
+
+# Explicit binary types (never normalize / never diff as text).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary

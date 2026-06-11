@@ -1,9 +1,11 @@
 from typing import Literal
 
 from api.dependencies.use_cases import (
-    get_manage_season_matches_use_case,
-    get_manage_season_players_use_case,
-    get_season_match_insights_use_case,
+    get_season_match_command_bus,
+    get_season_match_insights_query_bus,
+    get_season_match_query_bus,
+    get_season_player_command_bus,
+    get_season_player_query_bus,
 )
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
@@ -39,34 +41,62 @@ from api.interface.controller.v1.season_competition_presenters import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin
-from fastapi import APIRouter, Depends, Query, status
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
-from persistence.application.use_cases import (
-    GetSeasonMatchInsightsUseCase,
-    InvalidSeasonMatchDataError,
-    InvalidSeasonPlayerUpdateDataError,
-    ManageSeasonMatchesUseCase,
-    ManageSeasonPlayersUseCase,
-    SeasonMatchAlreadyStartedError,
-    SeasonMatchClockNotRunningError,
+from core.application.commands.season_match_commands import (
+    CreateSeasonMatchCommand,
+    CreateSeasonMatchEventCommand,
+    CreateSeasonMatchWithLineupsCommand,
+    DeleteSeasonMatchCommand,
+    DeleteSeasonMatchEventCommand,
+    StartSeasonMatchCommand,
+    StopSeasonMatchCommand,
+    UpdateSeasonMatchCommand,
+    UpdateSeasonMatchLineupsCommand,
+    UpdateSeasonMatchResultCommand,
+    UpdateSeasonMatchStatsCommand,
+)
+from core.application.commands.season_player_commands import (
+    RegisterSeasonPlayerCommand,
+    RegisterSeasonPlayersBulkCommand,
+    UnregisterSeasonPlayerCommand,
+    UpdateSeasonPlayerStatsCommand,
+)
+from core.application.models.season_competition_models import (
     SeasonMatchCreate,
     SeasonMatchCreateDetailed,
     SeasonMatchEventCreate,
-    SeasonMatchEventNotFoundError,
-    SeasonMatchEventPlayerNotInMatchError,
-    SeasonMatchInvalidPlayersError,
-    SeasonMatchLineupLockedError,
     SeasonMatchLineupsUpdate,
-    SeasonMatchPlayersNotInSeasonError,
     SeasonMatchPlayerStatsUpdate,
-    SeasonMatchReportClosedError,
     SeasonMatchResultUpdate,
     SeasonMatchStatsUpdate,
     SeasonMatchTeamCreate,
     SeasonMatchUpdate,
-    SeasonPlayerNotFoundError,
     SeasonPlayerStatsUpdate,
 )
+from core.application.policies import FieldUpdate
+from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
+from core.application.queries.season_match_queries import (
+    GetSeasonMatchDetailQuery,
+    ListSeasonMatchesQuery,
+)
+from core.application.queries.season_player_queries import (
+    GetSeasonStandingsQuery,
+    ListSeasonPlayersQuery,
+)
+from core.application.use_cases.season_competition_errors import (
+    InvalidSeasonMatchDataError,
+    InvalidSeasonPlayerUpdateDataError,
+    SeasonMatchAlreadyStartedError,
+    SeasonMatchClockNotRunningError,
+    SeasonMatchEventNotFoundError,
+    SeasonMatchEventPlayerNotInMatchError,
+    SeasonMatchInvalidPlayersError,
+    SeasonMatchLineupLockedError,
+    SeasonMatchPlayersNotInSeasonError,
+    SeasonMatchReportClosedError,
+    SeasonPlayerNotFoundError,
+)
+from fastapi import APIRouter, Depends, Query, status
+from shared.application.bus.buses import CommandBus, QueryBus
 
 router = APIRouter()
 
@@ -243,13 +273,15 @@ def register_player_in_season(
     season_guid: str,
     payload: RegisterSeasonPlayerRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
+    command_bus: CommandBus = Depends(get_season_player_command_bus),
 ):
-    registered = use_case.register_player_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        admin_id=admin_session.user_id,
-        player_guid=payload.player_guid,
+    registered = command_bus.dispatch(
+        RegisterSeasonPlayerCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            player_guid=payload.player_guid,
+        )
     )
     return to_season_player_response(registered)
 
@@ -265,14 +297,16 @@ def register_players_in_season_bulk(
     season_guid: str,
     payload: RegisterSeasonPlayersBulkRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
+    command_bus: CommandBus = Depends(get_season_player_command_bus),
 ):
-    registered = use_case.register_players_bulk_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        admin_id=admin_session.user_id,
-        player_guids=payload.player_guids,
-        source_season_guid=payload.source_season_guid,
+    registered = command_bus.dispatch(
+        RegisterSeasonPlayersBulkCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            player_guids=payload.player_guids,
+            source_season_guid=payload.source_season_guid,
+        )
     )
     return SeasonPlayersBulkResponse(
         items=[to_season_player_response(item) for item in registered],
@@ -291,7 +325,7 @@ def update_season_player_stats(
     player_guid: str,
     payload: UpdateSeasonPlayerStatsRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
+    command_bus: CommandBus = Depends(get_season_player_command_bus),
 ):
     update = SeasonPlayerStatsUpdate(
         wins=(
@@ -325,12 +359,14 @@ def update_season_player_stats(
             else FieldUpdate.keep()
         ),
     )
-    updated = use_case.update_player_stats_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        admin_id=admin_session.user_id,
-        player_guid=player_guid,
-        update=update,
+    updated = command_bus.dispatch(
+        UpdateSeasonPlayerStatsCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            player_guid=player_guid,
+            update=update,
+        )
     )
     return to_season_player_response(updated)
 
@@ -345,13 +381,15 @@ def unregister_player_from_season(
     season_guid: str,
     player_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
+    command_bus: CommandBus = Depends(get_season_player_command_bus),
 ):
-    use_case.unregister_player_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        admin_id=admin_session.user_id,
-        player_guid=player_guid,
+    command_bus.dispatch(
+        UnregisterSeasonPlayerCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            admin_id=admin_session.user_id,
+            player_guid=player_guid,
+        )
     )
 
 
@@ -383,7 +421,7 @@ def list_season_players(
         "points",
     ] = Query(default="quality_level"),
     order_dir: Literal["asc", "desc"] = Query(default="desc"),
-    use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
+    query_bus: QueryBus = Depends(get_season_player_query_bus),
     _session=Depends(authorize_pena_access),
 ):
     filters = build_season_players_filters(
@@ -396,14 +434,16 @@ def list_season_players(
         position=position,
         search=search,
     )
-    result = use_case.list_season_players(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        filters=filters,
-        page=page,
-        page_size=page_size,
-        order_by=order_by,
-        order_dir=order_dir,
+    result = query_bus.ask(
+        ListSeasonPlayersQuery(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            filters=filters,
+            page=page,
+            page_size=page_size,
+            order_by=order_by,
+            order_dir=order_dir,
+        )
     )
     return to_season_players_page_response(result)
 
@@ -419,9 +459,9 @@ def create_season_match(
     season_guid: str,
     payload: CreateSeasonMatchRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    created = use_case.create_match_for_admin(
+    command = CreateSeasonMatchCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         admin_id=admin_session.user_id,
@@ -431,6 +471,7 @@ def create_season_match(
             match_date=payload.match_date,
         ),
     )
+    created = command_bus.dispatch(command)
     return to_season_match_response(created)
 
 
@@ -445,9 +486,9 @@ def update_season_match_result(
     match_guid: str,
     payload: UpdateSeasonMatchResultRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.update_match_result_for_admin(
+    command = UpdateSeasonMatchResultCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
@@ -455,13 +496,10 @@ def update_season_match_result(
         update=SeasonMatchResultUpdate(
             home_score=payload.home_score,
             away_score=payload.away_score,
-            standings_policy=(
-                StandingsUpdatePolicy.APPLY
-                if payload.update_standings
-                else StandingsUpdatePolicy.SKIP
-            ),
+            standings_policy=payload.standings_policy,
         ),
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_response(updated)
 
 
@@ -476,7 +514,7 @@ def update_season_match(
     match_guid: str,
     payload: UpdateSeasonMatchRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
     update = SeasonMatchUpdate(
         match_date=(
@@ -495,13 +533,14 @@ def update_season_match(
             else FieldUpdate.keep()
         ),
     )
-    updated = use_case.update_match_for_admin(
+    command = UpdateSeasonMatchCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
         admin_id=admin_session.user_id,
         update=update,
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -516,9 +555,9 @@ def create_season_match_with_lineups(
     season_guid: str,
     payload: CreateSeasonMatchDetailedRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    created = use_case.create_match_with_lineups_for_admin(
+    command = CreateSeasonMatchWithLineupsCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         admin_id=admin_session.user_id,
@@ -534,6 +573,7 @@ def create_season_match_with_lineups(
             ),
         ),
     )
+    created = command_bus.dispatch(command)
     return to_season_match_detail_response(created)
 
 
@@ -548,9 +588,9 @@ def update_season_match_stats(
     match_guid: str,
     payload: UpdateSeasonMatchStatsRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.update_match_stats_for_admin(
+    command = UpdateSeasonMatchStatsCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
@@ -578,6 +618,7 @@ def update_season_match_stats(
             ],
         ),
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -592,9 +633,9 @@ def update_season_match_lineups(
     match_guid: str,
     payload: UpdateSeasonMatchLineupsRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.update_match_lineups_for_admin(
+    command = UpdateSeasonMatchLineupsCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
@@ -604,6 +645,7 @@ def update_season_match_lineups(
             away_player_guids=payload.away_team.player_guids,
         ),
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -617,14 +659,15 @@ def start_season_match(
     season_guid: str,
     match_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.start_match_for_admin(
+    command = StartSeasonMatchCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
         admin_id=admin_session.user_id,
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -638,14 +681,15 @@ def stop_season_match(
     season_guid: str,
     match_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.stop_match_for_admin(
+    command = StopSeasonMatchCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
         admin_id=admin_session.user_id,
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -660,9 +704,9 @@ def create_season_match_event(
     match_guid: str,
     payload: CreateSeasonMatchEventRequest,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.create_match_event_for_admin(
+    command = CreateSeasonMatchEventCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
@@ -677,6 +721,7 @@ def create_season_match_event(
             value_delta=payload.value_delta,
         ),
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -691,15 +736,16 @@ def delete_season_match_event(
     match_guid: str,
     event_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    updated = use_case.delete_match_event_for_admin(
+    command = DeleteSeasonMatchEventCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,
         event_guid=event_guid,
         admin_id=admin_session.user_id,
     )
+    updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)
 
 
@@ -713,14 +759,16 @@ def list_season_matches(
     season_guid: str,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    query_bus: QueryBus = Depends(get_season_match_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    result = use_case.list_season_matches(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        page=page,
-        page_size=page_size,
+    result = query_bus.ask(
+        ListSeasonMatchesQuery(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            page=page,
+            page_size=page_size,
+        )
     )
     return to_season_matches_page_response(result)
 
@@ -734,13 +782,15 @@ def get_season_match_detail(
     pena_guid: str,
     season_guid: str,
     match_guid: str,
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    query_bus: QueryBus = Depends(get_season_match_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    result = use_case.get_match_detail(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        match_guid=match_guid,
+    result = query_bus.ask(
+        GetSeasonMatchDetailQuery(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+        )
     )
     return to_season_match_detail_response(result)
 
@@ -753,18 +803,19 @@ def get_season_match_detail(
 def get_match_insights(
     pena_guid: str,
     payload: MatchInsightsRequest,
-    use_case: GetSeasonMatchInsightsUseCase = Depends(get_season_match_insights_use_case),
+    query_bus: QueryBus = Depends(get_season_match_insights_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    result = use_case.execute(
-        pena_guid=pena_guid,
-        season_guids=payload.season_guids,
-        scope=payload.scope,
-        matrix_size=payload.matrix_size,
-        top_pairs_size=payload.top_pairs_size,
-        leaders_size=payload.leaders_size,
+    return query_bus.ask(
+        GetSeasonMatchInsightsQuery(
+            pena_guid=pena_guid,
+            season_guids=payload.season_guids,
+            scope=payload.scope,
+            matrix_size=payload.matrix_size,
+            top_pairs_size=payload.top_pairs_size,
+            leaders_size=payload.leaders_size,
+        )
     )
-    return result
 
 
 @router.delete(
@@ -777,13 +828,15 @@ def delete_season_match(
     season_guid: str,
     match_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManageSeasonMatchesUseCase = Depends(get_manage_season_matches_use_case),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
-    use_case.delete_match_for_admin(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        match_guid=match_guid,
-        admin_id=admin_session.user_id,
+    command_bus.dispatch(
+        DeleteSeasonMatchCommand(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_session.user_id,
+        )
     )
 
 
@@ -798,17 +851,19 @@ def get_season_standings(
     page_size: int = Query(20, ge=1, le=100),
     role: list[str] | None = Query(default=None),
     position: list[str] | None = Query(default=None),
-    use_case: ManageSeasonPlayersUseCase = Depends(get_manage_season_players_use_case),
+    query_bus: QueryBus = Depends(get_season_player_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    result = use_case.get_standings(
-        pena_guid=pena_guid,
-        season_guid=season_guid,
-        filters=build_season_players_filters(
-            role=role,
-            position=position,
-        ),
-        page=page,
-        page_size=page_size,
+    result = query_bus.ask(
+        GetSeasonStandingsQuery(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            filters=build_season_players_filters(
+                role=role,
+                position=position,
+            ),
+            page=page,
+            page_size=page_size,
+        )
     )
     return to_season_players_page_response(result)

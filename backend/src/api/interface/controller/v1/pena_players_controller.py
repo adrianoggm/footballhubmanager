@@ -2,8 +2,9 @@ import math
 from dataclasses import asdict
 
 from api.dependencies.use_cases import (
-    get_pena_membership_use_case,
-    get_pena_players_use_case,
+    get_pena_membership_command_bus,
+    get_pena_membership_query_bus,
+    get_pena_players_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_players_request import (
     CreateGuestPlayerRequest,
@@ -16,17 +17,26 @@ from api.interface.controller.v1.model.response.pena_players_response import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_pena_access, require_admin, require_user
-from fastapi import APIRouter, Depends, Query, Response, status
-from persistence.application.update_policies import FieldUpdate
-from persistence.application.use_cases import (
-    GetPenaPlayersUseCase,
-    ManagePenaMembershipUseCase,
-    PenaGuestPlayerCreate,
+from core.application.commands.pena_membership_commands import (
+    CreateGuestPlayerCommand,
+    RemoveMembershipForAdminCommand,
+    RemoveMembershipForUserCommand,
+    UpdateMembershipForAdminCommand,
+    UpdateMembershipForUserCommand,
+)
+from core.application.models import PenaPlayerFilters
+from core.application.policies import FieldUpdate
+from core.application.queries.pena_membership_queries import (
+    GetPenaMembershipForPlayerQuery,
+    GetPenaMembershipForUserQuery,
+)
+from core.application.queries.pena_players_query import GetPenaPlayersQuery
+from core.domain.errors import (
     PenaMembershipAccessDeniedError,
     PenaMembershipNotFoundError,
-    PenaMembershipUpdate,
-    PenaPlayerFilters,
 )
+from fastapi import APIRouter, Depends, Query, Response, status
+from shared.application.bus.buses import CommandBus, QueryBus
 
 router = APIRouter()
 
@@ -72,12 +82,12 @@ def create_guest_player_for_admin(
     pena_guid: str,
     payload: CreateGuestPlayerRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    command_bus: CommandBus = Depends(get_pena_membership_command_bus),
 ):
-    created = use_case.create_guest_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        data=PenaGuestPlayerCreate(
+    created = command_bus.dispatch(
+        CreateGuestPlayerCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
             name=payload.name,
             surname1=payload.surname1,
             surname2=payload.surname2,
@@ -85,7 +95,7 @@ def create_guest_player_for_admin(
             nickname=payload.nickname,
             role=payload.role,
             position=payload.position,
-        ),
+        )
     )
     return _to_membership_response(created)
 
@@ -103,7 +113,7 @@ def get_pena_players(
     role: str | None = Query(default=None),
     position: str | None = Query(default=None),
     search: str | None = Query(default=None),
-    use_case: GetPenaPlayersUseCase = Depends(get_pena_players_use_case),
+    query_bus: QueryBus = Depends(get_pena_players_query_bus),
     _session=Depends(authorize_pena_access),
 ):
     filters = PenaPlayerFilters(
@@ -116,7 +126,9 @@ def get_pena_players(
         position=_clean(position),
         search=_clean(search),
     )
-    result = use_case.execute(pena_guid, filters=filters, page=page, page_size=page_size)
+    result = query_bus.ask(
+        GetPenaPlayersQuery(pena_guid=pena_guid, filters=filters, page=page, page_size=page_size)
+    )
 
     total_pages = math.ceil(result.total / page_size) if result.total else 0
     return PenaPlayersPageResponse(
@@ -133,10 +145,12 @@ def get_pena_players(
 def get_pena_player_membership(
     pena_guid: str,
     player_guid: str,
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    query_bus: QueryBus = Depends(get_pena_membership_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    membership = use_case.get_for_player(pena_guid=pena_guid, player_guid=player_guid)
+    membership = query_bus.ask(
+        GetPenaMembershipForPlayerQuery(pena_guid=pena_guid, player_guid=player_guid)
+    )
     return _to_membership_response(membership)
 
 
@@ -145,9 +159,11 @@ def get_pena_player_membership(
 def get_my_pena_membership(
     pena_guid: str,
     session=Depends(require_user),
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    query_bus: QueryBus = Depends(get_pena_membership_query_bus),
 ):
-    membership = use_case.get_for_user(pena_guid=pena_guid, account_id=session.user_id)
+    membership = query_bus.ask(
+        GetPenaMembershipForUserQuery(pena_guid=pena_guid, account_id=session.user_id)
+    )
     return _to_membership_response(membership)
 
 
@@ -157,24 +173,23 @@ def update_my_pena_membership(
     pena_guid: str,
     payload: UpdatePenaMembershipRequest,
     session=Depends(require_user),
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    command_bus: CommandBus = Depends(get_pena_membership_command_bus),
 ):
-    update = PenaMembershipUpdate(
-        nickname=(
-            FieldUpdate.set(payload.nickname)
-            if "nickname" in payload.model_fields_set
-            else FieldUpdate.keep()
-        ),
-        position=(
-            FieldUpdate.set(payload.position)
-            if "position" in payload.model_fields_set
-            else FieldUpdate.keep()
-        ),
-    )
-    membership = use_case.update_for_user(
-        pena_guid=pena_guid,
-        account_id=session.user_id,
-        update=update,
+    membership = command_bus.dispatch(
+        UpdateMembershipForUserCommand(
+            pena_guid=pena_guid,
+            account_id=session.user_id,
+            nickname=(
+                FieldUpdate.set(payload.nickname)
+                if "nickname" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            position=(
+                FieldUpdate.set(payload.position)
+                if "position" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+        )
     )
     return _to_membership_response(membership)
 
@@ -184,9 +199,11 @@ def update_my_pena_membership(
 def remove_my_pena_membership(
     pena_guid: str,
     session=Depends(require_user),
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    command_bus: CommandBus = Depends(get_pena_membership_command_bus),
 ):
-    use_case.remove_for_user(pena_guid=pena_guid, account_id=session.user_id)
+    command_bus.dispatch(
+        RemoveMembershipForUserCommand(pena_guid=pena_guid, account_id=session.user_id)
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -197,30 +214,29 @@ def update_pena_player_membership_as_admin(
     player_guid: str,
     payload: UpdatePenaMembershipRequest,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    command_bus: CommandBus = Depends(get_pena_membership_command_bus),
 ):
-    update = PenaMembershipUpdate(
-        nickname=(
-            FieldUpdate.set(payload.nickname)
-            if "nickname" in payload.model_fields_set
-            else FieldUpdate.keep()
-        ),
-        role=(
-            FieldUpdate.set(payload.role)
-            if "role" in payload.model_fields_set
-            else FieldUpdate.keep()
-        ),
-        position=(
-            FieldUpdate.set(payload.position)
-            if "position" in payload.model_fields_set
-            else FieldUpdate.keep()
-        ),
-    )
-    membership = use_case.update_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        player_guid=player_guid,
-        update=update,
+    membership = command_bus.dispatch(
+        UpdateMembershipForAdminCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            player_guid=player_guid,
+            nickname=(
+                FieldUpdate.set(payload.nickname)
+                if "nickname" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            role=(
+                FieldUpdate.set(payload.role)
+                if "role" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+            position=(
+                FieldUpdate.set(payload.position)
+                if "position" in payload.model_fields_set
+                else FieldUpdate.keep()
+            ),
+        )
     )
     return _to_membership_response(membership)
 
@@ -231,11 +247,13 @@ def remove_pena_player_membership_as_admin(
     pena_guid: str,
     player_guid: str,
     admin_session=Depends(require_admin),
-    use_case: ManagePenaMembershipUseCase = Depends(get_pena_membership_use_case),
+    command_bus: CommandBus = Depends(get_pena_membership_command_bus),
 ):
-    use_case.remove_for_admin(
-        pena_guid=pena_guid,
-        admin_id=admin_session.user_id,
-        player_guid=player_guid,
+    command_bus.dispatch(
+        RemoveMembershipForAdminCommand(
+            pena_guid=pena_guid,
+            admin_id=admin_session.user_id,
+            player_guid=player_guid,
+        )
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

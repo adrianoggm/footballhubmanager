@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 
-from auth.application.models import AuthAccount
-from auth.application.ports import AuthAccountRepository
+from auth.domain.errors import InvalidCredentialsError
+from auth.domain.models.auth_account import AuthAccount
+from auth.domain.ports.auth_account_repository_port import AuthAccountRepositoryPort
 from auth.security import verify_password
 
-
-class InvalidCredentialsError(Exception):
-    pass
+# Re-exportado por conveniencia: el use case lo lanza, pero su hogar canónico
+# es auth.domain.errors.
+__all__ = ["InvalidCredentialsError", "LoginPayload", "LoginUserUseCase", "LoginAdminUseCase"]
 
 
 @dataclass(frozen=True)
@@ -16,7 +17,7 @@ class LoginPayload:
 
 
 class LoginUserUseCase:
-    def __init__(self, repository: AuthAccountRepository):
+    def __init__(self, repository: AuthAccountRepositoryPort):
         self.repository = repository
 
     def execute(self, payload: LoginPayload) -> AuthAccount:
@@ -27,7 +28,7 @@ class LoginUserUseCase:
 
 
 class LoginAdminUseCase:
-    def __init__(self, repository: AuthAccountRepository):
+    def __init__(self, repository: AuthAccountRepositoryPort):
         self.repository = repository
 
     def execute(self, payload: LoginPayload) -> AuthAccount:

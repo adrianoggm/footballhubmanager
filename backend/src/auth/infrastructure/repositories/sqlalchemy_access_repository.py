@@ -1,10 +1,10 @@
-from auth.application.ports import AccessRepository
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from auth.domain.ports.access_repository_port import AccessRepositoryPort
+from persistence.infrastructure.entity import Pena, PenaPlayer, Player
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyAccessRepository(AccessRepository):
+class SqlAlchemyAccessRepository(AccessRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 

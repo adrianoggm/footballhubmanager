@@ -1,16 +1,18 @@
 from datetime import date
 
-from persistence.application.ports.pena_accountability_port import (
+from core.application.ports.pena_accountability_port import (
     PenaAccountabilityExpenseResult,
     PenaAccountabilityMemberAccountResult,
     PenaAccountabilityPort,
     PenaAccountabilityResult,
-    PenaExpenseNotFoundError,
-    PenaMemberNotFoundError,
-    PenaNotFoundError,
-    PenaNotManagedByAdminError,
 )
-from persistence.domain.entity import (
+from core.domain.errors import (
+    PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityExpenseNotFoundError,
+    PenaAccountabilityMemberNotFoundError,
+    PenaAccountabilityPenaNotFoundError,
+)
+from persistence.infrastructure.entity import (
     Pena,
     PenaAccountability,
     PenaExpense,
@@ -108,7 +110,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         ).scalar_one_or_none()
         if member_account is None:
             self.session.rollback()
-            raise PenaMemberNotFoundError()
+            raise PenaAccountabilityMemberNotFoundError()
 
         self.session.delete(member_account)
         self.session.commit()
@@ -155,7 +157,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         ).scalar_one_or_none()
         if expense is None:
             self.session.rollback()
-            raise PenaExpenseNotFoundError()
+            raise PenaAccountabilityExpenseNotFoundError()
 
         self.session.delete(expense)
         self.session.commit()
@@ -171,7 +173,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         pena = self.session.execute(stmt).scalar_one_or_none()
         if not pena:
             self.session.rollback()
-            raise PenaNotFoundError()
+            raise PenaAccountabilityPenaNotFoundError()
         return pena
 
     def _lock_pena(self, pena_guid: str) -> Pena:
@@ -180,13 +182,13 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         ).scalar_one_or_none()
         if not pena:
             self.session.rollback()
-            raise PenaNotFoundError()
+            raise PenaAccountabilityPenaNotFoundError()
         return pena
 
     def _ensure_admin_manages_pena(self, *, pena: Pena, admin_id: int) -> None:
         if pena.id_admin != admin_id:
             self.session.rollback()
-            raise PenaNotManagedByAdminError()
+            raise PenaAccountabilityAccessDeniedError()
 
     def _get_or_create_locked_accountability_row(self, *, pena_id: int) -> PenaAccountability:
         row = self.session.execute(
@@ -216,7 +218,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         ).scalar_one_or_none()
         if player is None:
             self.session.rollback()
-            raise PenaMemberNotFoundError()
+            raise PenaAccountabilityMemberNotFoundError()
         return player
 
     def _build_result(self, *, pena_id: int) -> PenaAccountabilityResult:

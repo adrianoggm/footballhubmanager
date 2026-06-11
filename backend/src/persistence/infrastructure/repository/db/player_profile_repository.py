@@ -1,14 +1,16 @@
-from persistence.application.ports.player_profile_port import (
-    InvalidNationalityError,
-    InvalidProfileImageError,
+from core.application.ports.player_profile_port import (
     PenaInfoResult,
     PlayerProfilePort,
     PlayerProfileResult,
 )
-from persistence.application.use_cases.profile_image_utils import (
+from core.application.services.profile_image_utils import (
     is_supported_profile_image_data_url,
 )
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from core.domain.errors import (
+    InvalidPlayerNationalityError,
+    InvalidProfileImageError,
+)
+from persistence.infrastructure.entity import Pena, PenaPlayer, Player
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -60,7 +62,7 @@ class SqlAlchemyPlayerProfileRepository(PlayerProfilePort):
         except IntegrityError as exc:
             self.session.rollback()
             if "fk_player_nationality" in str(exc.orig).lower():
-                raise InvalidNationalityError() from exc
+                raise InvalidPlayerNationalityError() from exc
             raise
         return self._build_profile(player)
 
@@ -92,7 +94,7 @@ class SqlAlchemyPlayerProfileRepository(PlayerProfilePort):
         except IntegrityError as exc:
             self.session.rollback()
             if "fk_player_nationality" in str(exc.orig).lower():
-                raise InvalidNationalityError() from exc
+                raise InvalidPlayerNationalityError() from exc
             raise
         return self._build_profile(player)
 

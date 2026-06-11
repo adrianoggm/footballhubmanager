@@ -16,41 +16,55 @@ from api.interface.controller.v1.model.request.penas_request import (
 )
 from auth.dependencies import require_user
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.use_cases.generate_pena_link_token_usecase import (
-    PenaAccessDeniedError,
-    PenaLinkToken,
+from core.application.commands.pena_accountability_commands import (
+    CreateExpenseCommand,
+    UpdateAccountabilitySettingsCommand,
+    UpsertMemberAccountCommand,
 )
-from persistence.application.use_cases.get_penas_usecase import PenaInfo, PenasPage
-from persistence.application.use_cases.link_user_to_pena_usecase import (
+from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
+from core.application.commands.pena_link_commands import (
+    GeneratePenaLinkTokenCommand,
+    LinkUserToPenaCommand,
+)
+from core.application.models import (
+    PenaAccountabilityExpenseInfo,
+    PenaAccountabilityInfo,
+    PenaAccountabilityMemberAccountInfo,
+    PenaInfo,
+    PenaLabelsInfo,
+    PenaLinkToken,
+    PenaProfileInfo,
+    PenasPage,
+    PenasPageResult,
+)
+from core.application.queries.pena_accountability_queries import (
+    GetPenaAccountabilityQuery,
+    GetPlayerGuidForAccountQuery,
+)
+from core.application.queries.pena_labels_query import GetPenaLabelsQuery
+from core.application.queries.pena_queries import (
+    GetPenaByGuidQuery,
+    ListPenasForAdminQuery,
+    ListPenasForUserQuery,
+)
+from core.domain.errors import (
     InvalidLinkTokenError,
+    InvalidPenaAccountabilityDataError,
+    InvalidPenaLabelsDataError,
+    InvalidProfileImageError,
+    PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityExpenseNotFoundError,
+    PenaAccountabilityMemberNotFoundError,
+    PenaAccountabilityPenaNotFoundError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
+    PenaLinkAccessDeniedError,
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
-from persistence.application.use_cases.manage_pena_accountability_usecase import (
-    InvalidPenaAccountabilityDataError,
-    PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseCreate,
-    PenaAccountabilityExpenseInfo,
-    PenaAccountabilityExpenseNotFoundError,
-    PenaAccountabilityInfo,
-    PenaAccountabilityMemberAccountInfo,
-    PenaAccountabilityMemberAccountUpsert,
-    PenaAccountabilityMemberNotFoundError,
-    PenaAccountabilityPenaNotFoundError,
-)
-from persistence.application.use_cases.manage_pena_labels_usecase import (
-    InvalidPenaLabelsDataError,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsInfo,
-    PenaLabelsPenaNotFoundError,
-)
-from persistence.application.use_cases.manage_pena_profile_usecase import (
-    InvalidPenaProfileImageError,
-    PenaProfileAccessDeniedError,
-    PenaProfileInfo,
-    PenaProfileNotFoundError,
-)
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_id: int = 7) -> SessionData:
@@ -132,60 +146,60 @@ def test_page_response_rounds_up_total_pages():
 
 
 @dataclass
-class _GetPenasUseCaseStub:
+class _PenaQueryBusStub:
     page_result: PenasPage
     last_admin_call: dict | None = None
     last_user_call: dict | None = None
 
-    def execute_for_admin(self, admin_id: int, *, page: int, page_size: int, search: str | None):
-        self.last_admin_call = {
-            "admin_id": admin_id,
-            "page": page,
-            "page_size": page_size,
-            "search": search,
-        }
-        return PenasPage(
-            items=self.page_result.items,
-            page=page,
-            page_size=page_size,
-            total=self.page_result.total,
-        )
-
-    def execute_for_user(self, account_id: int, *, page: int, page_size: int, search: str | None):
-        self.last_user_call = {
-            "account_id": account_id,
-            "page": page,
-            "page_size": page_size,
-            "search": search,
-        }
-        return PenasPage(
-            items=self.page_result.items,
-            page=page,
-            page_size=page_size,
-            total=self.page_result.total,
-        )
-
-    def execute_by_guid(self, pena_guid: str):
-        if pena_guid == "pena-missing":
-            return None
-        return PenaInfo(guid=pena_guid, name="Pena Found")
+    def ask(self, query):
+        if isinstance(query, ListPenasForAdminQuery):
+            self.last_admin_call = {
+                "admin_id": query.admin_id,
+                "page": query.page,
+                "page_size": query.page_size,
+                "search": query.search,
+            }
+            return PenasPage(
+                items=self.page_result.items,
+                page=query.page,
+                page_size=query.page_size,
+                total=self.page_result.total,
+            )
+        if isinstance(query, ListPenasForUserQuery):
+            self.last_user_call = {
+                "account_id": query.account_id,
+                "page": query.page,
+                "page_size": query.page_size,
+                "search": query.search,
+            }
+            return PenasPage(
+                items=self.page_result.items,
+                page=query.page,
+                page_size=query.page_size,
+                total=self.page_result.total,
+            )
+        if isinstance(query, GetPenaByGuidQuery):
+            if query.pena_guid == "pena-missing":
+                return None
+            return PenaInfo(guid=query.pena_guid, name="Pena Found")
+        raise AssertionError(f"unexpected query {type(query)!r}")
 
 
 def test_list_penas_for_admin_returns_page_data():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=21))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=21))
 
     response = penas_controller.list_penas(
         page=2,
         page_size=20,
         search=" madrid ",
         session=_session(user_type="admin", user_id=99),
-        use_case=use_case,
+        query_bus=bus,
     )
 
     assert response.total_pages == 2
     assert response.page == 2
     assert response.items[0].guid == "pena-1"
-    assert use_case.last_admin_call == {
+    assert bus.last_admin_call == {
         "admin_id": 99,
         "page": 2,
         "page_size": 20,
@@ -194,22 +208,22 @@ def test_list_penas_for_admin_returns_page_data():
 
 
 def test_list_penas_for_user_returns_page_data():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
     response = penas_controller.list_penas(
         page=1,
         page_size=20,
         search=None,
         session=_session(user_type="user", user_id=11),
-        use_case=use_case,
+        query_bus=bus,
     )
 
     assert response.total_pages == 1
-    assert use_case.last_user_call == {"account_id": 11, "page": 1, "page_size": 20, "search": None}
+    assert bus.last_user_call == {"account_id": 11, "page": 1, "page_size": 20, "search": None}
 
 
 def test_list_penas_rejects_invalid_session_type():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
     with pytest.raises(HTTPException) as exc:
         penas_controller.list_penas(
@@ -217,62 +231,56 @@ def test_list_penas_rejects_invalid_session_type():
             page_size=20,
             search=None,
             session=_session(user_type="service"),
-            use_case=use_case,
+            query_bus=bus,
         )
     assert exc.value.status_code == 403
     assert exc.value.detail == "Invalid session type"
 
 
 def test_get_pena_returns_404_when_missing():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
     with pytest.raises(HTTPException) as exc:
-        penas_controller.get_pena("pena-missing", _session=object(), use_case=use_case)
+        penas_controller.get_pena("pena-missing", _session=object(), query_bus=bus)
     assert exc.value.status_code == 404
     assert exc.value.detail == "Pena not found"
 
 
 def test_get_pena_returns_pena_when_found():
-    use_case = _GetPenasUseCaseStub(page_result=_penas_page(total=1))
+    bus = _PenaQueryBusStub(page_result=_penas_page(total=1))
 
-    response = penas_controller.get_pena("pena-xyz", _session=object(), use_case=use_case)
+    response = penas_controller.get_pena("pena-xyz", _session=object(), query_bus=bus)
 
     assert response.guid == "pena-xyz"
     assert response.name == "Pena Found"
 
 
 def test_update_pena_profile_success():
-    class _UseCase:
+    class _Bus:
         def __init__(self):
-            self.last_call: dict | None = None
+            self.last_command = None
 
-        def update_for_admin(self, *, pena_guid: str, admin_id: int, update):
-            self.last_call = {
-                "pena_guid": pena_guid,
-                "admin_id": admin_id,
-                "image_url": update.image_url,
-            }
+        def dispatch(self, command):
+            self.last_command = command
             return PenaProfileInfo(
-                guid=pena_guid,
+                guid=command.pena_guid,
                 name="Pena Uno",
-                image_url=update.image_url,
+                image_url=command.image_url,
             )
 
-    use_case = _UseCase()
+    bus = _Bus()
     response = penas_controller.update_pena_profile(
         "pena-1",
         UpdatePenaProfileRequest(image_url="data:image/jpeg;base64,QQ=="),
         admin_session=_session(user_type="admin", user_id=99),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.guid == "pena-1"
     assert response.image_url == "data:image/jpeg;base64,QQ=="
-    assert use_case.last_call == {
-        "pena_guid": "pena-1",
-        "admin_id": 99,
-        "image_url": "data:image/jpeg;base64,QQ==",
-    }
+    assert bus.last_command.pena_guid == "pena-1"
+    assert bus.last_command.admin_id == 99
+    assert bus.last_command.image_url == "data:image/jpeg;base64,QQ=="
 
 
 @pytest.mark.parametrize(
@@ -280,12 +288,12 @@ def test_update_pena_profile_success():
     [
         (PenaProfileNotFoundError(), 404, "Pena not found"),
         (PenaProfileAccessDeniedError(), 403, "Admin does not manage this pena"),
-        (InvalidPenaProfileImageError(), 400, "Invalid profile image"),
+        (InvalidProfileImageError(), 400, "Invalid profile image"),
     ],
 )
 def test_update_pena_profile_maps_domain_errors(error, status_code, detail):
-    class _UseCase:
-        def update_for_admin(self, **_kwargs):
+    class _Bus:
+        def dispatch(self, _command):
             raise error
 
     with pytest.raises(HTTPException) as exc:
@@ -293,57 +301,63 @@ def test_update_pena_profile_maps_domain_errors(error, status_code, detail):
             "pena-1",
             UpdatePenaProfileRequest(image_url="data:image/jpeg;base64,QQ=="),
             admin_session=_session(user_type="admin", user_id=99),
-            use_case=_UseCase(),
+            command_bus=_Bus(),
         )
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
 
 
-def test_get_pena_labels_returns_labels():
-    class _UseCase:
-        def get_for_pena(self, *, pena_guid: str):
-            assert pena_guid == "pena-1"
-            return _labels_info()
+class _RaisingQueryBus:
+    def __init__(self, error):
+        self._error = error
 
+    def ask(self, _query):
+        raise self._error
+
+
+class _RaisingCommandBus:
+    def __init__(self, error):
+        self._error = error
+
+    def dispatch(self, _command):
+        raise self._error
+
+
+class _LabelsQueryBus:
+    def ask(self, query):
+        assert isinstance(query, GetPenaLabelsQuery)
+        assert query.pena_guid == "pena-1"
+        return _labels_info()
+
+
+class _LabelsCommandBus:
+    def __init__(self):
+        self.last_command = None
+
+    def dispatch(self, command):
+        self.last_command = command
+        return _labels_info()
+
+
+def test_get_pena_labels_returns_labels():
     response = penas_controller.get_pena_labels(
-        "pena-1",
-        _session=object(),
-        use_case=_UseCase(),
+        "pena-1", _session=object(), query_bus=_LabelsQueryBus()
     )
     assert response.role_labels == ["Capitan", "Titular"]
     assert response.position_colors == {"POR": "#111111", "DEF": "#222222"}
 
 
 def test_get_pena_labels_maps_not_found_error():
-    class _UseCase:
-        def get_for_pena(self, **_kwargs):
-            raise PenaLabelsPenaNotFoundError()
-
+    bus = _RaisingQueryBus(PenaLabelsPenaNotFoundError())
     with pytest.raises(HTTPException) as exc:
-        penas_controller.get_pena_labels(
-            "pena-1",
-            _session=object(),
-            use_case=_UseCase(),
-        )
+        penas_controller.get_pena_labels("pena-1", _session=object(), query_bus=bus)
     assert exc.value.status_code == 404
     assert exc.value.detail == "Pena not found"
 
 
 def test_update_pena_labels_success():
-    class _UseCase:
-        def __init__(self):
-            self.last_call: dict | None = None
-
-        def update_for_admin(self, *, pena_guid: str, admin_id: int, update):
-            self.last_call = {
-                "pena_guid": pena_guid,
-                "admin_id": admin_id,
-                "update": update,
-            }
-            return _labels_info()
-
-    use_case = _UseCase()
+    bus = _LabelsCommandBus()
     response = penas_controller.update_pena_labels(
         "pena-1",
         payload=UpdatePenaLabelsRequest(
@@ -353,15 +367,16 @@ def test_update_pena_labels_success():
             position_colors={"POR": "#111111"},
         ),
         admin_session=_session(user_type="admin", user_id=99),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.role_labels == ["Capitan", "Titular"]
-    assert use_case.last_call is not None
-    assert use_case.last_call["pena_guid"] == "pena-1"
-    assert use_case.last_call["admin_id"] == 99
-    assert use_case.last_call["update"].role_labels == ["Capitan", "Titular"]
-    assert use_case.last_call["update"].position_labels == ["POR", "DEF"]
+    command = bus.last_command
+    assert isinstance(command, UpdatePenaLabelsCommand)
+    assert command.pena_guid == "pena-1"
+    assert command.admin_id == 99
+    assert command.role_labels == ["Capitan", "Titular"]
+    assert command.position_labels == ["POR", "DEF"]
 
 
 @pytest.mark.parametrize(
@@ -373,10 +388,6 @@ def test_update_pena_labels_success():
     ],
 )
 def test_update_pena_labels_maps_domain_errors(error, status_code, detail):
-    class _UseCase:
-        def update_for_admin(self, **_kwargs):
-            raise error
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.update_pena_labels(
             "pena-1",
@@ -385,50 +396,47 @@ def test_update_pena_labels_maps_domain_errors(error, status_code, detail):
                 position_labels=["POR"],
             ),
             admin_session=_session(user_type="admin", user_id=5),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(error),
         )
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
 
 
+class _LinkCommandBus:
+    def __init__(self, result=None):
+        self._result = result
+        self.last_command = None
+
+    def dispatch(self, command):
+        self.last_command = command
+        return self._result
+
+
 def test_create_link_token_success():
-    class _UseCase:
-        def __init__(self):
-            self.last_call: dict | None = None
-
-        def execute(self, *, admin_id: int, pena_guid: str, ttl_seconds: int) -> PenaLinkToken:
-            self.last_call = {
-                "admin_id": admin_id,
-                "pena_guid": pena_guid,
-                "ttl_seconds": ttl_seconds,
-            }
-            return PenaLinkToken(token="t-1", pena_guid=pena_guid, expires_at=12345)
-
-    use_case = _UseCase()
+    bus = _LinkCommandBus(PenaLinkToken(token="t-1", pena_guid="pena-1", expires_at=12345))
     response = penas_controller.create_link_token(
         "pena-1",
         admin_session=_session(user_type="admin", user_id=5),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.token == "t-1"
     assert response.pena_guid == "pena-1"
     assert response.expires_at == 12345
-    assert use_case.last_call is not None
-    assert use_case.last_call["ttl_seconds"] == penas_controller.app_config.LINK_TOKEN_TTL_SECONDS
+    command = bus.last_command
+    assert isinstance(command, GeneratePenaLinkTokenCommand)
+    assert command.admin_id == 5
+    assert command.pena_guid == "pena-1"
+    assert command.ttl_seconds == penas_controller.app_config.LINK_TOKEN_TTL_SECONDS
 
 
 def test_create_link_token_maps_access_denied_to_403():
-    class _UseCase:
-        def execute(self, **_kwargs):
-            raise PenaAccessDeniedError()
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.create_link_token(
             "pena-1",
             admin_session=_session(user_type="admin", user_id=5),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(PenaLinkAccessDeniedError()),
         )
     assert exc.value.status_code == 403
     assert exc.value.detail == "Admin does not manage this pena"
@@ -442,40 +450,21 @@ def test_consume_link_token_rejects_non_user_sessions():
 
 
 def test_consume_link_token_success():
-    class _UseCase:
-        def __init__(self):
-            self.last_call: dict | None = None
-
-        def execute(
-            self,
-            *,
-            token: str,
-            account_id: int,
-            nickname: str | None,
-            position: str | None,
-        ):
-            self.last_call = {
-                "token": token,
-                "account_id": account_id,
-                "nickname": nickname,
-                "position": position,
-            }
-
-    use_case = _UseCase()
+    bus = _LinkCommandBus()
     payload = ConsumeLinkTokenRequest(token="tok-1", nickname="nick", position="mid")
     response = penas_controller.consume_link_token(
         payload,
         session=_session(user_type="user", user_id=88),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response == {"status": "ok"}
-    assert use_case.last_call == {
-        "token": "tok-1",
-        "account_id": 88,
-        "nickname": "nick",
-        "position": "mid",
-    }
+    command = bus.last_command
+    assert isinstance(command, LinkUserToPenaCommand)
+    assert command.token == "tok-1"
+    assert command.account_id == 88
+    assert command.nickname == "nick"
+    assert command.position == "mid"
 
 
 @pytest.mark.parametrize(
@@ -487,139 +476,134 @@ def test_consume_link_token_success():
     ],
 )
 def test_consume_link_token_maps_domain_errors_to_http(error, status_code, detail):
-    class _UseCase:
-        def execute(self, **_kwargs):
-            raise error
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.consume_link_token(
             ConsumeLinkTokenRequest(token="tok-1", nickname=None, position=None),
             session=_session(user_type="user", user_id=88),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(error),
         )
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
 
 
-def test_get_penas_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_pena_query_bus_builds_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import QueryBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
 
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
+        def find_for_admin(self, admin_id, *, page, page_size, search):
+            return PenasPageResult(items=[], page=page, page_size=page_size, total=0)
+
+        def find_for_user(self, account_id, *, page, page_size, search):
+            return PenasPageResult(items=[], page=page, page_size=page_size, total=0)
+
+        def find_by_guid(self, pena_guid):
+            return None
 
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaQueryRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "GetPenasUseCase", _UseCase)
 
-    use_case = penas_controller.get_penas_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    bus = penas_controller.get_pena_query_bus(db="db-session")
+    assert isinstance(bus, QueryBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    # Las tres queries de lectura están registradas y enrutan al handler.
+    assert bus.ask(ListPenasForAdminQuery(admin_id=1)).total == 0
+    assert bus.ask(ListPenasForUserQuery(account_id=1)).total == 0
+    assert bus.ask(GetPenaByGuidQuery(pena_guid="x")) is None
 
 
-def test_get_generate_pena_link_token_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_pena_link_command_bus_builds_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import CommandBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
 
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "GeneratePenaLinkTokenUseCase", _UseCase)
 
-    use_case = penas_controller.get_generate_pena_link_token_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    bus = penas_controller.get_pena_link_command_bus(db="db-session")
+    assert isinstance(bus, CommandBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    assert GeneratePenaLinkTokenCommand in bus._handlers
+    assert LinkUserToPenaCommand in bus._handlers
 
 
-def test_get_link_user_to_pena_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_pena_labels_buses_build_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import CommandBus, QueryBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
-    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "LinkUserToPenaUseCase", _UseCase)
-
-    use_case = penas_controller.get_link_user_to_pena_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
-    assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
-
-
-def test_get_pena_labels_use_case_builds_expected_dependencies(monkeypatch):
-    captured: dict[str, object] = {}
-
-    class _Repo:
-        def __init__(self, db):
-            captured["db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
 
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLabelsRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "ManagePenaLabelsUseCase", _UseCase)
 
-    use_case = penas_controller.get_pena_labels_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    command_bus = use_case_dependencies.get_pena_labels_command_bus(db="db-session")
+    query_bus = use_case_dependencies.get_pena_labels_query_bus(db="db-session")
+
+    assert isinstance(command_bus, CommandBus)
+    assert isinstance(query_bus, QueryBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    assert UpdatePenaLabelsCommand in command_bus._handlers
+    assert GetPenaLabelsQuery in query_bus._handlers
 
 
-def test_get_pena_accountability_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_pena_accountability_buses_build_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import CommandBus, QueryBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
 
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaAccountabilityRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "ManagePenaAccountabilityUseCase", _UseCase)
 
-    use_case = penas_controller.get_pena_accountability_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    query_bus = penas_controller.get_pena_accountability_query_bus(db="db-session")
+    command_bus = penas_controller.get_pena_accountability_command_bus(db="db-session")
+    assert isinstance(query_bus, QueryBus)
+    assert isinstance(command_bus, CommandBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    assert GetPenaAccountabilityQuery in query_bus._handlers
+    assert UpdateAccountabilitySettingsCommand in command_bus._handlers
+
+
+class _AccountabilityQueryBus:
+    def __init__(self, info, player_guid=None):
+        self._info = info
+        self._player_guid = player_guid
+
+    def ask(self, query):
+        if isinstance(query, GetPenaAccountabilityQuery):
+            return self._info
+        if isinstance(query, GetPlayerGuidForAccountQuery):
+            return self._player_guid
+        raise AssertionError(f"unexpected query {type(query)!r}")
+
+
+class _AccountabilityCommandBus:
+    def __init__(self, info):
+        self._info = info
+        self.last_command = None
+
+    def dispatch(self, command):
+        self.last_command = command
+        return self._info
 
 
 def test_get_pena_accountability_for_admin_returns_full_payload():
-    class _UseCase:
-        def get_for_pena(self, *, pena_guid: str):
-            assert pena_guid == "pena-1"
-            return _accountability_info()
-
-        def get_player_guid_for_account(self, *, account_id: int):
-            raise AssertionError("must not be called for admin")
-
+    bus = _AccountabilityQueryBus(_accountability_info())
     response = penas_controller.get_pena_accountability(
         "pena-1",
         session=_session(user_type="admin", user_id=7),
-        use_case=_UseCase(),
+        query_bus=bus,
     )
 
     assert response.balance_cents == 20_000
@@ -637,20 +621,12 @@ def test_get_pena_accountability_for_user_hides_data_by_transparency():
             "expenses_visibility": "summary",
         }
     )
-
-    class _UseCase:
-        def get_for_pena(self, *, pena_guid: str):
-            assert pena_guid == "pena-1"
-            return info
-
-        def get_player_guid_for_account(self, *, account_id: int):
-            assert account_id == 9
-            return "player-1"
+    bus = _AccountabilityQueryBus(info, player_guid="player-1")
 
     response = penas_controller.get_pena_accountability(
         "pena-1",
         session=_session(user_type="user", user_id=9),
-        use_case=_UseCase(),
+        query_bus=bus,
     )
 
     assert response.balance_cents is None
@@ -663,18 +639,11 @@ def test_get_pena_accountability_for_user_hides_data_by_transparency():
 
 
 def test_get_pena_accountability_maps_not_found_error():
-    class _UseCase:
-        def get_for_pena(self, **_kwargs):
-            raise PenaAccountabilityPenaNotFoundError()
-
-        def get_player_guid_for_account(self, **_kwargs):
-            return None
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.get_pena_accountability(
             "pena-missing",
             session=_session(user_type="admin", user_id=1),
-            use_case=_UseCase(),
+            query_bus=_RaisingQueryBus(PenaAccountabilityPenaNotFoundError()),
         )
 
     assert exc.value.status_code == 404
@@ -690,60 +659,39 @@ def test_get_pena_accountability_maps_not_found_error():
     ],
 )
 def test_update_pena_accountability_maps_errors(error, status_code, detail):
-    class _UseCase:
-        def update_settings_for_admin(self, **_kwargs):
-            raise error
-
     with pytest.raises(HTTPException) as exc:
         penas_controller.update_pena_accountability(
             "pena-1",
             payload=UpdatePenaAccountabilityRequest(balance_cents=0),
             admin_session=_session(user_type="admin", user_id=3),
-            use_case=_UseCase(),
+            command_bus=_RaisingCommandBus(error),
         )
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
 
 
-def test_upsert_member_accountability_success_builds_use_case_payload():
-    class _UseCase:
-        def __init__(self):
-            self.last_call = None
-
-        def upsert_member_account_for_admin(self, **kwargs):
-            self.last_call = kwargs
-            return _accountability_info()
-
-    use_case = _UseCase()
+def test_upsert_member_accountability_success_builds_command():
+    bus = _AccountabilityCommandBus(_accountability_info())
     response = penas_controller.upsert_member_accountability(
         "pena-1",
         "player-1",
         payload=UpsertPenaMemberAccountRequest(debt_cents=400, contribution_cents=100, note="x"),
         admin_session=_session(user_type="admin", user_id=3),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.member_accounts[0].player_guid == "player-1"
-    assert use_case.last_call is not None
-    data = use_case.last_call["data"]
-    assert isinstance(data, PenaAccountabilityMemberAccountUpsert)
-    assert data.player_guid == "player-1"
-    assert data.debt_cents == 400
-    assert data.contribution_cents == 100
-    assert data.note == "x"
+    command = bus.last_command
+    assert isinstance(command, UpsertMemberAccountCommand)
+    assert command.player_guid == "player-1"
+    assert command.debt_cents == 400
+    assert command.contribution_cents == 100
+    assert command.note == "x"
 
 
-def test_create_pena_expense_success_builds_use_case_payload():
-    class _UseCase:
-        def __init__(self):
-            self.last_call = None
-
-        def create_expense_for_admin(self, **kwargs):
-            self.last_call = kwargs
-            return _accountability_info()
-
-    use_case = _UseCase()
+def test_create_pena_expense_success_builds_command():
+    bus = _AccountabilityCommandBus(_accountability_info())
     response = penas_controller.create_pena_expense(
         "pena-1",
         payload=CreatePenaExpenseRequest(
@@ -754,17 +702,17 @@ def test_create_pena_expense_success_builds_use_case_payload():
             note="bus",
         ),
         admin_session=_session(user_type="admin", user_id=3),
-        use_case=use_case,
+        command_bus=bus,
     )
 
     assert response.expenses[0].guid == "expense-1"
-    data = use_case.last_call["data"]
-    assert isinstance(data, PenaAccountabilityExpenseCreate)
-    assert data.title == "Travel"
-    assert data.category == "transport"
-    assert data.amount_cents == 2000
-    assert data.occurred_on == date(2026, 3, 2)
-    assert data.note == "bus"
+    command = bus.last_command
+    assert isinstance(command, CreateExpenseCommand)
+    assert command.title == "Travel"
+    assert command.category == "transport"
+    assert command.amount_cents == 2000
+    assert command.occurred_on == date(2026, 3, 2)
+    assert command.note == "bus"
 
 
 @pytest.mark.parametrize(
@@ -786,16 +734,7 @@ def test_create_pena_expense_success_builds_use_case_payload():
     ],
 )
 def test_accountability_mutations_map_not_found_errors(fn_name, error, status_code, detail):
-    class _UseCase:
-        def upsert_member_account_for_admin(self, **_kwargs):
-            raise error
-
-        def remove_member_account_for_admin(self, **_kwargs):
-            raise error
-
-        def remove_expense_for_admin(self, **_kwargs):
-            raise error
-
+    bus = _RaisingCommandBus(error)
     with pytest.raises(HTTPException) as exc:
         if fn_name == "upsert_member_accountability":
             penas_controller.upsert_member_accountability(
@@ -803,21 +742,21 @@ def test_accountability_mutations_map_not_found_errors(fn_name, error, status_co
                 "player-1",
                 payload=UpsertPenaMemberAccountRequest(debt_cents=0, contribution_cents=0),
                 admin_session=_session(user_type="admin", user_id=1),
-                use_case=_UseCase(),
+                command_bus=bus,
             )
         elif fn_name == "delete_member_accountability":
             penas_controller.delete_member_accountability(
                 "pena-1",
                 "player-1",
                 admin_session=_session(user_type="admin", user_id=1),
-                use_case=_UseCase(),
+                command_bus=bus,
             )
         else:
             penas_controller.delete_pena_expense(
                 "pena-1",
                 "expense-1",
                 admin_session=_session(user_type="admin", user_id=1),
-                use_case=_UseCase(),
+                command_bus=bus,
             )
 
     assert exc.value.status_code == status_code

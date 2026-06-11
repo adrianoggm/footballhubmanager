@@ -3,17 +3,20 @@ from api.interface.controller.v1 import players_controller
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
 from auth.dependencies import require_user
 from auth.session import SessionData
-from fastapi import HTTPException
-from persistence.application.use_cases.get_player_profile_usecase import PenaInfo, PlayerProfile
-from persistence.application.use_cases.update_player_profile_usecase import (
-    InvalidNationalityError as PlayerInvalidNationalityError,
+from core.application.commands.player_profile_commands import (
+    UpdatePlayerProfileByAccountIdCommand,
 )
-from persistence.application.use_cases.update_player_profile_usecase import (
+from core.application.models import PenaInfo, PlayerProfile
+from core.application.queries.player_profile_queries import (
+    GetPlayerProfileByAccountIdQuery,
+    GetPlayerProfileByGuidQuery,
+)
+from core.domain.errors import (
+    InvalidPlayerNationalityError,
     InvalidPlayerUpdateDataError,
+    InvalidProfileImageError,
 )
-from persistence.application.use_cases.update_player_profile_usecase import (
-    InvalidProfileImageError as PlayerInvalidProfileImageError,
-)
+from fastapi import HTTPException
 
 
 def _session(*, user_type: str, user_id: int = 5) -> SessionData:
@@ -58,32 +61,32 @@ def test_get_me_rejects_non_user_session():
 
 
 def test_get_me_returns_profile_for_user():
-    class _UseCase:
+    class _QueryBus:
         def __init__(self):
-            self.last_account_id: int | None = None
+            self.last_query = None
 
-        def execute_by_account_id(self, account_id: int):
-            self.last_account_id = account_id
+        def ask(self, query):
+            self.last_query = query
             return _profile(guid="player-20")
 
-    use_case = _UseCase()
+    query_bus = _QueryBus()
     response = players_controller.get_me(
         session=_session(user_type="user", user_id=20),
-        use_case=use_case,
+        query_bus=query_bus,
     )
 
-    assert use_case.last_account_id == 20
+    assert query_bus.last_query == GetPlayerProfileByAccountIdQuery(account_id=20)
     assert response.guid == "player-20"
     assert response.name == "Ana"
 
 
 def test_get_me_returns_404_when_profile_missing():
-    class _UseCase:
-        def execute_by_account_id(self, _account_id: int):
+    class _QueryBus:
+        def ask(self, _query):
             return None
 
     with pytest.raises(HTTPException) as exc:
-        players_controller.get_me(session=_session(user_type="user"), use_case=_UseCase())
+        players_controller.get_me(session=_session(user_type="user"), query_bus=_QueryBus())
     assert exc.value.status_code == 404
     assert exc.value.detail == "Player not found"
 
@@ -95,23 +98,16 @@ def test_update_me_rejects_non_user_session():
     assert exc.value.detail == "User access required"
 
 
-def test_update_me_success_calls_use_case_with_payload_fields():
-    class _UseCase:
+def test_update_me_success_dispatches_command_with_payload_fields():
+    class _CommandBus:
         def __init__(self):
-            self.last_call: dict | None = None
+            self.last_command = None
 
-        def execute_by_account_id(self, account_id: int, update):
-            self.last_call = {
-                "account_id": account_id,
-                "name": update.name,
-                "surname1": update.surname1,
-                "surname2": update.surname2,
-                "nationality": update.nationality,
-                "image_url": update.image_url,
-            }
+        def dispatch(self, command):
+            self.last_command = command
             return _profile(guid="player-updated")
 
-    use_case = _UseCase()
+    command_bus = _CommandBus()
     response = players_controller.update_me(
         PlayerUpdateRequest(
             name="Nora",
@@ -121,79 +117,85 @@ def test_update_me_success_calls_use_case_with_payload_fields():
             image_url="data:image/jpeg;base64,QQ==",
         ),
         session=_session(user_type="user", user_id=31),
-        use_case=use_case,
+        command_bus=command_bus,
     )
 
+    assert command_bus.last_command == UpdatePlayerProfileByAccountIdCommand(
+        account_id=31,
+        name="Nora",
+        surname1="Diaz",
+        surname2="Lopez",
+        nationality="ES",
+        image_url="data:image/jpeg;base64,QQ==",
+    )
     assert response.guid == "player-updated"
-    assert use_case.last_call == {
-        "account_id": 31,
-        "name": "Nora",
-        "surname1": "Diaz",
-        "surname2": "Lopez",
-        "nationality": "ES",
-        "image_url": "data:image/jpeg;base64,QQ==",
-    }
 
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
     [
-        (PlayerInvalidNationalityError(), 400, "Invalid nationality"),
-        (PlayerInvalidProfileImageError(), 400, "Invalid profile image"),
+        (InvalidPlayerNationalityError(), 400, "Invalid nationality"),
+        (InvalidProfileImageError(), 400, "Invalid profile image"),
         (InvalidPlayerUpdateDataError(), 400, "Invalid player update data"),
     ],
 )
 def test_update_me_maps_validation_errors(error, status_code, detail):
-    class _UseCase:
-        def execute_by_account_id(self, _account_id: int, _update):
+    class _CommandBus:
+        def dispatch(self, _command):
             raise error
 
     with pytest.raises(HTTPException) as exc:
         players_controller.update_me(
             PlayerUpdateRequest(name="Nora"),
             session=_session(user_type="user"),
-            use_case=_UseCase(),
+            command_bus=_CommandBus(),
         )
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
 
 
-def test_update_me_returns_404_when_use_case_returns_none():
-    class _UseCase:
-        def execute_by_account_id(self, _account_id: int, _update):
+def test_update_me_returns_404_when_command_bus_returns_none():
+    class _CommandBus:
+        def dispatch(self, _command):
             return None
 
     with pytest.raises(HTTPException) as exc:
         players_controller.update_me(
             PlayerUpdateRequest(name="Nora"),
             session=_session(user_type="user"),
-            use_case=_UseCase(),
+            command_bus=_CommandBus(),
         )
     assert exc.value.status_code == 404
     assert exc.value.detail == "Player not found"
 
 
 def test_get_player_returns_profile():
-    class _UseCase:
-        def execute_by_guid(self, player_guid: str):
-            return _profile(guid=player_guid)
+    class _QueryBus:
+        def __init__(self):
+            self.last_query = None
 
+        def ask(self, query):
+            self.last_query = query
+            return _profile(guid="player-7")
+
+    query_bus = _QueryBus()
     response = players_controller.get_player(
         "player-7",
         _session=object(),
-        use_case=_UseCase(),
+        query_bus=query_bus,
     )
 
+    assert query_bus.last_query == GetPlayerProfileByGuidQuery(player_guid="player-7")
     assert response.guid == "player-7"
     assert response.nationality == "ES"
 
 
 def test_get_player_returns_404_when_profile_is_missing():
-    class _UseCase:
-        def execute_by_guid(self, _player_guid: str):
+    class _QueryBus:
+        def ask(self, _query):
             return None
 
     with pytest.raises(HTTPException) as exc:
-        players_controller.get_player("missing", _session=object(), use_case=_UseCase())
+        players_controller.get_player("missing", _session=object(), query_bus=_QueryBus())
     assert exc.value.status_code == 404
     assert exc.value.detail == "Player not found"

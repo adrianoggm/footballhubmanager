@@ -1,17 +1,6 @@
-from persistence.application.ports.pena_profile_port import (
-    InvalidPenaProfileImageError,
-    PenaNotFoundError,
-    PenaNotManagedByAdminError,
-)
-from persistence.application.ports.pena_query_port import (
-    PenaQueryPort,
-    PenasPageResult,
-    PenaSummary,
-)
-from persistence.application.use_cases.profile_image_utils import (
-    is_supported_profile_image_data_url,
-)
-from persistence.domain.entity import Pena, PenaPlayer, Player
+from core.application.models import PenasPageResult, PenaSummary
+from core.application.ports.pena_query_port import PenaQueryPort
+from persistence.infrastructure.entity import Pena, PenaPlayer, Player
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -84,17 +73,4 @@ class SqlAlchemyPenaQueryRepository(PenaQueryPort):
         pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
         if not pena:
             return None
-        return PenaSummary(guid=pena.guid, name=pena.name, image_url=pena.image_url)
-
-    def update_for_admin(self, *, pena_guid: str, admin_id: int, image_url: str | None):
-        pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
-        if pena is None:
-            raise PenaNotFoundError()
-        if pena.id_admin != admin_id:
-            raise PenaNotManagedByAdminError()
-        if image_url and not is_supported_profile_image_data_url(image_url):
-            raise InvalidPenaProfileImageError()
-        pena.image_url = image_url or None
-        self.session.commit()
-        self.session.refresh(pena)
         return PenaSummary(guid=pena.guid, name=pena.name, image_url=pena.image_url)

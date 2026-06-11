@@ -1,6 +1,6 @@
 import pytest
-from auth.application.models import AuthAccount
 from auth.application.use_cases import login as login_module
+from auth.domain.models.auth_account import AuthAccount
 
 
 class _FakeRepo:

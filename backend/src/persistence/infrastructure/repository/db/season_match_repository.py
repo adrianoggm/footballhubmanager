@@ -1,7 +1,8 @@
 import time
 from datetime import date
 
-from persistence.application.ports.season_competition_port import (
+from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
     MatchClockAlreadyStartedError,
     MatchClockNotRunningError,
@@ -25,11 +26,14 @@ from persistence.application.ports.season_competition_port import (
     PlayerNotFoundError,
     SamePlayerMatchError,
     SeasonNotFoundError,
-    SeasonPlayerNotFoundError,
 )
-from persistence.application.ports.season_match_port import SeasonMatchPort
-from persistence.application.update_policies import FieldUpdate, StandingsUpdatePolicy
-from persistence.domain.entity import (
+from core.application.ports.season_match_port import SeasonMatchPort
+from core.application.services import (
+    SeasonMatchLineupUpdateMode,
+    SeasonMatchReportService,
+    SeasonMatchReportState,
+)
+from persistence.infrastructure.entity import (
     FootballMatch,
     FootballMatchEvent,
     Pena,
@@ -45,8 +49,13 @@ from sqlalchemy.orm import Session
 
 
 class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
-    def __init__(self, session: Session):
+    def __init__(
+        self,
+        session: Session,
+        report_service: SeasonMatchReportService | None = None,
+    ):
         self.session = session
+        self.report_service = report_service or SeasonMatchReportService()
 
     def create_match_for_admin(
         self,
@@ -160,11 +169,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise PenaNotManagedByAdminError()
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
-        bundle = self._get_match_teams(
-            season_id=season.id,
-            match_guid=match_guid,
-            for_update=True,
-        )
+        bundle = self._get_locked_match_teams(season_id=season.id, match_guid=match_guid)
         if not bundle:
             self.session.rollback()
             raise MatchNotFoundError()
@@ -232,8 +237,8 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             ),
         )
 
-        self._add_team_players(team_id=home_team.id, players=home_players)
-        self._add_team_players(team_id=away_team.id, players=away_players)
+        self._add_open_team_players(team_id=home_team.id, players=home_players)
+        self._add_open_team_players(team_id=away_team.id, players=away_players)
 
         self.session.commit()
         return self._build_match_detail_result(
@@ -258,26 +263,24 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             home_player_guids=home_player_guids,
             away_player_guids=away_player_guids,
         )
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
-        home_team_players, away_team_players = self._load_required_team_players(
+        home_team_players, away_team_players = self._load_locked_required_team_players(
             home_team_id=home_team.id,
             away_team_id=away_team.id,
-            for_update=True,
         )
-        was_closed = self._match_status(football_match) == "closed"
-        self._remove_match_standings(
-            football_match=football_match,
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
+        report_state = self._match_report_state(football_match)
+        if self.report_service.should_remove_closed_standings(report_state):
+            self._remove_closed_match_standings(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
 
         home_players = self._resolve_match_players(
             pena_id=pena.id,
@@ -290,23 +293,33 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             player_guids=cleaned_away,
         )
 
-        self._replace_team_players(
-            existing_players=home_team_players + away_team_players,
-            home_team_id=home_team.id,
-            away_team_id=away_team.id,
-            home_players=home_players,
-            away_players=away_players,
-            closed_match=was_closed,
-        )
+        if (
+            self.report_service.lineup_update_mode(report_state)
+            is SeasonMatchLineupUpdateMode.CLOSED_MATCH
+        ):
+            self._replace_team_players_for_closed_match(
+                existing_players=home_team_players + away_team_players,
+                home_team_id=home_team.id,
+                away_team_id=away_team.id,
+                home_players=home_players,
+                away_players=away_players,
+            )
+        else:
+            self._replace_team_players_for_open_match(
+                existing_players=home_team_players + away_team_players,
+                home_team_id=home_team.id,
+                away_team_id=away_team.id,
+                home_players=home_players,
+                away_players=away_players,
+            )
         football_match.lineup_change_count = (
             int(getattr(football_match, "lineup_change_count", 0) or 0) + 1
         )
         football_match.lineup_updated_at_epoch = self._now_epoch()
-        if was_closed:
-            home_team_players, away_team_players = self._load_required_team_players(
+        if self.report_service.should_reclose_after_lineup_update(report_state):
+            home_team_players, away_team_players = self._load_locked_required_team_players(
                 home_team_id=home_team.id,
                 away_team_id=away_team.id,
-                for_update=True,
             )
             self._close_match_report(
                 football_match=football_match,
@@ -333,20 +346,19 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         match_guid: str,
         admin_id: int,
     ) -> MatchDetailResult:
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
-        if self._match_status(football_match) == "closed":
+        if self._match_report_state(football_match) is SeasonMatchReportState.CLOSED:
             self.session.rollback()
             raise MatchReportClosedError()
         if football_match.started_at_epoch is not None:
             self.session.rollback()
             raise MatchClockAlreadyStartedError()
-        if self._match_has_events(football_match.id, for_update=True):
+        if self._has_locked_match_events(football_match.id):
             self.session.rollback()
             raise InvalidMatchDataError()
 
@@ -369,30 +381,30 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         match_guid: str,
         admin_id: int,
     ) -> MatchDetailResult:
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
         if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
             self.session.rollback()
             raise MatchClockNotRunningError()
 
-        home_team_players, away_team_players = self._load_required_team_players(
+        home_team_players, away_team_players = self._load_locked_required_team_players(
             home_team_id=home_team.id,
             away_team_id=away_team.id,
-            for_update=True,
         )
-        self._remove_match_standings(
-            football_match=football_match,
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
-        events = self._list_match_events(match_id=football_match.id, for_update=True)
+        if self.report_service.should_remove_closed_standings(
+            self._match_report_state(football_match)
+        ):
+            self._remove_closed_match_standings(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
+        events = self._list_locked_match_events(match_id=football_match.id)
         if events:
             self._apply_tracked_events_to_team_players(
                 home_team_players=home_team_players,
@@ -426,20 +438,18 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         admin_id: int,
         event: MatchEventCreateData,
     ) -> MatchDetailResult:
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
-        if self._match_status(football_match) == "closed":
+        if self._match_report_state(football_match) is SeasonMatchReportState.CLOSED:
             self.session.rollback()
             raise MatchReportClosedError()
-        home_team_players, away_team_players = self._load_required_team_players(
+        home_team_players, away_team_players = self._load_locked_required_team_players(
             home_team_id=home_team.id,
             away_team_id=away_team.id,
-            for_update=True,
         )
         roster_by_team = {
             "home": self._team_player_guid_map(home_team_players),
@@ -492,19 +502,17 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         event_guid: str,
         admin_id: int,
     ) -> MatchDetailResult:
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
-        event = self._get_match_event(
+        event = self._find_locked_match_event(
             match_id=football_match.id,
             event_guid=event_guid,
-            for_update=True,
         )
-        if self._match_status(football_match) == "closed":
+        if self._match_report_state(football_match) is SeasonMatchReportState.CLOSED:
             self.session.rollback()
             raise MatchReportClosedError()
         if not event:
@@ -537,17 +545,15 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise InvalidMatchDataError()
 
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
-        home_team_players, away_team_players = self._load_required_team_players(
+        home_team_players, away_team_players = self._load_locked_required_team_players(
             home_team_id=home_team.id,
             away_team_id=away_team.id,
-            for_update=True,
         )
 
         home_roster = self._team_player_guid_map(home_team_players)
@@ -559,21 +565,14 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise MatchStatsMismatchError()
 
-        old_home_score = sum(row.goals for row in home_team_players)
-        old_away_score = sum(row.goals for row in away_team_players)
-        if self._match_status(football_match) == "closed":
-            home_season_players, away_season_players = self._load_match_season_players(
+        if self.report_service.should_remove_closed_standings(
+            self._match_report_state(football_match)
+        ):
+            self._remove_closed_match_standings(
                 pena_id=pena.id,
                 season_id=season.id,
                 home_team_players=home_team_players,
                 away_team_players=away_team_players,
-            )
-            self._apply_team_outcome_delta(
-                home_team_stats=home_season_players,
-                away_team_stats=away_season_players,
-                home_score=old_home_score,
-                away_score=old_away_score,
-                delta=-1,
             )
 
         self._apply_team_player_stats(home_roster, home_stats_map)
@@ -638,7 +637,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             for football_match in matches
             for team_id in (football_match.id_home_team, football_match.id_away_team)
         }
-        teams_by_id = self._get_teams_by_ids(team_ids, for_update=False)
+        teams_by_id = self._get_teams_by_ids(team_ids)
         team_stats = self._get_team_match_summary_stats(team_ids)
         current_epoch = self._now_epoch()
 
@@ -692,11 +691,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> MatchDetailResult:
         pena = self._get_pena(pena_guid)
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
-        bundle = self._get_match_teams(
-            season_id=season.id,
-            match_guid=match_guid,
-            for_update=False,
-        )
+        bundle = self._get_match_teams(season_id=season.id, match_guid=match_guid)
         if not bundle:
             self.session.rollback()
             raise MatchNotFoundError()
@@ -717,25 +712,25 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         match_guid: str,
         admin_id: int,
     ) -> None:
-        pena, season, football_match, home_team, away_team = self._get_admin_match_bundle(
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
             pena_guid=pena_guid,
             season_guid=season_guid,
             match_guid=match_guid,
             admin_id=admin_id,
-            for_update=True,
         )
-        home_team_players, away_team_players = self._load_required_team_players(
+        home_team_players, away_team_players = self._load_locked_required_team_players(
             home_team_id=home_team.id,
             away_team_id=away_team.id,
-            for_update=True,
         )
-        self._remove_match_standings(
-            football_match=football_match,
-            pena_id=pena.id,
-            season_id=season.id,
-            home_team_players=home_team_players,
-            away_team_players=away_team_players,
-        )
+        if self.report_service.should_remove_closed_standings(
+            self._match_report_state(football_match)
+        ):
+            self._remove_closed_match_standings(
+                pena_id=pena.id,
+                season_id=season.id,
+                home_team_players=home_team_players,
+                away_team_players=away_team_players,
+            )
 
         self.session.delete(football_match)
         self.session.flush()
@@ -768,50 +763,79 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             raise PlayerNotFoundError()
         return player
 
-    def _get_season_player(
+    def _find_season_player(
         self,
         *,
         pena_id: int,
         season_id: int,
         player_id: int,
-        for_update: bool,
-        allow_missing: bool = False,
     ) -> SeasonPlayer | None:
         stmt = select(SeasonPlayer).where(
             SeasonPlayer.id_pena == pena_id,
             SeasonPlayer.id_season == season_id,
             SeasonPlayer.id_player == player_id,
         )
-        if for_update:
-            stmt = stmt.with_for_update()
-        row = self.session.execute(stmt).scalar_one_or_none()
-        if row:
-            return row
-        if allow_missing:
-            return None
-        self.session.rollback()
-        raise SeasonPlayerNotFoundError()
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def _find_locked_season_player(
+        self,
+        *,
+        pena_id: int,
+        season_id: int,
+        player_id: int,
+    ) -> SeasonPlayer | None:
+        stmt = (
+            select(SeasonPlayer)
+            .where(
+                SeasonPlayer.id_pena == pena_id,
+                SeasonPlayer.id_season == season_id,
+                SeasonPlayer.id_player == player_id,
+            )
+            .with_for_update()
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
 
     def _get_match_teams(
         self,
         *,
         season_id: int,
         match_guid: str,
-        for_update: bool,
     ) -> tuple[FootballMatch, Team, Team] | None:
         stmt = select(FootballMatch).where(
             FootballMatch.guid == match_guid,
             FootballMatch.id_season == season_id,
         )
-        if for_update:
-            stmt = stmt.with_for_update()
         football_match = self.session.execute(stmt).scalar_one_or_none()
         if not football_match:
             return None
 
         teams_by_id = self._get_teams_by_ids(
-            {football_match.id_home_team, football_match.id_away_team},
-            for_update=for_update,
+            {football_match.id_home_team, football_match.id_away_team}
+        )
+        home_team = teams_by_id[football_match.id_home_team]
+        away_team = teams_by_id[football_match.id_away_team]
+        return football_match, home_team, away_team
+
+    def _get_locked_match_teams(
+        self,
+        *,
+        season_id: int,
+        match_guid: str,
+    ) -> tuple[FootballMatch, Team, Team] | None:
+        stmt = (
+            select(FootballMatch)
+            .where(
+                FootballMatch.guid == match_guid,
+                FootballMatch.id_season == season_id,
+            )
+            .with_for_update()
+        )
+        football_match = self.session.execute(stmt).scalar_one_or_none()
+        if not football_match:
+            return None
+
+        teams_by_id = self._get_locked_teams_by_ids(
+            {football_match.id_home_team, football_match.id_away_team}
         )
         home_team = teams_by_id[football_match.id_home_team]
         away_team = teams_by_id[football_match.id_away_team]
@@ -831,40 +855,34 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         season = self._get_season(pena_id=pena.id, season_guid=season_guid)
         return pena, season
 
-    def _get_admin_match_bundle(
+    def _get_locked_admin_match_bundle(
         self,
         *,
         pena_guid: str,
         season_guid: str,
         match_guid: str,
         admin_id: int,
-        for_update: bool,
     ) -> tuple[Pena, Season, FootballMatch, Team, Team]:
         pena, season = self._get_admin_season(
             pena_guid=pena_guid,
             season_guid=season_guid,
             admin_id=admin_id,
         )
-        bundle = self._get_match_teams(
-            season_id=season.id,
-            match_guid=match_guid,
-            for_update=for_update,
-        )
+        bundle = self._get_locked_match_teams(season_id=season.id, match_guid=match_guid)
         if not bundle:
             self.session.rollback()
             raise MatchNotFoundError()
         football_match, home_team, away_team = bundle
         return pena, season, football_match, home_team, away_team
 
-    def _load_required_team_players(
+    def _load_locked_required_team_players(
         self,
         *,
         home_team_id: int,
         away_team_id: int,
-        for_update: bool,
     ) -> tuple[list[TeamPlayer], list[TeamPlayer]]:
-        home_team_players = self._list_team_players(home_team_id, for_update=for_update)
-        away_team_players = self._list_team_players(away_team_id, for_update=for_update)
+        home_team_players = self._list_locked_team_players(home_team_id)
+        away_team_players = self._list_locked_team_players(away_team_id)
         if not home_team_players or not away_team_players:
             self.session.rollback()
             raise MatchNotFoundError()
@@ -924,21 +942,26 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         away_team.id_match = football_match.id
         return football_match, home_team, away_team
 
-    def _list_team_players(self, team_id: int, *, for_update: bool) -> list[TeamPlayer]:
+    def _list_team_players(self, team_id: int) -> list[TeamPlayer]:
         stmt = (
             select(TeamPlayer)
             .where(TeamPlayer.id_team == team_id)
             .order_by(TeamPlayer.id_player.asc())
         )
-        if for_update:
-            stmt = stmt.with_for_update()
+        return list(self.session.execute(stmt).scalars())
+
+    def _list_locked_team_players(self, team_id: int) -> list[TeamPlayer]:
+        stmt = (
+            select(TeamPlayer)
+            .where(TeamPlayer.id_team == team_id)
+            .order_by(TeamPlayer.id_player.asc())
+            .with_for_update()
+        )
         return list(self.session.execute(stmt).scalars())
 
     def _list_team_players_by_team_ids(
         self,
         team_ids: set[int],
-        *,
-        for_update: bool,
     ) -> dict[int, list[TeamPlayer]]:
         if not team_ids:
             return {}
@@ -948,21 +971,29 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             .where(TeamPlayer.id_team.in_(team_ids))
             .order_by(TeamPlayer.id_team.asc(), TeamPlayer.id_player.asc())
         )
-        if for_update:
-            stmt = stmt.with_for_update()
 
         grouped = {team_id: [] for team_id in team_ids}
         for row in self.session.execute(stmt).scalars():
             grouped[row.id_team].append(row)
         return grouped
 
-    def _get_teams_by_ids(self, team_ids: set[int], *, for_update: bool) -> dict[int, Team]:
+    def _get_teams_by_ids(self, team_ids: set[int]) -> dict[int, Team]:
         if not team_ids:
             return {}
 
         stmt = select(Team).where(Team.id.in_(team_ids))
-        if for_update:
-            stmt = stmt.with_for_update()
+        teams = list(self.session.execute(stmt).scalars())
+        teams_by_id = {team.id: team for team in teams}
+        if len(teams_by_id) != len(team_ids):
+            self.session.rollback()
+            raise MatchNotFoundError()
+        return teams_by_id
+
+    def _get_locked_teams_by_ids(self, team_ids: set[int]) -> dict[int, Team]:
+        if not team_ids:
+            return {}
+
+        stmt = select(Team).where(Team.id.in_(team_ids)).with_for_update()
         teams = list(self.session.execute(stmt).scalars())
         teams_by_id = {team.id: team for team in teams}
         if len(teams_by_id) != len(team_ids):
@@ -1001,12 +1032,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         players: list[Player] = []
         for player_guid in player_guids:
             player = self._get_player(player_guid)
-            season_player = self._get_season_player(
+            season_player = self._find_season_player(
                 pena_id=pena_id,
                 season_id=season_id,
                 player_id=player.id,
-                for_update=False,
-                allow_missing=True,
             )
             if not season_player:
                 self.session.rollback()
@@ -1022,29 +1051,46 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         players: list[Player],
     ) -> None:
         for player in players:
-            season_player = self._get_season_player(
+            season_player = self._find_season_player(
                 pena_id=pena_id,
                 season_id=season_id,
                 player_id=player.id,
-                for_update=False,
-                allow_missing=True,
             )
             if not season_player:
                 self.session.rollback()
                 raise MatchPlayersNotInSeasonError()
 
-    def _add_team_players(
+    def _add_open_team_players(
         self,
         *,
         team_id: int,
         players: list[Player],
         preserved_by_player_id: dict[int, dict[str, float | int]] | None = None,
-        closed_match: bool = False,
     ) -> None:
         for player in players:
             preserved = (preserved_by_player_id or {}).get(player.id, {})
-            rating = float(preserved.get("rating", 0.0 if closed_match else -1.0))
-            if closed_match and rating < 0:
+            self.session.add(
+                TeamPlayer(
+                    id_team=team_id,
+                    id_player=player.id,
+                    goals=int(preserved.get("goals", 0)),
+                    assists=int(preserved.get("assists", 0)),
+                    rating=float(preserved.get("rating", -1.0)),
+                    saves=int(preserved.get("saves", 0)),
+                )
+            )
+
+    def _add_closed_team_players(
+        self,
+        *,
+        team_id: int,
+        players: list[Player],
+        preserved_by_player_id: dict[int, dict[str, float | int]] | None = None,
+    ) -> None:
+        for player in players:
+            preserved = (preserved_by_player_id or {}).get(player.id, {})
+            rating = float(preserved.get("rating", 0.0))
+            if rating < 0:
                 rating = 0.0
             self.session.add(
                 TeamPlayer(
@@ -1108,40 +1154,54 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     def _now_epoch() -> int:
         return int(time.time())
 
-    def _match_has_events(self, match_id: int, *, for_update: bool) -> bool:
-        stmt = select(FootballMatchEvent.id).where(FootballMatchEvent.id_match == match_id).limit(1)
-        if for_update:
-            stmt = stmt.with_for_update()
+    def _has_locked_match_events(self, match_id: int) -> bool:
+        stmt = (
+            select(FootballMatchEvent.id)
+            .where(FootballMatchEvent.id_match == match_id)
+            .limit(1)
+            .with_for_update()
+        )
         return self.session.execute(stmt).scalar_one_or_none() is not None
 
-    def _get_match_event(
+    def _find_locked_match_event(
         self,
         *,
         match_id: int,
         event_guid: str,
-        for_update: bool,
     ) -> FootballMatchEvent | None:
-        stmt = select(FootballMatchEvent).where(
-            FootballMatchEvent.id_match == match_id,
-            FootballMatchEvent.guid == event_guid,
+        stmt = (
+            select(FootballMatchEvent)
+            .where(
+                FootballMatchEvent.id_match == match_id,
+                FootballMatchEvent.guid == event_guid,
+            )
+            .with_for_update()
         )
-        if for_update:
-            stmt = stmt.with_for_update()
         return self.session.execute(stmt).scalar_one_or_none()
 
     def _list_match_events(
         self,
         *,
         match_id: int,
-        for_update: bool,
     ) -> list[FootballMatchEvent]:
         stmt = (
             select(FootballMatchEvent)
             .where(FootballMatchEvent.id_match == match_id)
             .order_by(FootballMatchEvent.elapsed_seconds.asc(), FootballMatchEvent.id.asc())
         )
-        if for_update:
-            stmt = stmt.with_for_update()
+        return list(self.session.execute(stmt).scalars())
+
+    def _list_locked_match_events(
+        self,
+        *,
+        match_id: int,
+    ) -> list[FootballMatchEvent]:
+        stmt = (
+            select(FootballMatchEvent)
+            .where(FootballMatchEvent.id_match == match_id)
+            .order_by(FootballMatchEvent.elapsed_seconds.asc(), FootballMatchEvent.id.asc())
+            .with_for_update()
+        )
         return list(self.session.execute(stmt).scalars())
 
     def _resolve_event_player(
@@ -1189,7 +1249,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             raise MatchClockNotRunningError()
         return max(self._now_epoch() - int(football_match.started_at_epoch), 0)
 
-    def _team_season_players(
+    def _load_locked_team_season_players(
         self,
         *,
         pena_id: int,
@@ -1198,12 +1258,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> list[SeasonPlayer]:
         rows: list[SeasonPlayer] = []
         for team_player in team_players:
-            season_player = self._get_season_player(
+            season_player = self._find_locked_season_player(
                 pena_id=pena_id,
                 season_id=season_id,
                 player_id=team_player.id_player,
-                for_update=True,
-                allow_missing=True,
             )
             if not season_player:
                 self.session.rollback()
@@ -1211,7 +1269,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             rows.append(season_player)
         return rows
 
-    def _load_match_season_players(
+    def _load_locked_match_season_players(
         self,
         *,
         pena_id: int,
@@ -1220,30 +1278,27 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         away_team_players: list[TeamPlayer],
     ) -> tuple[list[SeasonPlayer], list[SeasonPlayer]]:
         return (
-            self._team_season_players(
+            self._load_locked_team_season_players(
                 pena_id=pena_id,
                 season_id=season_id,
                 team_players=home_team_players,
             ),
-            self._team_season_players(
+            self._load_locked_team_season_players(
                 pena_id=pena_id,
                 season_id=season_id,
                 team_players=away_team_players,
             ),
         )
 
-    def _remove_match_standings(
+    def _remove_closed_match_standings(
         self,
         *,
-        football_match: FootballMatch,
         pena_id: int,
         season_id: int,
         home_team_players: list[TeamPlayer],
         away_team_players: list[TeamPlayer],
     ) -> None:
-        if self._match_status(football_match) != "closed":
-            return
-        home_season_players, away_season_players = self._load_match_season_players(
+        home_season_players, away_season_players = self._load_locked_match_season_players(
             pena_id=pena_id,
             season_id=season_id,
             home_team_players=home_team_players,
@@ -1257,17 +1312,11 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             delta=-1,
         )
 
-    def _replace_team_players(
-        self,
-        *,
+    @staticmethod
+    def _build_preserved_team_player_stats(
         existing_players: list[TeamPlayer],
-        home_team_id: int,
-        away_team_id: int,
-        home_players: list[Player],
-        away_players: list[Player],
-        closed_match: bool,
-    ) -> None:
-        preserved_by_player_id = {
+    ) -> dict[int, dict[str, float | int]]:
+        return {
             int(team_player.id_player): {
                 "goals": int(team_player.goals),
                 "assists": int(team_player.assists),
@@ -1276,23 +1325,57 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             }
             for team_player in existing_players
         }
+
+    def _replace_team_players_for_open_match(
+        self,
+        *,
+        existing_players: list[TeamPlayer],
+        home_team_id: int,
+        away_team_id: int,
+        home_players: list[Player],
+        away_players: list[Player],
+    ) -> None:
+        preserved_by_player_id = self._build_preserved_team_player_stats(existing_players)
         for team_player in existing_players:
             self.session.delete(team_player)
         self.session.flush()
-        self._add_team_players(
+        self._add_open_team_players(
             team_id=home_team_id,
             players=home_players,
             preserved_by_player_id=preserved_by_player_id,
-            closed_match=closed_match,
         )
-        self._add_team_players(
+        self._add_open_team_players(
             team_id=away_team_id,
             players=away_players,
             preserved_by_player_id=preserved_by_player_id,
-            closed_match=closed_match,
         )
         # Session autoflush is disabled, so explicit flush is required before
         # the closed-match recalculation path reads the updated rosters again.
+        self.session.flush()
+
+    def _replace_team_players_for_closed_match(
+        self,
+        *,
+        existing_players: list[TeamPlayer],
+        home_team_id: int,
+        away_team_id: int,
+        home_players: list[Player],
+        away_players: list[Player],
+    ) -> None:
+        preserved_by_player_id = self._build_preserved_team_player_stats(existing_players)
+        for team_player in existing_players:
+            self.session.delete(team_player)
+        self.session.flush()
+        self._add_closed_team_players(
+            team_id=home_team_id,
+            players=home_players,
+            preserved_by_player_id=preserved_by_player_id,
+        )
+        self._add_closed_team_players(
+            team_id=away_team_id,
+            players=away_players,
+            preserved_by_player_id=preserved_by_player_id,
+        )
         self.session.flush()
 
     @staticmethod
@@ -1324,12 +1407,14 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             if float(team_player.rating) < 0:
                 team_player.rating = 0.0
 
-    @staticmethod
-    def _match_status(football_match: FootballMatch) -> str:
-        status = str(getattr(football_match, "status", "") or "").strip().lower()
-        if status in {"open", "closed"}:
-            return status
-        return "closed" if getattr(football_match, "ended_at_epoch", None) is not None else "open"
+    def _match_status(self, football_match: FootballMatch) -> str:
+        return self._match_report_state(football_match).value
+
+    def _match_report_state(self, football_match: FootballMatch) -> SeasonMatchReportState:
+        return self.report_service.resolve_state(
+            persisted_status=getattr(football_match, "status", None),
+            ended_at_epoch=getattr(football_match, "ended_at_epoch", None),
+        )
 
     @staticmethod
     def _normalize_team_player_ratings(team_players: list[TeamPlayer]) -> None:
@@ -1347,7 +1432,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         away_team_players: list[TeamPlayer],
     ) -> None:
         self._normalize_team_player_ratings(home_team_players + away_team_players)
-        home_season_players, away_season_players = self._load_match_season_players(
+        home_season_players, away_season_players = self._load_locked_match_season_players(
             pena_id=pena_id,
             season_id=season_id,
             home_team_players=home_team_players,
@@ -1439,11 +1524,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> MatchDetailResult:
         team_players_by_id = self._list_team_players_by_team_ids(
             {home_team.id, away_team.id},
-            for_update=False,
         )
         home_players = team_players_by_id.get(home_team.id, [])
         away_players = team_players_by_id.get(away_team.id, [])
-        events = self._list_match_events(match_id=football_match.id, for_update=False)
+        events = self._list_match_events(match_id=football_match.id)
         player_ids = {team_player.id_player for team_player in home_players + away_players}.union(
             {
                 player_id
