@@ -129,3 +129,38 @@ class PenaAccountabilityMemberNotFoundError(DomainError):
 
 class PenaAccountabilityExpenseNotFoundError(DomainError):
     code = "pena_accountability_expense_not_found"
+
+
+# --- Pena membership ---
+
+
+class PenaMembershipPenaNotFoundError(DomainError):
+    code = "pena_membership_pena_not_found"
+
+
+class PenaMembershipAccessDeniedError(DomainError):
+    code = "pena_membership_access_denied"
+
+
+class PenaMembershipNotFoundError(DomainError):
+    code = "pena_membership_not_found"
+
+
+class PenaMembershipPlayerNotFoundError(DomainError):
+    code = "pena_membership_player_not_found"
+
+
+class PenaMembershipUserProfileNotFoundError(DomainError):
+    code = "pena_membership_user_profile_not_found"
+
+
+class InvalidPenaMembershipUpdateDataError(DomainError):
+    code = "invalid_pena_membership_update_data"
+
+
+class InvalidPenaGuestPlayerDataError(DomainError):
+    code = "invalid_pena_guest_player_data"
+
+
+class PenaMembershipInvalidNationalityError(DomainError):
+    code = "pena_membership_invalid_nationality"

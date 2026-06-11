@@ -32,13 +32,26 @@ def _assert_single_repository_factory(monkeypatch, *, repo_attr: str, use_case_a
     assert captured["repo_type"] is _Repo
 
 
-def test_get_pena_membership_use_case_builds_expected_dependencies(monkeypatch):
-    _assert_single_repository_factory(
-        monkeypatch,
-        repo_attr="SqlAlchemyPenaMembershipRepository",
-        use_case_attr="ManagePenaMembershipUseCase",
-        factory=use_case_dependencies.get_pena_membership_use_case,
-    )
+def test_get_pena_membership_buses_build_expected_dependencies(monkeypatch):
+    from core.application.commands.pena_membership_commands import CreateGuestPlayerCommand
+    from core.application.queries.pena_membership_queries import GetPenaMembershipForUserQuery
+    from shared.application.bus.buses import CommandBus, QueryBus
+
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaMembershipRepository", _Repo)
+
+    query_bus = use_case_dependencies.get_pena_membership_query_bus(db="db-session")
+    command_bus = use_case_dependencies.get_pena_membership_command_bus(db="db-session")
+    assert isinstance(query_bus, QueryBus)
+    assert isinstance(command_bus, CommandBus)
+    assert captured["db"] == "db-session"
+    assert GetPenaMembershipForUserQuery in query_bus._handlers
+    assert CreateGuestPlayerCommand in command_bus._handlers
 
 
 def test_get_pena_players_query_bus_builds_expected_dependencies(monkeypatch):

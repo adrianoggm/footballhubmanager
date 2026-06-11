@@ -26,6 +26,20 @@ from core.application.commands.pena_link_commands import (
     GeneratePenaLinkTokenCommand,
     LinkUserToPenaCommand,
 )
+from core.application.commands.pena_membership_command_handlers import (
+    CreateGuestPlayerHandler,
+    RemoveMembershipForAdminHandler,
+    RemoveMembershipForUserHandler,
+    UpdateMembershipForAdminHandler,
+    UpdateMembershipForUserHandler,
+)
+from core.application.commands.pena_membership_commands import (
+    CreateGuestPlayerCommand,
+    RemoveMembershipForAdminCommand,
+    RemoveMembershipForUserCommand,
+    UpdateMembershipForAdminCommand,
+    UpdateMembershipForUserCommand,
+)
 from core.application.commands.pena_season_command_handlers import (
     CreatePenaSeasonHandler,
     DeletePenaSeasonHandler,
@@ -66,6 +80,14 @@ from core.application.queries.pena_accountability_query_handlers import (
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_labels_query_handler import GetPenaLabelsHandler
+from core.application.queries.pena_membership_queries import (
+    GetPenaMembershipForPlayerQuery,
+    GetPenaMembershipForUserQuery,
+)
+from core.application.queries.pena_membership_query_handlers import (
+    GetPenaMembershipForPlayerHandler,
+    GetPenaMembershipForUserHandler,
+)
 from core.application.queries.pena_players_query import GetPenaPlayersQuery
 from core.application.queries.pena_players_query_handler import GetPenaPlayersHandler
 from core.application.queries.pena_queries import (
@@ -98,9 +120,6 @@ from core.application.queries.player_profile_query_handlers import (
 )
 from core.application.use_cases.get_season_match_insights_usecase import (
     GetSeasonMatchInsightsUseCase,
-)
-from core.application.use_cases.manage_pena_membership_usecase import (
-    ManagePenaMembershipUseCase,
 )
 from core.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
@@ -241,10 +260,23 @@ def get_pena_accountability_command_bus(db: Session = Depends(get_db)) -> Comman
     return bus
 
 
-def get_pena_membership_use_case(
-    db: Session = Depends(get_db),
-) -> ManagePenaMembershipUseCase:
-    return ManagePenaMembershipUseCase(SqlAlchemyPenaMembershipRepository(db))
+def get_pena_membership_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemyPenaMembershipRepository(db)
+    bus = QueryBus()
+    bus.register(GetPenaMembershipForPlayerQuery, GetPenaMembershipForPlayerHandler(repository))
+    bus.register(GetPenaMembershipForUserQuery, GetPenaMembershipForUserHandler(repository))
+    return bus
+
+
+def get_pena_membership_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemyPenaMembershipRepository(db)
+    bus = CommandBus()
+    bus.register(UpdateMembershipForUserCommand, UpdateMembershipForUserHandler(repository))
+    bus.register(RemoveMembershipForUserCommand, RemoveMembershipForUserHandler(repository))
+    bus.register(UpdateMembershipForAdminCommand, UpdateMembershipForAdminHandler(repository))
+    bus.register(RemoveMembershipForAdminCommand, RemoveMembershipForAdminHandler(repository))
+    bus.register(CreateGuestPlayerCommand, CreateGuestPlayerHandler(repository))
+    return bus
 
 
 def get_pena_players_query_bus(db: Session = Depends(get_db)) -> QueryBus:
