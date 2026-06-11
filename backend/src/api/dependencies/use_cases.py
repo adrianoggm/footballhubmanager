@@ -66,6 +66,32 @@ from core.application.commands.registration_commands import (
     RegisterAdminCommand,
     RegisterUserCommand,
 )
+from core.application.commands.season_match_command_handlers import (
+    CreateSeasonMatchEventHandler,
+    CreateSeasonMatchHandler,
+    CreateSeasonMatchWithLineupsHandler,
+    DeleteSeasonMatchEventHandler,
+    DeleteSeasonMatchHandler,
+    StartSeasonMatchHandler,
+    StopSeasonMatchHandler,
+    UpdateSeasonMatchHandler,
+    UpdateSeasonMatchLineupsHandler,
+    UpdateSeasonMatchResultHandler,
+    UpdateSeasonMatchStatsHandler,
+)
+from core.application.commands.season_match_commands import (
+    CreateSeasonMatchCommand,
+    CreateSeasonMatchEventCommand,
+    CreateSeasonMatchWithLineupsCommand,
+    DeleteSeasonMatchCommand,
+    DeleteSeasonMatchEventCommand,
+    StartSeasonMatchCommand,
+    StopSeasonMatchCommand,
+    UpdateSeasonMatchCommand,
+    UpdateSeasonMatchLineupsCommand,
+    UpdateSeasonMatchResultCommand,
+    UpdateSeasonMatchStatsCommand,
+)
 from core.application.commands.season_player_command_handlers import (
     RegisterSeasonPlayerHandler,
     RegisterSeasonPlayersBulkHandler,
@@ -133,6 +159,14 @@ from core.application.queries.player_profile_query_handlers import (
 from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
 from core.application.queries.season_match_insights_query_handler import (
     GetSeasonMatchInsightsHandler,
+)
+from core.application.queries.season_match_queries import (
+    GetSeasonMatchDetailQuery,
+    ListSeasonMatchesQuery,
+)
+from core.application.queries.season_match_query_handlers import (
+    GetSeasonMatchDetailHandler,
+    ListSeasonMatchesHandler,
 )
 from core.application.queries.season_player_queries import (
     GetSeasonStandingsQuery,
@@ -390,6 +424,33 @@ def get_season_player_query_bus(db: Session = Depends(get_db)) -> QueryBus:
     bus = QueryBus()
     bus.register(ListSeasonPlayersQuery, ListSeasonPlayersHandler(repository))
     bus.register(GetSeasonStandingsQuery, GetSeasonStandingsHandler(repository))
+    return bus
+
+
+def get_season_match_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemySeasonMatchRepository(db)
+    bus = CommandBus()
+    bus.register(CreateSeasonMatchCommand, CreateSeasonMatchHandler(repository))
+    bus.register(UpdateSeasonMatchResultCommand, UpdateSeasonMatchResultHandler(repository))
+    bus.register(
+        CreateSeasonMatchWithLineupsCommand, CreateSeasonMatchWithLineupsHandler(repository)
+    )
+    bus.register(UpdateSeasonMatchStatsCommand, UpdateSeasonMatchStatsHandler(repository))
+    bus.register(UpdateSeasonMatchCommand, UpdateSeasonMatchHandler(repository))
+    bus.register(StartSeasonMatchCommand, StartSeasonMatchHandler(repository))
+    bus.register(StopSeasonMatchCommand, StopSeasonMatchHandler(repository))
+    bus.register(CreateSeasonMatchEventCommand, CreateSeasonMatchEventHandler(repository))
+    bus.register(DeleteSeasonMatchEventCommand, DeleteSeasonMatchEventHandler(repository))
+    bus.register(UpdateSeasonMatchLineupsCommand, UpdateSeasonMatchLineupsHandler(repository))
+    bus.register(DeleteSeasonMatchCommand, DeleteSeasonMatchHandler(repository))
+    return bus
+
+
+def get_season_match_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemySeasonMatchRepository(db)
+    bus = QueryBus()
+    bus.register(ListSeasonMatchesQuery, ListSeasonMatchesHandler(repository))
+    bus.register(GetSeasonMatchDetailQuery, GetSeasonMatchDetailHandler(repository))
     return bus
 
 

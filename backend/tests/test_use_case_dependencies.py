@@ -206,6 +206,58 @@ def test_get_season_player_buses_build_expected_dependencies(monkeypatch):
     assert GetSeasonStandingsQuery in query_bus._handlers
 
 
+def test_get_season_match_buses_build_expected_dependencies(monkeypatch):
+    from core.application.commands.season_match_commands import (
+        CreateSeasonMatchCommand,
+        CreateSeasonMatchEventCommand,
+        CreateSeasonMatchWithLineupsCommand,
+        DeleteSeasonMatchCommand,
+        DeleteSeasonMatchEventCommand,
+        StartSeasonMatchCommand,
+        StopSeasonMatchCommand,
+        UpdateSeasonMatchCommand,
+        UpdateSeasonMatchLineupsCommand,
+        UpdateSeasonMatchResultCommand,
+        UpdateSeasonMatchStatsCommand,
+    )
+    from core.application.queries.season_match_queries import (
+        GetSeasonMatchDetailQuery,
+        ListSeasonMatchesQuery,
+    )
+    from shared.application.bus.buses import CommandBus, QueryBus
+
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonMatchRepository", _Repo)
+
+    command_bus = use_case_dependencies.get_season_match_command_bus(db="db-session")
+    query_bus = use_case_dependencies.get_season_match_query_bus(db="db-session")
+
+    assert isinstance(command_bus, CommandBus)
+    assert isinstance(query_bus, QueryBus)
+    assert captured["db"] == "db-session"
+    for command_type in (
+        CreateSeasonMatchCommand,
+        UpdateSeasonMatchResultCommand,
+        CreateSeasonMatchWithLineupsCommand,
+        UpdateSeasonMatchStatsCommand,
+        UpdateSeasonMatchCommand,
+        StartSeasonMatchCommand,
+        StopSeasonMatchCommand,
+        CreateSeasonMatchEventCommand,
+        DeleteSeasonMatchEventCommand,
+        UpdateSeasonMatchLineupsCommand,
+        DeleteSeasonMatchCommand,
+    ):
+        assert command_type in command_bus._handlers
+    assert ListSeasonMatchesQuery in query_bus._handlers
+    assert GetSeasonMatchDetailQuery in query_bus._handlers
+
+
 def test_get_manage_season_lifecycle_use_case_builds_expected_dependencies(monkeypatch):
     _assert_single_repository_factory(
         monkeypatch,

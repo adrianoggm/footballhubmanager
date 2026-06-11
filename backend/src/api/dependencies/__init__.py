@@ -15,6 +15,8 @@ from .use_cases import (
     get_player_profile_query_bus,
     get_registration_command_bus,
     get_season_competition_use_case,
+    get_season_match_command_bus,
+    get_season_match_query_bus,
     get_season_player_command_bus,
     get_season_player_query_bus,
 )
@@ -36,6 +38,8 @@ __all__ = [
     "get_player_profile_command_bus",
     "get_player_profile_query_bus",
     "get_season_competition_use_case",
+    "get_season_match_command_bus",
+    "get_season_match_query_bus",
     "get_season_player_command_bus",
     "get_season_player_query_bus",
 ]
