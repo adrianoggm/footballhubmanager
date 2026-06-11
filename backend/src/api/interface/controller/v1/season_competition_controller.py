@@ -3,7 +3,7 @@ from typing import Literal
 from api.dependencies.use_cases import (
     get_manage_season_matches_use_case,
     get_manage_season_players_use_case,
-    get_season_match_insights_use_case,
+    get_season_match_insights_query_bus,
 )
 from api.interface.controller.v1.model.request.season_competition_request import (
     CreateSeasonMatchDetailedRequest,
@@ -52,9 +52,7 @@ from core.application.models.season_competition_models import (
     SeasonPlayerStatsUpdate,
 )
 from core.application.policies import FieldUpdate
-from core.application.use_cases.get_season_match_insights_usecase import (
-    GetSeasonMatchInsightsUseCase,
-)
+from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
 from core.application.use_cases.manage_season_matches_usecase import (
     ManageSeasonMatchesUseCase,
 )
@@ -75,6 +73,7 @@ from core.application.use_cases.season_competition_errors import (
     SeasonPlayerNotFoundError,
 )
 from fastapi import APIRouter, Depends, Query, status
+from shared.application.bus.buses import QueryBus
 
 router = APIRouter()
 
@@ -757,18 +756,19 @@ def get_season_match_detail(
 def get_match_insights(
     pena_guid: str,
     payload: MatchInsightsRequest,
-    use_case: GetSeasonMatchInsightsUseCase = Depends(get_season_match_insights_use_case),
+    query_bus: QueryBus = Depends(get_season_match_insights_query_bus),
     _session=Depends(authorize_pena_access),
 ):
-    result = use_case.execute(
-        pena_guid=pena_guid,
-        season_guids=payload.season_guids,
-        scope=payload.scope,
-        matrix_size=payload.matrix_size,
-        top_pairs_size=payload.top_pairs_size,
-        leaders_size=payload.leaders_size,
+    return query_bus.ask(
+        GetSeasonMatchInsightsQuery(
+            pena_guid=pena_guid,
+            season_guids=payload.season_guids,
+            scope=payload.scope,
+            matrix_size=payload.matrix_size,
+            top_pairs_size=payload.top_pairs_size,
+            leaders_size=payload.leaders_size,
+        )
     )
-    return result
 
 
 @router.delete(

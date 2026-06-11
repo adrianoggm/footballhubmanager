@@ -164,3 +164,10 @@ class InvalidPenaGuestPlayerDataError(DomainError):
 
 class PenaMembershipInvalidNationalityError(DomainError):
     code = "pena_membership_invalid_nationality"
+
+
+# --- Season match insights ---
+
+
+class InvalidSeasonInsightsDataError(DomainError):
+    code = "invalid_season_insights_data"

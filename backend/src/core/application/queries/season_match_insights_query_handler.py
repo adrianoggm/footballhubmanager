@@ -1,49 +1,55 @@
+"""Handler de la query de insights de partidos de temporada.
+
+Traduce los errores de contrato del repositorio (``season_competition_port``)
+a errores de dominio.
+"""
+
+from __future__ import annotations
+
 from core.application.models import MatchDetail, MatchPlayerStats, MatchTeam
-from core.application.ports import SeasonMatchInsightsPort
 from core.application.ports.season_competition_port import (
     PenaNotFoundError as RepositoryPenaNotFoundError,
 )
 from core.application.ports.season_competition_port import (
     SeasonNotFoundError as RepositorySeasonNotFoundError,
 )
+from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
+from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
 from core.application.services import MatchInsightsReportBuilder
-
-from .season_match_insights_errors import (
+from core.domain.errors import (
     InvalidSeasonInsightsDataError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
 )
 
 
-class GetSeasonMatchInsightsUseCase:
-    def __init__(self, repository: SeasonMatchInsightsPort):
-        self.repository = repository
+def _normalize_insight_season_guids(season_guids: list[str]) -> list[str]:
+    cleaned = [str(item or "").strip() for item in season_guids if str(item or "").strip()]
+    if not cleaned:
+        raise InvalidSeasonInsightsDataError()
+    return list(dict.fromkeys(cleaned))
 
-    def execute(
-        self,
-        *,
-        pena_guid: str,
-        season_guids: list[str],
-        scope: str | None = None,
-        matrix_size: int = 8,
-        top_pairs_size: int = 10,
-        leaders_size: int = 5,
-    ) -> dict:
-        cleaned_season_guids = self._normalize_insight_season_guids(season_guids)
-        if matrix_size < 2 or top_pairs_size < 1 or leaders_size < 1:
+
+class GetSeasonMatchInsightsHandler:
+    def __init__(self, repository: SeasonMatchInsightsPort) -> None:
+        self._repository = repository
+
+    def handle(self, query: GetSeasonMatchInsightsQuery) -> dict:
+        cleaned_season_guids = _normalize_insight_season_guids(query.season_guids)
+        if query.matrix_size < 2 or query.top_pairs_size < 1 or query.leaders_size < 1:
             raise InvalidSeasonInsightsDataError()
 
         details = self._collect_match_insight_details(
-            pena_guid=pena_guid,
+            pena_guid=query.pena_guid,
             season_guids=cleaned_season_guids,
         )
         report = MatchInsightsReportBuilder.build(
             details,
-            matrix_size=matrix_size,
-            top_pairs_size=top_pairs_size,
-            leaders_size=leaders_size,
+            matrix_size=query.matrix_size,
+            top_pairs_size=query.top_pairs_size,
+            leaders_size=query.leaders_size,
         )
-        report["scope"] = scope
+        report["scope"] = query.scope
         report["season_guids"] = cleaned_season_guids
         return report
 
@@ -51,7 +57,7 @@ class GetSeasonMatchInsightsUseCase:
         self, *, pena_guid: str, season_guids: list[str]
     ) -> list[MatchDetail]:
         try:
-            rows = self.repository.list_closed_match_insight_rows(
+            rows = self._repository.list_closed_match_insight_rows(
                 pena_guid=pena_guid,
                 season_guids=season_guids,
             )
@@ -76,7 +82,6 @@ class GetSeasonMatchInsightsUseCase:
                     "away_players": [],
                 }
 
-            rating = 0.0
             try:
                 rating = max(float(row.rating), 0.0)
             except (TypeError, ValueError):
@@ -148,10 +153,3 @@ class GetSeasonMatchInsightsUseCase:
                 )
             )
         return details
-
-    @staticmethod
-    def _normalize_insight_season_guids(season_guids: list[str]) -> list[str]:
-        cleaned = [str(item or "").strip() for item in season_guids if str(item or "").strip()]
-        if not cleaned:
-            raise InvalidSeasonInsightsDataError()
-        return list(dict.fromkeys(cleaned))

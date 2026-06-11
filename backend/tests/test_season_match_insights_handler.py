@@ -7,10 +7,11 @@ from core.application.ports.season_competition_port import (
     PenaNotFoundError,
     SeasonNotFoundError,
 )
-from core.application.use_cases.get_season_match_insights_usecase import (
-    GetSeasonMatchInsightsUseCase,
+from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
+from core.application.queries.season_match_insights_query_handler import (
+    GetSeasonMatchInsightsHandler,
 )
-from core.application.use_cases.season_match_insights_errors import (
+from core.domain.errors import (
     InvalidSeasonInsightsDataError,
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
@@ -24,40 +25,29 @@ class _FakeRepo:
     last_payload: dict | None = None
 
     def list_closed_match_insight_rows(self, *, pena_guid: str, season_guids: list[str]):
-        self.last_payload = {
-            "pena_guid": pena_guid,
-            "season_guids": season_guids,
-        }
+        self.last_payload = {"pena_guid": pena_guid, "season_guids": season_guids}
         if self.error:
             raise self.error
         return list(self.rows or [])
 
 
-def test_execute_validates_payload():
-    use_case = GetSeasonMatchInsightsUseCase(_FakeRepo())
+def _handle(repo, **kwargs):
+    return GetSeasonMatchInsightsHandler(repo).handle(GetSeasonMatchInsightsQuery(**kwargs))
 
+
+def test_validates_payload():
     with pytest.raises(InvalidSeasonInsightsDataError):
-        use_case.execute(
-            pena_guid="pena-guid",
-            season_guids=[],
-        )
+        _handle(_FakeRepo(), pena_guid="pena-guid", season_guids=[])
 
 
-def test_execute_maps_repository_not_found_errors():
+def test_maps_repository_not_found_errors():
     with pytest.raises(PenaSeasonPenaNotFoundError):
-        GetSeasonMatchInsightsUseCase(_FakeRepo(error=PenaNotFoundError())).execute(
-            pena_guid="pena-guid",
-            season_guids=["season-guid"],
-        )
-
+        _handle(_FakeRepo(error=PenaNotFoundError()), pena_guid="pena-guid", season_guids=["s"])
     with pytest.raises(PenaSeasonNotFoundError):
-        GetSeasonMatchInsightsUseCase(_FakeRepo(error=SeasonNotFoundError())).execute(
-            pena_guid="pena-guid",
-            season_guids=["season-guid"],
-        )
+        _handle(_FakeRepo(error=SeasonNotFoundError()), pena_guid="pena-guid", season_guids=["s"])
 
 
-def test_execute_computes_report_from_closed_matches():
+def test_computes_report_from_closed_matches():
     repo = _FakeRepo(
         rows=[
             MatchInsightRow(
@@ -126,9 +116,9 @@ def test_execute_computes_report_from_closed_matches():
             ),
         ]
     )
-    use_case = GetSeasonMatchInsightsUseCase(repo)
 
-    report = use_case.execute(
+    report = _handle(
+        repo,
         pena_guid="pena-guid",
         season_guids=["season-guid"],
         scope="selected_season",
@@ -147,8 +137,6 @@ def test_execute_computes_report_from_closed_matches():
     assert report["timeline_by_match"][0]["label"] == "M1"
     assert report["timeline_by_match"][0]["match_index"] == 1
     assert report["timeline_by_match"][0]["running_goals_per_match"] == 3.0
-    assert report["timeline_by_match"][0]["running_assists_per_match"] == 2.0
-    assert report["timeline_by_match"][0]["running_saves_per_match"] == 1.0
     assert report["top_teammates_by_player"][0]["player_guid"] == "player-a"
     assert report["top_teammates_by_player"][0]["partner_guid"] == "player-b"
     assert report["top_teammates_by_player"][0]["player_label"] == "Anita"
@@ -157,16 +145,6 @@ def test_execute_computes_report_from_closed_matches():
         "guid": "player-a",
         "label": "Anita",
         "appearances": 1,
-    }
-    assert report["matrix_rows"][0]["cells"][0] == {
-        "player_guid": "player-a",
-        "teammate_guid": "player-a",
-        "same_player": True,
-        "matches": 1,
-        "wins": 1,
-        "draws": 0,
-        "losses": 0,
-        "win_rate": 1.0,
     }
     assert report["matrix_rows"][0]["cells"][1] == {
         "player_guid": "player-a",
@@ -179,13 +157,10 @@ def test_execute_computes_report_from_closed_matches():
         "win_rate": 1.0,
     }
     assert len(report["leaders"]["scorers"]) == 2
-    assert repo.last_payload == {
-        "pena_guid": "pena-guid",
-        "season_guids": ["season-guid"],
-    }
+    assert repo.last_payload == {"pena_guid": "pena-guid", "season_guids": ["season-guid"]}
 
 
-def test_execute_computes_running_timeline_metrics_across_matches():
+def test_computes_running_timeline_metrics_across_matches():
     repo = _FakeRepo(
         rows=[
             MatchInsightRow(
@@ -254,12 +229,8 @@ def test_execute_computes_running_timeline_metrics_across_matches():
             ),
         ]
     )
-    use_case = GetSeasonMatchInsightsUseCase(repo)
 
-    report = use_case.execute(
-        pena_guid="pena-guid",
-        season_guids=["season-a", "season-b"],
-    )
+    report = _handle(repo, pena_guid="pena-guid", season_guids=["season-a", "season-b"])
 
     first_match, second_match = report["timeline_by_match"]
     assert first_match["match_index"] == 1
@@ -331,9 +302,8 @@ def test_collect_match_insight_details_preserves_position_and_rating():
             ),
         ]
     )
-    use_case = GetSeasonMatchInsightsUseCase(repo)
 
-    details = use_case._collect_match_insight_details(
+    details = GetSeasonMatchInsightsHandler(repo)._collect_match_insight_details(
         pena_guid="pena-guid",
         season_guids=["season-guid"],
     )

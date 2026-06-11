@@ -33,8 +33,8 @@ from core.application.models.season_competition_models import (
     SeasonPlayersPage,
 )
 from core.application.policies import FieldUpdate, StandingsUpdatePolicy
+from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
 from core.application.use_cases.manage_season_competition_usecase import (
-    InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -56,6 +56,7 @@ from core.application.use_cases.manage_season_competition_usecase import (
     SeasonPlayerNotFoundError,
     SeasonPlayerNotInPenaError,
 )
+from core.domain.errors import InvalidSeasonInsightsDataError
 from fastapi import HTTPException
 
 
@@ -371,25 +372,21 @@ def test_get_manage_season_matches_use_case_builds_expected_dependencies(monkeyp
     assert captured["repo_type"] is _Repo
 
 
-def test_get_season_match_insights_use_case_builds_expected_dependencies(monkeypatch):
+def test_get_season_match_insights_query_bus_builds_expected_dependencies(monkeypatch):
+    from shared.application.bus.buses import QueryBus
+
     captured: dict[str, object] = {}
 
     class _Repo:
         def __init__(self, db):
             captured["db"] = db
 
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
     monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonMatchInsightsRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "GetSeasonMatchInsightsUseCase", _UseCase)
 
-    use_case = controller.get_season_match_insights_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
+    bus = controller.get_season_match_insights_query_bus(db="db-session")
+    assert isinstance(bus, QueryBus)
     assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
+    assert GetSeasonMatchInsightsQuery in bus._handlers
 
 
 def test_helper_match_detail_response_serializes_nested_data():
@@ -953,22 +950,36 @@ def test_get_season_match_detail_success_and_not_found_mapping():
     assert exc.value.detail == "Match not found"
 
 
+class _InsightsQueryBus:
+    def __init__(self, result=None, error=None):
+        self._result = result
+        self._error = error
+        self.last_query = None
+
+    def ask(self, query):
+        self.last_query = query
+        if self._error is not None:
+            raise self._error
+        return self._result
+
+
 def test_get_match_insights_success_and_bad_request_mapping():
-    use_case = _UseCaseStub()
+    bus = _InsightsQueryBus(result={"matches_analyzed": 1})
     result = controller.get_match_insights(
         "pena-1",
         payload=MatchInsightsRequest(season_guids=["season-1"]),
-        use_case=use_case,
+        query_bus=bus,
         _session=object(),
     )
     assert result == {"matches_analyzed": 1}
+    assert isinstance(bus.last_query, GetSeasonMatchInsightsQuery)
+    assert bus.last_query.pena_guid == "pena-1"
 
-    use_case.error_by_method["get_match_insights"] = InvalidSeasonInsightsDataError()
     with pytest.raises(HTTPException) as exc:
         controller.get_match_insights(
             "pena-1",
             payload=MatchInsightsRequest(season_guids=["season-1"]),
-            use_case=use_case,
+            query_bus=_InsightsQueryBus(error=InvalidSeasonInsightsDataError()),
             _session=object(),
         )
     assert exc.value.status_code == 400
@@ -1444,14 +1455,11 @@ def test_get_season_match_detail_maps_pena_and_season_not_found(error, detail):
     ],
 )
 def test_get_match_insights_maps_not_found_errors(error, detail):
-    use_case = _UseCaseStub()
-    use_case.error_by_method["get_match_insights"] = error
-
     with pytest.raises(HTTPException) as exc:
         controller.get_match_insights(
             "pena-1",
             payload=MatchInsightsRequest(season_guids=["season-1"]),
-            use_case=use_case,
+            query_bus=_InsightsQueryBus(error=error),
             _session=object(),
         )
 

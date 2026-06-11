@@ -118,8 +118,9 @@ from core.application.queries.player_profile_query_handlers import (
     GetPlayerProfileByAccountIdHandler,
     GetPlayerProfileByGuidHandler,
 )
-from core.application.use_cases.get_season_match_insights_usecase import (
-    GetSeasonMatchInsightsUseCase,
+from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
+from core.application.queries.season_match_insights_query_handler import (
+    GetSeasonMatchInsightsHandler,
 )
 from core.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
@@ -360,7 +361,10 @@ def get_manage_season_matches_use_case(
     return ManageSeasonMatchesUseCase(SqlAlchemySeasonMatchRepository(db))
 
 
-def get_season_match_insights_use_case(
-    db: Session = Depends(get_db),
-) -> GetSeasonMatchInsightsUseCase:
-    return GetSeasonMatchInsightsUseCase(SqlAlchemySeasonMatchInsightsRepository(db))
+def get_season_match_insights_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    bus = QueryBus()
+    bus.register(
+        GetSeasonMatchInsightsQuery,
+        GetSeasonMatchInsightsHandler(SqlAlchemySeasonMatchInsightsRepository(db)),
+    )
+    return bus

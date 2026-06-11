@@ -5,12 +5,8 @@ from functools import wraps
 from typing import Any
 
 from auth.domain.errors import InvalidCredentialsError
-from core.application.use_cases import (
-    InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
-)
 from core.application.use_cases.season_competition_errors import (
     InvalidSeasonDataError,
-    InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -36,12 +32,6 @@ from core.application.use_cases.season_competition_errors import (
 from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError as CompetitionPenaSeasonPenaNotFoundError,
 )
-from core.application.use_cases.season_match_insights_errors import (
-    PenaSeasonNotFoundError as CoreCompetitionPenaSeasonNotFoundError,
-)
-from core.application.use_cases.season_match_insights_errors import (
-    PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
-)
 from core.domain.errors import (
     AdminUsernameExistsError,
     InvalidAdminRegistrationDataError,
@@ -55,6 +45,7 @@ from core.domain.errors import (
     InvalidPlayerUpdateDataError,
     InvalidProfileImageError,
     InvalidRegistrationDataError,
+    InvalidSeasonInsightsDataError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
@@ -164,20 +155,8 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         status.HTTP_409_CONFLICT,
         "Season range overlaps an existing season",
     ),
-    CoreCompetitionPenaSeasonPenaNotFoundError: (
-        status.HTTP_404_NOT_FOUND,
-        "Pena not found",
-    ),
-    CoreCompetitionPenaSeasonNotFoundError: (
-        status.HTTP_404_NOT_FOUND,
-        "Season not found",
-    ),
     InvalidSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season data"),
     InvalidSeasonInsightsDataError: (
-        status.HTTP_400_BAD_REQUEST,
-        "Invalid match insights request",
-    ),
-    CoreInvalidSeasonInsightsRequestError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match insights request",
     ),
