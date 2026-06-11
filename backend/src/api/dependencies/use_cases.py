@@ -66,6 +66,18 @@ from core.application.commands.registration_commands import (
     RegisterAdminCommand,
     RegisterUserCommand,
 )
+from core.application.commands.season_player_command_handlers import (
+    RegisterSeasonPlayerHandler,
+    RegisterSeasonPlayersBulkHandler,
+    UnregisterSeasonPlayerHandler,
+    UpdateSeasonPlayerStatsHandler,
+)
+from core.application.commands.season_player_commands import (
+    RegisterSeasonPlayerCommand,
+    RegisterSeasonPlayersBulkCommand,
+    UnregisterSeasonPlayerCommand,
+    UpdateSeasonPlayerStatsCommand,
+)
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.commands.update_pena_profile_handler import UpdatePenaProfileHandler
 from core.application.queries.nationality_query import GetNationalitiesQuery
@@ -121,6 +133,14 @@ from core.application.queries.player_profile_query_handlers import (
 from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
 from core.application.queries.season_match_insights_query_handler import (
     GetSeasonMatchInsightsHandler,
+)
+from core.application.queries.season_player_queries import (
+    GetSeasonStandingsQuery,
+    ListSeasonPlayersQuery,
+)
+from core.application.queries.season_player_query_handlers import (
+    GetSeasonStandingsHandler,
+    ListSeasonPlayersHandler,
 )
 from core.application.use_cases.manage_season_competition_usecase import (
     ManageSeasonCompetitionUseCase,
@@ -353,6 +373,24 @@ def get_manage_season_players_use_case(
     db: Session = Depends(get_db),
 ) -> ManageSeasonPlayersUseCase:
     return ManageSeasonPlayersUseCase(SqlAlchemySeasonPlayerRepository(db))
+
+
+def get_season_player_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    repository = SqlAlchemySeasonPlayerRepository(db)
+    bus = CommandBus()
+    bus.register(RegisterSeasonPlayerCommand, RegisterSeasonPlayerHandler(repository))
+    bus.register(RegisterSeasonPlayersBulkCommand, RegisterSeasonPlayersBulkHandler(repository))
+    bus.register(UpdateSeasonPlayerStatsCommand, UpdateSeasonPlayerStatsHandler(repository))
+    bus.register(UnregisterSeasonPlayerCommand, UnregisterSeasonPlayerHandler(repository))
+    return bus
+
+
+def get_season_player_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemySeasonPlayerRepository(db)
+    bus = QueryBus()
+    bus.register(ListSeasonPlayersQuery, ListSeasonPlayersHandler(repository))
+    bus.register(GetSeasonStandingsQuery, GetSeasonStandingsHandler(repository))
+    return bus
 
 
 def get_manage_season_matches_use_case(

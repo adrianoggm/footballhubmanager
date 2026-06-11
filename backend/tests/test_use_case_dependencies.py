@@ -171,6 +171,41 @@ def test_get_player_profile_buses_build_expected_dependencies(monkeypatch):
     assert UpdatePlayerProfileByAccountIdCommand in command_bus._handlers
 
 
+def test_get_season_player_buses_build_expected_dependencies(monkeypatch):
+    from core.application.commands.season_player_commands import (
+        RegisterSeasonPlayerCommand,
+        RegisterSeasonPlayersBulkCommand,
+        UnregisterSeasonPlayerCommand,
+        UpdateSeasonPlayerStatsCommand,
+    )
+    from core.application.queries.season_player_queries import (
+        GetSeasonStandingsQuery,
+        ListSeasonPlayersQuery,
+    )
+    from shared.application.bus.buses import CommandBus, QueryBus
+
+    captured: dict[str, object] = {}
+
+    class _Repo:
+        def __init__(self, db):
+            captured["db"] = db
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonPlayerRepository", _Repo)
+
+    command_bus = use_case_dependencies.get_season_player_command_bus(db="db-session")
+    query_bus = use_case_dependencies.get_season_player_query_bus(db="db-session")
+
+    assert isinstance(command_bus, CommandBus)
+    assert isinstance(query_bus, QueryBus)
+    assert captured["db"] == "db-session"
+    assert RegisterSeasonPlayerCommand in command_bus._handlers
+    assert RegisterSeasonPlayersBulkCommand in command_bus._handlers
+    assert UpdateSeasonPlayerStatsCommand in command_bus._handlers
+    assert UnregisterSeasonPlayerCommand in command_bus._handlers
+    assert ListSeasonPlayersQuery in query_bus._handlers
+    assert GetSeasonStandingsQuery in query_bus._handlers
+
+
 def test_get_manage_season_lifecycle_use_case_builds_expected_dependencies(monkeypatch):
     _assert_single_repository_factory(
         monkeypatch,

@@ -21,6 +21,12 @@ from api.interface.controller.v1.model.request.season_competition_request import
     UpdateSeasonPlayerStatsRequest,
 )
 from auth.session import SessionData
+from core.application.commands.season_player_commands import (
+    RegisterSeasonPlayerCommand,
+    RegisterSeasonPlayersBulkCommand,
+    UnregisterSeasonPlayerCommand,
+    UpdateSeasonPlayerStatsCommand,
+)
 from core.application.models.season_competition_models import (
     SeasonMatchDetailInfo,
     SeasonMatchesPage,
@@ -34,6 +40,10 @@ from core.application.models.season_competition_models import (
 )
 from core.application.policies import FieldUpdate, StandingsUpdatePolicy
 from core.application.queries.season_match_insights_query import GetSeasonMatchInsightsQuery
+from core.application.queries.season_player_queries import (
+    GetSeasonStandingsQuery,
+    ListSeasonPlayersQuery,
+)
 from core.application.use_cases.manage_season_competition_usecase import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
@@ -312,6 +322,74 @@ class _UseCaseStub:
         return _players_page(total=9, page=kwargs["page"], page_size=kwargs["page_size"])
 
 
+class _SeasonPlayerCommandBusStub:
+    """Adapta el CommandBus al ``_UseCaseStub``: traduce el comando a su método."""
+
+    def __init__(self, use_case: _UseCaseStub):
+        self._use_case = use_case
+
+    def dispatch(self, command):
+        if isinstance(command, RegisterSeasonPlayerCommand):
+            return self._use_case.register_player_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                admin_id=command.admin_id,
+                player_guid=command.player_guid,
+            )
+        if isinstance(command, RegisterSeasonPlayersBulkCommand):
+            return self._use_case.register_players_bulk_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                admin_id=command.admin_id,
+                player_guids=command.player_guids,
+                source_season_guid=command.source_season_guid,
+            )
+        if isinstance(command, UpdateSeasonPlayerStatsCommand):
+            return self._use_case.update_player_stats_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                admin_id=command.admin_id,
+                player_guid=command.player_guid,
+                update=command.update,
+            )
+        if isinstance(command, UnregisterSeasonPlayerCommand):
+            return self._use_case.unregister_player_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                admin_id=command.admin_id,
+                player_guid=command.player_guid,
+            )
+        raise AssertionError(f"Comando inesperado: {command!r}")
+
+
+class _SeasonPlayerQueryBusStub:
+    """Adapta el QueryBus al ``_UseCaseStub``: traduce la query a su método."""
+
+    def __init__(self, use_case: _UseCaseStub):
+        self._use_case = use_case
+
+    def ask(self, query):
+        if isinstance(query, ListSeasonPlayersQuery):
+            return self._use_case.list_season_players(
+                pena_guid=query.pena_guid,
+                season_guid=query.season_guid,
+                filters=query.filters,
+                page=query.page,
+                page_size=query.page_size,
+                order_by=query.order_by,
+                order_dir=query.order_dir,
+            )
+        if isinstance(query, GetSeasonStandingsQuery):
+            return self._use_case.get_standings(
+                pena_guid=query.pena_guid,
+                season_guid=query.season_guid,
+                filters=query.filters,
+                page=query.page,
+                page_size=query.page_size,
+            )
+        raise AssertionError(f"Query inesperada: {query!r}")
+
+
 def test_helper_clean_and_page_response():
     assert controller._clean("  x  ") == "x"
     assert controller._clean("  ") is None
@@ -402,7 +480,7 @@ def test_register_player_in_season_success():
         "season-1",
         payload=RegisterSeasonPlayerRequest(player_guid="player-7"),
         admin_session=_admin_session(55),
-        use_case=use_case,
+        command_bus=_SeasonPlayerCommandBusStub(use_case),
     )
     assert response.player_guid == "player-7"
     assert use_case.last_call == (
@@ -425,7 +503,7 @@ def test_register_player_in_season_maps_conflict_error():
             "season-1",
             payload=RegisterSeasonPlayerRequest(player_guid="player-7"),
             admin_session=_admin_session(),
-            use_case=use_case,
+            command_bus=_SeasonPlayerCommandBusStub(use_case),
         )
     assert exc.value.status_code == 409
     assert exc.value.detail == "Player is already registered in this season"
@@ -438,7 +516,7 @@ def test_register_players_in_season_bulk_success():
         "season-1",
         payload=RegisterSeasonPlayersBulkRequest(player_guids=["p1", "p2"]),
         admin_session=_admin_session(77),
-        use_case=use_case,
+        command_bus=_SeasonPlayerCommandBusStub(use_case),
     )
     assert response.total_registered == 2
     method, payload = use_case.last_call
@@ -454,7 +532,7 @@ def test_update_season_player_stats_sets_partial_flags():
         "player-1",
         payload=UpdateSeasonPlayerStatsRequest(wins=5),
         admin_session=_admin_session(11),
-        use_case=use_case,
+        command_bus=_SeasonPlayerCommandBusStub(use_case),
     )
     assert response.player_guid == "player-1"
     method, payload = use_case.last_call
@@ -472,7 +550,7 @@ def test_unregister_player_from_season_success():
         "season-1",
         "player-1",
         admin_session=_admin_session(12),
-        use_case=use_case,
+        command_bus=_SeasonPlayerCommandBusStub(use_case),
     )
     assert use_case.last_call[0] == "unregister_player_for_admin"
 
@@ -493,7 +571,7 @@ def test_list_season_players_success_and_filter_cleaning():
         search=" text ",
         order_by="goals",
         order_dir="asc",
-        use_case=use_case,
+        query_bus=_SeasonPlayerQueryBusStub(use_case),
         _session=object(),
     )
     assert response.total_pages == 2
@@ -524,7 +602,7 @@ def test_list_season_players_maps_not_found():
             search=None,
             order_by="quality_level",
             order_dir="desc",
-            use_case=use_case,
+            query_bus=_SeasonPlayerQueryBusStub(use_case),
             _session=object(),
         )
     assert exc.value.status_code == 404
@@ -1017,7 +1095,7 @@ def test_get_season_standings_success():
         "season-1",
         page=1,
         page_size=10,
-        use_case=use_case,
+        query_bus=_SeasonPlayerQueryBusStub(use_case),
         _session=object(),
     )
     assert response.page == 1
@@ -1060,7 +1138,7 @@ def test_register_player_in_season_maps_domain_errors(error, status_code, detail
             "season-1",
             payload=RegisterSeasonPlayerRequest(player_guid="player-7"),
             admin_session=_admin_session(),
-            use_case=use_case,
+            command_bus=_SeasonPlayerCommandBusStub(use_case),
         )
 
     assert exc.value.status_code == status_code
@@ -1089,7 +1167,7 @@ def test_register_players_in_season_bulk_maps_domain_errors(error, status_code, 
             "season-1",
             payload=RegisterSeasonPlayersBulkRequest(player_guids=["player-1"]),
             admin_session=_admin_session(),
-            use_case=use_case,
+            command_bus=_SeasonPlayerCommandBusStub(use_case),
         )
 
     assert exc.value.status_code == status_code
@@ -1117,7 +1195,7 @@ def test_update_season_player_stats_maps_domain_errors(error, status_code, detai
             "player-1",
             payload=UpdateSeasonPlayerStatsRequest(wins=2),
             admin_session=_admin_session(),
-            use_case=use_case,
+            command_bus=_SeasonPlayerCommandBusStub(use_case),
         )
 
     assert exc.value.status_code == status_code
@@ -1144,7 +1222,7 @@ def test_unregister_player_from_season_maps_domain_errors(error, status_code, de
             "season-1",
             "player-1",
             admin_session=_admin_session(),
-            use_case=use_case,
+            command_bus=_SeasonPlayerCommandBusStub(use_case),
         )
 
     assert exc.value.status_code == status_code
@@ -1168,7 +1246,7 @@ def test_list_season_players_sets_role_and_position_filters_for_single_values():
         search=None,
         order_by="quality_level",
         order_dir="desc",
-        use_case=use_case,
+        query_bus=_SeasonPlayerQueryBusStub(use_case),
         _session=object(),
     )
 
@@ -1201,7 +1279,7 @@ def test_list_season_players_maps_pena_not_found():
             search=None,
             order_by="quality_level",
             order_dir="desc",
-            use_case=use_case,
+            query_bus=_SeasonPlayerQueryBusStub(use_case),
             _session=object(),
         )
 
@@ -1502,7 +1580,7 @@ def test_get_season_standings_passes_cleaned_filters():
         page_size=20,
         role=[" ATA ", "ata"],
         position=[" GK "],
-        use_case=use_case,
+        query_bus=_SeasonPlayerQueryBusStub(use_case),
         _session=object(),
     )
 
@@ -1534,7 +1612,7 @@ def test_get_season_standings_maps_not_found_errors(error, detail):
             page_size=20,
             role=None,
             position=None,
-            use_case=use_case,
+            query_bus=_SeasonPlayerQueryBusStub(use_case),
             _session=object(),
         )
 
