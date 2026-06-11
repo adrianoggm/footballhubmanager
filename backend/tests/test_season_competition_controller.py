@@ -61,7 +61,7 @@ from core.application.queries.season_player_queries import (
     GetSeasonStandingsQuery,
     ListSeasonPlayersQuery,
 )
-from core.application.use_cases.manage_season_competition_usecase import (
+from core.application.use_cases.season_competition_errors import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -536,52 +536,6 @@ def test_helper_clean_many_removes_invalid_values_and_duplicates():
     assert controller._clean_many(None) == ()
     assert controller._clean_many("MID") == ()
     assert controller._clean_many(["  MID ", "mid", "", "GK", None]) == ("MID", "GK")
-
-
-def test_get_manage_season_players_use_case_builds_expected_dependencies(monkeypatch):
-    captured: dict[str, object] = {}
-
-    class _Repo:
-        def __init__(self, db):
-            captured["db"] = db
-
-    class _MatchRepo:
-        def __init__(self, db):
-            captured["match_db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
-    monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonPlayerRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "ManageSeasonPlayersUseCase", _UseCase)
-
-    use_case = use_case_dependencies.get_manage_season_players_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
-    assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
-
-
-def test_get_manage_season_matches_use_case_builds_expected_dependencies(monkeypatch):
-    captured: dict[str, object] = {}
-
-    class _Repo:
-        def __init__(self, db):
-            captured["db"] = db
-
-    class _UseCase:
-        def __init__(self, repo):
-            captured["repo_type"] = type(repo)
-            self.repo = repo
-
-    monkeypatch.setattr(use_case_dependencies, "SqlAlchemySeasonMatchRepository", _Repo)
-    monkeypatch.setattr(use_case_dependencies, "ManageSeasonMatchesUseCase", _UseCase)
-
-    use_case = use_case_dependencies.get_manage_season_matches_use_case(db="db-session")
-    assert isinstance(use_case, _UseCase)
-    assert captured["db"] == "db-session"
-    assert captured["repo_type"] is _Repo
 
 
 def test_get_season_match_insights_query_bus_builds_expected_dependencies(monkeypatch):

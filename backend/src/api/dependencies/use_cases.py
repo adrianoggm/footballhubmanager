@@ -176,18 +176,6 @@ from core.application.queries.season_player_query_handlers import (
     GetSeasonStandingsHandler,
     ListSeasonPlayersHandler,
 )
-from core.application.use_cases.manage_season_competition_usecase import (
-    ManageSeasonCompetitionUseCase,
-)
-from core.application.use_cases.manage_season_lifecycle_usecase import (
-    ManageSeasonLifecycleUseCase,
-)
-from core.application.use_cases.manage_season_matches_usecase import (
-    ManageSeasonMatchesUseCase,
-)
-from core.application.use_cases.manage_season_players_usecase import (
-    ManageSeasonPlayersUseCase,
-)
 from fastapi import Depends
 from persistence.infrastructure.repository.db.nationality_query_repository import (
     SqlAlchemyNationalityQueryRepository,
@@ -221,9 +209,6 @@ from persistence.infrastructure.repository.db.player_profile_repository import (
 )
 from persistence.infrastructure.repository.db.registration_repository import (
     SqlAlchemyRegistrationRepository,
-)
-from persistence.infrastructure.repository.db.season_competition_repository import (
-    SqlAlchemySeasonCompetitionRepository,
 )
 from persistence.infrastructure.repository.db.season_match_insights_repository import (
     SqlAlchemySeasonMatchInsightsRepository,
@@ -387,28 +372,6 @@ def get_player_profile_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     return bus
 
 
-def get_season_competition_use_case(
-    db: Session = Depends(get_db),
-) -> ManageSeasonCompetitionUseCase:
-    return ManageSeasonCompetitionUseCase(
-        SqlAlchemySeasonCompetitionRepository(db),
-        player_repository=SqlAlchemySeasonPlayerRepository(db),
-        match_repository=SqlAlchemySeasonMatchRepository(db),
-    )
-
-
-def get_manage_season_lifecycle_use_case(
-    db: Session = Depends(get_db),
-) -> ManageSeasonLifecycleUseCase:
-    return ManageSeasonLifecycleUseCase(SqlAlchemySeasonCompetitionRepository(db))
-
-
-def get_manage_season_players_use_case(
-    db: Session = Depends(get_db),
-) -> ManageSeasonPlayersUseCase:
-    return ManageSeasonPlayersUseCase(SqlAlchemySeasonPlayerRepository(db))
-
-
 def get_season_player_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     repository = SqlAlchemySeasonPlayerRepository(db)
     bus = CommandBus()
@@ -452,12 +415,6 @@ def get_season_match_query_bus(db: Session = Depends(get_db)) -> QueryBus:
     bus.register(ListSeasonMatchesQuery, ListSeasonMatchesHandler(repository))
     bus.register(GetSeasonMatchDetailQuery, GetSeasonMatchDetailHandler(repository))
     return bus
-
-
-def get_manage_season_matches_use_case(
-    db: Session = Depends(get_db),
-) -> ManageSeasonMatchesUseCase:
-    return ManageSeasonMatchesUseCase(SqlAlchemySeasonMatchRepository(db))
 
 
 def get_season_match_insights_query_bus(db: Session = Depends(get_db)) -> QueryBus:
