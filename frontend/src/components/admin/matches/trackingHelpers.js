@@ -43,11 +43,18 @@ export const buildTrackedTeamScore = (detail) => {
   }
 }
 
+export const isPausedTrackingStatus = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase() === 'paused'
+
 export const trackingChipColor = (status) => {
   switch (String(status || '').toLowerCase()) {
     case 'live':
     case 'in_progress':
       return 'success'
+    case 'paused':
+      return 'warning'
     case 'finished':
       return 'info'
     default:
@@ -60,6 +67,8 @@ export const trackingLabel = (status, t) => {
     case 'live':
     case 'in_progress':
       return t('dashboard.common.matchDetail.trackingLive')
+    case 'paused':
+      return t('dashboard.common.matchDetail.trackingPaused')
     case 'finished':
       return t('dashboard.common.matchDetail.trackingFinished')
     default:

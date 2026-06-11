@@ -115,6 +115,7 @@ export const messages = {
           finalScore: 'Score: {score}',
           trackingNotStarted: 'Not started',
           trackingLive: 'Live',
+          trackingPaused: 'Paused',
           trackingFinished: 'Finished',
           elapsed: 'Elapsed: {value}',
           startedAt: 'Started: {value}',
@@ -486,7 +487,11 @@ export const messages = {
           trackingDescription:
             'Start the match clock and log timed events such as goals, cards, fouls, saves or sanctions.',
           startTracking: 'Start match',
-          stopTracking: 'Stop match',
+          pauseTracking: 'Pause clock',
+          resumeTracking: 'Resume clock',
+          stopTracking: 'Finish match',
+          trackingPausedHint:
+            'The clock is paused. Quick tracking is disabled until you resume; paused time does not count towards match time.',
           liveClockLabel: 'Live clock',
           quickTrackingTitle: 'Quick live tracking',
           quickTrackingDescription:
@@ -638,6 +643,8 @@ export const messages = {
           matchDeleted: 'Match deleted',
           matchTrackingStarted: 'Match tracking started',
           matchTrackingStopped: 'Match tracking stopped',
+          matchTrackingPaused: 'Match clock paused',
+          matchTrackingResumed: 'Match clock resumed',
           matchEventCreated: 'Match event added',
           matchEventDeleted: 'Match event deleted',
           matchResultUpdated: 'Match result updated',
@@ -952,6 +959,7 @@ export const messages = {
           finalScore: 'Marcador: {score}',
           trackingNotStarted: 'Sin iniciar',
           trackingLive: 'En juego',
+          trackingPaused: 'Pausado',
           trackingFinished: 'Finalizado',
           elapsed: 'Tiempo: {value}',
           startedAt: 'Inicio: {value}',
@@ -1331,7 +1339,11 @@ export const messages = {
           trackingDescription:
             'Inicia el reloj del partido y registra eventos con tiempo como goles, tarjetas, faltas, paradas o sanciones.',
           startTracking: 'Iniciar partido',
-          stopTracking: 'Detener partido',
+          pauseTracking: 'Pausar reloj',
+          resumeTracking: 'Reanudar reloj',
+          stopTracking: 'Finalizar partido',
+          trackingPausedHint:
+            'El reloj está en pausa. El registro rápido queda deshabilitado hasta reanudar; el tiempo en pausa no cuenta como tiempo de partido.',
           liveClockLabel: 'Reloj en vivo',
           quickTrackingTitle: 'Seguimiento rápido en vivo',
           quickTrackingDescription:
@@ -1485,6 +1497,8 @@ export const messages = {
           matchDeleted: 'Partido eliminado',
           matchTrackingStarted: 'Seguimiento del partido iniciado',
           matchTrackingStopped: 'Seguimiento del partido detenido',
+          matchTrackingPaused: 'Reloj del partido pausado',
+          matchTrackingResumed: 'Reloj del partido reanudado',
           matchEventCreated: 'Evento de partido añadido',
           matchEventDeleted: 'Evento de partido eliminado',
           matchResultUpdated: 'Resultado del partido actualizado',

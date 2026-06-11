@@ -2243,6 +2243,38 @@ export default function AdminDashboard({
     }, t('dashboard.admin.notices.matchTrackingStopped'))
   }
 
+  const handlePauseMatch = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.pauseMatch(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid
+      )
+      setSelectedMatchDetail(updated)
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, t('dashboard.admin.notices.matchTrackingPaused'))
+  }
+
+  const handleResumeMatch = async () => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.resumeMatch(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid
+      )
+      setSelectedMatchDetail(updated)
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, t('dashboard.admin.notices.matchTrackingResumed'))
+  }
+
   const createMatchEventAndRefresh = async ({
     eventType,
     teamSide,
@@ -2529,6 +2561,8 @@ export default function AdminDashboard({
       onMatchEventDraftField,
       handleStartMatch,
       handleStopMatch,
+      handlePauseMatch,
+      handleResumeMatch,
       handleQuickMatchEvent,
       handleCreateMatchEvent,
       handleDeleteMatchEvent,
