@@ -2,15 +2,17 @@ import secrets
 import time
 
 from core.application.ports.pena_link_port import (
-    InvalidOrExpiredLinkTokenError,
     PenaLinkPort,
     PenaLinkTokenResult,
-    PenaNotManagedByAdminError,
-    UserAlreadyLinkedToPenaError,
-    UserPlayerNotFoundError,
+)
+from core.domain.errors import (
+    InvalidLinkTokenError,
+    PenaLinkAccessDeniedError,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
 )
 from core.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
-from persistence.domain.entity import Pena, PenaLinkToken, PenaPlayer, PenaRole, Player
+from persistence.infrastructure.entity import Pena, PenaLinkToken, PenaPlayer, PenaRole, Player
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -31,7 +33,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
         ).scalar_one_or_none()
         if not pena:
             self.session.rollback()
-            raise PenaNotManagedByAdminError()
+            raise PenaLinkAccessDeniedError()
 
         token = secrets.token_urlsafe(32)
         expires_at = now_ts + ttl_seconds
@@ -62,7 +64,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                     .with_for_update()
                 ).scalar_one_or_none()
                 if not link:
-                    raise InvalidOrExpiredLinkTokenError()
+                    raise InvalidLinkTokenError()
 
                 roles = list(
                     self.session.execute(
@@ -82,7 +84,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                     select(Player).where(Player.id_player_account == account_id)
                 ).scalar_one_or_none()
                 if not player:
-                    raise UserPlayerNotFoundError()
+                    raise UserProfileNotFoundError()
 
                 existing = self.session.execute(
                     select(PenaPlayer.id)
@@ -104,7 +106,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                         position=position,
                     )
                     self.session.add(membership)
-        except (InvalidOrExpiredLinkTokenError, UserPlayerNotFoundError):
+        except (InvalidLinkTokenError, UserProfileNotFoundError):
             self.session.rollback()
             raise
         except IntegrityError as exc:
@@ -112,7 +114,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
             # Best effort: ensure token is consumed even when membership insert raced.
             with self.session.begin():
                 self.session.execute(delete(PenaLinkToken).where(PenaLinkToken.token == token))
-            raise UserAlreadyLinkedToPenaError() from exc
+            raise UserAlreadyLinkedError() from exc
 
         if already_linked:
-            raise UserAlreadyLinkedToPenaError()
+            raise UserAlreadyLinkedError()

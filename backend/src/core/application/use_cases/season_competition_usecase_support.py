@@ -1,5 +1,4 @@
 from core.application.models.season_competition_models import (
-    SeasonInfo,
     SeasonMatchDetailInfo,
     SeasonMatchesPage,
     SeasonMatchEventCreate,
@@ -26,7 +25,6 @@ from core.application.ports.season_competition_port import (
     MatchTeamResult,
     SeasonPlayerResult,
     SeasonPlayersPageResult,
-    SeasonResult,
 )
 from core.application.ports.season_competition_port import (
     SeasonPlayerFilters as RepositorySeasonPlayerFilters,
@@ -186,17 +184,6 @@ def to_repository_filters(filters: SeasonPlayersFilters) -> RepositorySeasonPlay
         position=filters.position,
         positions=filters.positions,
         search=filters.search,
-    )
-
-
-def to_season_info(item: SeasonResult) -> SeasonInfo:
-    return SeasonInfo(
-        guid=item.guid,
-        start_date=item.start_date,
-        end_date=item.end_date,
-        points_win=item.points_win,
-        points_draw=item.points_draw,
-        points_loss=item.points_loss,
     )
 
 

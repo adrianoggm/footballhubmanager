@@ -19,14 +19,6 @@ class PlayerProfileResult:
     image_url: str | None = None
 
 
-class InvalidNationalityError(Exception):
-    pass
-
-
-class InvalidProfileImageError(Exception):
-    pass
-
-
 class PlayerProfilePort(Protocol):
     def find_by_guid(self, player_guid: str) -> PlayerProfileResult | None: ...
 

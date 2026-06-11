@@ -4,7 +4,7 @@ from core.application.ports.season_competition_port import (
     SeasonNotFoundError,
 )
 from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
-from persistence.domain.entity import (
+from persistence.infrastructure.entity import (
     FootballMatch,
     Pena,
     PenaPlayer,

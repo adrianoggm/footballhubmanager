@@ -1,5 +1,5 @@
 from persistence.config import initialize_config
-from persistence.domain.entity import Base
+from persistence.infrastructure.entity import Base
 from persistence.infrastructure.repository.db.repository import BaseRepository
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

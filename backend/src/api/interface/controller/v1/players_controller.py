@@ -1,8 +1,8 @@
 from dataclasses import asdict
 
 from api.dependencies.use_cases import (
-    get_player_profile_use_case,
-    get_update_player_profile_use_case,
+    get_player_profile_command_bus,
+    get_player_profile_query_bus,
 )
 from api.interface.controller.v1.model.request.players_request import PlayerUpdateRequest
 from api.interface.controller.v1.model.response.players_response import (
@@ -10,13 +10,16 @@ from api.interface.controller.v1.model.response.players_response import (
 )
 from api.middleware.exception_mapper import map_exceptions
 from auth.dependencies import authorize_player_access, require_user
+from core.application.commands.player_profile_commands import (
+    UpdatePlayerProfileByAccountIdCommand,
+)
 from core.application.models import PlayerProfile
-from core.application.use_cases.get_player_profile_usecase import GetPlayerProfileUseCase
-from core.application.use_cases.update_player_profile_usecase import (
-    PlayerUpdate,
-    UpdatePlayerProfileUseCase,
+from core.application.queries.player_profile_queries import (
+    GetPlayerProfileByAccountIdQuery,
+    GetPlayerProfileByGuidQuery,
 )
 from fastapi import APIRouter, Depends, HTTPException, status
+from shared.application.bus.buses import CommandBus, QueryBus
 
 router = APIRouter()
 
@@ -30,9 +33,11 @@ def _profile_or_404(profile: PlayerProfile | None) -> PlayerProfile:
 @router.get("/players/me", response_model=PlayerProfileResponse)
 def get_me(
     session=Depends(require_user),
-    use_case: GetPlayerProfileUseCase = Depends(get_player_profile_use_case),
+    query_bus: QueryBus = Depends(get_player_profile_query_bus),
 ):
-    profile = _profile_or_404(use_case.execute_by_account_id(session.user_id))
+    profile = _profile_or_404(
+        query_bus.ask(GetPlayerProfileByAccountIdQuery(account_id=session.user_id))
+    )
     return PlayerProfileResponse(**asdict(profile))
 
 
@@ -41,16 +46,20 @@ def get_me(
 def update_me(
     payload: PlayerUpdateRequest,
     session=Depends(require_user),
-    use_case: UpdatePlayerProfileUseCase = Depends(get_update_player_profile_use_case),
+    command_bus: CommandBus = Depends(get_player_profile_command_bus),
 ):
-    update = PlayerUpdate(
-        name=payload.name,
-        surname1=payload.surname1,
-        surname2=payload.surname2,
-        nationality=payload.nationality,
-        image_url=payload.image_url,
+    profile = _profile_or_404(
+        command_bus.dispatch(
+            UpdatePlayerProfileByAccountIdCommand(
+                account_id=session.user_id,
+                name=payload.name,
+                surname1=payload.surname1,
+                surname2=payload.surname2,
+                nationality=payload.nationality,
+                image_url=payload.image_url,
+            )
+        )
     )
-    profile = _profile_or_404(use_case.execute_by_account_id(session.user_id, update))
     return PlayerProfileResponse(**asdict(profile))
 
 
@@ -58,7 +67,7 @@ def update_me(
 def get_player(
     player_guid: str,
     _session=Depends(authorize_player_access),
-    use_case: GetPlayerProfileUseCase = Depends(get_player_profile_use_case),
+    query_bus: QueryBus = Depends(get_player_profile_query_bus),
 ):
-    profile = _profile_or_404(use_case.execute_by_guid(player_guid))
+    profile = _profile_or_404(query_bus.ask(GetPlayerProfileByGuidQuery(player_guid=player_guid)))
     return PlayerProfileResponse(**asdict(profile))

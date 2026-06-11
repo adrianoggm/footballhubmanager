@@ -1,11 +1,11 @@
-from auth.application.models import AuthAccount
-from auth.application.ports import AuthAccountRepository
-from persistence.domain.entity import AdminAccounts, PlayerAccount
+from auth.domain.models.auth_account import AuthAccount
+from auth.domain.ports.auth_account_repository_port import AuthAccountRepositoryPort
+from persistence.infrastructure.entity import AdminAccounts, PlayerAccount
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-class SqlAlchemyAuthAccountRepository(AuthAccountRepository):
+class SqlAlchemyAuthAccountRepository(AuthAccountRepositoryPort):
     def __init__(self, session: Session):
         self.session = session
 

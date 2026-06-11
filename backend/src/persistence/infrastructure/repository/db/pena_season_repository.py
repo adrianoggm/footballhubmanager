@@ -2,16 +2,18 @@ from datetime import date
 
 from core.application.policies import FieldUpdate
 from core.application.ports.pena_season_port import (
-    InvalidSeasonDateRangeError,
-    PenaNotFoundError,
-    PenaNotManagedByAdminError,
     PenaSeasonPort,
     PenaSeasonResult,
     PenaSeasonsPageResult,
-    SeasonDateRangeOverlapError,
-    SeasonNotFoundError,
 )
-from persistence.domain.entity import Pena, Season
+from core.domain.errors import (
+    InvalidPenaSeasonDataError,
+    PenaSeasonAccessDeniedError,
+    PenaSeasonDateOverlapError,
+    PenaSeasonNotFoundError,
+    PenaSeasonPenaNotFoundError,
+)
+from persistence.infrastructure.entity import Pena, Season
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -106,7 +108,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
             self.session.rollback()
-            raise PenaNotManagedByAdminError()
+            raise PenaSeasonAccessDeniedError()
 
         if self._has_overlapping_range(
             pena_id=pena.id,
@@ -114,7 +116,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             end_date=end_date,
         ):
             self.session.rollback()
-            raise SeasonDateRangeOverlapError()
+            raise PenaSeasonDateOverlapError()
 
         season = Season(
             id_pena=pena.id,
@@ -151,7 +153,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
             self.session.rollback()
-            raise PenaNotManagedByAdminError()
+            raise PenaSeasonAccessDeniedError()
 
         season = self._lock_season_for_pena(
             pena_id=pena.id,
@@ -172,7 +174,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             or resolved_start_date > resolved_end_date
         ):
             self.session.rollback()
-            raise InvalidSeasonDateRangeError()
+            raise InvalidPenaSeasonDataError()
 
         if self._has_overlapping_range(
             pena_id=pena.id,
@@ -181,7 +183,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
             exclude_season_id=season.id,
         ):
             self.session.rollback()
-            raise SeasonDateRangeOverlapError()
+            raise PenaSeasonDateOverlapError()
 
         season.start_date = resolved_start_date
         season.end_date = resolved_end_date
@@ -209,7 +211,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         pena = self._get_pena(pena_guid)
         if pena.id_admin != admin_id:
             self.session.rollback()
-            raise PenaNotManagedByAdminError()
+            raise PenaSeasonAccessDeniedError()
 
         season = self._lock_season_for_pena(
             pena_id=pena.id,
@@ -222,7 +224,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
         if not pena:
             self.session.rollback()
-            raise PenaNotFoundError()
+            raise PenaSeasonPenaNotFoundError()
         return pena
 
     def _get_season_for_pena(self, *, pena_id: int, season_guid: str) -> Season:
@@ -231,7 +233,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         ).scalar_one_or_none()
         if not season:
             self.session.rollback()
-            raise SeasonNotFoundError()
+            raise PenaSeasonNotFoundError()
         return season
 
     def _lock_season_for_pena(self, *, pena_id: int, season_guid: str) -> Season:
@@ -243,7 +245,7 @@ class SqlAlchemyPenaSeasonRepository(PenaSeasonPort):
         season = self.session.execute(stmt).scalar_one_or_none()
         if not season:
             self.session.rollback()
-            raise SeasonNotFoundError()
+            raise PenaSeasonNotFoundError()
         return season
 
     def _has_overlapping_range(

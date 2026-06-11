@@ -5,16 +5,6 @@ from core.application.policies import FieldUpdate, StandingsUpdatePolicy
 
 
 @dataclass(frozen=True)
-class SeasonInfo:
-    guid: str
-    start_date: date
-    end_date: date
-    points_win: int
-    points_draw: int
-    points_loss: int
-
-
-@dataclass(frozen=True)
 class SeasonPlayerInfo:
     player_guid: str
     name: str
@@ -56,15 +46,6 @@ class SeasonPlayersFilters:
     position: str | None = None
     positions: tuple[str, ...] = ()
     search: str | None = None
-
-
-@dataclass(frozen=True)
-class SeasonCreate:
-    start_date: date
-    end_date: date
-    points_win: int = 3
-    points_draw: int = 1
-    points_loss: int = 0
 
 
 @dataclass(frozen=True)

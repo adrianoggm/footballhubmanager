@@ -21,7 +21,7 @@ from core.domain.label_config import (
     align_label_colors,
     parse_label_colors_payload,
 )
-from persistence.domain.entity import (
+from persistence.infrastructure.entity import (
     FootballMatch,
     Pena,
     PenaPlayer,

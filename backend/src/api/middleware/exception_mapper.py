@@ -4,65 +4,9 @@ from collections.abc import Callable, Mapping
 from functools import wraps
 from typing import Any
 
-from auth.application.use_cases.login import InvalidCredentialsError
-from core.application.use_cases import (
-    AdminUsernameExistsError,
-    InvalidAdminRegistrationDataError,
-    InvalidLinkTokenError,
-    InvalidPenaAccountabilityDataError,
-    InvalidPenaGuestPlayerDataError,
-    InvalidPenaLabelsDataError,
-    InvalidPenaMembershipUpdateDataError,
-    InvalidPenaProfileImageError,
-    InvalidPlayerUpdateDataError,
-    InvalidRegistrationDataError,
-    PenaAccessDeniedError,
-    PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseNotFoundError,
-    PenaAccountabilityMemberNotFoundError,
-    PenaAccountabilityPenaNotFoundError,
-    PenaLabelsAccessDeniedError,
-    PenaLabelsPenaNotFoundError,
-    PenaMembershipAccessDeniedError,
-    PenaMembershipInvalidNationalityError,
-    PenaMembershipNotFoundError,
-    PenaMembershipPenaNotFoundError,
-    PenaMembershipPlayerNotFoundError,
-    PenaMembershipUserProfileNotFoundError,
-    PenaProfileAccessDeniedError,
-    PenaProfileNotFoundError,
-    UserAlreadyLinkedError,
-    UserInvalidNationalityError,
-    UserProfileNotFoundError,
-    UserUsernameExistsError,
-)
-from core.application.use_cases import (
-    InvalidNationalityError as PlayerInvalidNationalityError,
-)
-from core.application.use_cases import (
-    InvalidProfileImageError as PlayerInvalidProfileImageError,
-)
-from core.application.use_cases import (
-    InvalidSeasonInsightsDataError as CoreInvalidSeasonInsightsRequestError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    InvalidPenaSeasonDataError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonDateOverlapError as PenaSeasonsDateOverlapError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonNotFoundError as PenaSeasonsNotFoundError,
-)
-from core.application.use_cases.manage_pena_seasons_usecase import (
-    PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
-)
+from auth.domain.errors import InvalidCredentialsError
 from core.application.use_cases.season_competition_errors import (
     InvalidSeasonDataError,
-    InvalidSeasonInsightsDataError,
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
@@ -88,11 +32,51 @@ from core.application.use_cases.season_competition_errors import (
 from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError as CompetitionPenaSeasonPenaNotFoundError,
 )
-from core.application.use_cases.season_match_insights_errors import (
-    PenaSeasonNotFoundError as CoreCompetitionPenaSeasonNotFoundError,
+from core.domain.errors import (
+    AdminUsernameExistsError,
+    InvalidAdminRegistrationDataError,
+    InvalidLinkTokenError,
+    InvalidPenaAccountabilityDataError,
+    InvalidPenaGuestPlayerDataError,
+    InvalidPenaLabelsDataError,
+    InvalidPenaMembershipUpdateDataError,
+    InvalidPenaSeasonDataError,
+    InvalidPlayerNationalityError,
+    InvalidPlayerUpdateDataError,
+    InvalidProfileImageError,
+    InvalidRegistrationDataError,
+    InvalidSeasonInsightsDataError,
+    PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityExpenseNotFoundError,
+    PenaAccountabilityMemberNotFoundError,
+    PenaAccountabilityPenaNotFoundError,
+    PenaLabelsAccessDeniedError,
+    PenaLabelsPenaNotFoundError,
+    PenaLinkAccessDeniedError,
+    PenaMembershipAccessDeniedError,
+    PenaMembershipInvalidNationalityError,
+    PenaMembershipNotFoundError,
+    PenaMembershipPenaNotFoundError,
+    PenaMembershipPlayerNotFoundError,
+    PenaMembershipUserProfileNotFoundError,
+    PenaProfileAccessDeniedError,
+    PenaProfileNotFoundError,
+    UserAlreadyLinkedError,
+    UserInvalidNationalityError,
+    UserProfileNotFoundError,
+    UserUsernameExistsError,
 )
-from core.application.use_cases.season_match_insights_errors import (
-    PenaSeasonPenaNotFoundError as CoreCompetitionPenaSeasonPenaNotFoundError,
+from core.domain.errors import (
+    PenaSeasonAccessDeniedError as PenaSeasonsAccessDeniedError,
+)
+from core.domain.errors import (
+    PenaSeasonDateOverlapError as PenaSeasonsDateOverlapError,
+)
+from core.domain.errors import (
+    PenaSeasonNotFoundError as PenaSeasonsNotFoundError,
+)
+from core.domain.errors import (
+    PenaSeasonPenaNotFoundError as PenaSeasonsPenaNotFoundError,
 )
 from fastapi import HTTPException, status
 
@@ -110,15 +94,14 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Invalid admin registration data",
     ),
     UserInvalidNationalityError: (status.HTTP_400_BAD_REQUEST, "Invalid nationality"),
-    PlayerInvalidNationalityError: (status.HTTP_400_BAD_REQUEST, "Invalid nationality"),
+    InvalidPlayerNationalityError: (status.HTTP_400_BAD_REQUEST, "Invalid nationality"),
     InvalidPlayerUpdateDataError: (status.HTTP_400_BAD_REQUEST, "Invalid player update data"),
-    PlayerInvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     InvalidLinkTokenError: (status.HTTP_400_BAD_REQUEST, "Invalid or expired link token"),
     UserAlreadyLinkedError: (status.HTTP_409_CONFLICT, "User is already linked to this pena"),
     UserProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "User player profile not found"),
-    PenaAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
+    PenaLinkAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
-    InvalidPenaProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
+    InvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaLabelsAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
     PenaProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
@@ -172,20 +155,8 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         status.HTTP_409_CONFLICT,
         "Season range overlaps an existing season",
     ),
-    CoreCompetitionPenaSeasonPenaNotFoundError: (
-        status.HTTP_404_NOT_FOUND,
-        "Pena not found",
-    ),
-    CoreCompetitionPenaSeasonNotFoundError: (
-        status.HTTP_404_NOT_FOUND,
-        "Season not found",
-    ),
     InvalidSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season data"),
     InvalidSeasonInsightsDataError: (
-        status.HTTP_400_BAD_REQUEST,
-        "Invalid match insights request",
-    ),
-    CoreInvalidSeasonInsightsRequestError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid match insights request",
     ),

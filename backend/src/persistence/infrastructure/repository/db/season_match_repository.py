@@ -33,7 +33,7 @@ from core.application.services import (
     SeasonMatchReportService,
     SeasonMatchReportState,
 )
-from persistence.domain.entity import (
+from persistence.infrastructure.entity import (
     FootballMatch,
     FootballMatchEvent,
     Pena,

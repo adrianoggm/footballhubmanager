@@ -1,9 +1,8 @@
 from auth.application.use_cases.authorize_access import (
-    AccessDeniedError,
     AuthorizePenaAccessUseCase,
     AuthorizePlayerAccessUseCase,
-    InvalidSessionTypeError,
 )
+from auth.domain.errors import AccessDeniedError, InvalidSessionTypeError
 from auth.infrastructure.repositories.sqlalchemy_access_repository import (
     SqlAlchemyAccessRepository,
 )

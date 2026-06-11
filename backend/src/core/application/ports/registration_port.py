@@ -2,14 +2,6 @@ from dataclasses import dataclass
 from typing import Protocol
 
 
-class DuplicateUsernameError(Exception):
-    pass
-
-
-class InvalidNationalityError(Exception):
-    pass
-
-
 @dataclass(frozen=True)
 class RegisteredUserResult:
     account_id: int
