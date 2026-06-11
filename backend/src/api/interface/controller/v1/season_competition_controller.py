@@ -47,6 +47,8 @@ from core.application.commands.season_match_commands import (
     CreateSeasonMatchWithLineupsCommand,
     DeleteSeasonMatchCommand,
     DeleteSeasonMatchEventCommand,
+    PauseSeasonMatchCommand,
+    ResumeSeasonMatchCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -86,6 +88,8 @@ from core.application.use_cases.season_competition_errors import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerUpdateDataError,
     SeasonMatchAlreadyStartedError,
+    SeasonMatchClockAlreadyPausedError,
+    SeasonMatchClockNotPausedError,
     SeasonMatchClockNotRunningError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
@@ -218,6 +222,38 @@ STOP_SEASON_MATCH_OVERRIDES = {
     SeasonMatchClockNotRunningError: (
         status.HTTP_409_CONFLICT,
         "Match tracking is not currently running",
+    ),
+    InvalidSeasonMatchDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match tracking operation",
+    ),
+}
+
+
+PAUSE_SEASON_MATCH_OVERRIDES = {
+    SeasonMatchClockNotRunningError: (
+        status.HTTP_409_CONFLICT,
+        "Match tracking is not currently running",
+    ),
+    SeasonMatchClockAlreadyPausedError: (
+        status.HTTP_409_CONFLICT,
+        "Match clock is already paused",
+    ),
+    InvalidSeasonMatchDataError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Invalid match tracking operation",
+    ),
+}
+
+
+RESUME_SEASON_MATCH_OVERRIDES = {
+    SeasonMatchClockNotRunningError: (
+        status.HTTP_409_CONFLICT,
+        "Match tracking is not currently running",
+    ),
+    SeasonMatchClockNotPausedError: (
+        status.HTTP_409_CONFLICT,
+        "Match clock is not paused",
     ),
     InvalidSeasonMatchDataError: (
         status.HTTP_400_BAD_REQUEST,
@@ -684,6 +720,50 @@ def stop_season_match(
     command_bus: CommandBus = Depends(get_season_match_command_bus),
 ):
     command = StopSeasonMatchCommand(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        admin_id=admin_session.user_id,
+    )
+    updated = command_bus.dispatch(command)
+    return to_season_match_detail_response(updated)
+
+
+@router.post(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/pause",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=PAUSE_SEASON_MATCH_OVERRIDES)
+def pause_season_match(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    admin_session=Depends(require_admin),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
+):
+    command = PauseSeasonMatchCommand(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        admin_id=admin_session.user_id,
+    )
+    updated = command_bus.dispatch(command)
+    return to_season_match_detail_response(updated)
+
+
+@router.post(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/resume",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=RESUME_SEASON_MATCH_OVERRIDES)
+def resume_season_match(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    admin_session=Depends(require_admin),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
+):
+    command = ResumeSeasonMatchCommand(
         pena_guid=pena_guid,
         season_guid=season_guid,
         match_guid=match_guid,

@@ -4,7 +4,9 @@ from datetime import date
 from core.application.policies import FieldUpdate, StandingsUpdatePolicy
 from core.application.ports.season_competition_port import (
     InvalidMatchDataError,
+    MatchClockAlreadyPausedError,
     MatchClockAlreadyStartedError,
+    MatchClockNotPausedError,
     MatchClockNotRunningError,
     MatchDetailResult,
     MatchesPageResult,
@@ -364,6 +366,8 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
 
         football_match.started_at_epoch = self._now_epoch()
         football_match.ended_at_epoch = None
+        football_match.paused_at_epoch = None
+        football_match.total_paused_seconds = 0
         self.session.commit()
         return self._build_match_detail_result(
             pena_id=pena.id,
@@ -419,7 +423,80 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_team_players=away_team_players,
         )
 
-        football_match.ended_at_epoch = self._now_epoch()
+        now_epoch = self._now_epoch()
+        # Finishing while paused folds the in-progress pause into the accumulated total
+        # so the final elapsed time stays consistent.
+        if football_match.paused_at_epoch is not None:
+            football_match.total_paused_seconds = int(
+                football_match.total_paused_seconds or 0
+            ) + max(now_epoch - int(football_match.paused_at_epoch), 0)
+            football_match.paused_at_epoch = None
+        football_match.ended_at_epoch = now_epoch
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def pause_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+        )
+        if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockNotRunningError()
+        if football_match.paused_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockAlreadyPausedError()
+
+        football_match.paused_at_epoch = self._now_epoch()
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
+    def resume_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+        )
+        if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
+            self.session.rollback()
+            raise MatchClockNotRunningError()
+        if football_match.paused_at_epoch is None:
+            self.session.rollback()
+            raise MatchClockNotPausedError()
+
+        football_match.total_paused_seconds = int(football_match.total_paused_seconds or 0) + max(
+            self._now_epoch() - int(football_match.paused_at_epoch), 0
+        )
+        football_match.paused_at_epoch = None
         self.session.commit()
         return self._build_match_detail_result(
             pena_id=pena.id,
@@ -1247,7 +1324,15 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         if football_match.started_at_epoch is None or football_match.ended_at_epoch is not None:
             self.session.rollback()
             raise MatchClockNotRunningError()
-        return max(self._now_epoch() - int(football_match.started_at_epoch), 0)
+        # While paused the clock is frozen at the pause instant; accumulated pauses
+        # never count towards event time.
+        reference_epoch = (
+            football_match.paused_at_epoch
+            if football_match.paused_at_epoch is not None
+            else self._now_epoch()
+        )
+        elapsed = int(reference_epoch) - int(football_match.started_at_epoch)
+        return max(elapsed - int(football_match.total_paused_seconds or 0), 0)
 
     def _load_locked_team_season_players(
         self,
@@ -1452,6 +1537,8 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         if football_match.started_at_epoch is None:
             return "not_started"
         if football_match.ended_at_epoch is None:
+            if football_match.paused_at_epoch is not None:
+                return "paused"
             return "live"
         return "finished"
 
@@ -1464,14 +1551,15 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
     ) -> int:
         if football_match.started_at_epoch is None:
             return 0
-        end_epoch = (
-            football_match.ended_at_epoch
-            if football_match.ended_at_epoch is not None
-            else current_epoch
-            if current_epoch is not None
-            else cls._now_epoch()
-        )
-        return max(int(end_epoch) - int(football_match.started_at_epoch), 0)
+        if football_match.ended_at_epoch is not None:
+            end_epoch = football_match.ended_at_epoch
+        elif football_match.paused_at_epoch is not None:
+            # Clock is frozen while paused.
+            end_epoch = football_match.paused_at_epoch
+        else:
+            end_epoch = current_epoch if current_epoch is not None else cls._now_epoch()
+        elapsed = int(end_epoch) - int(football_match.started_at_epoch)
+        return max(elapsed - int(football_match.total_paused_seconds or 0), 0)
 
     @staticmethod
     def _apply_team_outcome_delta(

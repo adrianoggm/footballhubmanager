@@ -244,6 +244,8 @@ def test_stop_match_for_admin_finalizes_tracked_stats_when_events_exist():
         id=33,
         started_at_epoch=100,
         ended_at_epoch=None,
+        paused_at_epoch=None,
+        total_paused_seconds=0,
         guid="match-guid",
     )
     pena = SimpleNamespace(id=44)
@@ -530,3 +532,120 @@ def test_update_match_stats_for_admin_reverts_closed_match_before_reclosing():
     repo._remove_closed_match_standings.assert_called_once()
     repo._close_match_report.assert_called_once()
     session.commit.assert_called_once()
+
+
+def _tracking_match(**overrides):
+    base = {
+        "id": 33,
+        "guid": "match-guid",
+        "started_at_epoch": 100,
+        "ended_at_epoch": None,
+        "paused_at_epoch": None,
+        "total_paused_seconds": 0,
+    }
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+def _tracking_repo(session, football_match):
+    repo = SqlAlchemySeasonMatchRepository(session)
+    repo._get_locked_admin_match_bundle = lambda **kwargs: (
+        SimpleNamespace(id=44),
+        SimpleNamespace(id=55, guid="season-guid"),
+        football_match,
+        SimpleNamespace(id=1),
+        SimpleNamespace(id=2),
+    )
+    repo._build_match_detail_result = lambda **kwargs: "detail-result"
+    return repo
+
+
+def test_pause_match_for_admin_freezes_clock():
+    session = Mock()
+    football_match = _tracking_match()
+    repo = _tracking_repo(session, football_match)
+    repo._now_epoch = lambda: 160
+
+    result = repo.pause_match_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=7,
+    )
+
+    assert result == "detail-result"
+    assert football_match.paused_at_epoch == 160
+    session.commit.assert_called_once()
+
+
+def test_pause_match_for_admin_rejects_already_paused_clock():
+    from core.application.ports.season_competition_port import MatchClockAlreadyPausedError
+
+    session = Mock()
+    football_match = _tracking_match(paused_at_epoch=130)
+    repo = _tracking_repo(session, football_match)
+
+    with pytest.raises(MatchClockAlreadyPausedError):
+        repo.pause_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=7,
+        )
+    session.rollback.assert_called_once()
+
+
+def test_resume_match_for_admin_accumulates_paused_seconds():
+    session = Mock()
+    football_match = _tracking_match(paused_at_epoch=130, total_paused_seconds=10)
+    repo = _tracking_repo(session, football_match)
+    repo._now_epoch = lambda: 190
+
+    repo.resume_match_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=7,
+    )
+
+    assert football_match.paused_at_epoch is None
+    assert football_match.total_paused_seconds == 70
+    session.commit.assert_called_once()
+
+
+def test_resume_match_for_admin_rejects_clock_that_is_not_paused():
+    from core.application.ports.season_competition_port import MatchClockNotPausedError
+
+    session = Mock()
+    football_match = _tracking_match()
+    repo = _tracking_repo(session, football_match)
+
+    with pytest.raises(MatchClockNotPausedError):
+        repo.resume_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=7,
+        )
+    session.rollback.assert_called_once()
+
+
+def test_match_tracking_status_reports_paused_state():
+    assert (
+        SqlAlchemySeasonMatchRepository._match_tracking_status(_tracking_match(paused_at_epoch=130))
+        == "paused"
+    )
+    assert SqlAlchemySeasonMatchRepository._match_tracking_status(_tracking_match()) == "live"
+
+
+def test_match_elapsed_seconds_excludes_paused_time():
+    live_match = _tracking_match(total_paused_seconds=30)
+    assert (
+        SqlAlchemySeasonMatchRepository._match_elapsed_seconds(live_match, current_epoch=200) == 70
+    )
+
+    paused_match = _tracking_match(paused_at_epoch=150, total_paused_seconds=10)
+    assert (
+        SqlAlchemySeasonMatchRepository._match_elapsed_seconds(paused_match, current_epoch=500)
+        == 40
+    )
