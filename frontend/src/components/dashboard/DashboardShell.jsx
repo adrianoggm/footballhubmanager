@@ -423,7 +423,8 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
 
   return (
     <Paper
-      component="aside"
+      component="nav"
+      aria-label={railLabel || brand}
       elevation={0}
       sx={{
         display: { xs: 'none', xl: 'flex' },
@@ -550,13 +551,15 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
   )
 }
 
-function MobileNav({ navItems, activeNavId, onNavChange }) {
+function MobileNav({ navItems, activeNavId, onNavChange, navLabel = '' }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const geometry = getDashboardGeometry(theme)
 
   return (
     <Paper
+      component="nav"
+      aria-label={navLabel}
       elevation={0}
       sx={{
         display: { xs: 'block', xl: 'none' },
@@ -783,7 +786,12 @@ export default function DashboardShell({
         </Paper>
 
         {navItems.length > 0 ? (
-          <MobileNav navItems={navItems} activeNavId={activeNavId} onNavChange={onNavChange} />
+          <MobileNav
+            navItems={navItems}
+            activeNavId={activeNavId}
+            onNavChange={onNavChange}
+            navLabel={railLabel || brand}
+          />
         ) : null}
 
         {summaryCards.length > 0 ? (

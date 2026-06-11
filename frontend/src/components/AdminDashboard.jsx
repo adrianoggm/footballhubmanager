@@ -28,6 +28,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminMatches } from '../hooks/useAdminMatches.js'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
+import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
@@ -604,24 +605,51 @@ export default function AdminDashboard({
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
 
-  const [seasonForm, setSeasonForm] = useState(defaultSeasonForm)
+  // Form/draft state via the shared useForm hook. `setValues` is aliased to the
+  // legacy setter names so the existing reset/merge call sites stay unchanged.
+  const {
+    values: seasonForm,
+    setValues: setSeasonForm,
+    onField: onSeasonFormField,
+  } = useForm(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
   const [importSourceSeasonGuid, setImportSourceSeasonGuid] = useState('')
   const [selectedSeasonForm, setSelectedSeasonForm] = useState(defaultSeasonForm)
   const [penaLabels, setPenaLabels] = useState(defaultPenaLabels)
-  const [labelsDraft, setLabelsDraft] = useState(defaultLabelsDraft)
+  const {
+    values: labelsDraft,
+    setValues: setLabelsDraft,
+    onField: onLabelsDraftField,
+  } = useForm(defaultLabelsDraft)
   const [memberFilters, setMemberFilters] = useState(defaultLabelFilters)
   const [standingsFilters, setStandingsFilters] = useState(defaultLabelFilters)
-  const [matchForm, setMatchForm] = useState(defaultMatchForm)
-  const [guestForm, setGuestForm] = useState(defaultGuestForm)
+  const {
+    values: matchForm,
+    setValues: setMatchForm,
+    onField: onMatchField,
+  } = useForm(defaultMatchForm)
+  const {
+    values: guestForm,
+    setValues: setGuestForm,
+    onField: onGuestField,
+  } = useForm(defaultGuestForm)
   const [pendingDeleteSeason, setPendingDeleteSeason] = useState(null)
   const [editingSeasonPlayer, setEditingSeasonPlayer] = useState(null)
-  const [seasonPlayerDraft, setSeasonPlayerDraft] = useState(defaultSeasonPlayerDraft)
+  const {
+    values: seasonPlayerDraft,
+    setValues: setSeasonPlayerDraft,
+    onField: onSeasonPlayerDraftField,
+  } = useForm(defaultSeasonPlayerDraft)
   const [pendingRemoveSeasonPlayer, setPendingRemoveSeasonPlayer] = useState(null)
   const [editingMembershipPlayer, setEditingMembershipPlayer] = useState(null)
-  const [membershipDraft, setMembershipDraft] = useState(defaultMembershipDraft)
+  const {
+    values: membershipDraft,
+    setValues: setMembershipDraft,
+    onField: onMembershipDraftField,
+  } = useForm(defaultMembershipDraft)
   const [pendingRemoveMembershipPlayer, setPendingRemoveMembershipPlayer] = useState(null)
-  const [penaProfileDraft, setPenaProfileDraft] = useState(defaultPenaProfileDraft)
+  const { values: penaProfileDraft, setValues: setPenaProfileDraft } =
+    useForm(defaultPenaProfileDraft)
 
   const historySeasons = useMemo(() => {
     return [...seasonList].sort((left, right) => {
@@ -899,14 +927,8 @@ export default function AdminDashboard({
     t,
   })
 
-  const onSeasonField = (name) => (event) => {
-    const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
-    setSeasonForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const onMatchField = (name) => (event) => {
-    setMatchForm((prev) => ({ ...prev, [name]: event.target.value }))
-  }
+  const onSeasonField = (name) =>
+    onSeasonFormField(name, name.startsWith('points_') ? Number : undefined)
 
   const onMatchFormLineupsChange = ({ homePlayerGuids, awayPlayerGuids }) => {
     setMatchForm((prev) => ({
@@ -954,21 +976,6 @@ export default function AdminDashboard({
     })
   }
 
-  const onGuestField = (name) => (event) => {
-    setGuestForm((prev) => ({ ...prev, [name]: event.target.value }))
-  }
-
-  const onSeasonPlayerDraftField = (name) => (event) => {
-    setSeasonPlayerDraft((prev) => ({ ...prev, [name]: event.target.value }))
-  }
-
-  const onMembershipDraftField = (name) => (event) => {
-    setMembershipDraft((prev) => ({ ...prev, [name]: event.target.value }))
-  }
-
-  const onLabelsDraftField = (name) => (event) => {
-    setLabelsDraft((prev) => ({ ...prev, [name]: event.target.value }))
-  }
 
   const onLabelColorDraftChange = (group, label) => (event) => {
     const color = normalizeHexColor(event.target.value) || defaultColorForLabel(label, {})

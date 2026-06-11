@@ -37,6 +37,7 @@ import UserMembershipSection from './user/UserMembershipSection.jsx'
 import UserStandingsSection from './user/UserStandingsSection.jsx'
 import { DashboardContext } from '../context/dashboardContext.js'
 import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
+import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
@@ -145,14 +146,26 @@ export default function UserDashboard({
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
 
   const [profile, setProfile] = useState(null)
-  const [profileForm, setProfileForm] = useState(defaultProfileForm)
+  const {
+    values: profileForm,
+    setValues: setProfileForm,
+    onField: onProfileField,
+  } = useForm(defaultProfileForm)
   const [nationalities, setNationalities] = useState([])
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
   const [membership, setMembership] = useState(null)
-  const [membershipForm, setMembershipForm] = useState(defaultMembershipForm)
-  const [joinForm, setJoinForm] = useState(defaultJoinForm)
+  const {
+    values: membershipForm,
+    setValues: setMembershipForm,
+    onField: onMembershipField,
+  } = useForm(defaultMembershipForm)
+  const {
+    values: joinForm,
+    onField: onJoinField,
+    reset: resetJoinForm,
+  } = useForm(defaultJoinForm)
   const [seasonList, setSeasonList] = useState([])
   const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
   const [standings, setStandings] = useState([])
@@ -540,10 +553,6 @@ export default function UserDashboard({
     resetInsightsReport()
   }, [resetInsightsReport, selectedPenaGuid, selectedSeasonGuid, insightsScope])
 
-  const onProfileField = (name) => (event) => {
-    setProfileForm((prev) => ({ ...prev, [name]: event.target.value }))
-  }
-
   const openProfileSettings = () => {
     if (profile) {
       setProfileForm({
@@ -555,14 +564,6 @@ export default function UserDashboard({
       })
     }
     setProfileSettingsOpen(true)
-  }
-
-  const onMembershipField = (name) => (event) => {
-    setMembershipForm((prev) => ({ ...prev, [name]: event.target.value }))
-  }
-
-  const onJoinField = (name) => (event) => {
-    setJoinForm((prev) => ({ ...prev, [name]: event.target.value }))
   }
 
   const handleUpdateProfile = async () => {
@@ -598,7 +599,7 @@ export default function UserDashboard({
         nickname: joinForm.nickname.trim() || null,
         position: joinForm.position.trim() || null,
       })
-      setJoinForm(defaultJoinForm())
+      resetJoinForm()
       await loadDashboard()
     }, t('dashboard.user.noticeJoinedPena'))
   }

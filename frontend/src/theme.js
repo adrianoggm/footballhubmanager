@@ -596,6 +596,18 @@ const buildComponentOverrides = (palette, custom, preset) => {
         },
       },
     },
+    MuiButtonBase: {
+      styleOverrides: {
+        // Visible keyboard-focus indicator across every clickable surface
+        // (buttons, nav items, tabs, menu items). Pointer users are unaffected.
+        root: {
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${alpha(palette.secondary.main, 0.9)}`,
+            outlineOffset: 2,
+          },
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: ({ ownerState }) => {
@@ -612,6 +624,10 @@ const buildComponentOverrides = (palette, custom, preset) => {
             fontSize: '0.88rem',
             boxShadow: 'none',
             transition: 'background-position 300ms ease-out, box-shadow 250ms ease-out',
+            // >=44px touch targets on touch devices only (desktop keeps the compact 34px).
+            '@media (pointer: coarse)': {
+              minHeight: 44,
+            },
             ...(shouldUseTextColor ? { color: palette.text.primary } : {}),
           }
         },
@@ -801,6 +817,9 @@ const buildComponentOverrides = (palette, custom, preset) => {
           fontWeight: 700,
           fontSize: '0.82rem',
           paddingBlock: 6,
+          '@media (pointer: coarse)': {
+            minHeight: 44,
+          },
         },
       },
     },
