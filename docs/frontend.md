@@ -44,12 +44,23 @@ The frontend is a role-based application, not only an auth playground.
   - `frontend/src/components/admin/AdminSeasonsSection.jsx`
   - `frontend/src/components/admin/AdminAccountabilitySection.jsx`
   - `frontend/src/components/admin/AdminPlayersSection.jsx`
-  - `frontend/src/components/admin/AdminMatchesSection.jsx`
+  - `frontend/src/components/admin/AdminMatchesSection.jsx` (thin composition of
+    `admin/matches/`: `MatchCreateCard`, `MatchListCard`, `MatchEditorCard`, `trackingHelpers`)
   - `frontend/src/components/admin/AdminStandingsSection.jsx` (standings table + lazily nested `AdminInsightsSection`)
   - `frontend/src/components/admin/AdminInsightsSection.jsx`
-- Shared dashboard context + selector:
+- User feature sections (extracted from `UserDashboard`):
+  - `frontend/src/components/user/UserJoinSection.jsx`
+  - `frontend/src/components/user/UserMembershipSection.jsx`
+  - `frontend/src/components/user/UserStandingsSection.jsx`
+  - `frontend/src/components/user/UserMatchesSection.jsx`
+  - `frontend/src/components/user/UserAccountabilitySection.jsx` (lazy)
+- Shared dashboard context + selector + dialogs:
   - `frontend/src/context/dashboardContext.js`
   - `frontend/src/components/dashboard/PenaSeasonSelector.jsx`
+  - `frontend/src/components/dashboard/MatchDetailDialog.jsx` (shared by admin overview + user matches)
+  - `frontend/src/components/dashboard/AppearanceSettings.jsx` (theme + language, inside settings dialogs)
+  - `frontend/src/components/user/UserProfileSettingsDialog.jsx`
+  - `frontend/src/components/admin/PlayerEditDialogs.jsx`
 - Shared UI primitives library:
   - `frontend/src/components/common/` (`EmptyState`, `ErrorState`, `LoadingState`, `ConfirmDialog`, `SectionHeader`, `StatCard`, `PaginatedTable`)
 - Shared match viewer:

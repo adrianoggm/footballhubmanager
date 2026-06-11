@@ -132,8 +132,32 @@ primitives the user side reuses. Each phase is independently shippable and leave
 > states; header layout cleanup (appearance/language moved into settings dialogs, compact identity);
 > 4 confirmation dialogs migrated to the shared `ConfirmDialog`; season-player + membership edit
 > dialogs extracted to `admin/PlayerEditDialogs.jsx`. `AdminDashboard` 3583 → 3044 lines.
-> Remaining Phase 2: matches list/create/detail split, admin form extraction, section memoization
-> (needs prop-bundle stabilization first). Phases 3–4 pending.
+> Matches split ✅: `AdminMatchesSection` decomposed into `admin/matches/` —
+> `MatchCreateCard` (122), `MatchListCard` (159), `MatchEditorCard` (919, live tracking + events +
+> lineups + stats), shared `trackingHelpers` (68). The section itself is now a 74-line composition
+> (was 1265).
+> Phase 3 (in progress): user sections extracted to `components/user/` — `UserJoinSection`,
+> `UserMembershipSection`, `UserStandingsSection`, `UserMatchesSection`; `UserDashboard`
+> 1302 → 1027 lines.
+> Shared-state-primitive adoption: insights empty/loading and both accountability loading
+> placeholders migrated to `EmptyState`/`LoadingState`.
+> Form-state migration ✅: user forms (profile/membership/join) and admin forms/drafts (season,
+> match, guest, season-player, membership, labels, peña profile) now use the shared `useForm` hook;
+> 8 duplicated `onXField` closures removed.
+> Phase 4 accessibility (first pass) ✅: visible `:focus-visible` outline on all ButtonBase
+> surfaces, ≥44px touch targets on coarse pointers (buttons + toggle buttons), shell navigations
+> exposed as `nav` landmarks with aria-labels.
+> Targeted memoization ✅ (live-tracking hot path): inside `MatchEditorCard` the 1-second clock tick
+> no longer re-renders the heavy subtrees — `MatchDetailViewer`, `TrackingTeamPanel` (×2) and the
+> new `TeamStatsTable` (×2) are `React.memo`'d with `useMemo`'d inputs (event players, event counts,
+> tracked score).
+> Dialog dedup/extraction ✅: shared `MatchDetailDialog` (was duplicated inline in both dashboards),
+> `UserProfileSettingsDialog` extracted. `UserDashboard` 1302 → 944 lines.
+> Live-clock pause/resume feature ✅ (backend pause/resume commands + v9 migration + editor UI):
+> pausing the clock is now distinct from finishing the match.
+> Remaining: broad section memoization is intentionally NOT pursued — sections render one-at-a-time
+> by design, so the payoff doesn't justify stabilizing 50+ handler refs. Phase 4 visual-coherence
+> sweep pending (best done interactively).
 
 ### Phase 0 — Foundations (shared, no visible change) ✅
 - Create `components/common/` primitives: `EmptyState`, `ErrorState`, `LoadingState`,
