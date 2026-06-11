@@ -5,33 +5,18 @@ import {
   Card,
   CardContent,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  Grid,
   LinearProgress,
-  MenuItem,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
   Typography,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
-import MatchDetailViewer from './MatchDetailViewer.jsx'
-import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
-import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
+import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import UserJoinSection from './user/UserJoinSection.jsx'
+import UserProfileSettingsDialog from './user/UserProfileSettingsDialog.jsx'
 import UserMatchesSection from './user/UserMatchesSection.jsx'
 import UserMembershipSection from './user/UserMembershipSection.jsx'
 import UserStandingsSection from './user/UserStandingsSection.jsx'
@@ -929,99 +914,30 @@ export default function UserDashboard({
         </Box>
       )}
 
-      <Dialog
+      <MatchDetailDialog
         open={Boolean(selectedMatchGuid)}
         onClose={handleCloseMatchDetail}
-        fullWidth
-        maxWidth="lg"
-      >
-        <DialogTitle>{t('dashboard.common.matchDetail.dialogTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {matchDetailLoading && <LinearProgress />}
-            {!matchDetailLoading && selectedMatchDetail && (
-              <MatchDetailViewer detail={selectedMatchDetail} t={t} formatDate={formatDate} />
-            )}
-            {!matchDetailLoading && !selectedMatchDetail && (
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.common.matchDetail.noData')}
-              </Typography>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseMatchDetail}>
-            {t('dashboard.common.matchDetail.closeAction')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        loading={matchDetailLoading}
+        detail={selectedMatchDetail}
+        t={t}
+        formatDate={formatDate}
+      />
 
-      <Dialog
+      <UserProfileSettingsDialog
         open={profileSettingsOpen}
         onClose={() => setProfileSettingsOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>{t('dashboard.user.profileSettingsTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              {t('dashboard.user.profileSettingsHint')}
-            </Typography>
-            <ProfileImageField
-              value={profileForm.image_url}
-              alt={profileDisplayName || t('dashboard.user.profileSettingsTitle')}
-              label={t('dashboard.common.profileImageLabel')}
-              helperText={t('dashboard.user.profileImageHint')}
-              chooseLabel={t('dashboard.common.imageActions.choose')}
-              replaceLabel={t('dashboard.common.imageActions.replace')}
-              removeLabel={t('dashboard.common.imageActions.remove')}
-              emptyLabel={t('dashboard.common.imageEmpty')}
-              processingLabel={t('dashboard.common.imageActions.processing')}
-              disabled={loading}
-              onChange={(value) => setProfileForm((prev) => ({ ...prev, image_url: value }))}
-              onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
-            />
-            <TextField
-              label={t('dashboard.user.fields.name')}
-              value={profileForm.name}
-              onChange={onProfileField('name')}
-            />
-            <TextField
-              label={t('dashboard.user.fields.surname1')}
-              value={profileForm.surname1}
-              onChange={onProfileField('surname1')}
-            />
-            <TextField
-              label={t('dashboard.user.fields.surname2')}
-              value={profileForm.surname2}
-              onChange={onProfileField('surname2')}
-            />
-            <TextField
-              select
-              label={t('dashboard.user.fields.nationality')}
-              value={profileForm.nationality}
-              onChange={onProfileField('nationality')}
-            >
-              {nationalities.map((nationality) => (
-                <MenuItem key={nationality} value={nationality}>
-                  {nationality}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Divider />
-            <AppearanceSettings />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setProfileSettingsOpen(false)} disabled={loading}>
-            {t('dashboard.user.settingsCancel')}
-          </Button>
-          <Button variant="contained" onClick={handleSaveProfileFromSettings} disabled={loading}>
-            {t('dashboard.user.saveProfile')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={handleSaveProfileFromSettings}
+        loading={loading}
+        profileForm={profileForm}
+        onProfileField={onProfileField}
+        onProfileImageChange={(value) =>
+          setProfileForm((prev) => ({ ...prev, image_url: value }))
+        }
+        onProfileImageError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+        profileDisplayName={profileDisplayName}
+        nationalities={nationalities}
+        t={t}
+      />
     </DashboardShell>
     </DashboardContext.Provider>
   )

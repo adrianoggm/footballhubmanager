@@ -35,10 +35,10 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
-import MatchDetailViewer from './MatchDetailViewer.jsx'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
+import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import AdminOverviewSection from './admin/AdminOverviewSection.jsx'
@@ -2954,32 +2954,14 @@ export default function AdminDashboard({
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <MatchDetailDialog
         open={Boolean(overviewMatchGuid)}
         onClose={handleCloseOverviewMatchDetail}
-        fullWidth
-        maxWidth="lg"
-      >
-        <DialogTitle>{t('dashboard.common.matchDetail.dialogTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {overviewMatchLoading && <LinearProgress />}
-            {!overviewMatchLoading && overviewMatchDetail && (
-              <MatchDetailViewer detail={overviewMatchDetail} t={t} formatDate={formatDate} />
-            )}
-            {!overviewMatchLoading && !overviewMatchDetail && (
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.common.matchDetail.noData')}
-              </Typography>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseOverviewMatchDetail}>
-            {t('dashboard.common.matchDetail.closeAction')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        loading={overviewMatchLoading}
+        detail={overviewMatchDetail}
+        t={t}
+        formatDate={formatDate}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingDeleteSeason)}
