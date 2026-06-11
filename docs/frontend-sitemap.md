@@ -58,6 +58,28 @@ User navigation is section-based with quick anchors, backed by `USER_DASHBOARD_S
 - `insights` (`#user-section-insights`)
   - KPI and season comparison insights
 
+## 3b) Global Context Bar (peña + season)
+
+Both role dashboards share a single peña/season selector rendered in the dashboard header,
+instead of each screen re-implementing it.
+
+- Component: `frontend/src/components/dashboard/PenaSeasonSelector.jsx`
+- State source: `frontend/src/context/dashboardContext.js` (`DashboardContext` + `useDashboardContext`)
+- Each dashboard (`AdminDashboard`, `UserDashboard`) still owns the selection state and provides
+  a context value (`penas`, `selectedPenaGuid`, `onSelectPena`, `seasons`, `selectedSeasonGuid`,
+  `onSelectSeason`, `activeSeason`, role-specific `labels`). The selector and (in later phases)
+  feature sections read it from context rather than via prop drilling.
+
+Behavior:
+- Changing the peña updates `selectedPenaGuid`; changing the season runs each role's own handler
+  (admin resets dependent match/roster drafts via `applySeasonContext`; user simply re-selects).
+- The season select is disabled until a peña is selected and seasons are loaded.
+- When no peña is available/selected, the admin surface shows a guided `EmptyState`
+  (`frontend/src/components/common/EmptyState.jsx`) with a refresh action instead of a bare alert.
+
+When adding a section that depends on peña/season context, read it with `useDashboardContext()`
+rather than threading new props through the dashboard.
+
 ## 4) Global Style Baseline
 
 Global tokens and behavior are centralized in:

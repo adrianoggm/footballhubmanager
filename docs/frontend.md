@@ -91,13 +91,12 @@ The frontend is a role-based application, not only an auth playground.
   - Read match detail.
   - Delete matches.
 - Standings snapshot and season summary.
-- Insights section:
-  - KPI cards.
-  - Season comparison deltas.
-  - Top pairs and teammate rankings.
-  - Correlation heatmap matrix.
-  - Leaders (goals, assists, saves).
-  - Timeline charts by match and by season.
+- Insights section (`AdminInsightsSection`, shared with the user dashboard):
+  - Always-visible summary: KPI cards + season comparison deltas.
+  - Tabbed heavy content (progressive disclosure — only one group mounts at a time):
+    - `Trends`: timeline charts by match and by season (recharts renders only when this tab is open).
+    - `Rankings`: top pairs / teammate rankings + leaders (goals, assists, saves).
+    - `Matrix`: correlation heatmap matrix.
 
 ### User Dashboard
 
