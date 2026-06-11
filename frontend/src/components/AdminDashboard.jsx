@@ -54,7 +54,7 @@ const AdminSeasonsSection = lazy(() => import('./admin/AdminSeasonsSection.jsx')
 const AdminAccountabilitySection = lazy(() => import('./admin/AdminAccountabilitySection.jsx'))
 const AdminPlayersSection = lazy(() => import('./admin/AdminPlayersSection.jsx'))
 const AdminMatchesSection = lazy(() => import('./admin/AdminMatchesSection.jsx'))
-const AdminInsightsSection = lazy(() => import('./admin/AdminInsightsSection.jsx'))
+const AdminStandingsSection = lazy(() => import('./admin/AdminStandingsSection.jsx'))
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
@@ -272,12 +272,6 @@ const normalizeFilterValues = (value) => {
   )
 }
 
-const renderFilterValue = (selected, emptyLabel) => {
-  const values = Array.isArray(selected)
-    ? selected.map((item) => String(item || '').trim()).filter(Boolean)
-    : []
-  return values.length ? values.join(', ') : emptyLabel
-}
 
 const pruneFilterValues = (selectedValues, allowedLabels) => {
   const allowed = new Set(
@@ -724,6 +718,10 @@ export default function AdminDashboard({
     [adminSections]
   )
 
+  // Season-dependent sections (matches, standings) are gated until the pena has at
+  // least one season. The season list is always loaded with the pena, so this is reliable.
+  const hasSeason = seasonList.length > 0
+
   useEffect(() => {
     if (
       routeSectionId &&
@@ -744,9 +742,13 @@ export default function AdminDashboard({
     const resolvedSectionId = adminSectionIds.includes(nextSectionId)
       ? nextSectionId
       : adminSectionIds[0] || 'overview'
-    setActiveSection(resolvedSectionId)
+    // Don't land on a season-gated section while the pena has no season; send the
+    // admin to Seasons to configure one first.
+    const target = adminSections.find((section) => section.id === resolvedSectionId)
+    const finalSectionId = target?.requiresSeason && !hasSeason ? 'seasons' : resolvedSectionId
+    setActiveSection(finalSectionId)
     if (onSectionChange) {
-      onSectionChange(resolvedSectionId)
+      onSectionChange(finalSectionId)
     }
   }
 
@@ -2534,11 +2536,16 @@ export default function AdminDashboard({
     },
   })
 
-  const adminNavItems = adminSections.map((section) => ({
-    id: section.id,
-    label: t(section.titleKey),
-    icon: section.id,
-  }))
+  const adminNavItems = adminSections.map((section) => {
+    const locked = Boolean(section.requiresSeason) && !hasSeason
+    return {
+      id: section.id,
+      label: t(section.titleKey),
+      icon: section.id,
+      disabled: locked,
+      disabledReason: locked ? t('dashboard.admin.navLockedNoSeason') : '',
+    }
+  })
   const activeAdminSection = adminSections.find((section) => section.id === activeSection) || null
   const activeAdminSectionLabel = activeAdminSection
     ? t(activeAdminSection.titleKey)
@@ -2590,6 +2597,19 @@ export default function AdminDashboard({
       </Stack>
     )
   }
+
+  // Guided fallback shown when a season-dependent section is reached without a season.
+  const seasonGateEmptyState = (
+    <EmptyState
+      title={t('dashboard.admin.gating.noSeasonTitle')}
+      description={t('dashboard.admin.gating.noSeasonBody')}
+      action={
+        <Button variant="contained" onClick={() => handleSectionChange('seasons')}>
+          {t('dashboard.admin.gating.goToSeasons')}
+        </Button>
+      }
+    />
+  )
 
   // Selection state stays owned here; it is exposed through context so the shared
   // PenaSeasonSelector (and, in later phases, feature sections) can read it without
@@ -2981,16 +3001,28 @@ export default function AdminDashboard({
         </Suspense>
       )}
 
-      {selectedPenaGuid && activeSection === 'accountability' && (
-        <Suspense fallback={<SectionLoader />}>
-          <AdminAccountabilitySection
-            penaGuid={selectedPenaGuid}
-            players={historicalPlayers}
-            t={t}
-            formatPlayerDisplayName={formatPlayerDisplayName}
+      {selectedPenaGuid &&
+        activeSection === 'accountability' &&
+        (!loading && historicalPlayers.length === 0 ? (
+          <EmptyState
+            title={t('dashboard.admin.gating.noPlayersTitle')}
+            description={t('dashboard.admin.gating.noPlayersBody')}
+            action={
+              <Button variant="contained" onClick={() => handleSectionChange('players')}>
+                {t('dashboard.admin.gating.goToPlayers')}
+              </Button>
+            }
           />
-        </Suspense>
-      )}
+        ) : (
+          <Suspense fallback={<SectionLoader />}>
+            <AdminAccountabilitySection
+              penaGuid={selectedPenaGuid}
+              players={historicalPlayers}
+              t={t}
+              formatPlayerDisplayName={formatPlayerDisplayName}
+            />
+          </Suspense>
+        ))}
 
       {selectedPenaGuid && activeSection === 'players' && (
         <Suspense fallback={<SectionLoader />}>
@@ -3002,193 +3034,55 @@ export default function AdminDashboard({
         </Suspense>
       )}
 
-      {selectedPenaGuid && activeSection === 'matches' && (
-        <Suspense fallback={<SectionLoader />}>
-          <AdminMatchesSection
-            state={matchesSection.state}
-            actions={matchesSection.actions}
-            helpers={matchesSection.helpers}
-          />
-        </Suspense>
-      )}
+      {selectedPenaGuid &&
+        activeSection === 'matches' &&
+        (hasSeason ? (
+          <Suspense fallback={<SectionLoader />}>
+            <AdminMatchesSection
+              state={matchesSection.state}
+              actions={matchesSection.actions}
+              helpers={matchesSection.helpers}
+            />
+          </Suspense>
+        ) : (
+          seasonGateEmptyState
+        ))}
 
-      {selectedPenaGuid && activeSection === 'standings' && (
-        <Card sx={{ width: '100%' }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                alignItems={{ sm: 'center' }}
-                justifyContent="space-between"
-                spacing={1.5}
-              >
-                <Box>
-                  <Typography variant="h6">{t('dashboard.admin.standings.title')}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.standings.showingDataFor', { season: selectedSeasonLabel })}
-                  </Typography>
-                </Box>
-                <Button
-                  variant="outlined"
-                  onClick={handleRefreshStandings}
-                  disabled={loading || !selectedSeasonGuid}
-                >
-                  {t('dashboard.admin.overview.refreshStandings')}
-                </Button>
-              </Stack>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <TextField
-                  select
-                  size="small"
-                  label={t('dashboard.admin.members.filterRole')}
-                  value={standingsFilters.role}
-                  onChange={onStandingsFilterField('role')}
-                  InputLabelProps={{ shrink: true }}
-                  SelectProps={{
-                    multiple: true,
-                    displayEmpty: true,
-                    renderValue: (selected) =>
-                      renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles')),
-                  }}
-                  fullWidth
-                >
-                  {penaLabels.role_labels.map((roleLabel) => (
-                    <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
-                      {roleLabel}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  label={t('dashboard.admin.members.filterPosition')}
-                  value={standingsFilters.position}
-                  onChange={onStandingsFilterField('position')}
-                  InputLabelProps={{ shrink: true }}
-                  SelectProps={{
-                    multiple: true,
-                    displayEmpty: true,
-                    renderValue: (selected) =>
-                      renderFilterValue(selected, t('dashboard.admin.members.filterAllPositions')),
-                  }}
-                  fullWidth
-                >
-                  {penaLabels.position_labels.map((positionLabel) => (
-                    <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
-                      {positionLabel}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
-
-              {!selectedSeasonGuid && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.standings.selectSeasonHeader')}
-                </Typography>
-              )}
-
-              {selectedSeasonGuid && (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                        <TableCell>{t('dashboard.admin.members.role')}</TableCell>
-                        <TableCell>{t('dashboard.admin.members.position')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {standings.map((player) => (
-                        <TableRow key={player.player_guid}>
-                          <TableCell>
-                            {player.nickname || `${player.name} ${player.surname1}`}
-                          </TableCell>
-                          <TableCell>
-                            {player.role ? (
-                              <Chip
-                                size="small"
-                                label={player.role}
-                                sx={{
-                                  backgroundColor: player.role_color || DEFAULT_LABEL_COLOR,
-                                  color: '#fff',
-                                }}
-                              />
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {player.position ? (
-                              <Chip
-                                size="small"
-                                label={player.position}
-                                sx={{
-                                  backgroundColor: player.position_color || DEFAULT_LABEL_COLOR,
-                                  color: '#fff',
-                                }}
-                              />
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell align="right">
-                            {player.played ?? player.wins + player.draws + player.losses}
-                          </TableCell>
-                          <TableCell align="right">{player.wins}</TableCell>
-                          <TableCell align="right">{player.draws}</TableCell>
-                          <TableCell align="right">{player.losses}</TableCell>
-                          <TableCell align="right">{player.goals ?? 0}</TableCell>
-                          <TableCell align="right">{player.assists ?? 0}</TableCell>
-                          <TableCell align="right">{player.points}</TableCell>
-                        </TableRow>
-                      ))}
-                      {!standings.length && (
-                        <TableRow>
-                          <TableCell colSpan={10}>
-                            {t('dashboard.admin.standings.noSeasonPlayers')}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-
-              <Divider />
-              <Suspense fallback={<LinearProgress />}>
-                <AdminInsightsSection
-                  state={{
-                    selectedSeasonGuid,
-                    insightsScope,
-                    insightsLoading,
-                    insightsReport,
-                    insightsComparisonReport,
-                    insightsComparison,
-                  }}
-                  actions={{
-                    onInsightsScopeChange: setInsightsScope,
-                    onRefreshInsights: handleRefreshInsights,
-                  }}
-                  helpers={{
-                    t,
-                    formatDecimal,
-                    formatSignedDecimal,
-                    formatPercent,
-                  }}
-                />
-              </Suspense>
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
+      {selectedPenaGuid &&
+        activeSection === 'standings' &&
+        (hasSeason ? (
+          <Suspense fallback={<SectionLoader />}>
+            <AdminStandingsSection
+              state={{
+                selectedSeasonGuid,
+                selectedSeasonLabel,
+                loading,
+                standings,
+                standingsFilters,
+                penaLabels,
+                insightsScope,
+                insightsLoading,
+                insightsReport,
+                insightsComparisonReport,
+                insightsComparison,
+              }}
+              actions={{
+                onRefreshStandings: handleRefreshStandings,
+                onStandingsFilterField,
+                onInsightsScopeChange: setInsightsScope,
+                onRefreshInsights: handleRefreshInsights,
+              }}
+              helpers={{
+                t,
+                formatDecimal,
+                formatSignedDecimal,
+                formatPercent,
+              }}
+            />
+          </Suspense>
+        ) : (
+          seasonGateEmptyState
+        ))}
 
       <Dialog
         open={penaSettingsOpen}

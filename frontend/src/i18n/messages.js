@@ -171,6 +171,16 @@ export const messages = {
         referenceSeason: 'Reference season',
         noLinkedPenaInfo:
           'This admin account has no linked pena. In this system, each admin has exactly one pena created at admin registration. Logout and create a new admin account if this is a legacy account.',
+        navLockedNoSeason: 'Create a season first',
+        gating: {
+          noSeasonTitle: 'No season configured',
+          noSeasonBody:
+            'Create a season to unlock matches, standings and insights for this pena.',
+          goToSeasons: 'Go to Seasons',
+          noPlayersTitle: 'No players yet',
+          noPlayersBody: 'Add players to this pena before managing accountability.',
+          goToPlayers: 'Go to Players',
+        },
         openPenaSettings: 'Pena settings',
         penaSettingsTitle: 'Pena settings',
         penaSettingsHint: 'Keep the pena image lightweight and consistent across the dashboard.',
@@ -1000,6 +1010,16 @@ export const messages = {
         referenceSeason: 'Temporada de referencia',
         noLinkedPenaInfo:
           'Esta cuenta de admin no tiene una peña vinculada. En este sistema, cada admin tiene exactamente una peña creada durante el registro. Cierra sesión y crea un nuevo admin si esta es una cuenta antigua.',
+        navLockedNoSeason: 'Crea una temporada primero',
+        gating: {
+          noSeasonTitle: 'No hay temporada configurada',
+          noSeasonBody:
+            'Crea una temporada para habilitar partidos, clasificación e insights en esta peña.',
+          goToSeasons: 'Ir a Temporadas',
+          noPlayersTitle: 'Aún no hay jugadores',
+          noPlayersBody: 'Añade jugadores a esta peña antes de gestionar la contabilidad.',
+          goToPlayers: 'Ir a Jugadores',
+        },
         openPenaSettings: 'Configurar peña',
         penaSettingsTitle: 'Configuración de peña',
         penaSettingsHint: 'Mantén la imagen de la peña ligera y consistente en todo el panel.',

@@ -492,10 +492,19 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
           {navItems.map((item) => {
             const active = item.id === activeNavId
             return (
-              <Tooltip key={item.id} title={item.label} placement="right">
+              <Tooltip
+                key={item.id}
+                title={item.disabled ? item.disabledReason || item.label : item.label}
+                placement="right"
+              >
                 <ButtonBase
                   aria-label={item.label}
-                  onClick={() => onNavChange(item.id)}
+                  aria-disabled={item.disabled || undefined}
+                  onClick={() => {
+                    if (!item.disabled) {
+                      onNavChange(item.id)
+                    }
+                  }}
                   sx={{
                     width: '100%',
                     minHeight: 42,
@@ -520,12 +529,16 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                       : 'none',
                     transition:
                       'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: isDark
-                        ? '0 10px 22px rgba(0, 0, 0, 0.2)'
-                        : '0 10px 22px rgba(15, 23, 42, 0.08)',
-                    },
+                    opacity: item.disabled ? 0.4 : 1,
+                    cursor: item.disabled ? 'not-allowed' : 'pointer',
+                    '&:hover': item.disabled
+                      ? {}
+                      : {
+                          transform: 'translateY(-1px)',
+                          boxShadow: isDark
+                            ? '0 10px 22px rgba(0, 0, 0, 0.2)'
+                            : '0 10px 22px rgba(15, 23, 42, 0.08)',
+                        },
                   }}
                 >
                   <Box
@@ -583,13 +596,20 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
           return (
             <ButtonBase
               key={item.id}
-              onClick={() => onNavChange(item.id)}
+              aria-disabled={item.disabled || undefined}
+              onClick={() => {
+                if (!item.disabled) {
+                  onNavChange(item.id)
+                }
+              }}
               sx={{
                 minWidth: 104,
                 borderRadius: geometry.controlRadius,
                 px: 1.25,
                 py: 0.95,
                 justifyContent: 'flex-start',
+                opacity: item.disabled ? 0.4 : 1,
+                cursor: item.disabled ? 'not-allowed' : 'pointer',
                 border: `1px solid ${
                   active
                     ? alpha(theme.palette.secondary.main, 0.22)
