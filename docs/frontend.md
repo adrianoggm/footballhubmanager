@@ -38,11 +38,20 @@ The frontend is a role-based application, not only an auth playground.
 - Dashboards:
   - `frontend/src/components/AdminDashboard.jsx`
   - `frontend/src/components/UserDashboard.jsx`
-- Admin feature sections:
+- Admin feature sections (each takes `state` / `actions` / `helpers` prop bundles; all lazy-loaded
+  except `AdminOverviewSection`, which is eager since it is the default landing section):
+  - `frontend/src/components/admin/AdminOverviewSection.jsx` (invite code, standings + matches snapshots)
   - `frontend/src/components/admin/AdminSeasonsSection.jsx`
+  - `frontend/src/components/admin/AdminAccountabilitySection.jsx`
   - `frontend/src/components/admin/AdminPlayersSection.jsx`
   - `frontend/src/components/admin/AdminMatchesSection.jsx`
+  - `frontend/src/components/admin/AdminStandingsSection.jsx` (standings table + lazily nested `AdminInsightsSection`)
   - `frontend/src/components/admin/AdminInsightsSection.jsx`
+- Shared dashboard context + selector:
+  - `frontend/src/context/dashboardContext.js`
+  - `frontend/src/components/dashboard/PenaSeasonSelector.jsx`
+- Shared UI primitives library:
+  - `frontend/src/components/common/` (`EmptyState`, `ErrorState`, `LoadingState`, `ConfirmDialog`, `SectionHeader`, `StatCard`, `PaginatedTable`)
 - Shared match viewer:
   - `frontend/src/components/MatchDetailViewer.jsx`
 

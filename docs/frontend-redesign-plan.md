@@ -126,7 +126,14 @@ proven cross-cutting need appears (it currently does not). This keeps bundle and
 Both audiences are in scope; admin leads because it is the largest/messiest and produces the shared
 primitives the user side reuses. Each phase is independently shippable and leaves the app green.
 
-> **Progress:** Phase 0 ✅ done · Phase 1 ✅ done · Phases 2–4 pending.
+> **Progress:** Phase 0 ✅ · Phase 1 ✅ · Phase 2 🚧 in progress.
+> Done so far: insights tabs + deferred charts; token migration / 0-raw-hex; standings extracted to a
+> lazy section; overview extracted to an eager section; admin season/players nav gating + guided empty
+> states; header layout cleanup (appearance/language moved into settings dialogs, compact identity);
+> 4 confirmation dialogs migrated to the shared `ConfirmDialog`; season-player + membership edit
+> dialogs extracted to `admin/PlayerEditDialogs.jsx`. `AdminDashboard` 3583 → 3044 lines.
+> Remaining Phase 2: matches list/create/detail split, admin form extraction, section memoization
+> (needs prop-bundle stabilization first). Phases 3–4 pending.
 
 ### Phase 0 — Foundations (shared, no visible change) ✅
 - Create `components/common/` primitives: `EmptyState`, `ErrorState`, `LoadingState`,

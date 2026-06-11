@@ -36,6 +36,22 @@ Admin navigation is section-based (tabbed in `AdminDashboard`), backed by `ADMIN
 - `standings`
   - Rankings and summary reads
 
+### Admin section gating (no season / no players)
+
+Some admin sections require prerequisites and are gated to prevent dead-end empty screens:
+
+- Sections that require a season carry `requiresSeason: true` in `sitemap.js` (`matches`, `standings`).
+- When the current peña has **no season**, those nav items render **disabled** (dimmed, with a
+  "Create a season first" tooltip) and `handleSectionChange` redirects attempts to `seasons`.
+- If a gated section is reached anyway (e.g. a deep link), it renders a guided `EmptyState`
+  ("No season configured" → CTA to Seasons) instead of an empty/broken section.
+- `accountability` is gated on **players** at render time (the player list is loaded on that
+  section): with no players it shows an "Add players" `EmptyState` → CTA to Players.
+
+Note: `seasons` and `players` are intentionally never gated — they are where the admin creates the
+missing prerequisites. The `GET /seasons/active` 404 logged when no active season exists is the
+backend's "no active season" signal and is handled by the client (→ null), not an error.
+
 ## 3) User Surface
 
 User navigation is section-based with quick anchors, backed by `USER_DASHBOARD_SITEMAP`.
@@ -79,6 +95,11 @@ Behavior:
 
 When adding a section that depends on peña/season context, read it with `useDashboardContext()`
 rather than threading new props through the dashboard.
+
+Appearance + language preferences live in the **settings dialog** (peña settings for admin, profile
+settings for user) via `frontend/src/components/dashboard/AppearanceSettings.jsx`, not in the header
+toolbar. Language defaults to the browser language on first load (`I18nProvider.getInitialLanguage`
+reads `navigator.language`); an explicit change in settings is persisted and then takes precedence.
 
 ## 4) Global Style Baseline
 
