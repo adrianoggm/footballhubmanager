@@ -46,6 +46,10 @@ export const INSIGHT_ACCENTS = Object.freeze({
   saves: { main: '#f59e0b', soft: 'rgba(245, 158, 11, 0.14)', border: 'rgba(245, 158, 11, 0.4)' },
 })
 
+// Fixed dark text for the insights correlation matrix. The cells use light hsl
+// backgrounds regardless of theme mode, so this stays constant (not palette-derived).
+export const MATRIX_CELL_TEXT_COLOR = '#101820'
+
 // Token bag consumed by theme.js → theme.custom. Kept flat and serializable.
 export const designTokens = Object.freeze({
   labels: Object.freeze({

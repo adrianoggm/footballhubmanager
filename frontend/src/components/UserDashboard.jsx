@@ -27,9 +27,12 @@ import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import ProfileImageField from './ProfileImageField.jsx'
 import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
-import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
+import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
+import { DashboardContext } from '../context/dashboardContext.js'
+import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
@@ -58,8 +61,6 @@ const defaultMembershipForm = () => ({
   nickname: '',
   position: '',
 })
-
-const DEFAULT_LABEL_COLOR = '#64748B'
 
 const asText = (value) => value ?? ''
 
@@ -733,7 +734,29 @@ export default function UserDashboard({
     )
   }
 
+  // Selection state stays owned here; exposed through context so the shared
+  // PenaSeasonSelector reads it without prop drilling (see admin dashboard).
+  const dashboardContextValue = {
+    role: 'user',
+    loading,
+    penas,
+    selectedPenaGuid,
+    selectedPena,
+    onSelectPena: setSelectedPenaGuid,
+    seasons: seasonList,
+    selectedSeasonGuid,
+    selectedSeason,
+    activeSeason: null,
+    onSelectSeason: setSelectedSeasonGuid,
+    labels: {
+      pena: t('dashboard.user.selectedPena'),
+      season: t('dashboard.user.selectedSeason'),
+      activeSuffix: '',
+    },
+  }
+
   return (
+    <DashboardContext.Provider value={dashboardContextValue}>
     <DashboardShell
       brand={t('app.brand')}
       brandShort="FH"
@@ -808,45 +831,7 @@ export default function UserDashboard({
             </Stack>
           </Stack>
 
-          <Grid container spacing={0.85}>
-            <Grid item xs={12} md={6}>
-              <DashboardControlField label={t('dashboard.user.selectedPena')}>
-                <TextField
-                  select
-                  size="small"
-                  value={selectedPenaGuid}
-                  onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                  inputProps={{ 'aria-label': t('dashboard.user.selectedPena') }}
-                  fullWidth
-                >
-                  {penas.map((pena) => (
-                    <MenuItem key={pena.guid} value={pena.guid}>
-                      {pena.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </DashboardControlField>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <DashboardControlField label={t('dashboard.user.selectedSeason')}>
-                <TextField
-                  select
-                  size="small"
-                  value={selectedSeasonGuid}
-                  onChange={(event) => setSelectedSeasonGuid(event.target.value)}
-                  disabled={!selectedPenaGuid || !seasonList.length || loading}
-                  inputProps={{ 'aria-label': t('dashboard.user.selectedSeason') }}
-                  fullWidth
-                >
-                  {seasonList.map((season) => (
-                    <MenuItem key={season.guid} value={season.guid}>
-                      {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </DashboardControlField>
-            </Grid>
-          </Grid>
+          <PenaSeasonSelector />
         </Stack>
       }
       summaryCards={userSummaryCards}
@@ -1317,5 +1302,6 @@ export default function UserDashboard({
         </DialogActions>
       </Dialog>
     </DashboardShell>
+    </DashboardContext.Provider>
   )
 }

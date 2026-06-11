@@ -44,6 +44,11 @@ import DashboardShell from './dashboard/DashboardShell.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import { EmptyState } from './common'
 import { DashboardContext } from '../context/dashboardContext.js'
+import {
+  DEFAULT_LABEL_COLOR,
+  ROLE_LABEL_COLORS as DEFAULT_ROLE_LABEL_COLORS,
+  POSITION_LABEL_COLORS as DEFAULT_POSITION_LABEL_COLORS,
+} from '../theme/tokens.js'
 
 const AdminSeasonsSection = lazy(() => import('./admin/AdminSeasonsSection.jsx'))
 const AdminAccountabilitySection = lazy(() => import('./admin/AdminAccountabilitySection.jsx'))
@@ -109,21 +114,7 @@ const defaultPenaProfileDraft = () => ({
   image_url: '',
 })
 
-const DEFAULT_LABEL_COLOR = '#64748B'
 const HEX_COLOR_RE = /^#?[0-9a-fA-F]{6}$/
-const DEFAULT_ROLE_LABEL_COLORS = {
-  president: '#B45309',
-  coordinator: '#1D4ED8',
-  member: '#15803D',
-  guest: '#64748B',
-}
-const DEFAULT_POSITION_LABEL_COLORS = {
-  attacker: '#DC2626',
-  defender: '#2563EB',
-  midfielder: '#16A34A',
-  polivalent: '#7C3AED',
-  keeper: '#EA580C',
-}
 
 const asText = (value) => value ?? ''
 
@@ -162,7 +153,7 @@ const defaultColorForLabel = (label, defaults) =>
     ]
   ) ||
   normalizeHexColor(DEFAULT_LABEL_COLOR) ||
-  '#64748B'
+  DEFAULT_LABEL_COLOR
 
 const normalizeLabelColorMap = (labels, rawColors = {}, defaults = {}) => {
   const byKey = {}

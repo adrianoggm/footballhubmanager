@@ -24,9 +24,10 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const labelChipSx = (color) => ({
-  backgroundColor: color || '#64748B',
+  backgroundColor: color || DEFAULT_LABEL_COLOR,
   color: '#fff',
   border: '1px solid rgba(15, 23, 42, 0.12)',
 })

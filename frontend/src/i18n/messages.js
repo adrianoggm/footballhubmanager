@@ -568,6 +568,9 @@ export const messages = {
           insightsTitle: 'Match Insights',
           insightsDescription:
             'Build advanced metrics from closed matches: correlations, teammate trends, and per-match averages.',
+          insightsTabTrends: 'Trends',
+          insightsTabRankings: 'Rankings',
+          insightsTabMatrix: 'Matrix',
           insightsScopeLabel: 'Analysis scope',
           insightsScopeSelectedSeason: 'Selected season',
           insightsScopeAllSeasons: 'All seasons',
@@ -1400,6 +1403,9 @@ export const messages = {
           insightsTitle: 'Insights de partidos',
           insightsDescription:
             'Genera métricas avanzadas desde partidos cerrados: correlaciones, tendencias de compañeros y promedios por partido.',
+          insightsTabTrends: 'Tendencias',
+          insightsTabRankings: 'Rankings',
+          insightsTabMatrix: 'Matriz',
           insightsScopeLabel: 'Alcance del análisis',
           insightsScopeSelectedSeason: 'Temporada seleccionada',
           insightsScopeAllSeasons: 'Todas las temporadas',

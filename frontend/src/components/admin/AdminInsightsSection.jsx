@@ -9,6 +9,8 @@ import {
   LinearProgress,
   MenuItem,
   Stack,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -20,6 +22,7 @@ import {
   Typography,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
+import { useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -32,39 +35,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-
-const INSIGHT_ACCENTS = {
-  matches: {
-    main: '#0ea5e9',
-    soft: 'rgba(14, 165, 233, 0.12)',
-    border: 'rgba(14, 165, 233, 0.34)',
-  },
-  seasons: {
-    main: '#8b5cf6',
-    soft: 'rgba(139, 92, 246, 0.12)',
-    border: 'rgba(139, 92, 246, 0.34)',
-  },
-  players: {
-    main: '#14b8a6',
-    soft: 'rgba(20, 184, 166, 0.12)',
-    border: 'rgba(20, 184, 166, 0.34)',
-  },
-  goals: {
-    main: '#ef4444',
-    soft: 'rgba(239, 68, 68, 0.12)',
-    border: 'rgba(239, 68, 68, 0.35)',
-  },
-  assists: {
-    main: '#2563eb',
-    soft: 'rgba(37, 99, 235, 0.12)',
-    border: 'rgba(37, 99, 235, 0.35)',
-  },
-  saves: {
-    main: '#f59e0b',
-    soft: 'rgba(245, 158, 11, 0.14)',
-    border: 'rgba(245, 158, 11, 0.4)',
-  },
-}
+import { INSIGHT_ACCENTS, MATRIX_CELL_TEXT_COLOR } from '../../theme/tokens.js'
 
 const getDashboardGeometry = (theme) => ({
   surfaceRadius: theme.custom?.dashboard?.radius?.surface || '14px',
@@ -179,7 +150,6 @@ const getRateColor = (rate) => {
   return 'error'
 }
 
-const MATRIX_CELL_TEXT_COLOR = '#101820'
 const MATRIX_CELL_SUBTEXT_COLOR = alpha(MATRIX_CELL_TEXT_COLOR, 0.72)
 
 const buildMatrixCellSx = (cell, maxSharedMatches) => {
@@ -446,6 +416,11 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   const { onInsightsScopeChange, onRefreshInsights } = actions
   const { t, formatDecimal, formatSignedDecimal, formatPercent } = helpers
 
+  // Progressive disclosure: heavy content (charts / rankings / matrix) is split
+  // into tabs so only one group mounts at a time. This also defers the recharts
+  // render work until the Trends tab is opened.
+  const [activeInsightTab, setActiveInsightTab] = useState('trends')
+
   const maxSharedMatches =
     insightsReport?.matrix_rows?.reduce((maxValue, row) => {
       const rowMax = (row.cells || []).reduce(
@@ -643,7 +618,21 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             </Card>
           )}
 
-          <Grid container spacing={2}>
+          <Tabs
+            value={activeInsightTab}
+            onChange={(_, next) => setActiveInsightTab(next)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab value="trends" label={t('dashboard.admin.standings.insightsTabTrends')} />
+            <Tab value="rankings" label={t('dashboard.admin.standings.insightsTabRankings')} />
+            <Tab value="matrix" label={t('dashboard.admin.standings.insightsTabMatrix')} />
+          </Tabs>
+
+          {activeInsightTab === 'trends' && (
+            <Stack spacing={2.25}>
+              <Grid container spacing={2}>
             <Grid item xs={12} lg={8}>
               <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.assists)}>
                 <CardContent sx={buildInsightContentSx}>
@@ -894,7 +883,10 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               </Stack>
             </CardContent>
           </Card>
+            </Stack>
+          )}
 
+          {activeInsightTab === 'rankings' && (
           <Grid container spacing={2}>
             <Grid item xs={12} lg={6}>
               <InsightRankingPanel
@@ -913,7 +905,9 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               />
             </Grid>
           </Grid>
+          )}
 
+          {activeInsightTab === 'matrix' && (
           <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.players)}>
             <CardContent sx={buildInsightContentSx}>
               <Stack spacing={1.2}>
@@ -1053,7 +1047,9 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               </Stack>
             </CardContent>
           </Card>
+          )}
 
+          {activeInsightTab === 'rankings' && (
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <LeadersCard
@@ -1086,6 +1082,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               />
             </Grid>
           </Grid>
+          )}
         </Stack>
       )}
     </Stack>
