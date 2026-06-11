@@ -38,9 +38,12 @@ import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import ProfileImageField from './ProfileImageField.jsx'
 import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
-import { DashboardControlField, DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
+import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
+import { EmptyState } from './common'
+import { DashboardContext } from '../context/dashboardContext.js'
 
 const AdminSeasonsSection = lazy(() => import('./admin/AdminSeasonsSection.jsx'))
 const AdminAccountabilitySection = lazy(() => import('./admin/AdminAccountabilitySection.jsx'))
@@ -1816,9 +1819,6 @@ export default function AdminDashboard({
     )
   }
 
-  const handleSeasonSelection = (event) => {
-    selectSeason(event.target.value)
-  }
 
   const handleSelectSeasonFromHistory = (seasonGuid) => {
     selectSeason(selectedSeasonGuid === seasonGuid ? '' : seasonGuid)
@@ -2600,7 +2600,30 @@ export default function AdminDashboard({
     )
   }
 
+  // Selection state stays owned here; it is exposed through context so the shared
+  // PenaSeasonSelector (and, in later phases, feature sections) can read it without
+  // prop drilling. Cheap object — the only consumer today is the selector.
+  const dashboardContextValue = {
+    role: 'admin',
+    loading,
+    penas,
+    selectedPenaGuid,
+    selectedPena,
+    onSelectPena: setSelectedPenaGuid,
+    seasons: seasonList,
+    selectedSeasonGuid,
+    selectedSeason,
+    activeSeason,
+    onSelectSeason: selectSeason,
+    labels: {
+      pena: t('dashboard.admin.currentPena'),
+      season: t('dashboard.admin.referenceSeason'),
+      activeSuffix: t('dashboard.admin.seasonActiveSuffix'),
+    },
+  }
+
   return (
+    <DashboardContext.Provider value={dashboardContextValue}>
     <DashboardShell
       brand={t('app.brand')}
       brandShort="FH"
@@ -2674,48 +2697,7 @@ export default function AdminDashboard({
             </Stack>
           </Stack>
 
-          <Grid container spacing={0.85}>
-            <Grid item xs={12} md={6}>
-              <DashboardControlField label={t('dashboard.admin.currentPena')}>
-                <TextField
-                  select
-                  size="small"
-                  value={selectedPenaGuid}
-                  onChange={(event) => setSelectedPenaGuid(event.target.value)}
-                  inputProps={{ 'aria-label': t('dashboard.admin.currentPena') }}
-                  fullWidth
-                >
-                  {penas.map((pena) => (
-                    <MenuItem key={pena.guid} value={pena.guid}>
-                      {pena.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </DashboardControlField>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <DashboardControlField label={t('dashboard.admin.referenceSeason')}>
-                <TextField
-                  select
-                  size="small"
-                  value={selectedSeasonGuid}
-                  onChange={handleSeasonSelection}
-                  disabled={!seasonList.length}
-                  inputProps={{ 'aria-label': t('dashboard.admin.referenceSeason') }}
-                  fullWidth
-                >
-                  {seasonList.map((season) => (
-                    <MenuItem key={season.guid} value={season.guid}>
-                      {formatDate(season.start_date)} - {formatDate(season.end_date)}
-                      {activeSeason?.guid === season.guid
-                        ? t('dashboard.admin.seasonActiveSuffix')
-                        : ''}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </DashboardControlField>
-            </Grid>
-          </Grid>
+          <PenaSeasonSelector />
         </Stack>
       }
       summaryCards={adminSummaryCards}
@@ -2724,7 +2706,17 @@ export default function AdminDashboard({
       {error && <Alert severity="error">{errorMessage}</Alert>}
       {notice && <Alert severity={noticeSeverity}>{notice}</Alert>}
 
-      {!selectedPenaGuid && <Alert severity="info">{t('dashboard.admin.noLinkedPenaInfo')}</Alert>}
+      {!selectedPenaGuid && (
+        <EmptyState
+          title={t('dashboard.admin.currentPena')}
+          description={t('dashboard.admin.noLinkedPenaInfo')}
+          action={
+            <Button variant="outlined" onClick={() => runAction(loadDashboard, '')} disabled={loading}>
+              {t('dashboard.common.refreshData')}
+            </Button>
+          }
+        />
+      )}
 
       {selectedPenaGuid && activeSection === 'overview' && (
         <Grid container spacing={2.5} sx={{ width: '100%' }}>
@@ -3579,5 +3571,6 @@ export default function AdminDashboard({
         </DialogActions>
       </Dialog>
     </DashboardShell>
+    </DashboardContext.Provider>
   )
 }

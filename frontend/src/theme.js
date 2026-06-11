@@ -1,4 +1,5 @@
 import { alpha, createTheme } from '@mui/material/styles'
+import { designTokens } from './theme/tokens.js'
 
 const DEFAULT_LIGHT_THEME_PRESET_ID = 'sand-light'
 const DEFAULT_DARK_THEME_PRESET_ID = 'midnight-dark'
@@ -515,6 +516,8 @@ const createCustomTokens = (preset) => {
       slow: 'all 350ms ease-out',
     },
     styleProfile: 'base',
+    labels: designTokens.labels,
+    insightAccents: designTokens.insightAccents,
     themeMeta: {
       presetId: preset.id,
       mode: palette.mode,
