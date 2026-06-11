@@ -34,13 +34,13 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
-import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import ProfileImageField from './ProfileImageField.jsx'
-import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
+import AdminOverviewSection from './admin/AdminOverviewSection.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import { EmptyState } from './common'
 import { DashboardContext } from '../context/dashboardContext.js'
@@ -2664,17 +2664,15 @@ export default function AdminDashboard({
         </>
       }
       headerAside={
-        <Stack spacing={0.95}>
+        <Stack spacing={1.1}>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
-            spacing={0.9}
+            spacing={1}
             alignItems={{ sm: 'center' }}
             justifyContent="space-between"
           >
             <DashboardIdentitySlot
-              title={t('dashboard.common.identityTitle')}
               name={selectedPena?.name || t('dashboard.admin.panelTitle')}
-              placeholderLabel={t('dashboard.common.identityPlaceholder')}
               imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
               imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
             />
@@ -2684,10 +2682,9 @@ export default function AdminDashboard({
               spacing={0.6}
               flexWrap="wrap"
               useFlexGap
-              justifyContent={{ sm: 'flex-end' }}
+              alignItems="center"
+              justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
             >
-              <LanguageSwitcher />
-              <ThemeModeSwitcher />
               <Button
                 variant="outlined"
                 onClick={openPenaSettings}
@@ -2730,237 +2727,28 @@ export default function AdminDashboard({
       )}
 
       {selectedPenaGuid && activeSection === 'overview' && (
-        <Grid container spacing={2.5} sx={{ width: '100%' }}>
-          <Grid item xs={12}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Typography variant="h6">{t('dashboard.admin.overview.inviteTitle')}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.overview.inviteDescription')}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={handleGenerateJoinCode}
-                    disabled={loading}
-                  >
-                    {t('dashboard.admin.overview.generateJoinCode')}
-                  </Button>
-                  {tokenPayload && (
-                    <Alert severity="info">
-                      <Typography variant="body2">
-                        <strong>{t('dashboard.admin.overview.codeLabel')}:</strong>{' '}
-                        {tokenPayload.token}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
-                        {formatEpochSeconds(tokenPayload.expires_at)}
-                      </Typography>
-                    </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    alignItems={{ sm: 'center' }}
-                    justifyContent="space-between"
-                    spacing={1}
-                  >
-                    <Typography variant="h6">
-                      {t('dashboard.admin.overview.standingsSnapshotTitle')}
-                    </Typography>
-                    <Button
-                      variant="text"
-                      onClick={handleRefreshStandings}
-                      disabled={loading || !selectedSeasonGuid}
-                    >
-                      {t('dashboard.admin.overview.refreshStandings')}
-                    </Button>
-                  </Stack>
-                  {!selectedSeasonGuid && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.overview.selectSeasonToLoad')}
-                    </Typography>
-                  )}
-                  {selectedSeasonGuid && (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                            <TableCell align="right">
-                              {t('dashboard.admin.table.assists')}
-                            </TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {standings.slice(0, 5).map((player) => (
-                            <TableRow key={player.player_guid}>
-                              <TableCell>
-                                {player.nickname || `${player.name} ${player.surname1}`}
-                              </TableCell>
-                              <TableCell align="right">
-                                {player.played ?? player.wins + player.draws + player.losses}
-                              </TableCell>
-                              <TableCell align="right">{player.wins}</TableCell>
-                              <TableCell align="right">{player.draws}</TableCell>
-                              <TableCell align="right">{player.losses}</TableCell>
-                              <TableCell align="right">{player.goals ?? 0}</TableCell>
-                              <TableCell align="right">{player.assists ?? 0}</TableCell>
-                              <TableCell align="right">{player.points}</TableCell>
-                            </TableRow>
-                          ))}
-                          {!standings.length && (
-                            <TableRow>
-                              <TableCell colSpan={8}>
-                                {t('dashboard.admin.overview.noStandingsForSeason')}
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    alignItems={{ sm: 'center' }}
-                    justifyContent="space-between"
-                    spacing={1}
-                  >
-                    <Box>
-                      <Typography variant="h6">
-                        {t('dashboard.admin.overview.seasonMatchesSnapshotTitle')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
-                      </Typography>
-                    </Box>
-                    <Button variant="text" onClick={() => handleSectionChange('matches')}>
-                      {t('dashboard.admin.overview.createMatch')}
-                    </Button>
-                  </Stack>
-
-                  {!selectedSeasonGuid && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.overview.selectSeasonToLoad')}
-                    </Typography>
-                  )}
-
-                  {selectedSeasonGuid && (
-                    <>
-                      <Stack direction="row" flexWrap="wrap" gap={1}>
-                        <Chip
-                          size="small"
-                          color="primary"
-                          label={t('dashboard.admin.overview.totalMatchesChip', {
-                            total: overviewMatchesSummary.total,
-                          })}
-                        />
-                        <Chip
-                          size="small"
-                          color="warning"
-                          label={t('dashboard.admin.overview.openMatchesChip', {
-                            open: overviewMatchesSummary.open,
-                          })}
-                        />
-                        <Chip
-                          size="small"
-                          color="success"
-                          label={t('dashboard.admin.overview.closedMatchesChip', {
-                            closed: overviewMatchesSummary.closed,
-                          })}
-                        />
-                      </Stack>
-
-                      {!overviewSeasonMatches.length && (
-                        <Typography variant="body2" color="text.secondary">
-                          {t('dashboard.admin.overview.noMatchesForSeason')}
-                        </Typography>
-                      )}
-
-                      {overviewSeasonMatches.length > 0 && (
-                        <TableContainer>
-                          <Table size="small">
-                            <TableHead>
-                              <TableRow>
-                                <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
-                                <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
-                                <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
-                                <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
-                                <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
-                                <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {overviewSeasonMatches.map((match) => {
-                                const isClosed =
-                                  String(match.status || '').toLowerCase() === 'closed'
-                                return (
-                                  <TableRow key={match.guid}>
-                                    <TableCell>{formatDate(match.match_date)}</TableCell>
-                                    <TableCell>{match.home_team_name}</TableCell>
-                                    <TableCell>{match.away_team_name}</TableCell>
-                                    <TableCell>
-                                      <Chip
-                                        size="small"
-                                        color={isClosed ? 'success' : 'warning'}
-                                        label={
-                                          isClosed
-                                            ? t('dashboard.admin.matches.statusClosed')
-                                            : t('dashboard.admin.matches.statusOpen')
-                                        }
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {match.home_score} - {match.away_score}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Button
-                                        size="small"
-                                        variant="text"
-                                        onClick={() => handleOpenOverviewMatchDetail(match.guid)}
-                                        disabled={overviewMatchLoading}
-                                      >
-                                        {t('dashboard.common.matchDetail.viewAction')}
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                )
-                              })}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      )}
-                    </>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        <AdminOverviewSection
+          state={{
+            loading,
+            selectedSeasonGuid,
+            tokenPayload,
+            standings,
+            overviewSeasonMatches,
+            overviewMatchesSummary,
+            overviewMatchLoading,
+          }}
+          actions={{
+            onGenerateJoinCode: handleGenerateJoinCode,
+            onRefreshStandings: handleRefreshStandings,
+            onCreateMatch: () => handleSectionChange('matches'),
+            onOpenMatchDetail: handleOpenOverviewMatchDetail,
+          }}
+          helpers={{
+            t,
+            formatDate,
+            formatEpochSeconds,
+          }}
+        />
       )}
 
       {selectedPenaGuid && activeSection === 'seasons' && (
@@ -3110,6 +2898,8 @@ export default function AdminDashboard({
               onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
               onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
             />
+            <Divider />
+            <AppearanceSettings />
           </Stack>
         </DialogContent>
         <DialogActions>

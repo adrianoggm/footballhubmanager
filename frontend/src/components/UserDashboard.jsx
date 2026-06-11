@@ -9,6 +9,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Grid,
   LinearProgress,
   MenuItem,
@@ -23,13 +24,12 @@ import {
   Typography,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
-import LanguageSwitcher from './LanguageSwitcher.jsx'
 import MatchDetailViewer from './MatchDetailViewer.jsx'
 import ProfileImageField from './ProfileImageField.jsx'
-import ThemeModeSwitcher from './ThemeModeSwitcher.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
+import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import { DashboardContext } from '../context/dashboardContext.js'
 import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
@@ -787,48 +787,35 @@ export default function UserDashboard({
         </>
       }
       headerAside={
-        <Stack spacing={0.95}>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={0.9}
-            alignItems={{ sm: 'center' }}
-            justifyContent="space-between"
-          >
-            <DashboardIdentitySlot
-              title={t('dashboard.common.identityTitle')}
-              name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-              subtitle={profileDisplayName || ''}
-              placeholderLabel={t('dashboard.common.identityPlaceholder')}
-              imageUrl={
-                resolveDashboardIdentityImageUrl(selectedPena) ||
-                resolveDashboardIdentityImageUrl(profile)
-              }
-              imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-            />
+        <Stack spacing={1.1}>
+          <DashboardIdentitySlot
+            name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+            subtitle={profileDisplayName || ''}
+            placeholderLabel={t('dashboard.common.identityPlaceholder')}
+            imageUrl={
+              resolveDashboardIdentityImageUrl(selectedPena) ||
+              resolveDashboardIdentityImageUrl(profile)
+            }
+            imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+          />
 
-            <Stack
-              direction="row"
-              spacing={0.6}
-              flexWrap="wrap"
-              useFlexGap
-              justifyContent={{ sm: 'flex-end' }}
-            >
-              <LanguageSwitcher />
-              <ThemeModeSwitcher />
-              <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
-                {t('dashboard.user.openSettings')}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => runAction(loadDashboard)}
-                disabled={loading}
-              >
-                {t('dashboard.common.refresh')}
-              </Button>
-              <Button variant="text" onClick={onLogout} disabled={loading}>
-                {t('dashboard.common.logout')}
-              </Button>
-            </Stack>
+          <Stack
+            direction="row"
+            spacing={0.6}
+            flexWrap="wrap"
+            useFlexGap
+            alignItems="center"
+            justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+          >
+            <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
+              {t('dashboard.user.openSettings')}
+            </Button>
+            <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
+              {t('dashboard.common.refresh')}
+            </Button>
+            <Button variant="text" onClick={onLogout} disabled={loading}>
+              {t('dashboard.common.logout')}
+            </Button>
           </Stack>
 
           <PenaSeasonSelector />
@@ -1290,6 +1277,8 @@ export default function UserDashboard({
                 </MenuItem>
               ))}
             </TextField>
+            <Divider />
+            <AppearanceSettings />
           </Stack>
         </DialogContent>
         <DialogActions>
