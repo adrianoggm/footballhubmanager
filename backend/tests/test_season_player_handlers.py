@@ -276,9 +276,21 @@ def test_register_bulk_normalizes_and_forwards_payload():
     }
 
 
-def test_register_bulk_maps_invalid_match_data():
-    with pytest.raises(InvalidSeasonPlayerBatchDataError):
-        RegisterSeasonPlayersBulkHandler(_FakeRepo(should_raise_invalid_match_data=True)).handle(
+@pytest.mark.parametrize(
+    ("repo", "expected_error"),
+    [
+        (_FakeRepo(should_raise_pena_not_found=True), PenaSeasonPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaSeasonAccessDeniedError),
+        (_FakeRepo(should_raise_season_not_found=True), PenaSeasonNotFoundError),
+        (_FakeRepo(should_raise_player_not_found=True), DomainSeasonPlayerNotFoundError),
+        (_FakeRepo(should_raise_player_not_in_pena=True), DomainSeasonPlayerNotInPenaError),
+        (_FakeRepo(should_raise_already_registered=True), DomainSeasonPlayerAlreadyRegisteredError),
+        (_FakeRepo(should_raise_invalid_match_data=True), InvalidSeasonPlayerBatchDataError),
+    ],
+)
+def test_register_bulk_maps_repository_errors(repo, expected_error):
+    with pytest.raises(expected_error):
+        RegisterSeasonPlayersBulkHandler(repo).handle(
             RegisterSeasonPlayersBulkCommand(
                 pena_guid="pena-guid",
                 season_guid="season-guid",
@@ -346,6 +358,10 @@ def test_update_stats_normalizes_text_and_forwards_flags():
 @pytest.mark.parametrize(
     ("repo", "expected_error"),
     [
+        (_FakeRepo(should_raise_pena_not_found=True), PenaSeasonPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaSeasonAccessDeniedError),
+        (_FakeRepo(should_raise_season_not_found=True), PenaSeasonNotFoundError),
+        (_FakeRepo(should_raise_player_not_found=True), DomainSeasonPlayerNotFoundError),
         (_FakeRepo(should_raise_season_player_not_found=True), DomainSeasonPlayerNotFoundError),
         (_FakeRepo(should_raise_invalid_stats=True), InvalidSeasonPlayerUpdateDataError),
     ],
@@ -366,6 +382,10 @@ def test_update_stats_maps_repository_errors(repo, expected_error):
 @pytest.mark.parametrize(
     ("repo", "expected_error"),
     [
+        (_FakeRepo(should_raise_pena_not_found=True), PenaSeasonPenaNotFoundError),
+        (_FakeRepo(should_raise_access_denied=True), PenaSeasonAccessDeniedError),
+        (_FakeRepo(should_raise_season_not_found=True), PenaSeasonNotFoundError),
+        (_FakeRepo(should_raise_player_not_found=True), DomainSeasonPlayerNotFoundError),
         (_FakeRepo(should_raise_player_has_matches=True), SeasonPlayerInMatchError),
         (_FakeRepo(should_raise_season_player_not_found=True), DomainSeasonPlayerNotFoundError),
     ],
