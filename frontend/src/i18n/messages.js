@@ -259,6 +259,8 @@ export const messages = {
         },
         seasons: {
           configTitle: 'Season Configuration',
+          tabEdit: 'Edit selected season',
+          tabCreate: 'New season',
           noActiveWarning: 'No active season found for today. Create one to start orchestration.',
           stepSelectCreate: 'Select or create',
           stepConfigure: 'Configure',
@@ -1122,6 +1124,8 @@ export const messages = {
         },
         seasons: {
           configTitle: 'Configuración de temporada',
+          tabEdit: 'Editar temporada seleccionada',
+          tabCreate: 'Nueva temporada',
           noActiveWarning: 'No hay temporada activa para hoy. Crea una para empezar.',
           stepSelectCreate: 'Seleccionar o crear',
           stepConfigure: 'Configurar',

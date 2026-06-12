@@ -791,7 +791,6 @@ export default function AdminDashboard({
   const shouldLoadHistoricalPlayers =
     activeSection === 'players' || activeSection === 'accountability'
   const shouldLoadPenaLabels = activeSection === 'players' || activeSection === 'standings'
-  const shouldLoadSeasonRoster = activeSection === 'players' || activeSection === 'matches'
   const shouldLoadStandings = activeSection === 'overview' || activeSection === 'standings'
   const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
 
@@ -1448,12 +1447,9 @@ export default function AdminDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
 
+  // The season roster feeds the always-visible "season players" summary card,
+  // so it loads for every section once a pena + season are selected.
   useEffect(() => {
-    if (!shouldLoadSeasonRoster) {
-      setSeasonRoster([])
-      setSeasonRosterLoading(false)
-      return
-    }
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
       setSeasonRoster([])
       setSeasonRosterLoading(false)
@@ -1494,7 +1490,7 @@ export default function AdminDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
 
   useEffect(() => {
     resetOverviewMatchDetailDialog()
@@ -2624,7 +2620,7 @@ export default function AdminDashboard({
     },
     {
       label: t('dashboard.admin.overview.seasonPlayers'),
-      value: shouldLoadSeasonRoster ? String(seasonRoster.length) : '-',
+      value: selectedSeasonGuid && !seasonRosterLoading ? String(seasonRoster.length) : '-',
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
       helperLabel: t('dashboard.common.summaryMeta.season'),
       tone: 'info',
