@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx prettier *)",
+      "Bash(echo \"EXIT_LINT:$?\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"LINT_EXIT:$?\")",
+      "Bash(./backend/.venv/Scripts/python.exe --version)",
+      "Bash(./backend/.venv/Scripts/python.exe -c \"import uvicorn; print\\('uvicorn', uvicorn.__version__\\)\")",
+      "Bash(./.venv/Scripts/python.exe --version)",
+      "Bash(./.venv/Scripts/python.exe -c \"import uvicorn; print\\('uvicorn', uvicorn.__version__\\)\")",
+      "Bash(ls -R docker)",
+      "Bash(ls docker-compose* compose*)",
+      "Bash(ls -a backend/.env* .env*)",
+      "Bash(docker --version)",
+      "Bash(echo \"LINT:$?\")"
+    ]
+  }
+}

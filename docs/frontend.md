@@ -63,6 +63,7 @@ The frontend is a role-based application, not only an auth playground.
   - `frontend/src/components/admin/PlayerEditDialogs.jsx`
 - Shared UI primitives library:
   - `frontend/src/components/common/` (`EmptyState`, `ErrorState`, `LoadingState`, `ConfirmDialog`, `SectionHeader`, `StatCard`, `PaginatedTable`)
+  - `frontend/src/components/common/AppFooter.jsx` — sitemap-driven page footer (about, navigation, rights), rendered by all three layouts
 - Shared match viewer:
   - `frontend/src/components/MatchDetailViewer.jsx`
 
