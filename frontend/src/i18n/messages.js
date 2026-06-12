@@ -541,6 +541,11 @@ export const messages = {
           trackingTitle: 'Match tracking',
           trackingDescription:
             'Start the match clock and log timed events such as goals, cards, fouls, saves or sanctions.',
+          dateQuickToday: 'Today',
+          dateQuickTomorrow: 'Tomorrow',
+          dateQuickSaturday: 'Next Saturday',
+          dateQuickSunday: 'Next Sunday',
+          dateWithinSeason: 'Within the season: {start} – {end}',
           editorTabSummary: 'Summary',
           editorTabTracking: 'Live tracking',
           editorTabLineups: 'Lineups',
@@ -1454,6 +1459,11 @@ export const messages = {
           trackingTitle: 'Seguimiento del partido',
           trackingDescription:
             'Inicia el reloj del partido y registra eventos con tiempo como goles, tarjetas, faltas, paradas o sanciones.',
+          dateQuickToday: 'Hoy',
+          dateQuickTomorrow: 'Mañana',
+          dateQuickSaturday: 'Próximo sábado',
+          dateQuickSunday: 'Próximo domingo',
+          dateWithinSeason: 'Dentro de la temporada: {start} – {end}',
           editorTabSummary: 'Resumen',
           editorTabTracking: 'Seguimiento en vivo',
           editorTabLineups: 'Alineaciones',

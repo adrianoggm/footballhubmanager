@@ -2560,6 +2560,7 @@ export default function AdminDashboard({
   const matchesSection = useAdminMatches({
     state: {
       selectedSeasonGuid,
+      selectedSeason,
       seasonRosterLoading,
       seasonRoster,
       createMatchLineupPlayers,

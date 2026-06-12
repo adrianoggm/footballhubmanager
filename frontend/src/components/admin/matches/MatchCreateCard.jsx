@@ -3,12 +3,57 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   LinearProgress,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
+import DateField from '../../common/DateField.jsx'
+
+const toIsoDate = (date) => {
+  const offset = date.getTimezoneOffset()
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10)
+}
+
+const addDays = (date, days) => {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+// Next occurrence of a weekday (0=Sunday..6=Saturday), today excluded.
+const nextWeekday = (date, weekday) => {
+  const delta = (weekday - date.getDay() + 7) % 7 || 7
+  return addDays(date, delta)
+}
+
+const buildQuickDates = (t) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return [
+    { key: 'today', label: t('dashboard.admin.matches.dateQuickToday'), iso: toIsoDate(today) },
+    {
+      key: 'tomorrow',
+      label: t('dashboard.admin.matches.dateQuickTomorrow'),
+      iso: toIsoDate(addDays(today, 1)),
+    },
+    {
+      key: 'saturday',
+      label: t('dashboard.admin.matches.dateQuickSaturday'),
+      iso: toIsoDate(nextWeekday(today, 6)),
+    },
+    {
+      key: 'sunday',
+      label: t('dashboard.admin.matches.dateQuickSunday'),
+      iso: toIsoDate(nextWeekday(today, 0)),
+    },
+  ]
+}
+
+const isWithinRange = (iso, minIso, maxIso) =>
+  (!minIso || iso >= minIso) && (!maxIso || iso <= maxIso)
 
 /**
  * "Create detailed match" card: date + team names + drag-and-drop lineups.
@@ -18,6 +63,7 @@ import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 export default function MatchCreateCard({ state, actions, helpers }) {
   const {
     selectedSeasonGuid,
+    selectedSeason,
     seasonRosterLoading,
     seasonRoster,
     createMatchLineupPlayers,
@@ -38,14 +84,53 @@ export default function MatchCreateCard({ state, actions, helpers }) {
           <Typography variant="body2" color="text.secondary">
             {t('dashboard.admin.matches.description')}
           </Typography>
-          <TextField
-            type="date"
-            label={t('dashboard.admin.matches.matchDate')}
-            InputLabelProps={{ shrink: true }}
-            value={matchForm.match_date}
-            onChange={onMatchField('match_date')}
-            disabled={!selectedSeasonGuid}
-          />
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            alignItems={{ md: 'center' }}
+          >
+            <DateField
+              label={t('dashboard.admin.matches.matchDate')}
+              value={matchForm.match_date}
+              onChange={(iso) => onMatchField('match_date')({ target: { value: iso } })}
+              minIso={selectedSeason?.start_date || ''}
+              maxIso={selectedSeason?.end_date || ''}
+              disabled={!selectedSeasonGuid}
+              helperText={
+                selectedSeason
+                  ? t('dashboard.admin.matches.dateWithinSeason', {
+                      start: formatDate(selectedSeason.start_date),
+                      end: formatDate(selectedSeason.end_date),
+                    })
+                  : ' '
+              }
+              sx={{ width: { xs: '100%', sm: 280 } }}
+            />
+            <Stack
+              direction="row"
+              spacing={1}
+              flexWrap="wrap"
+              useFlexGap
+              rowGap={1}
+              sx={{ pb: { md: 2.5 } }}
+            >
+              {buildQuickDates(t)
+                .filter((quick) =>
+                  isWithinRange(quick.iso, selectedSeason?.start_date, selectedSeason?.end_date)
+                )
+                .map((quick) => (
+                  <Chip
+                    key={quick.key}
+                    label={quick.label}
+                    size="small"
+                    variant={matchForm.match_date === quick.iso ? 'filled' : 'outlined'}
+                    color={matchForm.match_date === quick.iso ? 'secondary' : 'default'}
+                    disabled={!selectedSeasonGuid}
+                    onClick={() => onMatchField('match_date')({ target: { value: quick.iso } })}
+                  />
+                ))}
+            </Stack>
+          </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
             <TextField
               label={t('dashboard.admin.matches.homeTeam')}
