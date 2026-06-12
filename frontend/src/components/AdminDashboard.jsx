@@ -1871,6 +1871,18 @@ export default function AdminDashboard({
     )
   }
 
+  const handleRegisterSinglePlayerInSeason = async (playerGuid) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !playerGuid) {
+      return
+    }
+    await runAction(async () => {
+      await adminService.registerSeasonPlayersBulk(selectedPenaGuid, selectedSeasonGuid, [
+        playerGuid,
+      ])
+      await loadPenaData(selectedPenaGuid)
+    }, t('dashboard.admin.notices.playersAdded', { count: 1, suffix: '' }))
+  }
+
   const handleEditSeasonPlayer = (player) => {
     setEditingSeasonPlayer(player)
     setSeasonPlayerDraft({
@@ -2527,6 +2539,7 @@ export default function AdminDashboard({
     actions: {
       handleSelectHistoricalPlayers,
       handleRegisterHistoricalPlayersInSeason,
+      handleRegisterSinglePlayerInSeason,
       handleEditSeasonPlayer,
       handleRequestRemoveSeasonPlayer,
       onGuestField,
