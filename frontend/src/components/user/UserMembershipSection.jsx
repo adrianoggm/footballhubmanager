@@ -73,7 +73,12 @@ export default function UserMembershipSection({
                     <Button variant="contained" onClick={onUpdateMembership} disabled={loading}>
                       {t('dashboard.user.saveMembership')}
                     </Button>
-                    <Button variant="outlined" color="error" onClick={onLeavePena} disabled={loading}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={onLeavePena}
+                      disabled={loading}
+                    >
                       {t('dashboard.user.leavePena')}
                     </Button>
                   </Stack>

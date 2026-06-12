@@ -215,8 +215,7 @@ export const messages = {
         navLockedNoSeason: 'Create a season first',
         gating: {
           noSeasonTitle: 'No season configured',
-          noSeasonBody:
-            'Create a season to unlock matches, standings and insights for this pena.',
+          noSeasonBody: 'Create a season to unlock matches, standings and insights for this pena.',
           goToSeasons: 'Go to Seasons',
           noPlayersTitle: 'No players yet',
           noPlayersBody: 'Add players to this pena before managing accountability.',

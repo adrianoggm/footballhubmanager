@@ -94,8 +94,10 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                 multiple: true,
                 displayEmpty: true,
                 renderValue: (selected) =>
-                  renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles'), (value) =>
-                    translateRoleLabel(t, value)
+                  renderFilterValue(
+                    selected,
+                    t('dashboard.admin.members.filterAllRoles'),
+                    (value) => translateRoleLabel(t, value)
                   ),
               }}
               fullWidth
@@ -159,7 +161,9 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                 <TableBody>
                   {standings.map((player) => (
                     <TableRow key={player.player_guid}>
-                      <TableCell>{player.nickname || `${player.name} ${player.surname1}`}</TableCell>
+                      <TableCell>
+                        {player.nickname || `${player.name} ${player.surname1}`}
+                      </TableCell>
                       <TableCell>
                         {player.role ? (
                           <Chip

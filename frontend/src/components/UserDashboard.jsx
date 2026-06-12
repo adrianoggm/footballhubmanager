@@ -147,11 +147,7 @@ export default function UserDashboard({
     setValues: setMembershipForm,
     onField: onMembershipField,
   } = useForm(defaultMembershipForm)
-  const {
-    values: joinForm,
-    onField: onJoinField,
-    reset: resetJoinForm,
-  } = useForm(defaultJoinForm)
+  const { values: joinForm, onField: onJoinField, reset: resetJoinForm } = useForm(defaultJoinForm)
   const [seasonList, setSeasonList] = useState([])
   const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
   const [standings, setStandings] = useState([])
@@ -748,202 +744,210 @@ export default function UserDashboard({
 
   return (
     <DashboardContext.Provider value={dashboardContextValue}>
-    <DashboardShell
-      brand={t('app.brand')}
-      brandShort="FH"
-      railLabel={t('dashboard.user.panelTitle')}
-      navItems={userNavItems}
-      activeNavId={activeNavSectionId}
-      onNavChange={handleNavigateToSection}
-      title={activeUserSectionLabel}
-      subtitle={activeUserHeroSubtitle}
-      badges={
-        <>
-          <Chip
-            size="small"
-            color="secondary"
-            label={selectedPena?.name || t('dashboard.user.noPenasLinked')}
-          />
-          <Chip size="small" color="primary" label={selectedSeason ? selectedSeasonLabel : '-'} />
-          {membership?.role ? (
+      <DashboardShell
+        brand={t('app.brand')}
+        brandShort="FH"
+        railLabel={t('dashboard.user.panelTitle')}
+        navItems={userNavItems}
+        activeNavId={activeNavSectionId}
+        onNavChange={handleNavigateToSection}
+        title={activeUserSectionLabel}
+        subtitle={activeUserHeroSubtitle}
+        badges={
+          <>
             <Chip
               size="small"
-              label={translateRoleLabel(t, membership.role)}
-              sx={labelChipSx(membership.role_color)}
+              color="secondary"
+              label={selectedPena?.name || t('dashboard.user.noPenasLinked')}
             />
-          ) : null}
-          {currentStanding ? (
-            <Chip
-              size="small"
-              color="info"
-              label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
-            />
-          ) : null}
-        </>
-      }
-      headerAside={
-        <Stack spacing={1.1}>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1}
-            alignItems={{ sm: 'center' }}
-            justifyContent="space-between"
-          >
-            <DashboardIdentitySlot
-              name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-              subtitle={profileDisplayName || ''}
-              imageUrl={
-                resolveDashboardIdentityImageUrl(selectedPena) ||
-                resolveDashboardIdentityImageUrl(profile)
-              }
-              imageAlt={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-            />
-
+            <Chip size="small" color="primary" label={selectedSeason ? selectedSeasonLabel : '-'} />
+            {membership?.role ? (
+              <Chip
+                size="small"
+                label={translateRoleLabel(t, membership.role)}
+                sx={labelChipSx(membership.role_color)}
+              />
+            ) : null}
+            {currentStanding ? (
+              <Chip
+                size="small"
+                color="info"
+                label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
+              />
+            ) : null}
+          </>
+        }
+        headerAside={
+          <Stack spacing={1.1}>
             <Stack
-              direction="row"
-              spacing={0.6}
-              flexWrap="wrap"
-              useFlexGap
-              alignItems="center"
-              justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ sm: 'center' }}
+              justifyContent="space-between"
             >
-              <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
-                {t('dashboard.user.openSettings')}
-              </Button>
-              <Button variant="outlined" onClick={() => runAction(loadDashboard)} disabled={loading}>
-                {t('dashboard.common.refresh')}
-              </Button>
-              <Button variant="text" onClick={onLogout} disabled={loading}>
-                {t('dashboard.common.logout')}
-              </Button>
+              <DashboardIdentitySlot
+                name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
+                subtitle={profileDisplayName || ''}
+                imageUrl={
+                  resolveDashboardIdentityImageUrl(selectedPena) ||
+                  resolveDashboardIdentityImageUrl(profile)
+                }
+                imageAlt={
+                  selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')
+                }
+              />
+
+              <Stack
+                direction="row"
+                spacing={0.6}
+                flexWrap="wrap"
+                useFlexGap
+                alignItems="center"
+                justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+              >
+                <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
+                  {t('dashboard.user.openSettings')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => runAction(loadDashboard)}
+                  disabled={loading}
+                >
+                  {t('dashboard.common.refresh')}
+                </Button>
+                <Button variant="text" onClick={onLogout} disabled={loading}>
+                  {t('dashboard.common.logout')}
+                </Button>
+              </Stack>
             </Stack>
+
+            <PenaSeasonSelector />
           </Stack>
+        }
+        summaryCards={userSummaryCards}
+      >
+        {loading && <LinearProgress />}
+        {error && <Alert severity="error">{errorMessage}</Alert>}
+        {notice && <Alert severity="success">{notice}</Alert>}
 
-          <PenaSeasonSelector />
-        </Stack>
-      }
-      summaryCards={userSummaryCards}
-    >
-      {loading && <LinearProgress />}
-      {error && <Alert severity="error">{errorMessage}</Alert>}
-      {notice && <Alert severity="success">{notice}</Alert>}
+        {visibleUserSectionId === 'join' && (
+          <UserJoinSection
+            anchorId={USER_DASHBOARD_ANCHORS.join}
+            joinForm={joinForm}
+            onJoinField={onJoinField}
+            onJoin={handleJoinPena}
+            loading={loading}
+            t={t}
+          />
+        )}
 
-      {visibleUserSectionId === 'join' && (
-        <UserJoinSection
-          anchorId={USER_DASHBOARD_ANCHORS.join}
-          joinForm={joinForm}
-          onJoinField={onJoinField}
-          onJoin={handleJoinPena}
-          loading={loading}
-          t={t}
-        />
-      )}
+        {visibleUserSectionId === 'membership' && (
+          <UserMembershipSection
+            anchorId={USER_DASHBOARD_ANCHORS.membership}
+            penas={penas}
+            selectedPenaGuid={selectedPenaGuid}
+            selectedPena={selectedPena}
+            membership={membership}
+            membershipForm={membershipForm}
+            onMembershipField={onMembershipField}
+            onUpdateMembership={handleUpdateMembership}
+            onLeavePena={handleLeavePena}
+            seasonList={seasonList}
+            selectedSeason={selectedSeason}
+            selectedSeasonLabel={selectedSeasonLabel}
+            loading={loading}
+            t={t}
+          />
+        )}
 
-      {visibleUserSectionId === 'membership' && (
-        <UserMembershipSection
-          anchorId={USER_DASHBOARD_ANCHORS.membership}
-          penas={penas}
-          selectedPenaGuid={selectedPenaGuid}
-          selectedPena={selectedPena}
-          membership={membership}
-          membershipForm={membershipForm}
-          onMembershipField={onMembershipField}
-          onUpdateMembership={handleUpdateMembership}
-          onLeavePena={handleLeavePena}
-          seasonList={seasonList}
-          selectedSeason={selectedSeason}
-          selectedSeasonLabel={selectedSeasonLabel}
-          loading={loading}
-          t={t}
-        />
-      )}
+        {visibleUserSectionId === 'accountability' && selectedPenaGuid && (
+          <Box id={USER_DASHBOARD_ANCHORS.accountability} data-sitemap-anchor>
+            <Suspense fallback={<SectionLoader />}>
+              <UserAccountabilitySection
+                penaGuid={selectedPenaGuid}
+                currentPlayerGuid={currentPlayerGuid}
+                t={t}
+              />
+            </Suspense>
+          </Box>
+        )}
 
-      {visibleUserSectionId === 'accountability' && selectedPenaGuid && (
-        <Box id={USER_DASHBOARD_ANCHORS.accountability} data-sitemap-anchor>
-          <Suspense fallback={<SectionLoader />}>
-            <UserAccountabilitySection
-              penaGuid={selectedPenaGuid}
-              currentPlayerGuid={currentPlayerGuid}
-              t={t}
-            />
-          </Suspense>
-        </Box>
-      )}
+        {visibleUserSectionId === 'standings' && selectedSeasonGuid && (
+          <UserStandingsSection
+            anchorId={USER_DASHBOARD_ANCHORS.standings}
+            seasonDataLoading={seasonDataLoading}
+            standings={standings}
+            currentStanding={currentStanding}
+            currentPlayerGuid={currentPlayerGuid}
+            t={t}
+          />
+        )}
 
-      {visibleUserSectionId === 'standings' && selectedSeasonGuid && (
-        <UserStandingsSection
-          anchorId={USER_DASHBOARD_ANCHORS.standings}
-          seasonDataLoading={seasonDataLoading}
-          standings={standings}
-          currentStanding={currentStanding}
-          currentPlayerGuid={currentPlayerGuid}
-          t={t}
-        />
-      )}
+        {visibleUserSectionId === 'matches' && selectedSeasonGuid && (
+          <UserMatchesSection
+            anchorId={USER_DASHBOARD_ANCHORS.matches}
+            orderedSeasonMatches={orderedSeasonMatches}
+            matchDetailLoading={matchDetailLoading}
+            onOpenMatchDetail={handleOpenMatchDetail}
+            t={t}
+            formatDate={formatDate}
+          />
+        )}
 
-      {visibleUserSectionId === 'matches' && selectedSeasonGuid && (
-        <UserMatchesSection
-          anchorId={USER_DASHBOARD_ANCHORS.matches}
-          orderedSeasonMatches={orderedSeasonMatches}
-          matchDetailLoading={matchDetailLoading}
-          onOpenMatchDetail={handleOpenMatchDetail}
+        {visibleUserSectionId === 'insights' && selectedSeasonGuid && (
+          <Box id={USER_DASHBOARD_ANCHORS.insights} data-sitemap-anchor>
+            <Suspense fallback={<SectionLoader />}>
+              <AdminInsightsSection
+                state={{
+                  selectedSeasonGuid,
+                  insightsScope,
+                  insightsLoading,
+                  insightsReport,
+                  insightsComparisonReport,
+                  insightsComparison,
+                }}
+                actions={{
+                  onInsightsScopeChange: setInsightsScope,
+                  onRefreshInsights: handleRefreshInsights,
+                }}
+                helpers={{
+                  t,
+                  formatDecimal,
+                  formatSignedDecimal,
+                  formatPercent,
+                }}
+              />
+            </Suspense>
+          </Box>
+        )}
+
+        <MatchDetailDialog
+          open={Boolean(selectedMatchGuid)}
+          onClose={handleCloseMatchDetail}
+          loading={matchDetailLoading}
+          detail={selectedMatchDetail}
           t={t}
           formatDate={formatDate}
         />
-      )}
 
-      {visibleUserSectionId === 'insights' && selectedSeasonGuid && (
-        <Box id={USER_DASHBOARD_ANCHORS.insights} data-sitemap-anchor>
-          <Suspense fallback={<SectionLoader />}>
-            <AdminInsightsSection
-              state={{
-                selectedSeasonGuid,
-                insightsScope,
-                insightsLoading,
-                insightsReport,
-                insightsComparisonReport,
-                insightsComparison,
-              }}
-              actions={{
-                onInsightsScopeChange: setInsightsScope,
-                onRefreshInsights: handleRefreshInsights,
-              }}
-              helpers={{
-                t,
-                formatDecimal,
-                formatSignedDecimal,
-                formatPercent,
-              }}
-            />
-          </Suspense>
-        </Box>
-      )}
-
-      <MatchDetailDialog
-        open={Boolean(selectedMatchGuid)}
-        onClose={handleCloseMatchDetail}
-        loading={matchDetailLoading}
-        detail={selectedMatchDetail}
-        t={t}
-        formatDate={formatDate}
-      />
-
-      <UserProfileSettingsDialog
-        open={profileSettingsOpen}
-        onClose={() => setProfileSettingsOpen(false)}
-        onSave={handleSaveProfileFromSettings}
-        loading={loading}
-        profileForm={profileForm}
-        onProfileField={onProfileField}
-        onProfileImageChange={(value) =>
-          setProfileForm((prev) => ({ ...prev, image_url: value }))
-        }
-        onProfileImageError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
-        profileDisplayName={profileDisplayName}
-        nationalities={nationalities}
-        t={t}
-      />
-    </DashboardShell>
+        <UserProfileSettingsDialog
+          open={profileSettingsOpen}
+          onClose={() => setProfileSettingsOpen(false)}
+          onSave={handleSaveProfileFromSettings}
+          loading={loading}
+          profileForm={profileForm}
+          onProfileField={onProfileField}
+          onProfileImageChange={(value) =>
+            setProfileForm((prev) => ({ ...prev, image_url: value }))
+          }
+          onProfileImageError={(error) =>
+            setError(new Error(mapProfileImageErrorMessage(error, t)))
+          }
+          profileDisplayName={profileDisplayName}
+          nationalities={nationalities}
+          t={t}
+        />
+      </DashboardShell>
     </DashboardContext.Provider>
   )
 }

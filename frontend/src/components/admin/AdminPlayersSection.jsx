@@ -482,7 +482,9 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                     <Button
                                       size="small"
                                       variant="text"
-                                      onClick={() => handleRegisterSinglePlayerInSeason(player.guid)}
+                                      onClick={() =>
+                                        handleRegisterSinglePlayerInSeason(player.guid)
+                                      }
                                       disabled={loading}
                                     >
                                       {t('dashboard.admin.members.addToSeason')}

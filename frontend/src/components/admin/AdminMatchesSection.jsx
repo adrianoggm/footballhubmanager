@@ -30,10 +30,10 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   const selectedTrackedScore = buildTrackedTeamScore(selectedMatchDetail)
   const editorReady = Boolean(
     selectedSeasonGuid &&
-      !matchStatsLoading &&
-      selectedMatchDetail &&
-      matchLineupsDraft &&
-      matchStatsDraft
+    !matchStatsLoading &&
+    selectedMatchDetail &&
+    matchLineupsDraft &&
+    matchStatsDraft
   )
 
   return (
@@ -62,9 +62,7 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
               />
 
               {selectedSeasonGuid && matchStatsLoading && <LinearProgress />}
-              {editorReady && (
-                <MatchEditorCard state={state} actions={actions} helpers={helpers} />
-              )}
+              {editorReady && <MatchEditorCard state={state} actions={actions} helpers={helpers} />}
             </Stack>
           </CardContent>
         </Card>

@@ -22,7 +22,9 @@ export default function MatchDetailDialog({ open, onClose, loading, detail, t, f
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {loading && <LinearProgress />}
-          {!loading && detail && <MatchDetailViewer detail={detail} t={t} formatDate={formatDate} />}
+          {!loading && detail && (
+            <MatchDetailViewer detail={detail} t={t} formatDate={formatDate} />
+          )}
           {!loading && !detail && (
             <Typography variant="body2" color="text.secondary">
               {t('dashboard.common.matchDetail.noData')}

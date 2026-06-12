@@ -274,7 +274,6 @@ const normalizeFilterValues = (value) => {
   )
 }
 
-
 const pruneFilterValues = (selectedValues, allowedLabels) => {
   const allowed = new Set(
     (allowedLabels || [])
@@ -1000,7 +999,6 @@ export default function AdminDashboard({
       return next
     })
   }
-
 
   const onLabelColorDraftChange = (group, label) => (event) => {
     const color = normalizeHexColor(event.target.value) || defaultColorForLabel(label, {})
@@ -1839,7 +1837,6 @@ export default function AdminDashboard({
     )
   }
 
-
   const handleSelectSeasonFromHistory = (seasonGuid) => {
     selectSeason(selectedSeasonGuid === seasonGuid ? '' : seasonGuid)
   }
@@ -1875,12 +1872,15 @@ export default function AdminDashboard({
     if (!selectedPenaGuid || !selectedSeasonGuid || !playerGuid) {
       return
     }
-    await runAction(async () => {
-      await adminService.registerSeasonPlayersBulk(selectedPenaGuid, selectedSeasonGuid, [
-        playerGuid,
-      ])
-      await loadPenaData(selectedPenaGuid)
-    }, t('dashboard.admin.notices.playersAdded', { count: 1, suffix: '' }))
+    await runAction(
+      async () => {
+        await adminService.registerSeasonPlayersBulk(selectedPenaGuid, selectedSeasonGuid, [
+          playerGuid,
+        ])
+        await loadPenaData(selectedPenaGuid)
+      },
+      t('dashboard.admin.notices.playersAdded', { count: 1, suffix: '' })
+    )
   }
 
   const handleEditSeasonPlayer = (player) => {
@@ -2721,63 +2721,90 @@ export default function AdminDashboard({
 
   return (
     <DashboardContext.Provider value={dashboardContextValue}>
-    <DashboardShell
-      brand={t('app.brand')}
-      brandShort="FH"
-      railLabel={t('dashboard.admin.panelTitle')}
-      navItems={adminNavItems}
-      activeNavId={activeSection}
-      onNavChange={handleSectionChange}
-      title={activeAdminSectionLabel}
-      subtitle={activeAdminHeroSubtitle}
-      badges={
-        <>
-          <Chip
-            size="small"
-            color="secondary"
-            label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
-          />
-          <Chip
-            size="small"
-            color={activeSeason ? 'success' : 'warning'}
-            label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
-          />
-          <Chip
-            size="small"
-            color="primary"
-            label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
-          />
-        </>
-      }
-      headerAside={
-        <Stack spacing={1.1}>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1}
-            alignItems={{ sm: 'center' }}
-            justifyContent="space-between"
-          >
-            <DashboardIdentitySlot
-              name={selectedPena?.name || t('dashboard.admin.panelTitle')}
-              imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
-              imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
+      <DashboardShell
+        brand={t('app.brand')}
+        brandShort="FH"
+        railLabel={t('dashboard.admin.panelTitle')}
+        navItems={adminNavItems}
+        activeNavId={activeSection}
+        onNavChange={handleSectionChange}
+        title={activeAdminSectionLabel}
+        subtitle={activeAdminHeroSubtitle}
+        badges={
+          <>
+            <Chip
+              size="small"
+              color="secondary"
+              label={t('dashboard.admin.chips.pena', { name: selectedPena?.name || '-' })}
             />
-
+            <Chip
+              size="small"
+              color={activeSeason ? 'success' : 'warning'}
+              label={t('dashboard.admin.chips.activeSeason', { season: activeSeasonLabel })}
+            />
+            <Chip
+              size="small"
+              color="primary"
+              label={t('dashboard.admin.chips.selectedSeason', { season: selectedSeasonLabel })}
+            />
+          </>
+        }
+        headerAside={
+          <Stack spacing={1.1}>
             <Stack
-              direction="row"
-              spacing={0.6}
-              flexWrap="wrap"
-              useFlexGap
-              alignItems="center"
-              justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ sm: 'center' }}
+              justifyContent="space-between"
             >
-              <Button
-                variant="outlined"
-                onClick={openPenaSettings}
-                disabled={loading || !selectedPenaGuid}
+              <DashboardIdentitySlot
+                name={selectedPena?.name || t('dashboard.admin.panelTitle')}
+                imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
+                imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
+              />
+
+              <Stack
+                direction="row"
+                spacing={0.6}
+                flexWrap="wrap"
+                useFlexGap
+                alignItems="center"
+                justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
               >
-                {t('dashboard.admin.openPenaSettings')}
-              </Button>
+                <Button
+                  variant="outlined"
+                  onClick={openPenaSettings}
+                  disabled={loading || !selectedPenaGuid}
+                >
+                  {t('dashboard.admin.openPenaSettings')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => runAction(loadDashboard, '')}
+                  disabled={loading}
+                >
+                  {t('dashboard.common.refreshData')}
+                </Button>
+                <Button variant="text" onClick={onLogout} disabled={loading}>
+                  {t('dashboard.common.logout')}
+                </Button>
+              </Stack>
+            </Stack>
+
+            <PenaSeasonSelector />
+          </Stack>
+        }
+        summaryCards={adminSummaryCards}
+      >
+        {loading && <LinearProgress />}
+        {error && <Alert severity="error">{errorMessage}</Alert>}
+        {notice && <Alert severity={noticeSeverity}>{notice}</Alert>}
+
+        {!selectedPenaGuid && (
+          <EmptyState
+            title={t('dashboard.admin.currentPena')}
+            description={t('dashboard.admin.noLinkedPenaInfo')}
+            action={
               <Button
                 variant="outlined"
                 onClick={() => runAction(loadDashboard, '')}
@@ -2785,327 +2812,304 @@ export default function AdminDashboard({
               >
                 {t('dashboard.common.refreshData')}
               </Button>
-              <Button variant="text" onClick={onLogout} disabled={loading}>
-                {t('dashboard.common.logout')}
-              </Button>
-            </Stack>
-          </Stack>
+            }
+          />
+        )}
 
-          <PenaSeasonSelector />
-        </Stack>
-      }
-      summaryCards={adminSummaryCards}
-    >
-      {loading && <LinearProgress />}
-      {error && <Alert severity="error">{errorMessage}</Alert>}
-      {notice && <Alert severity={noticeSeverity}>{notice}</Alert>}
-
-      {!selectedPenaGuid && (
-        <EmptyState
-          title={t('dashboard.admin.currentPena')}
-          description={t('dashboard.admin.noLinkedPenaInfo')}
-          action={
-            <Button variant="outlined" onClick={() => runAction(loadDashboard, '')} disabled={loading}>
-              {t('dashboard.common.refreshData')}
-            </Button>
-          }
-        />
-      )}
-
-      {selectedPenaGuid && activeSection === 'overview' && (
-        <AdminOverviewSection
-          state={{
-            loading,
-            selectedSeasonGuid,
-            tokenPayload,
-            standings,
-            overviewSeasonMatches,
-            overviewMatchesSummary,
-            overviewMatchLoading,
-          }}
-          actions={{
-            onGenerateJoinCode: handleGenerateJoinCode,
-            onRefreshStandings: handleRefreshStandings,
-            onCreateMatch: () => handleSectionChange('matches'),
-            onOpenMatchDetail: handleOpenOverviewMatchDetail,
-          }}
-          helpers={{
-            t,
-            formatDate,
-            formatEpochSeconds,
-          }}
-        />
-      )}
-
-      {selectedPenaGuid && activeSection === 'seasons' && (
-        <Suspense fallback={<SectionLoader />}>
-          <AdminSeasonsSection
+        {selectedPenaGuid && activeSection === 'overview' && (
+          <AdminOverviewSection
             state={{
-              activeSeason,
-              selectedSeason,
-              activeSeasonLabel,
-              selectedSeasonLabel,
-              latestSeasonEndDate,
-              seasonForm,
-              importPreviousSeasonRoster,
-              importSourceSeasonGuid,
-              seasonImportCandidates,
               loading,
-              historySeasons,
               selectedSeasonGuid,
-              selectedSeasonForm,
-              selectedSeasonDateErrors,
+              tokenPayload,
+              standings,
+              overviewSeasonMatches,
+              overviewMatchesSummary,
+              overviewMatchLoading,
             }}
             actions={{
-              onSeasonField,
-              handlePrefillNextSeason,
-              onImportPreviousSeasonRosterChange,
-              onImportSourceSeasonGuidChange,
-              handleCreateSeason,
-              onSelectedSeasonField,
-              handleUpdateSelectedSeason,
-              handleRequestDeleteSelectedSeason,
-              handleSelectSeasonFromHistory,
+              onGenerateJoinCode: handleGenerateJoinCode,
+              onRefreshStandings: handleRefreshStandings,
+              onCreateMatch: () => handleSectionChange('matches'),
+              onOpenMatchDetail: handleOpenOverviewMatchDetail,
             }}
             helpers={{
               t,
               formatDate,
+              formatEpochSeconds,
             }}
           />
-        </Suspense>
-      )}
+        )}
 
-      {selectedPenaGuid &&
-        activeSection === 'accountability' &&
-        (!loading && historicalPlayers.length === 0 ? (
-          <EmptyState
-            title={t('dashboard.admin.gating.noPlayersTitle')}
-            description={t('dashboard.admin.gating.noPlayersBody')}
-            action={
-              <Button variant="contained" onClick={() => handleSectionChange('players')}>
-                {t('dashboard.admin.gating.goToPlayers')}
-              </Button>
-            }
-          />
-        ) : (
+        {selectedPenaGuid && activeSection === 'seasons' && (
           <Suspense fallback={<SectionLoader />}>
-            <AdminAccountabilitySection
-              penaGuid={selectedPenaGuid}
-              players={historicalPlayers}
-              t={t}
-              formatPlayerDisplayName={formatPlayerDisplayName}
-            />
-          </Suspense>
-        ))}
-
-      {selectedPenaGuid && activeSection === 'players' && (
-        <Suspense fallback={<SectionLoader />}>
-          <AdminPlayersSection
-            state={playersSection.state}
-            actions={playersSection.actions}
-            helpers={playersSection.helpers}
-          />
-        </Suspense>
-      )}
-
-      {selectedPenaGuid &&
-        activeSection === 'matches' &&
-        (hasSeason ? (
-          <Suspense fallback={<SectionLoader />}>
-            <AdminMatchesSection
-              state={matchesSection.state}
-              actions={matchesSection.actions}
-              helpers={matchesSection.helpers}
-            />
-          </Suspense>
-        ) : (
-          seasonGateEmptyState
-        ))}
-
-      {selectedPenaGuid &&
-        activeSection === 'standings' &&
-        (hasSeason ? (
-          <Suspense fallback={<SectionLoader />}>
-            <AdminStandingsSection
+            <AdminSeasonsSection
               state={{
-                selectedSeasonGuid,
+                activeSeason,
+                selectedSeason,
+                activeSeasonLabel,
                 selectedSeasonLabel,
+                latestSeasonEndDate,
+                seasonForm,
+                importPreviousSeasonRoster,
+                importSourceSeasonGuid,
+                seasonImportCandidates,
                 loading,
-                standings,
-                standingsFilters,
-                penaLabels,
-                insightsScope,
-                insightsLoading,
-                insightsReport,
-                insightsComparisonReport,
-                insightsComparison,
+                historySeasons,
+                selectedSeasonGuid,
+                selectedSeasonForm,
+                selectedSeasonDateErrors,
               }}
               actions={{
-                onRefreshStandings: handleRefreshStandings,
-                onStandingsFilterField,
-                onInsightsScopeChange: setInsightsScope,
-                onRefreshInsights: handleRefreshInsights,
+                onSeasonField,
+                handlePrefillNextSeason,
+                onImportPreviousSeasonRosterChange,
+                onImportSourceSeasonGuidChange,
+                handleCreateSeason,
+                onSelectedSeasonField,
+                handleUpdateSelectedSeason,
+                handleRequestDeleteSelectedSeason,
+                handleSelectSeasonFromHistory,
               }}
               helpers={{
                 t,
-                formatDecimal,
-                formatSignedDecimal,
-                formatPercent,
+                formatDate,
               }}
             />
           </Suspense>
-        ) : (
-          seasonGateEmptyState
-        ))}
+        )}
 
-      <Dialog
-        open={penaSettingsOpen}
-        onClose={() => setPenaSettingsOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>{t('dashboard.admin.penaSettingsTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              {t('dashboard.admin.penaSettingsHint')}
-            </Typography>
-            <ProfileImageField
-              value={penaProfileDraft.image_url}
-              alt={selectedPena?.name || t('dashboard.admin.panelTitle')}
-              label={t('dashboard.common.profileImageLabel')}
-              helperText={t('dashboard.admin.penaImageHint')}
-              chooseLabel={t('dashboard.common.imageActions.choose')}
-              replaceLabel={t('dashboard.common.imageActions.replace')}
-              removeLabel={t('dashboard.common.imageActions.remove')}
-              emptyLabel={t('dashboard.common.imageEmpty')}
-              processingLabel={t('dashboard.common.imageActions.processing')}
-              disabled={loading}
-              onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
-              onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+        {selectedPenaGuid &&
+          activeSection === 'accountability' &&
+          (!loading && historicalPlayers.length === 0 ? (
+            <EmptyState
+              title={t('dashboard.admin.gating.noPlayersTitle')}
+              description={t('dashboard.admin.gating.noPlayersBody')}
+              action={
+                <Button variant="contained" onClick={() => handleSectionChange('players')}>
+                  {t('dashboard.admin.gating.goToPlayers')}
+                </Button>
+              }
             />
-            <Divider />
-            <AppearanceSettings />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPenaSettingsOpen(false)} disabled={loading}>
-            {t('dashboard.user.settingsCancel')}
-          </Button>
-          <Button variant="contained" onClick={handleSavePenaProfile} disabled={loading}>
-            {t('dashboard.admin.savePenaProfile')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          ) : (
+            <Suspense fallback={<SectionLoader />}>
+              <AdminAccountabilitySection
+                penaGuid={selectedPenaGuid}
+                players={historicalPlayers}
+                t={t}
+                formatPlayerDisplayName={formatPlayerDisplayName}
+              />
+            </Suspense>
+          ))}
 
-      <MatchDetailDialog
-        open={Boolean(overviewMatchGuid)}
-        onClose={handleCloseOverviewMatchDetail}
-        loading={overviewMatchLoading}
-        detail={overviewMatchDetail}
-        t={t}
-        formatDate={formatDate}
-      />
+        {selectedPenaGuid && activeSection === 'players' && (
+          <Suspense fallback={<SectionLoader />}>
+            <AdminPlayersSection
+              state={playersSection.state}
+              actions={playersSection.actions}
+              helpers={playersSection.helpers}
+            />
+          </Suspense>
+        )}
 
-      <ConfirmDialog
-        open={Boolean(pendingDeleteSeason)}
-        onCancel={handleCancelDeleteSeason}
-        onConfirm={handleDeleteSeason}
-        title={t('dashboard.admin.seasons.deleteSeasonTitle')}
-        description={
-          pendingDeleteSeason
-            ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
-                season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
-              })
-            : ''
-        }
-        cancelLabel={t('dashboard.admin.seasons.cancelDeleteSeason')}
-        confirmLabel={t('dashboard.admin.seasons.deleteSelectedSeason')}
-        loading={loading}
-      />
+        {selectedPenaGuid &&
+          activeSection === 'matches' &&
+          (hasSeason ? (
+            <Suspense fallback={<SectionLoader />}>
+              <AdminMatchesSection
+                state={matchesSection.state}
+                actions={matchesSection.actions}
+                helpers={matchesSection.helpers}
+              />
+            </Suspense>
+          ) : (
+            seasonGateEmptyState
+          ))}
 
-      <EditSeasonPlayerDialog
-        player={editingSeasonPlayer}
-        draft={seasonPlayerDraft}
-        onField={onSeasonPlayerDraftField}
-        onClose={handleCloseEditSeasonPlayer}
-        onSave={handleSaveSeasonPlayer}
-        penaLabels={penaLabels}
-        loading={loading}
-        t={t}
-        formatPlayerDisplayName={formatPlayerDisplayName}
-      />
+        {selectedPenaGuid &&
+          activeSection === 'standings' &&
+          (hasSeason ? (
+            <Suspense fallback={<SectionLoader />}>
+              <AdminStandingsSection
+                state={{
+                  selectedSeasonGuid,
+                  selectedSeasonLabel,
+                  loading,
+                  standings,
+                  standingsFilters,
+                  penaLabels,
+                  insightsScope,
+                  insightsLoading,
+                  insightsReport,
+                  insightsComparisonReport,
+                  insightsComparison,
+                }}
+                actions={{
+                  onRefreshStandings: handleRefreshStandings,
+                  onStandingsFilterField,
+                  onInsightsScopeChange: setInsightsScope,
+                  onRefreshInsights: handleRefreshInsights,
+                }}
+                helpers={{
+                  t,
+                  formatDecimal,
+                  formatSignedDecimal,
+                  formatPercent,
+                }}
+              />
+            </Suspense>
+          ) : (
+            seasonGateEmptyState
+          ))}
 
-      <ConfirmDialog
-        open={Boolean(pendingRemoveSeasonPlayer)}
-        onCancel={handleCancelRemoveSeasonPlayer}
-        onConfirm={handleRemoveSeasonPlayer}
-        title={t('dashboard.admin.players.removeSeasonPlayerTitle')}
-        description={
-          pendingRemoveSeasonPlayer
-            ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
-                player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
-              })
-            : ''
-        }
-        cancelLabel={t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
-        confirmLabel={t('dashboard.admin.players.removeFromSeason')}
-        loading={loading}
-      />
+        <Dialog
+          open={penaSettingsOpen}
+          onClose={() => setPenaSettingsOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>{t('dashboard.admin.penaSettingsTitle')}</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t('dashboard.admin.penaSettingsHint')}
+              </Typography>
+              <ProfileImageField
+                value={penaProfileDraft.image_url}
+                alt={selectedPena?.name || t('dashboard.admin.panelTitle')}
+                label={t('dashboard.common.profileImageLabel')}
+                helperText={t('dashboard.admin.penaImageHint')}
+                chooseLabel={t('dashboard.common.imageActions.choose')}
+                replaceLabel={t('dashboard.common.imageActions.replace')}
+                removeLabel={t('dashboard.common.imageActions.remove')}
+                emptyLabel={t('dashboard.common.imageEmpty')}
+                processingLabel={t('dashboard.common.imageActions.processing')}
+                disabled={loading}
+                onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
+                onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+              />
+              <Divider />
+              <AppearanceSettings />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPenaSettingsOpen(false)} disabled={loading}>
+              {t('dashboard.user.settingsCancel')}
+            </Button>
+            <Button variant="contained" onClick={handleSavePenaProfile} disabled={loading}>
+              {t('dashboard.admin.savePenaProfile')}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      <EditMembershipDialog
-        player={editingMembershipPlayer}
-        draft={membershipDraft}
-        onField={onMembershipDraftField}
-        onClose={handleCloseEditMembershipPlayer}
-        onSave={handleSaveMembershipPlayer}
-        penaLabels={penaLabels}
-        loading={loading}
-        t={t}
-      />
+        <MatchDetailDialog
+          open={Boolean(overviewMatchGuid)}
+          onClose={handleCloseOverviewMatchDetail}
+          loading={overviewMatchLoading}
+          detail={overviewMatchDetail}
+          t={t}
+          formatDate={formatDate}
+        />
 
-      <ConfirmDialog
-        open={Boolean(pendingRemoveMembershipPlayer)}
-        onCancel={handleCancelRemoveMembershipPlayer}
-        onConfirm={handleRemoveMembershipPlayer}
-        title={t('dashboard.admin.members.removeTitle')}
-        description={
-          pendingRemoveMembershipPlayer
-            ? t('dashboard.admin.members.removeConfirm', {
-                player: [
-                  pendingRemoveMembershipPlayer.name,
-                  pendingRemoveMembershipPlayer.surname1,
-                  pendingRemoveMembershipPlayer.surname2,
-                ]
-                  .filter(Boolean)
-                  .join(' '),
-              })
-            : ''
-        }
-        cancelLabel={t('dashboard.admin.members.cancelRemove')}
-        confirmLabel={t('dashboard.admin.members.remove')}
-        loading={loading}
-      />
+        <ConfirmDialog
+          open={Boolean(pendingDeleteSeason)}
+          onCancel={handleCancelDeleteSeason}
+          onConfirm={handleDeleteSeason}
+          title={t('dashboard.admin.seasons.deleteSeasonTitle')}
+          description={
+            pendingDeleteSeason
+              ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
+                  season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
+                })
+              : ''
+          }
+          cancelLabel={t('dashboard.admin.seasons.cancelDeleteSeason')}
+          confirmLabel={t('dashboard.admin.seasons.deleteSelectedSeason')}
+          loading={loading}
+        />
 
-      <ConfirmDialog
-        open={Boolean(pendingDeleteMatch)}
-        onCancel={handleCancelDeleteSeasonMatch}
-        onConfirm={handleDeleteSeasonMatch}
-        title={t('dashboard.admin.matches.deleteMatchTitle')}
-        description={
-          pendingDeleteMatch
-            ? t('dashboard.admin.matches.deleteMatchConfirm', {
-                home: pendingDeleteMatch.home_team_name,
-                away: pendingDeleteMatch.away_team_name,
-                date: formatDate(pendingDeleteMatch.match_date),
-              })
-            : ''
-        }
-        cancelLabel={t('dashboard.admin.matches.cancelDelete')}
-        confirmLabel={t('dashboard.admin.matches.deleteMatch')}
-        loading={Boolean(deletingMatchGuid)}
-      />
-    </DashboardShell>
+        <EditSeasonPlayerDialog
+          player={editingSeasonPlayer}
+          draft={seasonPlayerDraft}
+          onField={onSeasonPlayerDraftField}
+          onClose={handleCloseEditSeasonPlayer}
+          onSave={handleSaveSeasonPlayer}
+          penaLabels={penaLabels}
+          loading={loading}
+          t={t}
+          formatPlayerDisplayName={formatPlayerDisplayName}
+        />
+
+        <ConfirmDialog
+          open={Boolean(pendingRemoveSeasonPlayer)}
+          onCancel={handleCancelRemoveSeasonPlayer}
+          onConfirm={handleRemoveSeasonPlayer}
+          title={t('dashboard.admin.players.removeSeasonPlayerTitle')}
+          description={
+            pendingRemoveSeasonPlayer
+              ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
+                  player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
+                })
+              : ''
+          }
+          cancelLabel={t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
+          confirmLabel={t('dashboard.admin.players.removeFromSeason')}
+          loading={loading}
+        />
+
+        <EditMembershipDialog
+          player={editingMembershipPlayer}
+          draft={membershipDraft}
+          onField={onMembershipDraftField}
+          onClose={handleCloseEditMembershipPlayer}
+          onSave={handleSaveMembershipPlayer}
+          penaLabels={penaLabels}
+          loading={loading}
+          t={t}
+        />
+
+        <ConfirmDialog
+          open={Boolean(pendingRemoveMembershipPlayer)}
+          onCancel={handleCancelRemoveMembershipPlayer}
+          onConfirm={handleRemoveMembershipPlayer}
+          title={t('dashboard.admin.members.removeTitle')}
+          description={
+            pendingRemoveMembershipPlayer
+              ? t('dashboard.admin.members.removeConfirm', {
+                  player: [
+                    pendingRemoveMembershipPlayer.name,
+                    pendingRemoveMembershipPlayer.surname1,
+                    pendingRemoveMembershipPlayer.surname2,
+                  ]
+                    .filter(Boolean)
+                    .join(' '),
+                })
+              : ''
+          }
+          cancelLabel={t('dashboard.admin.members.cancelRemove')}
+          confirmLabel={t('dashboard.admin.members.remove')}
+          loading={loading}
+        />
+
+        <ConfirmDialog
+          open={Boolean(pendingDeleteMatch)}
+          onCancel={handleCancelDeleteSeasonMatch}
+          onConfirm={handleDeleteSeasonMatch}
+          title={t('dashboard.admin.matches.deleteMatchTitle')}
+          description={
+            pendingDeleteMatch
+              ? t('dashboard.admin.matches.deleteMatchConfirm', {
+                  home: pendingDeleteMatch.home_team_name,
+                  away: pendingDeleteMatch.away_team_name,
+                  date: formatDate(pendingDeleteMatch.match_date),
+                })
+              : ''
+          }
+          cancelLabel={t('dashboard.admin.matches.cancelDelete')}
+          confirmLabel={t('dashboard.admin.matches.deleteMatch')}
+          loading={Boolean(deletingMatchGuid)}
+        />
+      </DashboardShell>
     </DashboardContext.Provider>
   )
 }
