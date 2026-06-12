@@ -338,79 +338,58 @@ export function DashboardControlField({ label, helper = '', children }) {
   )
 }
 
-export function DashboardIdentitySlot({
-  imageUrl = '',
-  imageAlt = '',
-  title = '',
-  name = '',
-  subtitle = '',
-  placeholderLabel = '',
-}) {
+export function DashboardIdentitySlot({ imageUrl = '', imageAlt = '', name = '', subtitle = '' }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const geometry = getDashboardGeometry(theme)
   const initials = getInitials(name)
 
   return (
-    <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={0.9}
-      alignItems={{ xs: 'center', sm: 'center' }}
-    >
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
       <Box
         sx={{
-          width: 66,
-          height: 66,
+          width: 42,
+          height: 42,
           flexShrink: 0,
           overflow: 'hidden',
-          borderRadius: geometry.surfaceRadiusTight,
-          border: `1px dashed ${alpha(theme.palette.text.primary, isDark ? 0.16 : 0.14)}`,
-          background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, isDark ? 0.14 : 0.08)} 0%, ${alpha(
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: geometry.controlRadius,
+          border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.16 : 0.12)}`,
+          background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, isDark ? 0.18 : 0.1)} 0%, ${alpha(
             theme.palette.secondary.main,
-            isDark ? 0.18 : 0.1
+            isDark ? 0.22 : 0.14
           )} 100%)`,
-          boxShadow: isDark
-            ? 'inset 0 1px 0 rgba(255,255,255,0.04)'
-            : 'inset 0 1px 0 rgba(255,255,255,0.55)',
         }}
       >
         {imageUrl ? (
           <Box
             component="img"
             src={imageUrl}
-            alt={imageAlt || name || title}
+            alt={imageAlt || name}
             sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
-          <Stack
-            alignItems="center"
-            justifyContent="center"
-            spacing={0.35}
-            sx={{ width: '100%', height: '100%', p: 1, textAlign: 'center' }}
-          >
-            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>
-              {placeholderLabel}
-            </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1 }}>
-              {initials}
-            </Typography>
-          </Stack>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1 }}>
+            {initials}
+          </Typography>
         )}
       </Box>
 
-      <Stack spacing={0.2} sx={{ minWidth: 0, textAlign: { xs: 'center', sm: 'left' } }}>
-        {title ? (
-          <Typography
-            variant="overline"
-            sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 0.95 }}
-          >
-            {title}
-          </Typography>
-        ) : null}
+      <Stack spacing={0} sx={{ minWidth: 0 }}>
         {name ? (
           <Typography
             variant="subtitle1"
-            sx={{ fontWeight: 700, fontSize: '0.98rem', overflowWrap: 'anywhere' }}
+            title={name}
+            sx={{
+              fontWeight: 700,
+              fontSize: '1rem',
+              lineHeight: 1.2,
+              maxWidth: '100%',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
           >
             {name}
           </Typography>
@@ -419,7 +398,15 @@ export function DashboardIdentitySlot({
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ fontSize: '0.86rem', overflowWrap: 'anywhere' }}
+            title={subtitle}
+            sx={{
+              fontSize: '0.8rem',
+              lineHeight: 1.2,
+              maxWidth: '100%',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
           >
             {subtitle}
           </Typography>
@@ -436,7 +423,8 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
 
   return (
     <Paper
-      component="aside"
+      component="nav"
+      aria-label={railLabel || brand}
       elevation={0}
       sx={{
         display: { xs: 'none', xl: 'flex' },
@@ -492,10 +480,19 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
           {navItems.map((item) => {
             const active = item.id === activeNavId
             return (
-              <Tooltip key={item.id} title={item.label} placement="right">
+              <Tooltip
+                key={item.id}
+                title={item.disabled ? item.disabledReason || item.label : item.label}
+                placement="right"
+              >
                 <ButtonBase
                   aria-label={item.label}
-                  onClick={() => onNavChange(item.id)}
+                  aria-disabled={item.disabled || undefined}
+                  onClick={() => {
+                    if (!item.disabled) {
+                      onNavChange(item.id)
+                    }
+                  }}
                   sx={{
                     width: '100%',
                     minHeight: 42,
@@ -520,12 +517,16 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                       : 'none',
                     transition:
                       'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: isDark
-                        ? '0 10px 22px rgba(0, 0, 0, 0.2)'
-                        : '0 10px 22px rgba(15, 23, 42, 0.08)',
-                    },
+                    opacity: item.disabled ? 0.4 : 1,
+                    cursor: item.disabled ? 'not-allowed' : 'pointer',
+                    '&:hover': item.disabled
+                      ? {}
+                      : {
+                          transform: 'translateY(-1px)',
+                          boxShadow: isDark
+                            ? '0 10px 22px rgba(0, 0, 0, 0.2)'
+                            : '0 10px 22px rgba(15, 23, 42, 0.08)',
+                        },
                   }}
                 >
                   <Box
@@ -550,13 +551,15 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
   )
 }
 
-function MobileNav({ navItems, activeNavId, onNavChange }) {
+function MobileNav({ navItems, activeNavId, onNavChange, navLabel = '' }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const geometry = getDashboardGeometry(theme)
 
   return (
     <Paper
+      component="nav"
+      aria-label={navLabel}
       elevation={0}
       sx={{
         display: { xs: 'block', xl: 'none' },
@@ -583,13 +586,20 @@ function MobileNav({ navItems, activeNavId, onNavChange }) {
           return (
             <ButtonBase
               key={item.id}
-              onClick={() => onNavChange(item.id)}
+              aria-disabled={item.disabled || undefined}
+              onClick={() => {
+                if (!item.disabled) {
+                  onNavChange(item.id)
+                }
+              }}
               sx={{
                 minWidth: 104,
                 borderRadius: geometry.controlRadius,
                 px: 1.25,
                 py: 0.95,
                 justifyContent: 'flex-start',
+                opacity: item.disabled ? 0.4 : 1,
+                cursor: item.disabled ? 'not-allowed' : 'pointer',
                 border: `1px solid ${
                   active
                     ? alpha(theme.palette.secondary.main, 0.22)
@@ -776,7 +786,12 @@ export default function DashboardShell({
         </Paper>
 
         {navItems.length > 0 ? (
-          <MobileNav navItems={navItems} activeNavId={activeNavId} onNavChange={onNavChange} />
+          <MobileNav
+            navItems={navItems}
+            activeNavId={activeNavId}
+            onNavChange={onNavChange}
+            navLabel={railLabel || brand}
+          />
         ) : null}
 
         {summaryCards.length > 0 ? (

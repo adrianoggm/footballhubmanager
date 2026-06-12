@@ -38,11 +38,32 @@ The frontend is a role-based application, not only an auth playground.
 - Dashboards:
   - `frontend/src/components/AdminDashboard.jsx`
   - `frontend/src/components/UserDashboard.jsx`
-- Admin feature sections:
+- Admin feature sections (each takes `state` / `actions` / `helpers` prop bundles; all lazy-loaded
+  except `AdminOverviewSection`, which is eager since it is the default landing section):
+  - `frontend/src/components/admin/AdminOverviewSection.jsx` (invite code, standings + matches snapshots)
   - `frontend/src/components/admin/AdminSeasonsSection.jsx`
+  - `frontend/src/components/admin/AdminAccountabilitySection.jsx`
   - `frontend/src/components/admin/AdminPlayersSection.jsx`
-  - `frontend/src/components/admin/AdminMatchesSection.jsx`
+  - `frontend/src/components/admin/AdminMatchesSection.jsx` (thin composition of
+    `admin/matches/`: `MatchCreateCard`, `MatchListCard`, `MatchEditorCard`, `trackingHelpers`)
+  - `frontend/src/components/admin/AdminStandingsSection.jsx` (standings table + lazily nested `AdminInsightsSection`)
   - `frontend/src/components/admin/AdminInsightsSection.jsx`
+- User feature sections (extracted from `UserDashboard`):
+  - `frontend/src/components/user/UserJoinSection.jsx`
+  - `frontend/src/components/user/UserMembershipSection.jsx`
+  - `frontend/src/components/user/UserStandingsSection.jsx`
+  - `frontend/src/components/user/UserMatchesSection.jsx`
+  - `frontend/src/components/user/UserAccountabilitySection.jsx` (lazy)
+- Shared dashboard context + selector + dialogs:
+  - `frontend/src/context/dashboardContext.js`
+  - `frontend/src/components/dashboard/PenaSeasonSelector.jsx`
+  - `frontend/src/components/dashboard/MatchDetailDialog.jsx` (shared by admin overview + user matches)
+  - `frontend/src/components/dashboard/AppearanceSettings.jsx` (theme + language, inside settings dialogs)
+  - `frontend/src/components/user/UserProfileSettingsDialog.jsx`
+  - `frontend/src/components/admin/PlayerEditDialogs.jsx`
+- Shared UI primitives library:
+  - `frontend/src/components/common/` (`EmptyState`, `ErrorState`, `LoadingState`, `ConfirmDialog`, `SectionHeader`, `StatCard`, `PaginatedTable`)
+  - `frontend/src/components/common/AppFooter.jsx` — sitemap-driven page footer (about, navigation, rights), rendered by all three layouts
 - Shared match viewer:
   - `frontend/src/components/MatchDetailViewer.jsx`
 
@@ -91,13 +112,12 @@ The frontend is a role-based application, not only an auth playground.
   - Read match detail.
   - Delete matches.
 - Standings snapshot and season summary.
-- Insights section:
-  - KPI cards.
-  - Season comparison deltas.
-  - Top pairs and teammate rankings.
-  - Correlation heatmap matrix.
-  - Leaders (goals, assists, saves).
-  - Timeline charts by match and by season.
+- Insights section (`AdminInsightsSection`, shared with the user dashboard):
+  - Always-visible summary: KPI cards + season comparison deltas.
+  - Tabbed heavy content (progressive disclosure — only one group mounts at a time):
+    - `Trends`: timeline charts by match and by season (recharts renders only when this tab is open).
+    - `Rankings`: top pairs / teammate rankings + leaders (goals, assists, saves).
+    - `Matrix`: correlation heatmap matrix.
 
 ### User Dashboard
 

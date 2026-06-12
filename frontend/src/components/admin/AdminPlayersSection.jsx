@@ -24,18 +24,23 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
+import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const labelChipSx = (color) => ({
-  backgroundColor: color || '#64748B',
+  backgroundColor: color || DEFAULT_LABEL_COLOR,
   color: '#fff',
   border: '1px solid rgba(15, 23, 42, 0.12)',
 })
 
-const renderFilterValue = (selected, emptyLabel) => {
+const renderFilterValue = (selected, emptyLabel, translate) => {
   const values = Array.isArray(selected)
     ? selected.map((item) => String(item || '').trim()).filter(Boolean)
     : []
-  return values.length ? values.join(', ') : emptyLabel
+  if (!values.length) {
+    return emptyLabel
+  }
+  return (translate ? values.map(translate) : values).join(', ')
 }
 
 function LabelColorList({ labels, colors, onColorChange }) {
@@ -97,6 +102,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
   const {
     handleSelectHistoricalPlayers,
     handleRegisterHistoricalPlayersInSeason,
+    handleRegisterSinglePlayerInSeason,
     handleEditSeasonPlayer,
     handleRequestRemoveSeasonPlayer,
     onGuestField,
@@ -114,6 +120,11 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
   const [seasonRosterPage, setSeasonRosterPage] = useState(0)
   const [seasonRosterRowsPerPage, setSeasonRosterRowsPerPage] = useState(25)
   const [labelsEditorOpen, setLabelsEditorOpen] = useState(false)
+
+  const seasonRosterGuids = useMemo(
+    () => new Set(seasonRoster.map((player) => player.player_guid)),
+    [seasonRoster]
+  )
 
   const historicalPlayersByGuid = useMemo(
     () => new Map(historicalPlayers.map((player) => [player.guid, player])),
@@ -154,115 +165,6 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
 
   return (
     <Grid container spacing={2.5} sx={{ width: '100%' }}>
-      <Grid item xs={12}>
-        <Card>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">{t('dashboard.admin.labels.title')}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.labels.description')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('dashboard.admin.labels.colorHelper')}
-              </Typography>
-              <Grid container spacing={1.5}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label={t('dashboard.admin.labels.roleLabels')}
-                    value={labelsDraft.role_labels}
-                    onChange={onLabelsDraftField('role_labels')}
-                    helperText={t('dashboard.admin.labels.inputHelper')}
-                    multiline
-                    minRows={2}
-                    fullWidth
-                  />
-                  {draftRoleLabels.length > 0 && (
-                    <Stack spacing={1} sx={{ mt: 1 }}>
-                      {draftRoleLabels.map((roleLabel) => (
-                        <Stack
-                          key={roleLabel}
-                          direction="row"
-                          spacing={1}
-                          alignItems="center"
-                          justifyContent="space-between"
-                        >
-                          <Chip
-                            size="small"
-                            label={roleLabel}
-                            sx={labelChipSx(draftRoleColors[roleLabel])}
-                          />
-                          <TextField
-                            type="color"
-                            size="small"
-                            value={draftRoleColors[roleLabel]}
-                            onChange={onLabelColorDraftChange('role_colors', roleLabel)}
-                            sx={{ width: 72 }}
-                            inputProps={{
-                              'aria-label': `${roleLabel} color`,
-                            }}
-                          />
-                        </Stack>
-                      ))}
-                    </Stack>
-                  )}
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label={t('dashboard.admin.labels.positionLabels')}
-                    value={labelsDraft.position_labels}
-                    onChange={onLabelsDraftField('position_labels')}
-                    helperText={t('dashboard.admin.labels.inputHelper')}
-                    multiline
-                    minRows={2}
-                    fullWidth
-                  />
-                  {draftPositionLabels.length > 0 && (
-                    <Stack spacing={1} sx={{ mt: 1 }}>
-                      {draftPositionLabels.map((positionLabel) => (
-                        <Stack
-                          key={positionLabel}
-                          direction="row"
-                          spacing={1}
-                          alignItems="center"
-                          justifyContent="space-between"
-                        >
-                          <Chip
-                            size="small"
-                            label={positionLabel}
-                            sx={labelChipSx(draftPositionColors[positionLabel])}
-                          />
-                          <TextField
-                            type="color"
-                            size="small"
-                            value={draftPositionColors[positionLabel]}
-                            onChange={onLabelColorDraftChange('position_colors', positionLabel)}
-                            sx={{ width: 72 }}
-                            inputProps={{
-                              'aria-label': `${positionLabel} color`,
-                            }}
-                          />
-                        </Stack>
-                      ))}
-                    </Stack>
-                  )}
-                </Grid>
-              </Grid>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Button variant="contained" onClick={handleSavePenaLabels} disabled={loading}>
-                  {t('dashboard.admin.labels.save')}
-                </Button>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.labels.currentCounts', {
-                    roles: penaLabels.role_labels.length,
-                    positions: penaLabels.position_labels.length,
-                  })}
-                </Typography>
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
-      </Grid>
-
       <Grid item xs={12} md={8}>
         <Stack spacing={2.5}>
           <Card>
@@ -365,7 +267,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.role ? (
                                   <Chip
                                     size="small"
-                                    label={player.role}
+                                    label={translateRoleLabel(t, player.role)}
                                     sx={labelChipSx(penaLabels.role_colors?.[player.role])}
                                   />
                                 ) : (
@@ -376,7 +278,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.position ? (
                                   <Chip
                                     size="small"
-                                    label={player.position}
+                                    label={translatePositionLabel(t, player.position)}
                                     sx={labelChipSx(penaLabels.position_colors?.[player.position])}
                                   />
                                 ) : (
@@ -471,14 +373,15 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           renderValue: (selected) =>
                             renderFilterValue(
                               selected,
-                              t('dashboard.admin.members.filterAllRoles')
+                              t('dashboard.admin.members.filterAllRoles'),
+                              (value) => translateRoleLabel(t, value)
                             ),
                         }}
                         fullWidth
                       >
                         {penaLabels.role_labels.map((roleLabel) => (
                           <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
-                            {roleLabel}
+                            {translateRoleLabel(t, roleLabel)}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -495,14 +398,15 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           renderValue: (selected) =>
                             renderFilterValue(
                               selected,
-                              t('dashboard.admin.members.filterAllPositions')
+                              t('dashboard.admin.members.filterAllPositions'),
+                              (value) => translatePositionLabel(t, value)
                             ),
                         }}
                         fullWidth
                       >
                         {penaLabels.position_labels.map((positionLabel) => (
                           <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
-                            {positionLabel}
+                            {translatePositionLabel(t, positionLabel)}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -516,6 +420,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                             <TableCell>{t('dashboard.admin.members.nickname')}</TableCell>
                             <TableCell>{t('dashboard.admin.members.role')}</TableCell>
                             <TableCell>{t('dashboard.admin.members.position')}</TableCell>
+                            <TableCell>{t('dashboard.admin.members.seasonColumn')}</TableCell>
                             <TableCell>{t('dashboard.admin.members.actions')}</TableCell>
                           </TableRow>
                         </TableHead>
@@ -532,7 +437,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.role ? (
                                   <Chip
                                     size="small"
-                                    label={player.role}
+                                    label={translateRoleLabel(t, player.role)}
                                     sx={labelChipSx(penaLabels.role_colors?.[player.role])}
                                   />
                                 ) : (
@@ -543,11 +448,48 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.position ? (
                                   <Chip
                                     size="small"
-                                    label={player.position}
+                                    label={translatePositionLabel(t, player.position)}
                                     sx={labelChipSx(penaLabels.position_colors?.[player.position])}
                                   />
                                 ) : (
                                   '-'
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {!selectedSeasonGuid ? (
+                                  '-'
+                                ) : seasonRosterGuids.has(player.guid) ? (
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    color="success"
+                                    label={t('dashboard.admin.members.inSeason')}
+                                  />
+                                ) : (
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    alignItems="center"
+                                    flexWrap="wrap"
+                                    useFlexGap
+                                  >
+                                    <Chip
+                                      size="small"
+                                      variant="outlined"
+                                      color="warning"
+                                      label={t('dashboard.admin.members.notInSeason')}
+                                    />
+                                    <Button
+                                      size="small"
+                                      variant="text"
+                                      onClick={() =>
+                                        handleRegisterSinglePlayerInSeason(player.guid)
+                                      }
+                                      disabled={loading}
+                                    >
+                                      {t('dashboard.admin.members.addToSeason')}
+                                    </Button>
+                                  </Stack>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -575,7 +517,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           ))}
                           {!filteredHistoricalPlayers.length && (
                             <TableRow>
-                              <TableCell colSpan={5}>
+                              <TableCell colSpan={6}>
                                 {t('dashboard.admin.members.noMembersForFilters')}
                               </TableCell>
                             </TableRow>
@@ -671,7 +613,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
                     {penaLabels.role_labels.map((roleLabel) => (
                       <MenuItem key={roleLabel} value={roleLabel}>
-                        {roleLabel}
+                        {translateRoleLabel(t, roleLabel)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -685,7 +627,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     <MenuItem value="">{t('dashboard.admin.guest.positionNone')}</MenuItem>
                     {penaLabels.position_labels.map((positionLabel) => (
                       <MenuItem key={positionLabel} value={positionLabel}>
-                        {positionLabel}
+                        {translatePositionLabel(t, positionLabel)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -751,7 +693,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         <Chip
                           key={roleLabel}
                           size="small"
-                          label={roleLabel}
+                          label={translateRoleLabel(t, roleLabel)}
                           sx={labelChipSx(penaLabels.role_colors?.[roleLabel])}
                         />
                       ))}
@@ -767,7 +709,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         <Chip
                           key={positionLabel}
                           size="small"
-                          label={positionLabel}
+                          label={translatePositionLabel(t, positionLabel)}
                           sx={labelChipSx(penaLabels.position_colors?.[positionLabel])}
                         />
                       ))}

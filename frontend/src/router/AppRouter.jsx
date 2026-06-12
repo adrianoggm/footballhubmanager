@@ -10,6 +10,7 @@ import RequireRole from './guards/RequireRole.jsx'
 import { resolveRoleHomePath } from './rolePaths.js'
 
 const AuthLandingPage = lazy(() => import('../pages/AuthLandingPage.jsx'))
+const LegalPage = lazy(() => import('../pages/LegalPage.jsx'))
 const SessionIncompletePage = lazy(() => import('../pages/SessionIncompletePage.jsx'))
 const AdminOverviewPage = lazy(() => import('../pages/admin/AdminOverviewPage.jsx'))
 const AdminSeasonsPage = lazy(() => import('../pages/admin/AdminSeasonsPage.jsx'))
@@ -70,6 +71,11 @@ export default function AppRouter({ auth, onLogout }) {
             <Route element={<PublicLayout />}>
               <Route path="/auth" element={<AuthLandingPage auth={auth} />} />
             </Route>
+          </Route>
+
+          {/* Legal/info placeholders: public regardless of session. */}
+          <Route element={<PublicLayout />}>
+            <Route path="/legal/:section" element={<LegalPage />} />
           </Route>
 
           <Route element={<RequireAuth isAuthenticated={isAuthenticated} />}>

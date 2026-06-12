@@ -40,12 +40,14 @@ export const ADMIN_DASHBOARD_SITEMAP = Object.freeze([
     path: `${ADMIN_BASE_PATH}/matches`,
     titleKey: 'dashboard.admin.tabs.matches',
     requiresSelectedPena: true,
+    requiresSeason: true,
   },
   {
     id: 'standings',
     path: `${ADMIN_BASE_PATH}/standings`,
     titleKey: 'dashboard.admin.tabs.standings',
     requiresSelectedPena: true,
+    requiresSeason: true,
   },
 ])
 

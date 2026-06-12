@@ -9,6 +9,8 @@ import {
   LinearProgress,
   MenuItem,
   Stack,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -20,6 +22,7 @@ import {
   Typography,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
+import { useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -32,39 +35,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-
-const INSIGHT_ACCENTS = {
-  matches: {
-    main: '#0ea5e9',
-    soft: 'rgba(14, 165, 233, 0.12)',
-    border: 'rgba(14, 165, 233, 0.34)',
-  },
-  seasons: {
-    main: '#8b5cf6',
-    soft: 'rgba(139, 92, 246, 0.12)',
-    border: 'rgba(139, 92, 246, 0.34)',
-  },
-  players: {
-    main: '#14b8a6',
-    soft: 'rgba(20, 184, 166, 0.12)',
-    border: 'rgba(20, 184, 166, 0.34)',
-  },
-  goals: {
-    main: '#ef4444',
-    soft: 'rgba(239, 68, 68, 0.12)',
-    border: 'rgba(239, 68, 68, 0.35)',
-  },
-  assists: {
-    main: '#2563eb',
-    soft: 'rgba(37, 99, 235, 0.12)',
-    border: 'rgba(37, 99, 235, 0.35)',
-  },
-  saves: {
-    main: '#f59e0b',
-    soft: 'rgba(245, 158, 11, 0.14)',
-    border: 'rgba(245, 158, 11, 0.4)',
-  },
-}
+import { EmptyState, LoadingState } from '../common'
+import { INSIGHT_ACCENTS, MATRIX_CELL_TEXT_COLOR } from '../../theme/tokens.js'
 
 const getDashboardGeometry = (theme) => ({
   surfaceRadius: theme.custom?.dashboard?.radius?.surface || '14px',
@@ -179,7 +151,6 @@ const getRateColor = (rate) => {
   return 'error'
 }
 
-const MATRIX_CELL_TEXT_COLOR = '#101820'
 const MATRIX_CELL_SUBTEXT_COLOR = alpha(MATRIX_CELL_TEXT_COLOR, 0.72)
 
 const buildMatrixCellSx = (cell, maxSharedMatches) => {
@@ -446,6 +417,11 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   const { onInsightsScopeChange, onRefreshInsights } = actions
   const { t, formatDecimal, formatSignedDecimal, formatPercent } = helpers
 
+  // Progressive disclosure: heavy content (charts / rankings / matrix) is split
+  // into tabs so only one group mounts at a time. This also defers the recharts
+  // render work until the Trends tab is opened.
+  const [activeInsightTab, setActiveInsightTab] = useState('trends')
+
   const maxSharedMatches =
     insightsReport?.matrix_rows?.reduce((maxValue, row) => {
       const rowMax = (row.cells || []).reduce(
@@ -524,28 +500,18 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
         </Stack>
       </Stack>
 
-      {insightsLoading && <LinearProgress />}
+      {insightsLoading && <LoadingState />}
 
       {!insightsLoading && !insightsReport && (
-        <Card
-          variant="outlined"
-          sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.matches, { dashed: true })}
-        >
-          <CardContent sx={buildInsightContentSx}>
-            <Stack spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.standings.insightsEmpty')}
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={onRefreshInsights}
-                disabled={!selectedSeasonGuid}
-              >
-                {t('dashboard.admin.standings.refreshInsights')}
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
+        <EmptyState
+          dense
+          description={t('dashboard.admin.standings.insightsEmpty')}
+          action={
+            <Button variant="contained" onClick={onRefreshInsights} disabled={!selectedSeasonGuid}>
+              {t('dashboard.admin.standings.refreshInsights')}
+            </Button>
+          }
+        />
       )}
 
       {!insightsLoading && insightsReport && (
@@ -643,119 +609,223 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             </Card>
           )}
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} lg={8}>
-              <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.assists)}>
-                <CardContent sx={buildInsightContentSx}>
-                  <Stack spacing={1.25}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                      {t('dashboard.admin.standings.chartTrendByMatchTitle')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.standings.chartTrendByMatchDescription')}
-                    </Typography>
-                    {!timelineMatchData.length && (
-                      <Typography variant="body2" color="text.secondary">
-                        {t('dashboard.admin.standings.insightsNoData')}
-                      </Typography>
-                    )}
-                    {timelineMatchData.length > 0 && (
-                      <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.assists, 280)}>
-                        <ResponsiveContainer>
-                          <LineChart data={timelineMatchData}>
-                            <CartesianGrid
-                              stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
-                              strokeDasharray="3 3"
-                            />
-                            <XAxis
-                              dataKey="x_label"
-                              minTickGap={28}
-                              tickLine={false}
-                              axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
-                              tick={{
-                                fill: theme.palette.text.secondary,
-                                fontSize: 11,
-                                fontFamily: theme.typography.fontFamily,
-                              }}
-                            />
-                            <YAxis
-                              allowDecimals={false}
-                              tickLine={false}
-                              axisLine={false}
-                              tick={{
-                                fill: theme.palette.text.secondary,
-                                fontSize: 11,
-                                fontFamily: theme.typography.fontFamily,
-                              }}
-                            />
-                            <RechartsTooltip
-                              {...chartTooltipProps}
-                              formatter={(value, name) => [`${value}`, name]}
-                              labelFormatter={(label, payload) => {
-                                const point = payload?.[0]?.payload
-                                return point?.match_date || label
-                              }}
-                            />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="goals"
-                              name={t('dashboard.common.matchDetail.goals')}
-                              stroke={INSIGHT_ACCENTS.goals.main}
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="assists"
-                              name={t('dashboard.common.matchDetail.assists')}
-                              stroke={INSIGHT_ACCENTS.assists.main}
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="saves"
-                              name={t('dashboard.common.matchDetail.saves')}
-                              stroke={INSIGHT_ACCENTS.saves.main}
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+          <Tabs
+            value={activeInsightTab}
+            onChange={(_, next) => setActiveInsightTab(next)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab value="trends" label={t('dashboard.admin.standings.insightsTabTrends')} />
+            <Tab value="rankings" label={t('dashboard.admin.standings.insightsTabRankings')} />
+            <Tab value="matrix" label={t('dashboard.admin.standings.insightsTabMatrix')} />
+          </Tabs>
 
-            <Grid item xs={12} lg={4}>
-              <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.goals)}>
+          {activeInsightTab === 'trends' && (
+            <Stack spacing={2.25}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} lg={8}>
+                  <Card
+                    variant="outlined"
+                    sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.assists)}
+                  >
+                    <CardContent sx={buildInsightContentSx}>
+                      <Stack spacing={1.25}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          {t('dashboard.admin.standings.chartTrendByMatchTitle')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.chartTrendByMatchDescription')}
+                        </Typography>
+                        {!timelineMatchData.length && (
+                          <Typography variant="body2" color="text.secondary">
+                            {t('dashboard.admin.standings.insightsNoData')}
+                          </Typography>
+                        )}
+                        {timelineMatchData.length > 0 && (
+                          <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.assists, 280)}>
+                            <ResponsiveContainer>
+                              <LineChart data={timelineMatchData}>
+                                <CartesianGrid
+                                  stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                                  strokeDasharray="3 3"
+                                />
+                                <XAxis
+                                  dataKey="x_label"
+                                  minTickGap={28}
+                                  tickLine={false}
+                                  axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                                  tick={{
+                                    fill: theme.palette.text.secondary,
+                                    fontSize: 11,
+                                    fontFamily: theme.typography.fontFamily,
+                                  }}
+                                />
+                                <YAxis
+                                  allowDecimals={false}
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tick={{
+                                    fill: theme.palette.text.secondary,
+                                    fontSize: 11,
+                                    fontFamily: theme.typography.fontFamily,
+                                  }}
+                                />
+                                <RechartsTooltip
+                                  {...chartTooltipProps}
+                                  formatter={(value, name) => [`${value}`, name]}
+                                  labelFormatter={(label, payload) => {
+                                    const point = payload?.[0]?.payload
+                                    return point?.match_date || label
+                                  }}
+                                />
+                                <Legend />
+                                <Line
+                                  type="monotone"
+                                  dataKey="goals"
+                                  name={t('dashboard.common.matchDetail.goals')}
+                                  stroke={INSIGHT_ACCENTS.goals.main}
+                                  strokeWidth={2}
+                                  dot={false}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="assists"
+                                  name={t('dashboard.common.matchDetail.assists')}
+                                  stroke={INSIGHT_ACCENTS.assists.main}
+                                  strokeWidth={2}
+                                  dot={false}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="saves"
+                                  name={t('dashboard.common.matchDetail.saves')}
+                                  stroke={INSIGHT_ACCENTS.saves.main}
+                                  strokeWidth={2}
+                                  dot={false}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} lg={4}>
+                  <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.goals)}>
+                    <CardContent sx={buildInsightContentSx}>
+                      <Stack spacing={1.25}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          {t('dashboard.admin.standings.chartRunningAveragesTitle')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.chartRunningAveragesDescription')}
+                        </Typography>
+                        {!timelineMatchData.length && (
+                          <Typography variant="body2" color="text.secondary">
+                            {t('dashboard.admin.standings.insightsNoData')}
+                          </Typography>
+                        )}
+                        {timelineMatchData.length > 0 && (
+                          <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.goals, 280)}>
+                            <ResponsiveContainer>
+                              <LineChart data={timelineMatchData}>
+                                <CartesianGrid
+                                  stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                                  strokeDasharray="3 3"
+                                />
+                                <XAxis
+                                  dataKey="x_label"
+                                  minTickGap={30}
+                                  tickLine={false}
+                                  axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                                  tick={{
+                                    fill: theme.palette.text.secondary,
+                                    fontSize: 11,
+                                    fontFamily: theme.typography.fontFamily,
+                                  }}
+                                />
+                                <YAxis
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tick={{
+                                    fill: theme.palette.text.secondary,
+                                    fontSize: 11,
+                                    fontFamily: theme.typography.fontFamily,
+                                  }}
+                                />
+                                <RechartsTooltip
+                                  {...chartTooltipProps}
+                                  formatter={(value, name) => [formatDecimal(value), name]}
+                                  labelFormatter={(label, payload) => {
+                                    const point = payload?.[0]?.payload
+                                    return point?.match_date || label
+                                  }}
+                                />
+                                <Legend />
+                                <Line
+                                  type="monotone"
+                                  dataKey="running_goals_per_match"
+                                  name={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
+                                  stroke={INSIGHT_ACCENTS.goals.main}
+                                  strokeWidth={2}
+                                  strokeDasharray="6 4"
+                                  dot={false}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="running_assists_per_match"
+                                  name={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
+                                  stroke={INSIGHT_ACCENTS.assists.main}
+                                  strokeWidth={2}
+                                  strokeDasharray="6 4"
+                                  dot={false}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="running_saves_per_match"
+                                  name={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
+                                  stroke={INSIGHT_ACCENTS.saves.main}
+                                  strokeWidth={2}
+                                  strokeDasharray="6 4"
+                                  dot={false}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.saves)}>
                 <CardContent sx={buildInsightContentSx}>
                   <Stack spacing={1.25}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                      {t('dashboard.admin.standings.chartRunningAveragesTitle')}
+                      {t('dashboard.admin.standings.chartSeasonComparisonTitle')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.standings.chartRunningAveragesDescription')}
+                      {t('dashboard.admin.standings.chartSeasonComparisonDescription')}
                     </Typography>
-                    {!timelineMatchData.length && (
+                    {!timelineSeasonData.length && (
                       <Typography variant="body2" color="text.secondary">
                         {t('dashboard.admin.standings.insightsNoData')}
                       </Typography>
                     )}
-                    {timelineMatchData.length > 0 && (
-                      <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.goals, 280)}>
+                    {timelineSeasonData.length > 0 && (
+                      <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.saves, 300)}>
                         <ResponsiveContainer>
-                          <LineChart data={timelineMatchData}>
+                          <BarChart data={timelineSeasonData}>
                             <CartesianGrid
                               stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
                               strokeDasharray="3 3"
                             />
                             <XAxis
                               dataKey="x_label"
-                              minTickGap={30}
                               tickLine={false}
                               axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
                               tick={{
@@ -775,317 +845,240 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                             />
                             <RechartsTooltip
                               {...chartTooltipProps}
-                              formatter={(value, name) => [formatDecimal(value), name]}
+                              formatter={(value, name, payload) => [formatDecimal(value), name]}
                               labelFormatter={(label, payload) => {
                                 const point = payload?.[0]?.payload
-                                return point?.match_date || label
+                                return point?.season_label || label
                               }}
                             />
                             <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="running_goals_per_match"
+                            <Bar
+                              dataKey="goals_per_match"
                               name={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
-                              stroke={INSIGHT_ACCENTS.goals.main}
-                              strokeWidth={2}
-                              strokeDasharray="6 4"
-                              dot={false}
+                              fill={INSIGHT_ACCENTS.goals.main}
+                              radius={[4, 4, 0, 0]}
                             />
-                            <Line
-                              type="monotone"
-                              dataKey="running_assists_per_match"
+                            <Bar
+                              dataKey="assists_per_match"
                               name={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
-                              stroke={INSIGHT_ACCENTS.assists.main}
-                              strokeWidth={2}
-                              strokeDasharray="6 4"
-                              dot={false}
+                              fill={INSIGHT_ACCENTS.assists.main}
+                              radius={[4, 4, 0, 0]}
                             />
-                            <Line
-                              type="monotone"
-                              dataKey="running_saves_per_match"
+                            <Bar
+                              dataKey="saves_per_match"
                               name={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
-                              stroke={INSIGHT_ACCENTS.saves.main}
-                              strokeWidth={2}
-                              strokeDasharray="6 4"
-                              dot={false}
+                              fill={INSIGHT_ACCENTS.saves.main}
+                              radius={[4, 4, 0, 0]}
                             />
-                          </LineChart>
+                          </BarChart>
                         </ResponsiveContainer>
                       </Box>
                     )}
                   </Stack>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Stack>
+          )}
 
-          <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.saves)}>
-            <CardContent sx={buildInsightContentSx}>
-              <Stack spacing={1.25}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  {t('dashboard.admin.standings.chartSeasonComparisonTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.standings.chartSeasonComparisonDescription')}
-                </Typography>
-                {!timelineSeasonData.length && (
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.standings.insightsNoData')}
+          {activeInsightTab === 'rankings' && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} lg={6}>
+                <InsightRankingPanel
+                  title={t('dashboard.admin.standings.topPairsTitle')}
+                  emptyText={t('dashboard.admin.standings.insightsNoData')}
+                  rows={pairRows}
+                  t={t}
+                />
+              </Grid>
+              <Grid item xs={12} lg={6}>
+                <InsightRankingPanel
+                  title={t('dashboard.admin.standings.topTeammatesTitle')}
+                  emptyText={t('dashboard.admin.standings.insightsNoData')}
+                  rows={teammateRows}
+                  t={t}
+                />
+              </Grid>
+            </Grid>
+          )}
+
+          {activeInsightTab === 'matrix' && (
+            <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.players)}>
+              <CardContent sx={buildInsightContentSx}>
+                <Stack spacing={1.2}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {t('dashboard.admin.standings.correlationMatrixTitle')}
                   </Typography>
-                )}
-                {timelineSeasonData.length > 0 && (
-                  <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.saves, 300)}>
-                    <ResponsiveContainer>
-                      <BarChart data={timelineSeasonData}>
-                        <CartesianGrid
-                          stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
-                          strokeDasharray="3 3"
-                        />
-                        <XAxis
-                          dataKey="x_label"
-                          tickLine={false}
-                          axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
-                          tick={{
-                            fill: theme.palette.text.secondary,
-                            fontSize: 11,
-                            fontFamily: theme.typography.fontFamily,
-                          }}
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tick={{
-                            fill: theme.palette.text.secondary,
-                            fontSize: 11,
-                            fontFamily: theme.typography.fontFamily,
-                          }}
-                        />
-                        <RechartsTooltip
-                          {...chartTooltipProps}
-                          formatter={(value, name, payload) => [formatDecimal(value), name]}
-                          labelFormatter={(label, payload) => {
-                            const point = payload?.[0]?.payload
-                            return point?.season_label || label
-                          }}
-                        />
-                        <Legend />
-                        <Bar
-                          dataKey="goals_per_match"
-                          name={t('dashboard.admin.standings.insightsKpiGoalsPerMatch')}
-                          fill={INSIGHT_ACCENTS.goals.main}
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="assists_per_match"
-                          name={t('dashboard.admin.standings.insightsKpiAssistsPerMatch')}
-                          fill={INSIGHT_ACCENTS.assists.main}
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="saves_per_match"
-                          name={t('dashboard.admin.standings.insightsKpiSavesPerMatch')}
-                          fill={INSIGHT_ACCENTS.saves.main}
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} lg={6}>
-              <InsightRankingPanel
-                title={t('dashboard.admin.standings.topPairsTitle')}
-                emptyText={t('dashboard.admin.standings.insightsNoData')}
-                rows={pairRows}
-                t={t}
-              />
-            </Grid>
-            <Grid item xs={12} lg={6}>
-              <InsightRankingPanel
-                title={t('dashboard.admin.standings.topTeammatesTitle')}
-                emptyText={t('dashboard.admin.standings.insightsNoData')}
-                rows={teammateRows}
-                t={t}
-              />
-            </Grid>
-          </Grid>
-
-          <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.players)}>
-            <CardContent sx={buildInsightContentSx}>
-              <Stack spacing={1.2}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  {t('dashboard.admin.standings.correlationMatrixTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.standings.correlationMatrixDescription')}
-                </Typography>
-                <Stack direction="row" flexWrap="wrap" gap={1}>
-                  {matrixLegend.map((item) => (
-                    <Chip
-                      key={item.key}
-                      size="small"
-                      variant="outlined"
-                      sx={buildMatrixCellSx(
-                        {
-                          same_player: false,
-                          matches: Math.max(1, Math.round(maxSharedMatches * item.matches)),
-                          win_rate: item.rate,
-                        },
-                        maxSharedMatches || 1
-                      )}
-                      label={t(
-                        `dashboard.admin.standings.correlationLegend${item.key[0].toUpperCase()}${item.key.slice(1)}`
-                      )}
-                    />
-                  ))}
-                </Stack>
-
-                {!insightsReport.matrix_players.length && (
                   <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.standings.insightsNoData')}
+                    {t('dashboard.admin.standings.correlationMatrixDescription')}
                   </Typography>
-                )}
+                  <Stack direction="row" flexWrap="wrap" gap={1}>
+                    {matrixLegend.map((item) => (
+                      <Chip
+                        key={item.key}
+                        size="small"
+                        variant="outlined"
+                        sx={buildMatrixCellSx(
+                          {
+                            same_player: false,
+                            matches: Math.max(1, Math.round(maxSharedMatches * item.matches)),
+                            win_rate: item.rate,
+                          },
+                          maxSharedMatches || 1
+                        )}
+                        label={t(
+                          `dashboard.admin.standings.correlationLegend${item.key[0].toUpperCase()}${item.key.slice(1)}`
+                        )}
+                      />
+                    ))}
+                  </Stack>
 
-                {insightsReport.matrix_players.length > 0 && (
-                  <TableContainer sx={buildInsightTableContainerSx(theme, INSIGHT_ACCENTS.players)}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ minWidth: 220 }}>
-                            {t('dashboard.admin.table.player')}
-                          </TableCell>
-                          {insightsReport.matrix_players.map((player) => (
-                            <TableCell key={player.guid} align="center" sx={{ minWidth: 110 }}>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  display: 'block',
-                                  fontWeight: 700,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                                title={player.label}
-                              >
-                                {player.label}
-                              </Typography>
+                  {!insightsReport.matrix_players.length && (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('dashboard.admin.standings.insightsNoData')}
+                    </Typography>
+                  )}
+
+                  {insightsReport.matrix_players.length > 0 && (
+                    <TableContainer
+                      sx={buildInsightTableContainerSx(theme, INSIGHT_ACCENTS.players)}
+                    >
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ minWidth: 220 }}>
+                              {t('dashboard.admin.table.player')}
                             </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {insightsReport.matrix_rows.map((row) => (
-                          <TableRow key={row.player.guid}>
-                            <TableCell>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: 700,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  maxWidth: 250,
-                                }}
-                                title={row.player.label}
-                              >
-                                {row.player.label}
-                              </Typography>
-                            </TableCell>
-                            {row.cells.map((cell) => (
-                              <Tooltip
-                                key={`${cell.player_guid}-${cell.teammate_guid}`}
-                                title={
-                                  cell.same_player
-                                    ? t('dashboard.admin.standings.correlationSamePlayer')
-                                    : cell.matches
-                                      ? t('dashboard.admin.standings.correlationCellTooltip', {
-                                          matches: cell.matches,
-                                          wins: cell.wins,
-                                          draws: cell.draws,
-                                          losses: cell.losses,
-                                          winRate: formatPercent(cell.win_rate),
-                                        })
-                                      : t('dashboard.admin.standings.correlationNoMatches')
-                                }
-                                arrow
-                              >
-                                <TableCell
-                                  align="center"
-                                  sx={buildMatrixCellSx(cell, maxSharedMatches)}
+                            {insightsReport.matrix_players.map((player) => (
+                              <TableCell key={player.guid} align="center" sx={{ minWidth: 110 }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    display: 'block',
+                                    fontWeight: 700,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={player.label}
                                 >
-                                  {cell.same_player ? (
-                                    <Typography variant="caption" sx={{ color: 'inherit' }}>
-                                      —
-                                    </Typography>
-                                  ) : cell.matches ? (
-                                    <Stack spacing={0.2}>
-                                      <Typography
-                                        variant="caption"
-                                        sx={{ color: 'inherit', fontWeight: 700 }}
-                                      >
-                                        {formatPercent(cell.win_rate)}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        sx={{ color: MATRIX_CELL_SUBTEXT_COLOR }}
-                                      >
-                                        {cell.matches}
-                                      </Typography>
-                                    </Stack>
-                                  ) : (
-                                    <Typography variant="caption" sx={{ color: 'inherit' }}>
-                                      -
-                                    </Typography>
-                                  )}
-                                </TableCell>
-                              </Tooltip>
+                                  {player.label}
+                                </Typography>
+                              </TableCell>
                             ))}
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
+                        </TableHead>
+                        <TableBody>
+                          {insightsReport.matrix_rows.map((row) => (
+                            <TableRow key={row.player.guid}>
+                              <TableCell>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 700,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: 250,
+                                  }}
+                                  title={row.player.label}
+                                >
+                                  {row.player.label}
+                                </Typography>
+                              </TableCell>
+                              {row.cells.map((cell) => (
+                                <Tooltip
+                                  key={`${cell.player_guid}-${cell.teammate_guid}`}
+                                  title={
+                                    cell.same_player
+                                      ? t('dashboard.admin.standings.correlationSamePlayer')
+                                      : cell.matches
+                                        ? t('dashboard.admin.standings.correlationCellTooltip', {
+                                            matches: cell.matches,
+                                            wins: cell.wins,
+                                            draws: cell.draws,
+                                            losses: cell.losses,
+                                            winRate: formatPercent(cell.win_rate),
+                                          })
+                                        : t('dashboard.admin.standings.correlationNoMatches')
+                                  }
+                                  arrow
+                                >
+                                  <TableCell
+                                    align="center"
+                                    sx={buildMatrixCellSx(cell, maxSharedMatches)}
+                                  >
+                                    {cell.same_player ? (
+                                      <Typography variant="caption" sx={{ color: 'inherit' }}>
+                                        —
+                                      </Typography>
+                                    ) : cell.matches ? (
+                                      <Stack spacing={0.2}>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{ color: 'inherit', fontWeight: 700 }}
+                                        >
+                                          {formatPercent(cell.win_rate)}
+                                        </Typography>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{ color: MATRIX_CELL_SUBTEXT_COLOR }}
+                                        >
+                                          {cell.matches}
+                                        </Typography>
+                                      </Stack>
+                                    ) : (
+                                      <Typography variant="caption" sx={{ color: 'inherit' }}>
+                                        -
+                                      </Typography>
+                                    )}
+                                  </TableCell>
+                                </Tooltip>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <LeadersCard
-                title={t('dashboard.admin.standings.leadersScorers')}
-                metricLabel={t('dashboard.common.matchDetail.goals')}
-                items={insightsReport.leaders.scorers}
-                metricKey="goals"
-                metricAccent={INSIGHT_ACCENTS.goals}
-                emptyText={t('dashboard.admin.standings.insightsNoData')}
-              />
+          {activeInsightTab === 'rankings' && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <LeadersCard
+                  title={t('dashboard.admin.standings.leadersScorers')}
+                  metricLabel={t('dashboard.common.matchDetail.goals')}
+                  items={insightsReport.leaders.scorers}
+                  metricKey="goals"
+                  metricAccent={INSIGHT_ACCENTS.goals}
+                  emptyText={t('dashboard.admin.standings.insightsNoData')}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <LeadersCard
+                  title={t('dashboard.admin.standings.leadersAssisters')}
+                  metricLabel={t('dashboard.common.matchDetail.assists')}
+                  items={insightsReport.leaders.assisters}
+                  metricKey="assists"
+                  metricAccent={INSIGHT_ACCENTS.assists}
+                  emptyText={t('dashboard.admin.standings.insightsNoData')}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <LeadersCard
+                  title={t('dashboard.admin.standings.leadersSavers')}
+                  metricLabel={t('dashboard.common.matchDetail.saves')}
+                  items={insightsReport.leaders.savers}
+                  metricKey="saves"
+                  metricAccent={INSIGHT_ACCENTS.saves}
+                  emptyText={t('dashboard.admin.standings.insightsNoData')}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <LeadersCard
-                title={t('dashboard.admin.standings.leadersAssisters')}
-                metricLabel={t('dashboard.common.matchDetail.assists')}
-                items={insightsReport.leaders.assisters}
-                metricKey="assists"
-                metricAccent={INSIGHT_ACCENTS.assists}
-                emptyText={t('dashboard.admin.standings.insightsNoData')}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <LeadersCard
-                title={t('dashboard.admin.standings.leadersSavers')}
-                metricLabel={t('dashboard.common.matchDetail.saves')}
-                items={insightsReport.leaders.savers}
-                metricKey="saves"
-                metricAccent={INSIGHT_ACCENTS.saves}
-                emptyText={t('dashboard.admin.standings.insightsNoData')}
-              />
-            </Grid>
-          </Grid>
+          )}
         </Stack>
       )}
     </Stack>
