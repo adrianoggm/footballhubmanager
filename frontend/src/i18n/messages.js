@@ -15,6 +15,30 @@ export const messages = {
         keeper: 'Goalkeeper',
       },
     },
+    footer: {
+      aboutTitle: 'Who we are',
+      aboutText:
+        'footballhubmanager is an end-to-end management platform for football penas: invitations, seasons, rosters, live match tracking, standings and insights — all in one place.',
+      navigationTitle: 'Navigation',
+      resourcesTitle: 'Resources',
+      sourceCode: 'Source code on GitHub',
+      rights: '© {year} {brand}. All rights reserved.',
+      madeFor: 'Made for grassroots football communities.',
+      contact: 'Contact',
+      terms: 'Terms of Service',
+      privacy: 'Privacy Policy',
+      accessibility: 'Accessibility',
+    },
+    legal: {
+      titles: {
+        terms: 'Terms of Service',
+        privacy: 'Privacy Policy',
+        accessibility: 'Accessibility',
+      },
+      placeholderBody:
+        'This content is being prepared and will be available at launch. If you need it sooner, reach us through the contact link in the footer.',
+      back: 'Go back',
+    },
     app: {
       brand: 'footballhubmanager',
       auth: {
@@ -892,6 +916,30 @@ export const messages = {
         polivalent: 'Polivalente',
         keeper: 'Portero',
       },
+    },
+    footer: {
+      aboutTitle: 'Quiénes somos',
+      aboutText:
+        'footballhubmanager es una plataforma de gestión integral para peñas de fútbol: invitaciones, temporadas, plantillas, seguimiento de partidos en vivo, clasificaciones e insights — todo en un solo lugar.',
+      navigationTitle: 'Navegación',
+      resourcesTitle: 'Recursos',
+      sourceCode: 'Código fuente en GitHub',
+      rights: '© {year} {brand}. Todos los derechos reservados.',
+      madeFor: 'Hecho para comunidades de fútbol amateur.',
+      contact: 'Contacto',
+      terms: 'Condiciones de Servicio',
+      privacy: 'Política de Privacidad',
+      accessibility: 'Accesibilidad',
+    },
+    legal: {
+      titles: {
+        terms: 'Condiciones de Servicio',
+        privacy: 'Política de Privacidad',
+        accessibility: 'Accesibilidad',
+      },
+      placeholderBody:
+        'Este contenido está en preparación y estará disponible en el lanzamiento. Si lo necesitas antes, escríbenos desde el enlace de contacto del pie de página.',
+      back: 'Volver',
     },
     app: {
       brand: 'footballhubmanager',

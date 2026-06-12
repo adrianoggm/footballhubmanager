@@ -1,6 +1,7 @@
 import { Box, Container, Stack, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { Outlet } from 'react-router-dom'
+import AppFooter from '../components/common/AppFooter.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import ThemeModeSwitcher from '../components/ThemeModeSwitcher.jsx'
 import { useI18n } from '../i18n/useI18n.js'
@@ -103,6 +104,8 @@ export default function PublicLayout() {
           </Stack>
 
           <Outlet />
+
+          <AppFooter />
         </Stack>
       </Container>
     </Box>
