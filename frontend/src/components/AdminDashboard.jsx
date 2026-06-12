@@ -342,6 +342,33 @@ const formatEpochSeconds = (value) => {
   return new Date(value * 1000).toLocaleString()
 }
 
+// Human countdown for a season relative to today ("starts in N days" /
+// "N days left" / "ended N days ago"). Empty string when dates are missing.
+const seasonCountdown = (season, t) => {
+  if (!season?.start_date || !season?.end_date) {
+    return ''
+  }
+  const dayMs = 86_400_000
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const start = new Date(`${season.start_date}T00:00:00`)
+  const end = new Date(`${season.end_date}T00:00:00`)
+  if (today < start) {
+    return t('dashboard.admin.status.startsInDays', {
+      days: Math.round((start - today) / dayMs),
+    })
+  }
+  if (today > end) {
+    return t('dashboard.admin.status.endedDaysAgo', {
+      days: Math.round((today - end) / dayMs),
+    })
+  }
+  const daysLeft = Math.round((end - today) / dayMs)
+  return daysLeft === 0
+    ? t('dashboard.admin.status.endsToday')
+    : t('dashboard.admin.status.daysLeft', { days: daysLeft })
+}
+
 const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
 
 const formatSignedDecimal = (value, digits = 2) => {
@@ -792,7 +819,6 @@ export default function AdminDashboard({
     activeSection === 'players' || activeSection === 'accountability'
   const shouldLoadPenaLabels = activeSection === 'players' || activeSection === 'standings'
   const shouldLoadStandings = activeSection === 'overview' || activeSection === 'standings'
-  const shouldLoadSeasonMatches = activeSection === 'overview' || activeSection === 'matches'
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -1500,12 +1526,9 @@ export default function AdminDashboard({
     resetInsightsReport()
   }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
+  // Season matches feed the always-visible "season matches" summary card, so they
+  // load for every section once a pena + season are selected.
   useEffect(() => {
-    if (!shouldLoadSeasonMatches) {
-      setSeasonMatches([])
-      setSeasonMatchesLoading(false)
-      return
-    }
     if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
       setSeasonMatches([])
       setSelectedMatchGuid('')
@@ -1550,7 +1573,7 @@ export default function AdminDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing, activeSection])
+  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
 
   useEffect(() => {
     const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
@@ -2592,38 +2615,49 @@ export default function AdminDashboard({
     ADMIN_HERO_SUBTITLE_KEY_BY_SECTION[activeSection] || 'dashboard.admin.heroSubtitle'
   )
 
+  // Summary cards favor actionable season-ops info over restating context that is
+  // already visible in the header (pena name, selectors).
+  const selectedIsActive = Boolean(
+    selectedSeason && activeSeason && selectedSeason.guid === activeSeason.guid
+  )
   const adminSummaryCards = [
     {
-      label: t('dashboard.admin.overview.currentPena'),
-      value: selectedPena?.name || '-',
-      helper: activeAdminSectionLabel,
-      helperLabel: t('dashboard.common.summaryMeta.section'),
-      tone: 'secondary',
-    },
-    {
       label: t('dashboard.admin.overview.activeSeason'),
-      value: activeSeason
-        ? t('dashboard.admin.status.configured')
-        : t('dashboard.admin.status.missing'),
-      helper: activeSeasonLabel,
-      helperLabel: t('dashboard.common.summaryMeta.range'),
+      value: activeSeason ? activeSeasonLabel : t('dashboard.admin.status.missing'),
+      helper: activeSeason
+        ? seasonCountdown(activeSeason, t)
+        : t('dashboard.admin.status.noActiveSeason'),
       tone: activeSeason ? 'success' : 'warning',
     },
     {
-      label: t('dashboard.admin.overview.totalSeasons'),
-      value: String(seasonList.length),
-      helper: latestSeasonEndDate
-        ? selectedSeasonLabel
+      label: t('dashboard.admin.overview.selectedSeasonCard'),
+      value: selectedSeason ? selectedSeasonLabel : '-',
+      helper: selectedSeason
+        ? selectedIsActive
+          ? t('dashboard.admin.status.sameAsActive')
+          : t('dashboard.admin.status.differentFromActive')
         : t('dashboard.admin.status.noSeasonSelected'),
-      helperLabel: t('dashboard.common.summaryMeta.reference'),
-      tone: 'primary',
+      tone: !selectedSeason || !selectedIsActive ? 'warning' : 'primary',
     },
     {
       label: t('dashboard.admin.overview.seasonPlayers'),
       value: selectedSeasonGuid && !seasonRosterLoading ? String(seasonRoster.length) : '-',
-      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.status.noSeasonSelected'),
-      helperLabel: t('dashboard.common.summaryMeta.season'),
+      helper: selectedSeason
+        ? t('dashboard.admin.status.registeredInSelected')
+        : t('dashboard.admin.status.noSeasonSelected'),
       tone: 'info',
+    },
+    {
+      label: t('dashboard.admin.overview.seasonMatchesCard'),
+      value:
+        selectedSeasonGuid && !seasonMatchesLoading ? String(overviewMatchesSummary.total) : '-',
+      helper: selectedSeason
+        ? t('dashboard.admin.status.matchesOpenClosed', {
+            open: overviewMatchesSummary.open,
+            closed: overviewMatchesSummary.closed,
+          })
+        : t('dashboard.admin.status.noSeasonSelected'),
+      tone: overviewMatchesSummary.open > 0 ? 'warning' : 'success',
     },
   ]
 
