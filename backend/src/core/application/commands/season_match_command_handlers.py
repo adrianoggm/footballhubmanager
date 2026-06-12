@@ -4,6 +4,8 @@ from core.application.commands.season_match_commands import (
     CreateSeasonMatchWithLineupsCommand,
     DeleteSeasonMatchCommand,
     DeleteSeasonMatchEventCommand,
+    PauseSeasonMatchCommand,
+    ResumeSeasonMatchCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -23,7 +25,13 @@ from core.application.ports.season_competition_port import (
     InvalidSeasonPlayerStatsError as RepositoryInvalidSeasonPlayerStatsError,
 )
 from core.application.ports.season_competition_port import (
+    MatchClockAlreadyPausedError as RepositoryMatchClockAlreadyPausedError,
+)
+from core.application.ports.season_competition_port import (
     MatchClockAlreadyStartedError as RepositoryMatchClockAlreadyStartedError,
+)
+from core.application.ports.season_competition_port import (
+    MatchClockNotPausedError as RepositoryMatchClockNotPausedError,
 )
 from core.application.ports.season_competition_port import (
     MatchClockNotRunningError as RepositoryMatchClockNotRunningError,
@@ -72,6 +80,8 @@ from core.application.use_cases.season_competition_errors import (
     PenaSeasonNotFoundError,
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
+    SeasonMatchClockAlreadyPausedError,
+    SeasonMatchClockNotPausedError,
     SeasonMatchClockNotRunningError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
@@ -336,6 +346,64 @@ class StopSeasonMatchHandler:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryMatchClockNotRunningError as exc:
             raise SeasonMatchClockNotRunningError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+
+class PauseSeasonMatchHandler:
+    def __init__(self, repository: SeasonMatchPort):
+        self.repository = repository
+
+    def handle(self, command: PauseSeasonMatchCommand) -> SeasonMatchDetailInfo:
+        try:
+            updated = self.repository.pause_match_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                match_guid=command.match_guid,
+                admin_id=command.admin_id,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchClockNotRunningError as exc:
+            raise SeasonMatchClockNotRunningError() from exc
+        except RepositoryMatchClockAlreadyPausedError as exc:
+            raise SeasonMatchClockAlreadyPausedError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+
+class ResumeSeasonMatchHandler:
+    def __init__(self, repository: SeasonMatchPort):
+        self.repository = repository
+
+    def handle(self, command: ResumeSeasonMatchCommand) -> SeasonMatchDetailInfo:
+        try:
+            updated = self.repository.resume_match_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                match_guid=command.match_guid,
+                admin_id=command.admin_id,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
+        except RepositoryMatchClockNotRunningError as exc:
+            raise SeasonMatchClockNotRunningError() from exc
+        except RepositoryMatchClockNotPausedError as exc:
+            raise SeasonMatchClockNotPausedError() from exc
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
         return to_match_detail(updated)

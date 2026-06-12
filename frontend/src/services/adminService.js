@@ -160,6 +160,20 @@ export class AdminService {
     )
   }
 
+  pauseMatch(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.post(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/pause`,
+      {}
+    )
+  }
+
+  resumeMatch(penaGuid, seasonGuid, matchGuid) {
+    return httpClient.post(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/resume`,
+      {}
+    )
+  }
+
   createMatchEvent(penaGuid, seasonGuid, matchGuid, payload) {
     return httpClient.post(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/events`,

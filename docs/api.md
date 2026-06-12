@@ -74,6 +74,15 @@ API docs:
 - `GET /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}`
 - `DELETE /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}` (admin)
 
+Live clock control (admin). Pausing freezes the clock (half-time, interruptions) without
+finishing tracking; paused time never counts towards match/event time. `tracking_status`
+values: `not_started` | `live` | `paused` | `finished`.
+
+- `POST /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/start` (admin)
+- `POST /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/pause` (admin)
+- `POST /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/resume` (admin)
+- `POST /penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/stop` (admin, finishes tracking)
+
 ### Standings
 
 - `GET /penas/{pena_guid}/seasons/{season_guid}/standings`

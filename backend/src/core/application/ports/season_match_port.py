@@ -100,6 +100,24 @@ class SeasonMatchPort(Protocol):
         admin_id: int,
     ) -> MatchDetailResult: ...
 
+    def pause_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult: ...
+
+    def resume_match_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+    ) -> MatchDetailResult: ...
+
     def create_match_event_for_admin(
         self,
         *,

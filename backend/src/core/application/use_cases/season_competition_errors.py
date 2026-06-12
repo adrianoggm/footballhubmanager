@@ -70,6 +70,14 @@ class SeasonMatchClockNotRunningError(Exception):
     pass
 
 
+class SeasonMatchClockAlreadyPausedError(Exception):
+    pass
+
+
+class SeasonMatchClockNotPausedError(Exception):
+    pass
+
+
 class SeasonMatchEventNotFoundError(Exception):
     pass
 

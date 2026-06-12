@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { adminService } from '../../services/adminService.js'
+import { LoadingState } from '../common'
 
 const ACCOUNTABILITY_TRANSPARENCY_LEVELS = ['private', 'summary', 'full']
 
@@ -344,7 +345,7 @@ export default function AdminAccountabilitySection({
 
       {loading && (
         <Grid item xs={12}>
-          <Alert severity="info">{t('dashboard.common.refreshData')}</Alert>
+          <LoadingState />
         </Grid>
       )}
       {error && (

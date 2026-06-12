@@ -263,6 +263,14 @@ class MatchClockNotRunningError(Exception):
     pass
 
 
+class MatchClockAlreadyPausedError(Exception):
+    pass
+
+
+class MatchClockNotPausedError(Exception):
+    pass
+
+
 class MatchEventNotFoundError(Exception):
     pass
 
