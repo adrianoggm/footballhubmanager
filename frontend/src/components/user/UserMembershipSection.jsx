@@ -1,4 +1,5 @@
 import { Box, Button, Card, CardContent, Chip, Stack, TextField, Typography } from '@mui/material'
+import { translateRoleLabel } from '../../i18n/labels.js'
 
 /**
  * "My peñas" overview + membership editing (nickname/position) and leave action.
@@ -65,7 +66,7 @@ export default function UserMembershipSection({
                   />
                   {membership?.role && (
                     <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.user.role', { role: membership.role })}
+                      {t('dashboard.user.role', { role: translateRoleLabel(t, membership.role) })}
                     </Typography>
                   )}
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>

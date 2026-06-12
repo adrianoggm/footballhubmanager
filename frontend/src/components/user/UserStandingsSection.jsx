@@ -12,6 +12,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const labelChipSx = (color) => ({
@@ -62,7 +63,7 @@ export default function UserStandingsSection({
                   {currentStanding.role && (
                     <Chip
                       size="small"
-                      label={currentStanding.role}
+                      label={translateRoleLabel(t, currentStanding.role)}
                       sx={labelChipSx(currentStanding.role_color)}
                     />
                   )}
@@ -138,7 +139,7 @@ export default function UserStandingsSection({
                             {player.role ? (
                               <Chip
                                 size="small"
-                                label={player.role}
+                                label={translateRoleLabel(t, player.role)}
                                 sx={labelChipSx(player.role_color)}
                               />
                             ) : (
@@ -149,7 +150,7 @@ export default function UserStandingsSection({
                             {player.position ? (
                               <Chip
                                 size="small"
-                                label={player.position}
+                                label={translatePositionLabel(t, player.position)}
                                 sx={labelChipSx(player.position_color)}
                               />
                             ) : (

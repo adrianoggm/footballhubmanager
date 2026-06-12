@@ -1,5 +1,20 @@
 export const messages = {
   en: {
+    labels: {
+      role: {
+        president: 'President',
+        coordinator: 'Coordinator',
+        member: 'Member',
+        guest: 'Guest',
+      },
+      position: {
+        attacker: 'Attacker',
+        defender: 'Defender',
+        midfielder: 'Midfielder',
+        polivalent: 'Polyvalent',
+        keeper: 'Goalkeeper',
+      },
+    },
     app: {
       brand: 'footballhubmanager',
       auth: {
@@ -841,6 +856,21 @@ export const messages = {
     },
   },
   es: {
+    labels: {
+      role: {
+        president: 'Presidente',
+        coordinator: 'Coordinador',
+        member: 'Miembro',
+        guest: 'Invitado',
+      },
+      position: {
+        attacker: 'Delantero',
+        defender: 'Defensa',
+        midfielder: 'Centrocampista',
+        polivalent: 'Polivalente',
+        keeper: 'Portero',
+      },
+    },
     app: {
       brand: 'footballhubmanager',
       auth: {

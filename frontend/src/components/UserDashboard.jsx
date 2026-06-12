@@ -23,6 +23,7 @@ import UserStandingsSection from './user/UserStandingsSection.jsx'
 import { DashboardContext } from '../context/dashboardContext.js'
 import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
 import { useForm } from '../hooks/useForm.js'
+import { translateRoleLabel } from '../i18n/labels.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useI18n } from '../i18n/useI18n.js'
@@ -765,7 +766,11 @@ export default function UserDashboard({
           />
           <Chip size="small" color="primary" label={selectedSeason ? selectedSeasonLabel : '-'} />
           {membership?.role ? (
-            <Chip size="small" label={membership.role} sx={labelChipSx(membership.role_color)} />
+            <Chip
+              size="small"
+              label={translateRoleLabel(t, membership.role)}
+              sx={labelChipSx(membership.role_color)}
+            />
           ) : null}
           {currentStanding ? (
             <Chip

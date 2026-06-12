@@ -24,6 +24,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const labelChipSx = (color) => ({
@@ -32,11 +33,14 @@ const labelChipSx = (color) => ({
   border: '1px solid rgba(15, 23, 42, 0.12)',
 })
 
-const renderFilterValue = (selected, emptyLabel) => {
+const renderFilterValue = (selected, emptyLabel, translate) => {
   const values = Array.isArray(selected)
     ? selected.map((item) => String(item || '').trim()).filter(Boolean)
     : []
-  return values.length ? values.join(', ') : emptyLabel
+  if (!values.length) {
+    return emptyLabel
+  }
+  return (translate ? values.map(translate) : values).join(', ')
 }
 
 function LabelColorList({ labels, colors, onColorChange }) {
@@ -366,7 +370,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.role ? (
                                   <Chip
                                     size="small"
-                                    label={player.role}
+                                    label={translateRoleLabel(t, player.role)}
                                     sx={labelChipSx(penaLabels.role_colors?.[player.role])}
                                   />
                                 ) : (
@@ -377,7 +381,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.position ? (
                                   <Chip
                                     size="small"
-                                    label={player.position}
+                                    label={translatePositionLabel(t, player.position)}
                                     sx={labelChipSx(penaLabels.position_colors?.[player.position])}
                                   />
                                 ) : (
@@ -472,14 +476,15 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           renderValue: (selected) =>
                             renderFilterValue(
                               selected,
-                              t('dashboard.admin.members.filterAllRoles')
+                              t('dashboard.admin.members.filterAllRoles'),
+                              (value) => translateRoleLabel(t, value)
                             ),
                         }}
                         fullWidth
                       >
                         {penaLabels.role_labels.map((roleLabel) => (
                           <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
-                            {roleLabel}
+                            {translateRoleLabel(t, roleLabel)}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -496,14 +501,15 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                           renderValue: (selected) =>
                             renderFilterValue(
                               selected,
-                              t('dashboard.admin.members.filterAllPositions')
+                              t('dashboard.admin.members.filterAllPositions'),
+                              (value) => translatePositionLabel(t, value)
                             ),
                         }}
                         fullWidth
                       >
                         {penaLabels.position_labels.map((positionLabel) => (
                           <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
-                            {positionLabel}
+                            {translatePositionLabel(t, positionLabel)}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -533,7 +539,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.role ? (
                                   <Chip
                                     size="small"
-                                    label={player.role}
+                                    label={translateRoleLabel(t, player.role)}
                                     sx={labelChipSx(penaLabels.role_colors?.[player.role])}
                                   />
                                 ) : (
@@ -544,7 +550,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                 {player.position ? (
                                   <Chip
                                     size="small"
-                                    label={player.position}
+                                    label={translatePositionLabel(t, player.position)}
                                     sx={labelChipSx(penaLabels.position_colors?.[player.position])}
                                   />
                                 ) : (
@@ -672,7 +678,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
                     {penaLabels.role_labels.map((roleLabel) => (
                       <MenuItem key={roleLabel} value={roleLabel}>
-                        {roleLabel}
+                        {translateRoleLabel(t, roleLabel)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -686,7 +692,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     <MenuItem value="">{t('dashboard.admin.guest.positionNone')}</MenuItem>
                     {penaLabels.position_labels.map((positionLabel) => (
                       <MenuItem key={positionLabel} value={positionLabel}>
-                        {positionLabel}
+                        {translatePositionLabel(t, positionLabel)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -752,7 +758,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         <Chip
                           key={roleLabel}
                           size="small"
-                          label={roleLabel}
+                          label={translateRoleLabel(t, roleLabel)}
                           sx={labelChipSx(penaLabels.role_colors?.[roleLabel])}
                         />
                       ))}
@@ -768,7 +774,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                         <Chip
                           key={positionLabel}
                           size="small"
-                          label={positionLabel}
+                          label={translatePositionLabel(t, positionLabel)}
                           sx={labelChipSx(penaLabels.position_colors?.[positionLabel])}
                         />
                       ))}

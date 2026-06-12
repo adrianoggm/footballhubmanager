@@ -18,15 +18,19 @@ import {
   Typography,
 } from '@mui/material'
 import { Suspense, lazy } from 'react'
+import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const AdminInsightsSection = lazy(() => import('./AdminInsightsSection.jsx'))
 
-const renderFilterValue = (selected, emptyLabel) => {
+const renderFilterValue = (selected, emptyLabel, translate) => {
   const values = Array.isArray(selected)
     ? selected.map((item) => String(item || '').trim()).filter(Boolean)
     : []
-  return values.length ? values.join(', ') : emptyLabel
+  if (!values.length) {
+    return emptyLabel
+  }
+  return (translate ? values.map(translate) : values).join(', ')
 }
 
 /**
@@ -90,13 +94,15 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                 multiple: true,
                 displayEmpty: true,
                 renderValue: (selected) =>
-                  renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles')),
+                  renderFilterValue(selected, t('dashboard.admin.members.filterAllRoles'), (value) =>
+                    translateRoleLabel(t, value)
+                  ),
               }}
               fullWidth
             >
               {penaLabels.role_labels.map((roleLabel) => (
                 <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
-                  {roleLabel}
+                  {translateRoleLabel(t, roleLabel)}
                 </MenuItem>
               ))}
             </TextField>
@@ -111,13 +117,17 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                 multiple: true,
                 displayEmpty: true,
                 renderValue: (selected) =>
-                  renderFilterValue(selected, t('dashboard.admin.members.filterAllPositions')),
+                  renderFilterValue(
+                    selected,
+                    t('dashboard.admin.members.filterAllPositions'),
+                    (value) => translatePositionLabel(t, value)
+                  ),
               }}
               fullWidth
             >
               {penaLabels.position_labels.map((positionLabel) => (
                 <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
-                  {positionLabel}
+                  {translatePositionLabel(t, positionLabel)}
                 </MenuItem>
               ))}
             </TextField>
@@ -154,7 +164,7 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                         {player.role ? (
                           <Chip
                             size="small"
-                            label={player.role}
+                            label={translateRoleLabel(t, player.role)}
                             sx={{
                               backgroundColor: player.role_color || DEFAULT_LABEL_COLOR,
                               color: '#fff',
@@ -168,7 +178,7 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                         {player.position ? (
                           <Chip
                             size="small"
-                            label={player.position}
+                            label={translatePositionLabel(t, player.position)}
                             sx={{
                               backgroundColor: player.position_color || DEFAULT_LABEL_COLOR,
                               color: '#fff',

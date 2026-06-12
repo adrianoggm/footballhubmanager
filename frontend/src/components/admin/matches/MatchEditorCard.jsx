@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material'
 import { memo, useEffect, useMemo, useState } from 'react'
+import { translatePositionLabel } from '../../../i18n/labels.js'
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../../MatchDetailViewer.jsx'
 
@@ -156,7 +157,7 @@ function TrackingPlayerCard({
             {formatPlayerDisplayName(player)}
           </Typography>
           {player.position ? (
-            <Chip size="small" variant="outlined" label={player.position} />
+            <Chip size="small" variant="outlined" label={translatePositionLabel(t, player.position)} />
           ) : null}
         </Stack>
 
