@@ -17,7 +17,11 @@ export const resolveDisplayedElapsed = (matchDetail, nowEpoch) => {
   if (!isLiveTrackingStatus(matchDetail.tracking_status) || !matchDetail.started_at_epoch) {
     return Number(matchDetail.elapsed_seconds || 0)
   }
-  return Math.max(Number(matchDetail.elapsed_seconds || 0), nowEpoch - matchDetail.started_at_epoch)
+  // Mirror the backend clock: paused intervals are excluded so the live timer
+  // resumes where it stopped instead of counting the time spent paused.
+  const liveElapsed =
+    nowEpoch - matchDetail.started_at_epoch - Number(matchDetail.total_paused_seconds || 0)
+  return Math.max(Number(matchDetail.elapsed_seconds || 0), liveElapsed)
 }
 
 export const buildTrackedTeamScore = (detail) => {

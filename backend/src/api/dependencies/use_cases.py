@@ -74,6 +74,7 @@ from core.application.commands.season_match_command_handlers import (
     DeleteSeasonMatchHandler,
     PauseSeasonMatchHandler,
     ResumeSeasonMatchHandler,
+    SetSeasonMatchGoalkeeperRotationHandler,
     StartSeasonMatchHandler,
     StopSeasonMatchHandler,
     UpdateSeasonMatchHandler,
@@ -89,6 +90,7 @@ from core.application.commands.season_match_commands import (
     DeleteSeasonMatchEventCommand,
     PauseSeasonMatchCommand,
     ResumeSeasonMatchCommand,
+    SetSeasonMatchGoalkeeperRotationCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -408,6 +410,10 @@ def get_season_match_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     bus.register(StopSeasonMatchCommand, StopSeasonMatchHandler(repository))
     bus.register(PauseSeasonMatchCommand, PauseSeasonMatchHandler(repository))
     bus.register(ResumeSeasonMatchCommand, ResumeSeasonMatchHandler(repository))
+    bus.register(
+        SetSeasonMatchGoalkeeperRotationCommand,
+        SetSeasonMatchGoalkeeperRotationHandler(repository),
+    )
     bus.register(CreateSeasonMatchEventCommand, CreateSeasonMatchEventHandler(repository))
     bus.register(DeleteSeasonMatchEventCommand, DeleteSeasonMatchEventHandler(repository))
     bus.register(UpdateSeasonMatchLineupsCommand, UpdateSeasonMatchLineupsHandler(repository))

@@ -21,6 +21,20 @@ bootstrap:
 install:
     {{venv_python}} -m pip install -r backend/requirements.txt
 
+db-up:
+    docker compose -f docker/docker-compose.yml up -d
+
+db-down:
+    docker compose -f docker/docker-compose.yml down
+
+# Recreate the database from scratch (drops the data volume and re-runs the init SQL).
+db-reset:
+    docker compose -f docker/docker-compose.yml down -v
+    docker compose -f docker/docker-compose.yml up -d
+
+db-logs:
+    docker compose -f docker/docker-compose.yml logs -f mysql
+
 backend port="8000" host="127.0.0.1":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 

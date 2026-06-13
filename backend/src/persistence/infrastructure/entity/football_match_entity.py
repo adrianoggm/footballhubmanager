@@ -19,5 +19,6 @@ class FootballMatch(GuidMixin, Base):
     ended_at_epoch: Mapped[int | None] = mapped_column(nullable=True)
     paused_at_epoch: Mapped[int | None] = mapped_column(nullable=True)
     total_paused_seconds: Mapped[int] = mapped_column(default=0)
+    goalkeeper_rotation_seconds: Mapped[int] = mapped_column(default=600)
     lineup_change_count: Mapped[int] = mapped_column(default=0)
     lineup_updated_at_epoch: Mapped[int | None] = mapped_column(nullable=True)

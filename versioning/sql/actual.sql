@@ -142,6 +142,7 @@ create table if not exists football_match (
   ended_at_epoch bigint null,
   paused_at_epoch bigint null,
   total_paused_seconds int not null default 0,
+  goalkeeper_rotation_seconds int not null default 600,
   lineup_change_count int not null default 0,
   lineup_updated_at_epoch bigint null,
   unique key uq_football_match_guid (guid),

@@ -20,8 +20,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { translatePositionLabel } from '../../../i18n/labels.js'
+import { playGoalkeeperAlarm } from './goalkeeperAlarm.js'
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../../MatchDetailViewer.jsx'
 
@@ -383,6 +384,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
     handleStopMatch,
     handlePauseMatch,
     handleResumeMatch,
+    handleSetGoalkeeperRotation,
     handleQuickMatchEvent,
     handleCreateMatchEvent,
     handleDeleteMatchEvent,
@@ -444,6 +446,13 @@ export default function MatchEditorCard({ state, actions, helpers }) {
     !officiallyClosed && trackingIsLive && !loading && !matchStatsLoading
   )
   const displayedElapsed = resolveDisplayedElapsed(selectedMatchDetail, nowEpoch)
+  const goalkeeperRotationSeconds = Number(selectedMatchDetail?.goalkeeper_rotation_seconds || 0)
+  const goalkeeperRotationEnabled = goalkeeperRotationSeconds > 0
+  // Seconds left until the next goalkeeper rotation cycle while the clock runs.
+  const secondsToNextRotation =
+    goalkeeperRotationEnabled && trackingIsLive
+      ? goalkeeperRotationSeconds - (displayedElapsed % goalkeeperRotationSeconds)
+      : null
   const workflowPhaseLabel = officiallyClosed
     ? t('dashboard.admin.matches.workflowPhaseClosed')
     : trackingIsLive || trackingIsPaused
@@ -472,6 +481,83 @@ export default function MatchEditorCard({ state, actions, helpers }) {
     }, 1000)
     return () => window.clearInterval(timerId)
   }, [selectedMatchDetail?.tracking_status, selectedMatchDetail?.started_at_epoch])
+
+  // Goalkeeper rotation alarm: a configurable interval (default 10 min) that, once
+  // the live clock crosses each multiple, fires a 5s beep + visual cue prompting a
+  // goalkeeper change. The interval can be tuned at any time and is persisted.
+  const [rotationMinutesInput, setRotationMinutesInput] = useState(() =>
+    String(Math.round(goalkeeperRotationSeconds / 60))
+  )
+  const [rotationAlarmActive, setRotationAlarmActive] = useState(false)
+  const [rotationAlarmCycle, setRotationAlarmCycle] = useState(0)
+  const lastRotationCycleRef = useRef(null)
+  const alarmStopRef = useRef(null)
+
+  // Keep the editable field in sync with the persisted value (after save / when
+  // switching matches), without clobbering edits to an unrelated field.
+  useEffect(() => {
+    setRotationMinutesInput(String(Math.round(goalkeeperRotationSeconds / 60)))
+  }, [goalkeeperRotationSeconds, selectedMatchDetail?.guid])
+
+  // Reset the cycle baseline whenever the interval, the match or the live state
+  // changes, so tuning the interval mid-match never fires the alarm retroactively.
+  useEffect(() => {
+    lastRotationCycleRef.current = null
+  }, [goalkeeperRotationSeconds, selectedMatchDetail?.guid, trackingIsLive])
+
+  useEffect(() => {
+    if (!trackingIsLive || goalkeeperRotationSeconds <= 0) {
+      return
+    }
+    const currentCycle = Math.floor(displayedElapsed / goalkeeperRotationSeconds)
+    if (lastRotationCycleRef.current === null) {
+      // First observation while live: adopt the current cycle as the baseline so
+      // reopening the match mid-cycle does not replay an already-passed boundary.
+      lastRotationCycleRef.current = currentCycle
+      return
+    }
+    if (currentCycle > lastRotationCycleRef.current && currentCycle >= 1) {
+      lastRotationCycleRef.current = currentCycle
+      alarmStopRef.current?.()
+      alarmStopRef.current = playGoalkeeperAlarm(5000)
+      setRotationAlarmCycle(currentCycle)
+      setRotationAlarmActive(true)
+    }
+  }, [trackingIsLive, goalkeeperRotationSeconds, displayedElapsed])
+
+  // Silence and clear the alarm when the match leaves the live state or changes.
+  useEffect(() => {
+    if (trackingIsLive) {
+      return
+    }
+    alarmStopRef.current?.()
+    alarmStopRef.current = null
+    setRotationAlarmActive(false)
+  }, [trackingIsLive, selectedMatchDetail?.guid])
+
+  // Stop any scheduled audio on unmount.
+  useEffect(
+    () => () => {
+      alarmStopRef.current?.()
+      alarmStopRef.current = null
+    },
+    []
+  )
+
+  const dismissRotationAlarm = () => {
+    alarmStopRef.current?.()
+    alarmStopRef.current = null
+    setRotationAlarmActive(false)
+  }
+
+  const handleApplyRotation = () => {
+    const minutes = Math.min(120, Math.max(0, Math.floor(Number(rotationMinutesInput) || 0)))
+    handleSetGoalkeeperRotation(minutes * 60)
+  }
+
+  const rotationInputSeconds =
+    Math.min(120, Math.max(0, Math.floor(Number(rotationMinutesInput) || 0))) * 60
+  const rotationDirty = rotationInputSeconds !== goalkeeperRotationSeconds
 
   // Progressive disclosure: the editor splits into task tabs (summary / live
   // tracking / lineups / stats) and follows the match state — opening a live
@@ -646,6 +732,70 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                     <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
                       {formatElapsedDuration(displayedElapsed)}
                     </Typography>
+                  </Box>
+
+                  {rotationAlarmActive && (
+                    <Alert
+                      severity="error"
+                      action={
+                        <Button color="inherit" size="small" onClick={dismissRotationAlarm}>
+                          {t('dashboard.admin.matches.goalkeeperRotationSilence')}
+                        </Button>
+                      }
+                    >
+                      {t('dashboard.admin.matches.goalkeeperRotationAlarm', {
+                        cycle: rotationAlarmCycle,
+                      })}
+                    </Alert>
+                  )}
+
+                  <Box
+                    sx={{
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      px: 2,
+                      py: 1.5,
+                    }}
+                  >
+                    <Typography variant="overline" color="text.secondary">
+                      {t('dashboard.admin.matches.goalkeeperRotationLabel')}
+                    </Typography>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems={{ sm: 'center' }}
+                      useFlexGap
+                      flexWrap="wrap"
+                    >
+                      <TextField
+                        type="number"
+                        size="small"
+                        label={t('dashboard.admin.matches.goalkeeperRotationMinutes')}
+                        value={rotationMinutesInput}
+                        onChange={(event) => setRotationMinutesInput(event.target.value)}
+                        inputProps={{ min: 0, max: 120, step: 1 }}
+                        disabled={loading || matchStatsLoading}
+                        sx={{ maxWidth: 160 }}
+                      />
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={handleApplyRotation}
+                        disabled={loading || matchStatsLoading || !rotationDirty}
+                      >
+                        {t('dashboard.admin.matches.goalkeeperRotationApply')}
+                      </Button>
+                      <Typography variant="body2" color="text.secondary">
+                        {!goalkeeperRotationEnabled
+                          ? t('dashboard.admin.matches.goalkeeperRotationDisabled')
+                          : secondsToNextRotation != null
+                            ? t('dashboard.admin.matches.goalkeeperRotationNext', {
+                                time: formatElapsedDuration(secondsToNextRotation),
+                              })
+                            : t('dashboard.admin.matches.goalkeeperRotationHint')}
+                      </Typography>
+                    </Stack>
                   </Box>
 
                   <Alert

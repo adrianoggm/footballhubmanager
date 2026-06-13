@@ -172,7 +172,10 @@ const resolveLiveElapsed = (detail, nowEpoch) => {
   if (!isLiveTrackingStatus(detail?.tracking_status) || !detail?.started_at_epoch) {
     return Number(detail?.elapsed_seconds || 0)
   }
-  return Math.max(Number(detail?.elapsed_seconds || 0), nowEpoch - detail.started_at_epoch)
+  // Mirror the backend clock: paused intervals are excluded so the live timer
+  // resumes where it stopped instead of counting the time spent paused.
+  const liveElapsed = nowEpoch - detail.started_at_epoch - Number(detail?.total_paused_seconds || 0)
+  return Math.max(Number(detail?.elapsed_seconds || 0), liveElapsed)
 }
 
 const buildTrackedPlayerEventCounts = (events) => {
