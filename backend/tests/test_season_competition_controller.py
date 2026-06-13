@@ -188,6 +188,7 @@ def _match_detail(match_guid: str = "match-1") -> SeasonMatchDetailInfo:
         started_at_epoch=None,
         ended_at_epoch=None,
         elapsed_seconds=0,
+        total_paused_seconds=15,
         home_team=home_team,
         away_team=away_team,
         events=[],
@@ -559,6 +560,8 @@ def test_helper_match_detail_response_serializes_nested_data():
     response = controller._match_detail_response(_match_detail("match-nested"))
     assert response.guid == "match-nested"
     assert response.home_team.players[0].player_guid == "player-1"
+    # Paused time must reach the client so the live clock can exclude it.
+    assert response.total_paused_seconds == 15
 
 
 def test_register_player_in_season_success():

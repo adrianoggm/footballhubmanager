@@ -165,6 +165,7 @@ class _FakeRepo:
             started_at_epoch=None,
             ended_at_epoch=None,
             elapsed_seconds=0,
+            total_paused_seconds=0,
             home_team=cls._match_team("Home"),
             away_team=cls._match_team("Away"),
             events=[],
