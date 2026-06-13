@@ -417,9 +417,7 @@ class SetSeasonMatchGoalkeeperRotationHandler:
     def __init__(self, repository: SeasonMatchPort):
         self.repository = repository
 
-    def handle(
-        self, command: SetSeasonMatchGoalkeeperRotationCommand
-    ) -> SeasonMatchDetailInfo:
+    def handle(self, command: SetSeasonMatchGoalkeeperRotationCommand) -> SeasonMatchDetailInfo:
         if command.rotation_seconds < 0 or command.rotation_seconds > self.MAX_ROTATION_SECONDS:
             raise InvalidSeasonMatchDataError()
         try:
