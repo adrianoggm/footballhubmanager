@@ -136,6 +136,7 @@ class MatchDetailResult:
     started_at_epoch: int | None
     ended_at_epoch: int | None
     elapsed_seconds: int
+    total_paused_seconds: int
     home_team: MatchTeamResult
     away_team: MatchTeamResult
     events: list[MatchEventResult]

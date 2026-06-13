@@ -1646,6 +1646,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             started_at_epoch=football_match.started_at_epoch,
             ended_at_epoch=football_match.ended_at_epoch,
             elapsed_seconds=self._match_elapsed_seconds(football_match),
+            total_paused_seconds=int(football_match.total_paused_seconds or 0),
             home_team=self._build_match_team_result(
                 team=home_team,
                 team_players=home_players,
