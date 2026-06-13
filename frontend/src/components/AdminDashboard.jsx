@@ -2306,6 +2306,23 @@ export default function AdminDashboard({
     }, t('dashboard.admin.notices.matchTrackingResumed'))
   }
 
+  const handleSetGoalkeeperRotation = async (rotationSeconds) => {
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
+      return
+    }
+
+    await runAction(async () => {
+      const updated = await adminService.setGoalkeeperRotation(
+        selectedPenaGuid,
+        selectedSeasonGuid,
+        selectedMatchGuid,
+        rotationSeconds
+      )
+      setSelectedMatchDetail(updated)
+      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+    }, t('dashboard.admin.notices.goalkeeperRotationUpdated'))
+  }
+
   const createMatchEventAndRefresh = async ({
     eventType,
     teamSide,
@@ -2596,6 +2613,7 @@ export default function AdminDashboard({
       handleStopMatch,
       handlePauseMatch,
       handleResumeMatch,
+      handleSetGoalkeeperRotation,
       handleQuickMatchEvent,
       handleCreateMatchEvent,
       handleDeleteMatchEvent,

@@ -214,6 +214,8 @@ class SeasonMatchDetailResponse(BaseModel):
     started_at_epoch: int | None
     ended_at_epoch: int | None
     elapsed_seconds: int
+    total_paused_seconds: int = 0
+    goalkeeper_rotation_seconds: int = 600
     home_team: SeasonMatchTeamResponse
     away_team: SeasonMatchTeamResponse
     events: list[SeasonMatchEventResponse]

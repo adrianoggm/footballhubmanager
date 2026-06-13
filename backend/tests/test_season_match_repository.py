@@ -649,3 +649,40 @@ def test_match_elapsed_seconds_excludes_paused_time():
         SqlAlchemySeasonMatchRepository._match_elapsed_seconds(paused_match, current_epoch=500)
         == 40
     )
+
+
+def test_set_goalkeeper_rotation_for_admin_updates_interval():
+    session = Mock()
+    football_match = _tracking_match(goalkeeper_rotation_seconds=600)
+    repo = _tracking_repo(session, football_match)
+
+    result = repo.set_goalkeeper_rotation_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=7,
+        rotation_seconds=300,
+    )
+
+    assert result == "detail-result"
+    assert football_match.goalkeeper_rotation_seconds == 300
+    session.commit.assert_called_once()
+
+
+def test_set_goalkeeper_rotation_for_admin_rejects_negative_interval():
+    from core.application.ports.season_competition_port import InvalidMatchDataError
+
+    session = Mock()
+    football_match = _tracking_match(goalkeeper_rotation_seconds=600)
+    repo = _tracking_repo(session, football_match)
+
+    with pytest.raises(InvalidMatchDataError):
+        repo.set_goalkeeper_rotation_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=7,
+            rotation_seconds=-1,
+        )
+    session.rollback.assert_called_once()
+    session.commit.assert_not_called()

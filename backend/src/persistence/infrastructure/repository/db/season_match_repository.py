@@ -506,6 +506,37 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             away_team=away_team,
         )
 
+    def set_goalkeeper_rotation_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        rotation_seconds: int,
+    ) -> MatchDetailResult:
+        pena, season, football_match, home_team, away_team = self._get_locked_admin_match_bundle(
+            pena_guid=pena_guid,
+            season_guid=season_guid,
+            match_guid=match_guid,
+            admin_id=admin_id,
+        )
+        if rotation_seconds < 0:
+            self.session.rollback()
+            raise InvalidMatchDataError()
+
+        # The interval can be tuned at any time (before, during or while paused);
+        # the live clock keeps running and the UI recomputes rotation cycles.
+        football_match.goalkeeper_rotation_seconds = int(rotation_seconds)
+        self.session.commit()
+        return self._build_match_detail_result(
+            pena_id=pena.id,
+            season_guid=season.guid,
+            football_match=football_match,
+            home_team=home_team,
+            away_team=away_team,
+        )
+
     def create_match_event_for_admin(
         self,
         *,
@@ -1646,6 +1677,10 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             started_at_epoch=football_match.started_at_epoch,
             ended_at_epoch=football_match.ended_at_epoch,
             elapsed_seconds=self._match_elapsed_seconds(football_match),
+            total_paused_seconds=int(football_match.total_paused_seconds or 0),
+            goalkeeper_rotation_seconds=int(
+                getattr(football_match, "goalkeeper_rotation_seconds", 0) or 0
+            ),
             home_team=self._build_match_team_result(
                 team=home_team,
                 team_players=home_players,

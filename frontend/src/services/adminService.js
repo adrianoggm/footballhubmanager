@@ -174,6 +174,13 @@ export class AdminService {
     )
   }
 
+  setGoalkeeperRotation(penaGuid, seasonGuid, matchGuid, rotationSeconds) {
+    return httpClient.patch(
+      `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/goalkeeper-rotation`,
+      { goalkeeper_rotation_seconds: rotationSeconds }
+    )
+  }
+
   createMatchEvent(penaGuid, seasonGuid, matchGuid, payload) {
     return httpClient.post(
       `${API_V1}/penas/${penaGuid}/seasons/${seasonGuid}/matches/${matchGuid}/events`,

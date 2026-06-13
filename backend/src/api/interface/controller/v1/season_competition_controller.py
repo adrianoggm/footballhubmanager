@@ -14,6 +14,7 @@ from api.interface.controller.v1.model.request.season_competition_request import
     MatchInsightsRequest,
     RegisterSeasonPlayerRequest,
     RegisterSeasonPlayersBulkRequest,
+    UpdateSeasonMatchGoalkeeperRotationRequest,
     UpdateSeasonMatchLineupsRequest,
     UpdateSeasonMatchRequest,
     UpdateSeasonMatchResultRequest,
@@ -49,6 +50,7 @@ from core.application.commands.season_match_commands import (
     DeleteSeasonMatchEventCommand,
     PauseSeasonMatchCommand,
     ResumeSeasonMatchCommand,
+    SetSeasonMatchGoalkeeperRotationCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -768,6 +770,30 @@ def resume_season_match(
         season_guid=season_guid,
         match_guid=match_guid,
         admin_id=admin_session.user_id,
+    )
+    updated = command_bus.dispatch(command)
+    return to_season_match_detail_response(updated)
+
+
+@router.patch(
+    "/penas/{pena_guid}/seasons/{season_guid}/matches/{match_guid}/goalkeeper-rotation",
+    response_model=SeasonMatchDetailResponse,
+)
+@map_exceptions(overrides=UPDATE_SEASON_MATCH_OVERRIDES)
+def set_season_match_goalkeeper_rotation(
+    pena_guid: str,
+    season_guid: str,
+    match_guid: str,
+    payload: UpdateSeasonMatchGoalkeeperRotationRequest,
+    admin_session=Depends(require_admin),
+    command_bus: CommandBus = Depends(get_season_match_command_bus),
+):
+    command = SetSeasonMatchGoalkeeperRotationCommand(
+        pena_guid=pena_guid,
+        season_guid=season_guid,
+        match_guid=match_guid,
+        admin_id=admin_session.user_id,
+        rotation_seconds=payload.goalkeeper_rotation_seconds,
     )
     updated = command_bus.dispatch(command)
     return to_season_match_detail_response(updated)

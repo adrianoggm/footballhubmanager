@@ -558,6 +558,14 @@ export const messages = {
           trackingPausedHint:
             'The clock is paused. Quick tracking is disabled until you resume; paused time does not count towards match time.',
           liveClockLabel: 'Live clock',
+          goalkeeperRotationLabel: 'Goalkeeper rotation',
+          goalkeeperRotationMinutes: 'Minutes per cycle',
+          goalkeeperRotationApply: 'Apply',
+          goalkeeperRotationDisabled: 'Rotation alarm disabled (set to 0 minutes).',
+          goalkeeperRotationNext: 'Next rotation in {time}.',
+          goalkeeperRotationHint: 'The alarm sounds at the end of each cycle while the clock runs.',
+          goalkeeperRotationAlarm: 'Goalkeeper rotation — cycle {cycle}. Make the change!',
+          goalkeeperRotationSilence: 'Silence',
           quickTrackingTitle: 'Quick live tracking',
           quickTrackingDescription:
             'Use the running match clock to increase or decrease goals, assists, saves, yellow cards and red cards directly from each player row.',
@@ -710,6 +718,7 @@ export const messages = {
           matchTrackingStopped: 'Match tracking stopped',
           matchTrackingPaused: 'Match clock paused',
           matchTrackingResumed: 'Match clock resumed',
+          goalkeeperRotationUpdated: 'Goalkeeper rotation interval updated',
           matchEventCreated: 'Match event added',
           matchEventDeleted: 'Match event deleted',
           matchResultUpdated: 'Match result updated',
@@ -1476,6 +1485,15 @@ export const messages = {
           trackingPausedHint:
             'El reloj está en pausa. El registro rápido queda deshabilitado hasta reanudar; el tiempo en pausa no cuenta como tiempo de partido.',
           liveClockLabel: 'Reloj en vivo',
+          goalkeeperRotationLabel: 'Rotación de porteros',
+          goalkeeperRotationMinutes: 'Minutos por ciclo',
+          goalkeeperRotationApply: 'Aplicar',
+          goalkeeperRotationDisabled: 'Alarma de rotación desactivada (pon 0 minutos).',
+          goalkeeperRotationNext: 'Próximo cambio en {time}.',
+          goalkeeperRotationHint:
+            'La alarma suena al final de cada ciclo mientras el reloj está en marcha.',
+          goalkeeperRotationAlarm: 'Rotación de porteros — ciclo {cycle}. ¡Haz el cambio!',
+          goalkeeperRotationSilence: 'Silenciar',
           quickTrackingTitle: 'Seguimiento rápido en vivo',
           quickTrackingDescription:
             'Usa el reloj del partido para incrementar o disminuir goles, asistencias, paradas, tarjetas amarillas y tarjetas rojas directamente desde cada fila de jugador.',
@@ -1630,6 +1648,7 @@ export const messages = {
           matchTrackingStopped: 'Seguimiento del partido detenido',
           matchTrackingPaused: 'Reloj del partido pausado',
           matchTrackingResumed: 'Reloj del partido reanudado',
+          goalkeeperRotationUpdated: 'Intervalo de rotación de porteros actualizado',
           matchEventCreated: 'Evento de partido añadido',
           matchEventDeleted: 'Evento de partido eliminado',
           matchResultUpdated: 'Resultado del partido actualizado',
