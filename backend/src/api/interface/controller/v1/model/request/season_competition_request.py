@@ -68,6 +68,12 @@ class UpdateSeasonMatchRequest(BaseModel):
     away_team_name: str | None = None
 
 
+class UpdateSeasonMatchGoalkeeperRotationRequest(BaseModel):
+    # Interval between goalkeeper rotation cycles, in seconds. 0 disables the
+    # alarm; the upper bound (2h) mirrors the handler validation.
+    goalkeeper_rotation_seconds: int = Field(ge=0, le=7200)
+
+
 class MatchTeamCreateRequest(BaseModel):
     team_name: str | None = None
     player_guids: list[str] = Field(min_length=1)

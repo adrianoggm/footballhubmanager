@@ -6,6 +6,7 @@ from core.application.commands.season_match_commands import (
     DeleteSeasonMatchEventCommand,
     PauseSeasonMatchCommand,
     ResumeSeasonMatchCommand,
+    SetSeasonMatchGoalkeeperRotationCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -404,6 +405,39 @@ class ResumeSeasonMatchHandler:
             raise SeasonMatchClockNotRunningError() from exc
         except RepositoryMatchClockNotPausedError as exc:
             raise SeasonMatchClockNotPausedError() from exc
+        except RepositoryInvalidMatchDataError as exc:
+            raise InvalidSeasonMatchDataError() from exc
+        return to_match_detail(updated)
+
+
+class SetSeasonMatchGoalkeeperRotationHandler:
+    # Upper bound keeps the rotation interval sane (2h); 0 disables the alarm.
+    MAX_ROTATION_SECONDS = 7200
+
+    def __init__(self, repository: SeasonMatchPort):
+        self.repository = repository
+
+    def handle(
+        self, command: SetSeasonMatchGoalkeeperRotationCommand
+    ) -> SeasonMatchDetailInfo:
+        if command.rotation_seconds < 0 or command.rotation_seconds > self.MAX_ROTATION_SECONDS:
+            raise InvalidSeasonMatchDataError()
+        try:
+            updated = self.repository.set_goalkeeper_rotation_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                match_guid=command.match_guid,
+                admin_id=command.admin_id,
+                rotation_seconds=command.rotation_seconds,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositoryPenaNotManagedByAdminError as exc:
+            raise PenaSeasonAccessDeniedError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchNotFoundError as exc:
+            raise SeasonMatchNotFoundError() from exc
         except RepositoryInvalidMatchDataError as exc:
             raise InvalidSeasonMatchDataError() from exc
         return to_match_detail(updated)

@@ -87,6 +87,15 @@ class ResumeSeasonMatchCommand:
 
 
 @dataclass(frozen=True)
+class SetSeasonMatchGoalkeeperRotationCommand:
+    pena_guid: str
+    season_guid: str
+    match_guid: str
+    admin_id: int
+    rotation_seconds: int
+
+
+@dataclass(frozen=True)
 class CreateSeasonMatchEventCommand:
     pena_guid: str
     season_guid: str

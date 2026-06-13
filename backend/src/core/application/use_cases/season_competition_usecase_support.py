@@ -294,6 +294,7 @@ def to_match_detail(item: MatchDetailResult) -> SeasonMatchDetailInfo:
         ended_at_epoch=item.ended_at_epoch,
         elapsed_seconds=item.elapsed_seconds,
         total_paused_seconds=item.total_paused_seconds,
+        goalkeeper_rotation_seconds=item.goalkeeper_rotation_seconds,
         home_team=to_match_team(item.home_team),
         away_team=to_match_team(item.away_team),
         events=[to_match_event(event) for event in item.events],

@@ -122,6 +122,7 @@ def to_season_match_detail_response(item: SeasonMatchDetailInfo) -> SeasonMatchD
         ended_at_epoch=item.ended_at_epoch,
         elapsed_seconds=item.elapsed_seconds,
         total_paused_seconds=item.total_paused_seconds,
+        goalkeeper_rotation_seconds=item.goalkeeper_rotation_seconds,
         home_team=to_season_match_team_response(item.home_team),
         away_team=to_season_match_team_response(item.away_team),
         events=[to_season_match_event_response(event) for event in item.events],

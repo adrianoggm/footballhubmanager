@@ -195,6 +195,7 @@ class SeasonMatchDetailInfo:
     ended_at_epoch: int | None
     elapsed_seconds: int
     total_paused_seconds: int
+    goalkeeper_rotation_seconds: int
     home_team: SeasonMatchTeamInfo
     away_team: SeasonMatchTeamInfo
     events: list[SeasonMatchEventInfo]

@@ -118,6 +118,16 @@ class SeasonMatchPort(Protocol):
         admin_id: int,
     ) -> MatchDetailResult: ...
 
+    def set_goalkeeper_rotation_for_admin(
+        self,
+        *,
+        pena_guid: str,
+        season_guid: str,
+        match_guid: str,
+        admin_id: int,
+        rotation_seconds: int,
+    ) -> MatchDetailResult: ...
+
     def create_match_event_for_admin(
         self,
         *,
