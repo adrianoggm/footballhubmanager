@@ -1,16 +1,13 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
     container_name: footballhub_mysql
+    # All MYSQL_* init variables come straight from the env file (injected into
+    # the container). We deliberately avoid a `${VAR}` `environment:` block: Compose
+    # resolves that interpolation from the shell / a sibling .env, NOT from env_file,
+    # so blank values there left MySQL uninitialized ("password option not specified").
     env_file:
       - ../backend/config/.env
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
