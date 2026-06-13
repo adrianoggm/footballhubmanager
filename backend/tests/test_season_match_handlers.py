@@ -8,6 +8,7 @@ from core.application.commands.season_match_command_handlers import (
     CreateSeasonMatchWithLineupsHandler,
     DeleteSeasonMatchEventHandler,
     DeleteSeasonMatchHandler,
+    SetSeasonMatchGoalkeeperRotationHandler,
     StartSeasonMatchHandler,
     StopSeasonMatchHandler,
     UpdateSeasonMatchHandler,
@@ -21,6 +22,7 @@ from core.application.commands.season_match_commands import (
     CreateSeasonMatchWithLineupsCommand,
     DeleteSeasonMatchCommand,
     DeleteSeasonMatchEventCommand,
+    SetSeasonMatchGoalkeeperRotationCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -166,6 +168,7 @@ class _FakeRepo:
             ended_at_epoch=None,
             elapsed_seconds=0,
             total_paused_seconds=0,
+            goalkeeper_rotation_seconds=600,
             home_team=cls._match_team("Home"),
             away_team=cls._match_team("Away"),
             events=[],
@@ -307,6 +310,20 @@ class _FakeRepo:
             raise MatchClockAlreadyStartedError()
         if self.should_raise_match_report_closed:
             raise MatchReportClosedError()
+        if self.should_raise_invalid_match_data:
+            raise InvalidMatchDataError()
+        self.last_payload = kwargs
+        return self._detail()
+
+    def set_goalkeeper_rotation_for_admin(self, **kwargs) -> MatchDetailResult:
+        if self.should_raise_pena_not_found:
+            raise PenaNotFoundError()
+        if self.should_raise_access_denied:
+            raise PenaNotManagedByAdminError()
+        if self.should_raise_season_not_found:
+            raise SeasonNotFoundError()
+        if self.should_raise_match_not_found:
+            raise MatchNotFoundError()
         if self.should_raise_invalid_match_data:
             raise InvalidMatchDataError()
         self.last_payload = kwargs
@@ -499,6 +516,40 @@ def test_update_match_rejects_empty_update():
                 update=SeasonMatchUpdate(),
             )
         )
+
+
+def test_set_goalkeeper_rotation_forwards_interval_to_repository():
+    repo = _FakeRepo()
+    handler = SetSeasonMatchGoalkeeperRotationHandler(repo)
+
+    handler.handle(
+        SetSeasonMatchGoalkeeperRotationCommand(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=9,
+            rotation_seconds=300,
+        )
+    )
+
+    assert repo.last_payload["rotation_seconds"] == 300
+
+
+@pytest.mark.parametrize("rotation_seconds", [-1, 7201])
+def test_set_goalkeeper_rotation_rejects_out_of_range_interval(rotation_seconds):
+    repo = _FakeRepo()
+    with pytest.raises(InvalidSeasonMatchDataError):
+        SetSeasonMatchGoalkeeperRotationHandler(repo).handle(
+            SetSeasonMatchGoalkeeperRotationCommand(
+                pena_guid="pena-guid",
+                season_guid="season-guid",
+                match_guid="match-guid",
+                admin_id=9,
+                rotation_seconds=rotation_seconds,
+            )
+        )
+    # Validation happens before the repository is touched.
+    assert repo.last_payload is None
 
 
 @pytest.mark.parametrize(

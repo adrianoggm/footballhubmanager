@@ -14,6 +14,7 @@ from api.interface.controller.v1.model.request.season_competition_request import
     MatchTeamStatsRequest,
     RegisterSeasonPlayerRequest,
     RegisterSeasonPlayersBulkRequest,
+    UpdateSeasonMatchGoalkeeperRotationRequest,
     UpdateSeasonMatchLineupsRequest,
     UpdateSeasonMatchRequest,
     UpdateSeasonMatchResultRequest,
@@ -27,6 +28,7 @@ from core.application.commands.season_match_commands import (
     CreateSeasonMatchWithLineupsCommand,
     DeleteSeasonMatchCommand,
     DeleteSeasonMatchEventCommand,
+    SetSeasonMatchGoalkeeperRotationCommand,
     StartSeasonMatchCommand,
     StopSeasonMatchCommand,
     UpdateSeasonMatchCommand,
@@ -189,6 +191,7 @@ def _match_detail(match_guid: str = "match-1") -> SeasonMatchDetailInfo:
         ended_at_epoch=None,
         elapsed_seconds=0,
         total_paused_seconds=15,
+        goalkeeper_rotation_seconds=900,
         home_team=home_team,
         away_team=away_team,
         events=[],
@@ -311,6 +314,10 @@ class _UseCaseStub:
     def stop_match_for_admin(self, **kwargs):
         self._call("stop_match_for_admin", **kwargs)
         return _match_detail("match-stopped")
+
+    def set_goalkeeper_rotation_for_admin(self, **kwargs):
+        self._call("set_goalkeeper_rotation_for_admin", **kwargs)
+        return _match_detail("match-gk-rotation")
 
     def create_match_event_for_admin(self, **kwargs):
         self._call("create_match_event_for_admin", **kwargs)
@@ -468,6 +475,14 @@ class _SeasonMatchCommandBusStub:
                 match_guid=command.match_guid,
                 admin_id=command.admin_id,
             )
+        if isinstance(command, SetSeasonMatchGoalkeeperRotationCommand):
+            return uc.set_goalkeeper_rotation_for_admin(
+                pena_guid=command.pena_guid,
+                season_guid=command.season_guid,
+                match_guid=command.match_guid,
+                admin_id=command.admin_id,
+                rotation_seconds=command.rotation_seconds,
+            )
         if isinstance(command, CreateSeasonMatchEventCommand):
             return uc.create_match_event_for_admin(
                 pena_guid=command.pena_guid,
@@ -562,6 +577,8 @@ def test_helper_match_detail_response_serializes_nested_data():
     assert response.home_team.players[0].player_guid == "player-1"
     # Paused time must reach the client so the live clock can exclude it.
     assert response.total_paused_seconds == 15
+    # The goalkeeper rotation interval is exposed so the UI can fire the alarm.
+    assert response.goalkeeper_rotation_seconds == 900
 
 
 def test_register_player_in_season_success():
@@ -787,6 +804,22 @@ def test_update_season_match_success_and_partial_flags():
     update = payload["update"]
     assert update.home_team_name == FieldUpdate.set("Titans")
     assert update.away_team_name == FieldUpdate.keep()
+
+
+def test_set_season_match_goalkeeper_rotation_success():
+    use_case = _UseCaseStub()
+    response = controller.set_season_match_goalkeeper_rotation(
+        "pena-1",
+        "season-1",
+        "match-1",
+        payload=UpdateSeasonMatchGoalkeeperRotationRequest(goalkeeper_rotation_seconds=300),
+        admin_session=_admin_session(),
+        command_bus=_SeasonMatchCommandBusStub(use_case),
+    )
+    assert response.guid == "match-gk-rotation"
+    method, payload = use_case.last_call
+    assert method == "set_goalkeeper_rotation_for_admin"
+    assert payload["rotation_seconds"] == 300
 
 
 def test_create_season_match_with_lineups_success():
