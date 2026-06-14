@@ -85,6 +85,18 @@ class UserProfileNotFoundError(DomainError):
     code = "user_profile_not_found"
 
 
+class PlayerNotClaimableError(DomainError):
+    """The target player of a claim token is not a guest player of the pena."""
+
+    code = "player_not_claimable"
+
+
+class PlayerAlreadyClaimedError(DomainError):
+    """The target guest player has already been linked to an account."""
+
+    code = "player_already_claimed"
+
+
 # --- Registration ---
 
 
