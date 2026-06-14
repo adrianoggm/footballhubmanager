@@ -163,6 +163,10 @@ export const messages = {
       subtitle: 'Create your account to take over an existing player.',
       loading: 'Checking your invitation…',
       invitedAs: 'You have been invited to join {pena} as {player}. Create your account below.',
+      linkInvitedAs:
+        'You have been invited to join {pena} as {player}. Link this player to your current account.',
+      linkAction: 'Link to my account',
+      linking: 'Linking…',
       usernameLabel: 'Username',
       passwordLabel: 'Password',
       confirmPasswordLabel: 'Confirm password',
@@ -1153,6 +1157,10 @@ export const messages = {
       subtitle: 'Crea tu cuenta para hacerte cargo de un jugador existente.',
       loading: 'Comprobando tu invitación…',
       invitedAs: 'Te han invitado a unirte a {pena} como {player}. Crea tu cuenta a continuación.',
+      linkInvitedAs:
+        'Te han invitado a unirte a {pena} como {player}. Vincula este jugador a tu cuenta actual.',
+      linkAction: 'Vincular a mi cuenta',
+      linking: 'Vinculando…',
       usernameLabel: 'Usuario',
       passwordLabel: 'Contraseña',
       confirmPasswordLabel: 'Confirmar contraseña',

@@ -16,6 +16,12 @@ export class ClaimService {
   registerAndClaim({ token, username, password }) {
     return httpClient.post(`${API_V1}/penas/link/claim`, { token, username, password })
   }
+
+  // Authenticated: an existing user merges the guest player into their own
+  // profile (uses the current session token attached by httpClient).
+  attachExistingAccount(token) {
+    return httpClient.post(`${API_V1}/penas/link/claim/attach`, { token })
+  }
 }
 
 export const claimService = new ClaimService()
