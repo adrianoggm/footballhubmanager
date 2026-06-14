@@ -1,4 +1,5 @@
 import { authService } from './authService.js'
+import { claimService } from './claimService.js'
 import { sessionStore } from './sessionStore.js'
 
 export class AuthController {
@@ -22,6 +23,12 @@ export class AuthController {
 
   async registerAdmin(payload) {
     const session = await authService.registerAdmin(payload)
+    sessionStore.setSession(session)
+    return session
+  }
+
+  async claimPlayer(payload) {
+    const session = await claimService.registerAndClaim(payload)
     sessionStore.setSession(session)
     return session
   }
