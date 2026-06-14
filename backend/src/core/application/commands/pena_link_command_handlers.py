@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from auth.security import hash_password
 from core.application.commands.pena_link_commands import (
+    GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
     LinkUserToPenaCommand,
+    RegisterAndClaimPlayerCommand,
 )
-from core.application.models import PenaLinkToken
+from core.application.models import ClaimRegistration, PenaLinkToken
 from core.application.ports.pena_link_port import PenaLinkPort
-from core.domain.errors import InvalidLinkTokenError
+from core.domain.errors import InvalidLinkTokenError, InvalidRegistrationDataError
 
 
 class GeneratePenaLinkTokenHandler:
@@ -25,6 +28,25 @@ class GeneratePenaLinkTokenHandler:
             token=created.token,
             pena_guid=created.pena_guid,
             expires_at=created.expires_at,
+        )
+
+
+class GeneratePenaClaimTokenHandler:
+    def __init__(self, repository: PenaLinkPort) -> None:
+        self._repository = repository
+
+    def handle(self, command: GeneratePenaClaimTokenCommand) -> PenaLinkToken:
+        created = self._repository.create_claim_token_for_admin(
+            admin_id=command.admin_id,
+            pena_guid=command.pena_guid,
+            player_guid=command.player_guid,
+            ttl_seconds=command.ttl_seconds,
+        )
+        return PenaLinkToken(
+            token=created.token,
+            pena_guid=created.pena_guid,
+            expires_at=created.expires_at,
+            player_guid=created.player_guid,
         )
 
 
@@ -49,4 +71,29 @@ class LinkUserToPenaHandler:
             account_id=command.account_id,
             nickname=normalized_nickname,
             position=normalized_position,
+        )
+
+
+class RegisterAndClaimPlayerHandler:
+    def __init__(self, repository: PenaLinkPort) -> None:
+        self._repository = repository
+
+    def handle(self, command: RegisterAndClaimPlayerCommand) -> ClaimRegistration:
+        token = command.token.strip()
+        username = command.username.strip()
+        if not token:
+            raise InvalidLinkTokenError()
+        if not username or not command.password:
+            raise InvalidRegistrationDataError()
+
+        result = self._repository.register_and_claim_player(
+            token=token,
+            username=username,
+            password_hash=hash_password(command.password),
+        )
+        return ClaimRegistration(
+            account_id=result.account_id,
+            account_guid=result.account_guid,
+            player_guid=result.player_guid,
+            pena_guid=result.pena_guid,
         )

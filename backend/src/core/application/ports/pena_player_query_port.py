@@ -12,6 +12,7 @@ class PenaPlayerInfoResult:
     nickname: str | None
     role: str | None = field(default=None, kw_only=True)
     position: str | None
+    has_account: bool = field(default=False, kw_only=True)
 
 
 @dataclass(frozen=True)
