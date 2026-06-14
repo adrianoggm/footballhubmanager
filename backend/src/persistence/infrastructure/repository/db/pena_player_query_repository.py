@@ -84,6 +84,7 @@ class SqlAlchemyPenaPlayerQueryRepository(PenaPlayerQueryPort):
                     nickname=link.nickname,
                     role=role_value,
                     position=link.position,
+                    has_account=player.id_player_account is not None,
                 )
                 for player, link, role_value in rows
             ],
