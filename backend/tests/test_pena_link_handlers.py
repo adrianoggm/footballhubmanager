@@ -4,16 +4,19 @@ import pytest
 from core.application.commands.pena_link_command_handlers import (
     GeneratePenaClaimTokenHandler,
     GeneratePenaLinkTokenHandler,
+    LinkExistingAccountToClaimHandler,
     LinkUserToPenaHandler,
     RegisterAndClaimPlayerHandler,
 )
 from core.application.commands.pena_link_commands import (
     GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
+    LinkExistingAccountToClaimCommand,
     LinkUserToPenaCommand,
     RegisterAndClaimPlayerCommand,
 )
 from core.application.ports.pena_link_port import (
+    ClaimLinkResult,
     ClaimRegistrationResult,
     ClaimTokenInfoResult,
     PenaLinkTokenResult,
@@ -273,3 +276,43 @@ def test_inspect_claim_token_handler_returns_info():
 def test_inspect_claim_token_handler_rejects_blank_token():
     with pytest.raises(InvalidLinkTokenError):
         InspectClaimTokenHandler(_InspectRepo()).handle(InspectClaimTokenQuery(token="   "))
+
+
+@dataclass
+class _LinkAccountRepo:
+    should_raise_already_linked: bool = False
+    last_payload: dict | None = None
+
+    def link_existing_account_to_player(self, *, token: str, account_id: int):
+        if self.should_raise_already_linked:
+            raise UserAlreadyLinkedError()
+        self.last_payload = {"token": token, "account_id": account_id}
+        return ClaimLinkResult(player_guid="own-60", pena_guid="pena-100")
+
+
+def test_link_existing_account_handler_returns_result():
+    repo = _LinkAccountRepo()
+    result = LinkExistingAccountToClaimHandler(repo).handle(
+        LinkExistingAccountToClaimCommand(token="  tok-link  ", account_id=50)
+    )
+
+    assert result.player_guid == "own-60"
+    assert result.pena_guid == "pena-100"
+    assert repo.last_payload == {"token": "tok-link", "account_id": 50}
+
+
+def test_link_existing_account_handler_rejects_blank_token():
+    repo = _LinkAccountRepo()
+    with pytest.raises(InvalidLinkTokenError):
+        LinkExistingAccountToClaimHandler(repo).handle(
+            LinkExistingAccountToClaimCommand(token="   ", account_id=50)
+        )
+    assert repo.last_payload is None
+
+
+def test_link_existing_account_handler_propagates_already_linked():
+    repo = _LinkAccountRepo(should_raise_already_linked=True)
+    with pytest.raises(UserAlreadyLinkedError):
+        LinkExistingAccountToClaimHandler(repo).handle(
+            LinkExistingAccountToClaimCommand(token="tok-link", account_id=50)
+        )

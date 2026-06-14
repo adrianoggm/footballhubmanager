@@ -26,10 +26,12 @@ from core.application.commands.pena_labels_command import UpdatePenaLabelsComman
 from core.application.commands.pena_link_commands import (
     GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
+    LinkExistingAccountToClaimCommand,
     LinkUserToPenaCommand,
     RegisterAndClaimPlayerCommand,
 )
 from core.application.models import (
+    ClaimLink,
     ClaimRegistration,
     ClaimTokenInfo,
     PenaAccountabilityExpenseInfo,
@@ -621,6 +623,41 @@ def test_register_and_claim_player_maps_domain_errors(error, status_code, detail
     assert exc.value.detail == detail
 
 
+def test_attach_account_to_claim_success():
+    bus = _LinkCommandBus(ClaimLink(player_guid="own-60", pena_guid="pena-1"))
+    response = penas_controller.attach_account_to_claim(
+        ConsumeLinkTokenRequest(token="tok-link"),
+        session=_session(user_type="user", user_id=42),
+        command_bus=bus,
+    )
+
+    assert response.pena_guid == "pena-1"
+    assert response.player_guid == "own-60"
+    command = bus.last_command
+    assert isinstance(command, LinkExistingAccountToClaimCommand)
+    assert command.token == "tok-link"
+    assert command.account_id == 42
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidLinkTokenError(), 400, "Invalid or expired link token"),
+        (UserAlreadyLinkedError(), 409, "User is already linked to this pena"),
+        (PlayerAlreadyClaimedError(), 409, "Player has already been linked to an account"),
+    ],
+)
+def test_attach_account_to_claim_maps_domain_errors(error, status_code, detail):
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.attach_account_to_claim(
+            ConsumeLinkTokenRequest(token="tok-link"),
+            session=_session(user_type="user", user_id=42),
+            command_bus=_RaisingCommandBus(error),
+        )
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
 def test_get_pena_link_command_bus_registers_claim_handlers(monkeypatch):
     class _Repo:
         def __init__(self, db):
@@ -633,6 +670,7 @@ def test_get_pena_link_command_bus_registers_claim_handlers(monkeypatch):
 
     assert GeneratePenaClaimTokenCommand in command_bus._handlers
     assert RegisterAndClaimPlayerCommand in command_bus._handlers
+    assert LinkExistingAccountToClaimCommand in command_bus._handlers
     assert InspectClaimTokenQuery in query_bus._handlers
 
 

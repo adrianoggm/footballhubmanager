@@ -6,16 +6,22 @@ from core.domain.errors import (
     PenaLinkAccessDeniedError,
     PlayerAlreadyClaimedError,
     PlayerNotClaimableError,
+    UserAlreadyLinkedError,
+    UserProfileNotFoundError,
     UserUsernameExistsError,
 )
 from persistence.infrastructure.entity import (
     AdminAccounts,
     Base,
+    FootballMatchEvent,
     Pena,
     PenaLinkToken,
+    PenaMemberAccount,
     PenaPlayer,
     Player,
     PlayerAccount,
+    SeasonPlayer,
+    TeamPlayer,
 )
 from persistence.infrastructure.repository.db.pena_link_repository import (
     SqlAlchemyPenaLinkRepository,
@@ -35,6 +41,10 @@ def _db_session() -> Session:
             Player.__table__,
             PenaPlayer.__table__,
             PenaLinkToken.__table__,
+            PenaMemberAccount.__table__,
+            SeasonPlayer.__table__,
+            TeamPlayer.__table__,
+            FootballMatchEvent.__table__,
         ],
     )
     local_session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -243,3 +253,106 @@ def test_register_and_claim_rejects_duplicate_username_and_keeps_token():
     assert db.execute(select(PenaLinkToken).where(PenaLinkToken.token == "tok-claim")).first()
     player = db.execute(select(Player).where(Player.id == 200)).scalar_one()
     assert player.id_player_account is None
+
+
+# --- link_existing_account_to_player ----------------------------------------------
+
+
+def _seed_existing_account(db: Session, *, member_of_pena: bool = False) -> None:
+    db.add(PlayerAccount(id=50, guid="acc-50", username="real", password="p", name="Real"))
+    db.add(
+        Player(
+            id=60,
+            guid="own-60",
+            name="Real",
+            surname1="User",
+            surname2=None,
+            nationality="Spain",
+            id_player_account=50,
+        )
+    )
+    if member_of_pena:
+        db.add(
+            PenaPlayer(
+                id=301,
+                guid="pena-player-301",
+                id_player=60,
+                id_pena=100,
+                nickname="Mine",
+                position="DEF",
+            )
+        )
+    db.commit()
+
+
+def test_link_existing_account_merges_guest_into_own_player():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    # Guest carries history beyond the membership: it must move, not vanish.
+    db.add(
+        SeasonPlayer(
+            guid="sp-1", id_player=200, id_pena=100, id_season=1, wins=3, losses=1, draws=0
+        )
+    )
+    db.add(PenaMemberAccount(id=1, guid="ma-1", id_pena=100, id_player=200, debt_cents=500))
+    db.commit()
+    _make_token(db, token="tok-link", id_player=200)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    result = repo.link_existing_account_to_player(token="tok-link", account_id=50)
+
+    assert result.player_guid == "own-60"
+    assert result.pena_guid == "pena-100"
+    # Guest player profile is removed - no duplicate remains.
+    assert db.execute(select(Player).where(Player.id == 200)).first() is None
+    # All of the guest's participation records now point to the account's player.
+    assert db.execute(select(PenaPlayer.id_player).where(PenaPlayer.id_pena == 100)).scalar() == 60
+    assert db.execute(select(SeasonPlayer.id_player)).scalar() == 60
+    assert db.execute(select(PenaMemberAccount.id_player)).scalar() == 60
+    assert db.execute(select(PenaLinkToken)).first() is None
+
+
+def test_link_existing_account_rejects_when_already_member():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db, member_of_pena=True)
+    _make_token(db, token="tok-link", id_player=200)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(UserAlreadyLinkedError):
+        repo.link_existing_account_to_player(token="tok-link", account_id=50)
+    # Nothing is merged: the guest profile is left intact.
+    assert db.execute(select(Player).where(Player.id == 200)).first() is not None
+
+
+def test_link_existing_account_rejects_invalid_token():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(InvalidLinkTokenError):
+        repo.link_existing_account_to_player(token="missing", account_id=50)
+
+
+def test_link_existing_account_rejects_already_claimed_guest():
+    db = _db_session()
+    _seed(db, guest_has_account=True)
+    _seed_existing_account(db)
+    _make_token(db, token="stale", id_player=200)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(PlayerAlreadyClaimedError):
+        repo.link_existing_account_to_player(token="stale", account_id=50)
+    assert db.execute(select(PenaLinkToken)).first() is None
+
+
+def test_link_existing_account_requires_own_player():
+    db = _db_session()
+    _seed(db)
+    _make_token(db, token="tok-link", id_player=200)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(UserProfileNotFoundError):
+        repo.link_existing_account_to_player(token="tok-link", account_id=9999)
