@@ -30,6 +30,7 @@ from api.interface.controller.v1.model.response.pena_accountability_response imp
 )
 from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from api.interface.controller.v1.model.response.penas_response import (
+    ClaimAttachResponse,
     ClaimTokenInfoResponse,
     LinkTokenResponse,
     PenaResponse,
@@ -55,6 +56,7 @@ from core.application.commands.pena_labels_command import UpdatePenaLabelsComman
 from core.application.commands.pena_link_commands import (
     GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
+    LinkExistingAccountToClaimCommand,
     LinkUserToPenaCommand,
     RegisterAndClaimPlayerCommand,
 )
@@ -537,3 +539,16 @@ def register_and_claim_player(
         user_guid=session.user_guid,
         user_type=session.user_type,
     )
+
+
+@router.post("/penas/link/claim/attach", response_model=ClaimAttachResponse)
+@map_exceptions
+def attach_account_to_claim(
+    payload: ConsumeLinkTokenRequest,
+    session=Depends(require_user),
+    command_bus: CommandBus = Depends(get_pena_link_command_bus),
+):
+    linked = command_bus.dispatch(
+        LinkExistingAccountToClaimCommand(token=payload.token, account_id=session.user_id)
+    )
+    return ClaimAttachResponse(pena_guid=linked.pena_guid, player_guid=linked.player_guid)

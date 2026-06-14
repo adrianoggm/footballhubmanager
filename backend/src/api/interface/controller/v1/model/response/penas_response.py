@@ -29,3 +29,8 @@ class ClaimTokenInfoResponse(BaseModel):
     player_name: str
     player_nickname: str | None = None
     expires_at: int
+
+
+class ClaimAttachResponse(BaseModel):
+    pena_guid: str
+    player_guid: str

@@ -21,12 +21,14 @@ from core.application.commands.pena_labels_command_handler import UpdatePenaLabe
 from core.application.commands.pena_link_command_handlers import (
     GeneratePenaClaimTokenHandler,
     GeneratePenaLinkTokenHandler,
+    LinkExistingAccountToClaimHandler,
     LinkUserToPenaHandler,
     RegisterAndClaimPlayerHandler,
 )
 from core.application.commands.pena_link_commands import (
     GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
+    LinkExistingAccountToClaimCommand,
     LinkUserToPenaCommand,
     RegisterAndClaimPlayerCommand,
 )
@@ -276,6 +278,7 @@ def get_pena_link_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     bus.register(GeneratePenaClaimTokenCommand, GeneratePenaClaimTokenHandler(repository))
     bus.register(LinkUserToPenaCommand, LinkUserToPenaHandler(repository))
     bus.register(RegisterAndClaimPlayerCommand, RegisterAndClaimPlayerHandler(repository))
+    bus.register(LinkExistingAccountToClaimCommand, LinkExistingAccountToClaimHandler(repository))
     return bus
 
 
