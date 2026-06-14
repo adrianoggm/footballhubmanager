@@ -29,6 +29,12 @@ class ClaimRegistrationResult:
     pena_guid: str
 
 
+@dataclass(frozen=True)
+class ClaimLinkResult:
+    player_guid: str
+    pena_guid: str
+
+
 class PenaLinkPort(Protocol):
     def create_token_for_admin_pena(
         self, *, admin_id: int, pena_guid: str, ttl_seconds: int
@@ -52,3 +58,7 @@ class PenaLinkPort(Protocol):
     def register_and_claim_player(
         self, *, token: str, username: str, password_hash: str
     ) -> ClaimRegistrationResult: ...
+
+    def link_existing_account_to_player(
+        self, *, token: str, account_id: int
+    ) -> ClaimLinkResult: ...

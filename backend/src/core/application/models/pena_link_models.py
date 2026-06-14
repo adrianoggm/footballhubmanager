@@ -30,3 +30,11 @@ class ClaimRegistration:
     account_guid: str
     player_guid: str
     pena_guid: str
+
+
+@dataclass(frozen=True)
+class ClaimLink:
+    """Result of linking an existing account to a guest player (profile merge)."""
+
+    player_guid: str
+    pena_guid: str

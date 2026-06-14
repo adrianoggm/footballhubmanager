@@ -31,3 +31,9 @@ class RegisterAndClaimPlayerCommand:
     token: str
     username: str
     password: str
+
+
+@dataclass(frozen=True)
+class LinkExistingAccountToClaimCommand:
+    token: str
+    account_id: int

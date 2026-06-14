@@ -6,10 +6,11 @@ from auth.security import hash_password
 from core.application.commands.pena_link_commands import (
     GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
+    LinkExistingAccountToClaimCommand,
     LinkUserToPenaCommand,
     RegisterAndClaimPlayerCommand,
 )
-from core.application.models import ClaimRegistration, PenaLinkToken
+from core.application.models import ClaimLink, ClaimRegistration, PenaLinkToken
 from core.application.ports.pena_link_port import PenaLinkPort
 from core.domain.errors import InvalidLinkTokenError, InvalidRegistrationDataError
 
@@ -97,3 +98,19 @@ class RegisterAndClaimPlayerHandler:
             player_guid=result.player_guid,
             pena_guid=result.pena_guid,
         )
+
+
+class LinkExistingAccountToClaimHandler:
+    def __init__(self, repository: PenaLinkPort) -> None:
+        self._repository = repository
+
+    def handle(self, command: LinkExistingAccountToClaimCommand) -> ClaimLink:
+        token = command.token.strip()
+        if not token:
+            raise InvalidLinkTokenError()
+
+        result = self._repository.link_existing_account_to_player(
+            token=token,
+            account_id=command.account_id,
+        )
+        return ClaimLink(player_guid=result.player_guid, pena_guid=result.pena_guid)
