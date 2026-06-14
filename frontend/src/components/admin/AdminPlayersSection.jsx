@@ -76,7 +76,7 @@ function LabelColorList({ labels, colors, onColorChange }) {
 }
 
 export default function AdminPlayersSection({ state, actions, helpers }) {
-  const { t, formatPlayerDisplayName } = helpers
+  const { t, formatPlayerDisplayName, formatEpochSeconds } = helpers
   const {
     selectedSeason,
     selectedSeasonLabel,
@@ -98,6 +98,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     memberFilters,
     guestForm,
     nationalities,
+    claimLinkPayload,
   } = state
   const {
     handleSelectHistoricalPlayers,
@@ -109,6 +110,8 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
     handleCreateGuestPlayer,
     handleEditMembershipPlayer,
     handleRequestRemoveMembershipPlayer,
+    handleGenerateClaimLink,
+    onCloseClaimLink,
     onMemberFilterField,
     onLabelsDraftField,
     onLabelColorDraftChange,
@@ -120,6 +123,27 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
   const [seasonRosterPage, setSeasonRosterPage] = useState(0)
   const [seasonRosterRowsPerPage, setSeasonRosterRowsPerPage] = useState(25)
   const [labelsEditorOpen, setLabelsEditorOpen] = useState(false)
+  const [claimLinkCopied, setClaimLinkCopied] = useState(false)
+
+  const claimUrl = claimLinkPayload?.token
+    ? `${window.location.origin}/claim/${claimLinkPayload.token}`
+    : ''
+
+  useEffect(() => {
+    setClaimLinkCopied(false)
+  }, [claimLinkPayload])
+
+  const handleCopyClaimLink = async () => {
+    if (!claimUrl) {
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(claimUrl)
+      setClaimLinkCopied(true)
+    } catch {
+      setClaimLinkCopied(false)
+    }
+  }
 
   const seasonRosterGuids = useMemo(
     () => new Set(seasonRoster.map((player) => player.player_guid)),
@@ -502,6 +526,17 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                                   >
                                     {t('dashboard.admin.members.edit')}
                                   </Button>
+                                  {!player.has_account && (
+                                    <Button
+                                      size="small"
+                                      variant="text"
+                                      color="secondary"
+                                      onClick={() => handleGenerateClaimLink(player)}
+                                      disabled={loading}
+                                    >
+                                      {t('dashboard.admin.members.generateClaimLink')}
+                                    </Button>
+                                  )}
                                   <Button
                                     size="small"
                                     variant="text"
@@ -783,6 +818,47 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
           </Button>
           <Button variant="contained" onClick={handleSavePenaLabels} disabled={loading}>
             {t('dashboard.admin.labels.save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(claimLinkPayload)} onClose={onCloseClaimLink} fullWidth maxWidth="sm">
+        <DialogTitle>{t('dashboard.admin.members.claimLinkTitle')}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              {claimLinkPayload?.player
+                ? t('dashboard.admin.members.claimLinkDescription', {
+                    player: formatPlayerDisplayName(claimLinkPayload.player),
+                  })
+                : t('dashboard.admin.members.claimLinkDescriptionGeneric')}
+            </Typography>
+            <TextField
+              label={t('dashboard.admin.members.claimLinkUrlLabel')}
+              value={claimUrl}
+              InputProps={{ readOnly: true }}
+              fullWidth
+              multiline
+            />
+            {claimLinkPayload?.expires_at && (
+              <Typography variant="body2" color="text.secondary">
+                <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
+                {formatEpochSeconds(claimLinkPayload.expires_at)}
+              </Typography>
+            )}
+            {claimLinkCopied && (
+              <Typography variant="body2" color="success.main">
+                {t('dashboard.admin.members.claimLinkCopied')}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onCloseClaimLink}>
+            {t('dashboard.common.matchDetail.closeAction')}
+          </Button>
+          <Button variant="contained" onClick={handleCopyClaimLink} disabled={!claimUrl}>
+            {t('dashboard.admin.members.claimLinkCopy')}
           </Button>
         </DialogActions>
       </Dialog>

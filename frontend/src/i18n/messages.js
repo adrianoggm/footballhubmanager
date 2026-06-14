@@ -114,6 +114,24 @@ export const messages = {
         generic: 'Authentication request failed. Please try again.',
       },
     },
+    claim: {
+      title: 'Claim your player profile',
+      subtitle: 'Create your account to take over an existing player.',
+      loading: 'Checking your invitation…',
+      invitedAs: 'You have been invited to join {pena} as {player}. Create your account below.',
+      usernameLabel: 'Username',
+      passwordLabel: 'Password',
+      confirmPasswordLabel: 'Confirm password',
+      submit: 'Create account and join',
+      submitting: 'Creating account…',
+      goToSignIn: 'Go to sign in',
+      errors: {
+        invalidToken: 'This invitation link is invalid or has expired.',
+        missingFields: 'Enter a username and password.',
+        passwordMismatch: 'Passwords do not match.',
+        generic: 'Could not complete your registration. Please try again.',
+      },
+    },
     dashboard: {
       common: {
         loggedAs: 'Logged as',
@@ -475,6 +493,15 @@ export const messages = {
           removeTitle: 'Remove membership',
           removeConfirm: 'Remove {player} from this pena?',
           cancelRemove: 'Cancel',
+          generateClaimLink: 'Invite link',
+          claimLinkTitle: 'Invitation claim link',
+          claimLinkDescription:
+            'Share this link with {player}. They register a new account that adopts this existing profile, so no duplicate player is created.',
+          claimLinkDescriptionGeneric:
+            'Share this link so the invited player can register and adopt this existing profile.',
+          claimLinkUrlLabel: 'Claim link',
+          claimLinkCopy: 'Copy link',
+          claimLinkCopied: 'Link copied to clipboard.',
         },
         matches: {
           title: 'Create Match + Lineups',
@@ -727,6 +754,7 @@ export const messages = {
           lineupsUpdatedWarning:
             'Lineups updated. This change has been recorded because lineup edits can materially alter the official match report.',
           joinCodeGenerated: 'Join code generated',
+          claimLinkGenerated: 'Claim link generated',
           guestCreatedAdded: 'Guest created and added to selected season',
           guestCreated: 'Guest player created',
           playersAdded: '{count} player{suffix} added to season',
@@ -1030,6 +1058,24 @@ export const messages = {
         validation: 'Revisa los campos obligatorios e inténtalo de nuevo.',
         network: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
         generic: 'La solicitud de autenticación falló. Inténtalo de nuevo.',
+      },
+    },
+    claim: {
+      title: 'Vincula tu perfil de jugador',
+      subtitle: 'Crea tu cuenta para hacerte cargo de un jugador existente.',
+      loading: 'Comprobando tu invitación…',
+      invitedAs: 'Te han invitado a unirte a {pena} como {player}. Crea tu cuenta a continuación.',
+      usernameLabel: 'Usuario',
+      passwordLabel: 'Contraseña',
+      confirmPasswordLabel: 'Confirmar contraseña',
+      submit: 'Crear cuenta y unirme',
+      submitting: 'Creando cuenta…',
+      goToSignIn: 'Ir a iniciar sesión',
+      errors: {
+        invalidToken: 'Este enlace de invitación no es válido o ha caducado.',
+        missingFields: 'Introduce un usuario y una contraseña.',
+        passwordMismatch: 'Las contraseñas no coinciden.',
+        generic: 'No se pudo completar tu registro. Inténtalo de nuevo.',
       },
     },
     dashboard: {
@@ -1402,6 +1448,15 @@ export const messages = {
           removeTitle: 'Eliminar membresía',
           removeConfirm: '¿Eliminar a {player} de esta peña?',
           cancelRemove: 'Cancelar',
+          generateClaimLink: 'Enlace de invitación',
+          claimLinkTitle: 'Enlace de invitación para vincular',
+          claimLinkDescription:
+            'Comparte este enlace con {player}. Registrará una cuenta nueva que adopta este perfil existente, así no se crea un jugador duplicado.',
+          claimLinkDescriptionGeneric:
+            'Comparte este enlace para que el jugador invitado se registre y adopte este perfil existente.',
+          claimLinkUrlLabel: 'Enlace de vinculación',
+          claimLinkCopy: 'Copiar enlace',
+          claimLinkCopied: 'Enlace copiado al portapapeles.',
         },
         matches: {
           title: 'Crear partido + alineaciones',
@@ -1657,6 +1712,7 @@ export const messages = {
           lineupsUpdatedWarning:
             'Convocatorias actualizadas. El cambio ha quedado registrado porque una modificación de alineación puede alterar materialmente el acta oficial del partido.',
           joinCodeGenerated: 'Código de acceso generado',
+          claimLinkGenerated: 'Enlace de invitación generado',
           guestCreatedAdded: 'Invitado creado y añadido a la temporada seleccionada',
           guestCreated: 'Jugador invitado creado',
           playersAdded: '{count} jugador{suffix} añadido a la temporada',

@@ -84,6 +84,18 @@ export function useAuth() {
     }
   }
 
+  const claimPlayer = async (payload) => {
+    setState((prev) => ({ ...prev, status: 'loading', error: null }))
+    try {
+      const session = await authController.claimPlayer(payload)
+      handleSuccess(session)
+      return session
+    } catch (error) {
+      handleError(error)
+      throw error
+    }
+  }
+
   const logout = async () => {
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
     try {
@@ -101,6 +113,7 @@ export function useAuth() {
     loginAdmin,
     registerUser,
     registerAdmin,
+    claimPlayer,
     logout,
   }
 }
