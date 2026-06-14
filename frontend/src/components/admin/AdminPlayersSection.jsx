@@ -24,7 +24,11 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
-import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
+import {
+  translateNationalityLabel,
+  translatePositionLabel,
+  translateRoleLabel,
+} from '../../i18n/labels.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const labelChipSx = (color) => ({
@@ -617,7 +621,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                   >
                     {nationalities.map((nationality) => (
                       <MenuItem key={nationality} value={nationality}>
-                        {nationality}
+                        {translateNationalityLabel(t, nationality)}
                       </MenuItem>
                     ))}
                   </TextField>

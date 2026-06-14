@@ -26,3 +26,16 @@ export const translateLabel = (t, kind, label) => {
 
 export const translateRoleLabel = (t, label) => translateLabel(t, 'role', label)
 export const translatePositionLabel = (t, label) => translateLabel(t, 'position', label)
+
+// Nationalities are catalog DATA stored as English names (the `nationality` table
+// FK). Like role/position labels, we translate the display text through the i18n
+// catalog (`labels.nationality.*`) while select values keep the raw English name.
+export const translateNationalityLabel = (t, label) => {
+  const key = normalizeLabelKey(label)
+  if (!key) {
+    return label
+  }
+  const i18nKey = `labels.nationality.${key}`
+  const translated = t(i18nKey)
+  return translated === i18nKey ? label : translated
+}
