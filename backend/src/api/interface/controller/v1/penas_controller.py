@@ -8,6 +8,7 @@ from api.dependencies.use_cases import (
     get_pena_labels_command_bus,
     get_pena_labels_query_bus,
     get_pena_link_command_bus,
+    get_pena_link_query_bus,
     get_pena_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
@@ -18,8 +19,10 @@ from api.interface.controller.v1.model.request.pena_accountability_request impor
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import (
     ConsumeLinkTokenRequest,
+    RegisterAndClaimRequest,
     UpdatePenaProfileRequest,
 )
+from api.interface.controller.v1.model.response.auth_response import LoginResponse
 from api.interface.controller.v1.model.response.pena_accountability_response import (
     PenaAccountabilityMemberAccountResponse,
     PenaAccountabilityResponse,
@@ -27,6 +30,7 @@ from api.interface.controller.v1.model.response.pena_accountability_response imp
 )
 from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from api.interface.controller.v1.model.response.penas_response import (
+    ClaimTokenInfoResponse,
     LinkTokenResponse,
     PenaResponse,
     PenasPageResponse,
@@ -39,6 +43,7 @@ from auth.dependencies import (
     require_admin,
     require_user,
 )
+from auth.session import create_session
 from core.application.commands.pena_accountability_commands import (
     CreateExpenseCommand,
     RemoveExpenseCommand,
@@ -48,8 +53,10 @@ from core.application.commands.pena_accountability_commands import (
 )
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.pena_link_commands import (
+    GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
     LinkUserToPenaCommand,
+    RegisterAndClaimPlayerCommand,
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.models import (
@@ -63,13 +70,16 @@ from core.application.queries.pena_accountability_queries import (
     GetPlayerGuidForAccountQuery,
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
+from core.application.queries.pena_link_queries import InspectClaimTokenQuery
 from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
     ListPenasForUserQuery,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from persistence.module import get_db
 from shared.application.bus.buses import CommandBus, QueryBus
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -278,6 +288,33 @@ def create_link_token(
     )
 
 
+@router.post(
+    "/penas/{pena_guid}/players/{player_guid}/claim-tokens",
+    response_model=LinkTokenResponse,
+)
+@map_exceptions
+def create_player_claim_token(
+    pena_guid: str,
+    player_guid: str,
+    admin_session=Depends(require_admin),
+    command_bus: CommandBus = Depends(get_pena_link_command_bus),
+):
+    created = command_bus.dispatch(
+        GeneratePenaClaimTokenCommand(
+            admin_id=admin_session.user_id,
+            pena_guid=pena_guid,
+            player_guid=player_guid,
+            ttl_seconds=app_config.LINK_TOKEN_TTL_SECONDS,
+        )
+    )
+    return LinkTokenResponse(
+        token=created.token,
+        pena_guid=created.pena_guid,
+        expires_at=created.expires_at,
+        player_guid=created.player_guid,
+    )
+
+
 @router.get("/penas/{pena_guid}/accountability", response_model=PenaAccountabilityResponse)
 @map_exceptions
 def get_pena_accountability(
@@ -450,3 +487,53 @@ def consume_link_token(
         )
     )
     return {"status": "ok"}
+
+
+@router.get("/penas/link/claim/{token}", response_model=ClaimTokenInfoResponse)
+@map_exceptions
+def inspect_claim_token(
+    token: str,
+    query_bus: QueryBus = Depends(get_pena_link_query_bus),
+):
+    info = query_bus.ask(InspectClaimTokenQuery(token=token))
+    return ClaimTokenInfoResponse(
+        pena_guid=info.pena_guid,
+        pena_name=info.pena_name,
+        player_guid=info.player_guid,
+        player_name=info.player_name,
+        player_nickname=info.player_nickname,
+        expires_at=info.expires_at,
+    )
+
+
+@router.post("/penas/link/claim", response_model=LoginResponse)
+@map_exceptions
+def register_and_claim_player(
+    payload: RegisterAndClaimRequest,
+    command_bus: CommandBus = Depends(get_pena_link_command_bus),
+    db: Session = Depends(get_db),
+):
+    registered = command_bus.dispatch(
+        RegisterAndClaimPlayerCommand(
+            token=payload.token,
+            username=payload.username,
+            password=payload.password,
+        )
+    )
+    try:
+        session = create_session(
+            db,
+            user_id=registered.account_id,
+            user_guid=registered.account_guid,
+            user_type="user",
+        )
+    except Exception:
+        db.rollback()
+        raise
+    return LoginResponse(
+        token=session.token,
+        token_type="session",
+        expires_at=session.expires_at,
+        user_guid=session.user_guid,
+        user_type=session.user_type,
+    )

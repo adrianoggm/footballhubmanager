@@ -19,12 +19,16 @@ from core.application.commands.pena_accountability_commands import (
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.pena_labels_command_handler import UpdatePenaLabelsHandler
 from core.application.commands.pena_link_command_handlers import (
+    GeneratePenaClaimTokenHandler,
     GeneratePenaLinkTokenHandler,
     LinkUserToPenaHandler,
+    RegisterAndClaimPlayerHandler,
 )
 from core.application.commands.pena_link_commands import (
+    GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
     LinkUserToPenaCommand,
+    RegisterAndClaimPlayerCommand,
 )
 from core.application.commands.pena_membership_command_handlers import (
     CreateGuestPlayerHandler,
@@ -124,6 +128,8 @@ from core.application.queries.pena_accountability_query_handlers import (
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_labels_query_handler import GetPenaLabelsHandler
+from core.application.queries.pena_link_queries import InspectClaimTokenQuery
+from core.application.queries.pena_link_query_handlers import InspectClaimTokenHandler
 from core.application.queries.pena_membership_queries import (
     GetPenaMembershipForPlayerQuery,
     GetPenaMembershipForUserQuery,
@@ -267,7 +273,16 @@ def get_pena_link_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     repository = SqlAlchemyPenaLinkRepository(db)
     bus = CommandBus()
     bus.register(GeneratePenaLinkTokenCommand, GeneratePenaLinkTokenHandler(repository))
+    bus.register(GeneratePenaClaimTokenCommand, GeneratePenaClaimTokenHandler(repository))
     bus.register(LinkUserToPenaCommand, LinkUserToPenaHandler(repository))
+    bus.register(RegisterAndClaimPlayerCommand, RegisterAndClaimPlayerHandler(repository))
+    return bus
+
+
+def get_pena_link_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    repository = SqlAlchemyPenaLinkRepository(db)
+    bus = QueryBus()
+    bus.register(InspectClaimTokenQuery, InspectClaimTokenHandler(repository))
     return bus
 
 
