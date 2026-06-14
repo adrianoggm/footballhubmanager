@@ -12,6 +12,7 @@ from api.interface.controller.v1.model.request.pena_accountability_request impor
 from api.interface.controller.v1.model.request.pena_labels_request import UpdatePenaLabelsRequest
 from api.interface.controller.v1.model.request.penas_request import (
     ConsumeLinkTokenRequest,
+    RegisterAndClaimRequest,
     UpdatePenaProfileRequest,
 )
 from auth.dependencies import require_user
@@ -23,10 +24,14 @@ from core.application.commands.pena_accountability_commands import (
 )
 from core.application.commands.pena_labels_command import UpdatePenaLabelsCommand
 from core.application.commands.pena_link_commands import (
+    GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
     LinkUserToPenaCommand,
+    RegisterAndClaimPlayerCommand,
 )
 from core.application.models import (
+    ClaimRegistration,
+    ClaimTokenInfo,
     PenaAccountabilityExpenseInfo,
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
@@ -42,6 +47,7 @@ from core.application.queries.pena_accountability_queries import (
     GetPlayerGuidForAccountQuery,
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
+from core.application.queries.pena_link_queries import InspectClaimTokenQuery
 from core.application.queries.pena_queries import (
     GetPenaByGuidQuery,
     ListPenasForAdminQuery,
@@ -61,6 +67,8 @@ from core.domain.errors import (
     PenaLinkAccessDeniedError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
+    PlayerAlreadyClaimedError,
+    PlayerNotClaimableError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
@@ -485,6 +493,147 @@ def test_consume_link_token_maps_domain_errors_to_http(error, status_code, detai
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
+
+
+def test_create_player_claim_token_success():
+    bus = _LinkCommandBus(
+        PenaLinkToken(token="claim-1", pena_guid="pena-1", expires_at=12345, player_guid="player-9")
+    )
+    response = penas_controller.create_player_claim_token(
+        "pena-1",
+        "player-9",
+        admin_session=_session(user_type="admin", user_id=5),
+        command_bus=bus,
+    )
+
+    assert response.token == "claim-1"
+    assert response.player_guid == "player-9"
+    command = bus.last_command
+    assert isinstance(command, GeneratePenaClaimTokenCommand)
+    assert command.admin_id == 5
+    assert command.pena_guid == "pena-1"
+    assert command.player_guid == "player-9"
+    assert command.ttl_seconds == penas_controller.app_config.LINK_TOKEN_TTL_SECONDS
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (PenaLinkAccessDeniedError(), 403, "Admin does not manage this pena"),
+        (PlayerNotClaimableError(), 404, "Player is not a claimable guest of this pena"),
+        (PlayerAlreadyClaimedError(), 409, "Player has already been linked to an account"),
+    ],
+)
+def test_create_player_claim_token_maps_domain_errors(error, status_code, detail):
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.create_player_claim_token(
+            "pena-1",
+            "player-9",
+            admin_session=_session(user_type="admin", user_id=5),
+            command_bus=_RaisingCommandBus(error),
+        )
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+def test_inspect_claim_token_returns_preview():
+    class _Bus:
+        def ask(self, query):
+            assert isinstance(query, InspectClaimTokenQuery)
+            assert query.token == "tok-claim"
+            return ClaimTokenInfo(
+                pena_guid="pena-1",
+                pena_name="Los Amigos",
+                player_guid="player-9",
+                player_name="Ana",
+                player_nickname="Nani",
+                expires_at=999,
+            )
+
+    response = penas_controller.inspect_claim_token("tok-claim", query_bus=_Bus())
+
+    assert response.pena_name == "Los Amigos"
+    assert response.player_guid == "player-9"
+    assert response.player_nickname == "Nani"
+
+
+def test_inspect_claim_token_maps_invalid_token():
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.inspect_claim_token(
+            "missing", query_bus=_RaisingQueryBus(InvalidLinkTokenError())
+        )
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "Invalid or expired link token"
+
+
+def test_register_and_claim_player_success(monkeypatch):
+    bus = _LinkCommandBus(
+        ClaimRegistration(
+            account_id=7, account_guid="acc-7", player_guid="player-9", pena_guid="pena-1"
+        )
+    )
+
+    def _fake_create_session(_db, *, user_id, user_guid, user_type):
+        assert user_id == 7
+        assert user_guid == "acc-7"
+        assert user_type == "user"
+        return SessionData(
+            token="session-tok",
+            user_id=user_id,
+            user_guid=user_guid,
+            user_type=user_type,
+            expires_at=4242,
+        )
+
+    monkeypatch.setattr(penas_controller, "create_session", _fake_create_session)
+
+    response = penas_controller.register_and_claim_player(
+        RegisterAndClaimRequest(token="tok-claim", username="ana", password="secret"),
+        command_bus=bus,
+        db=object(),
+    )
+
+    assert response.token == "session-tok"
+    assert response.user_guid == "acc-7"
+    assert response.expires_at == 4242
+    command = bus.last_command
+    assert isinstance(command, RegisterAndClaimPlayerCommand)
+    assert command.token == "tok-claim"
+    assert command.username == "ana"
+    assert command.password == "secret"
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (InvalidLinkTokenError(), 400, "Invalid or expired link token"),
+        (PlayerAlreadyClaimedError(), 409, "Player has already been linked to an account"),
+    ],
+)
+def test_register_and_claim_player_maps_domain_errors(error, status_code, detail):
+    with pytest.raises(HTTPException) as exc:
+        penas_controller.register_and_claim_player(
+            RegisterAndClaimRequest(token="tok-claim", username="ana", password="secret"),
+            command_bus=_RaisingCommandBus(error),
+            db=object(),
+        )
+    assert exc.value.status_code == status_code
+    assert exc.value.detail == detail
+
+
+def test_get_pena_link_command_bus_registers_claim_handlers(monkeypatch):
+    class _Repo:
+        def __init__(self, db):
+            pass
+
+    monkeypatch.setattr(use_case_dependencies, "SqlAlchemyPenaLinkRepository", _Repo)
+
+    command_bus = use_case_dependencies.get_pena_link_command_bus(db="db-session")
+    query_bus = use_case_dependencies.get_pena_link_query_bus(db="db-session")
+
+    assert GeneratePenaClaimTokenCommand in command_bus._handlers
+    assert RegisterAndClaimPlayerCommand in command_bus._handlers
+    assert InspectClaimTokenQuery in query_bus._handlers
 
 
 def test_get_pena_query_bus_builds_expected_dependencies(monkeypatch):

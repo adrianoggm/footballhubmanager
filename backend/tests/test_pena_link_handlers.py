@@ -2,17 +2,29 @@ from dataclasses import dataclass
 
 import pytest
 from core.application.commands.pena_link_command_handlers import (
+    GeneratePenaClaimTokenHandler,
     GeneratePenaLinkTokenHandler,
     LinkUserToPenaHandler,
+    RegisterAndClaimPlayerHandler,
 )
 from core.application.commands.pena_link_commands import (
+    GeneratePenaClaimTokenCommand,
     GeneratePenaLinkTokenCommand,
     LinkUserToPenaCommand,
+    RegisterAndClaimPlayerCommand,
 )
-from core.application.ports.pena_link_port import PenaLinkTokenResult
+from core.application.ports.pena_link_port import (
+    ClaimRegistrationResult,
+    ClaimTokenInfoResult,
+    PenaLinkTokenResult,
+)
+from core.application.queries.pena_link_queries import InspectClaimTokenQuery
+from core.application.queries.pena_link_query_handlers import InspectClaimTokenHandler
 from core.domain.errors import (
     InvalidLinkTokenError,
+    InvalidRegistrationDataError,
     PenaLinkAccessDeniedError,
+    PlayerAlreadyClaimedError,
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
@@ -137,3 +149,127 @@ def test_link_handler_propagates_user_profile_not_found():
         LinkUserToPenaHandler(repo).handle(
             LinkUserToPenaCommand(token="token-123", account_id=4, nickname=None, position=None)
         )
+
+
+@dataclass
+class _ClaimTokenRepo:
+    last_payload: dict | None = None
+
+    def create_claim_token_for_admin(
+        self, *, admin_id: int, pena_guid: str, player_guid: str, ttl_seconds: int
+    ):
+        self.last_payload = {
+            "admin_id": admin_id,
+            "pena_guid": pena_guid,
+            "player_guid": player_guid,
+            "ttl_seconds": ttl_seconds,
+        }
+        return PenaLinkTokenResult(
+            token="claim-1",
+            pena_guid=pena_guid,
+            expires_at=1700000000,
+            player_guid=player_guid,
+        )
+
+
+@dataclass
+class _RegisterClaimRepo:
+    should_raise_already_claimed: bool = False
+    last_payload: dict | None = None
+
+    def register_and_claim_player(self, *, token: str, username: str, password_hash: str):
+        if self.should_raise_already_claimed:
+            raise PlayerAlreadyClaimedError()
+        self.last_payload = {
+            "token": token,
+            "username": username,
+            "password_hash": password_hash,
+        }
+        return ClaimRegistrationResult(
+            account_id=7,
+            account_guid="acc-7",
+            player_guid="player-200",
+            pena_guid="pena-100",
+        )
+
+
+@dataclass
+class _InspectRepo:
+    def inspect_claim_token(self, *, token: str):
+        return ClaimTokenInfoResult(
+            pena_guid="pena-100",
+            pena_name="Los Amigos",
+            player_guid="player-200",
+            player_name="Ana",
+            player_nickname="Nani",
+            expires_at=1700000000,
+        )
+
+
+def test_generate_claim_handler_returns_player_bound_token():
+    repo = _ClaimTokenRepo()
+    result = GeneratePenaClaimTokenHandler(repo).handle(
+        GeneratePenaClaimTokenCommand(
+            admin_id=3, pena_guid="pena-100", player_guid="player-200", ttl_seconds=3600
+        )
+    )
+
+    assert result.token == "claim-1"
+    assert result.player_guid == "player-200"
+    assert repo.last_payload["player_guid"] == "player-200"
+
+
+def test_register_and_claim_handler_hashes_password_and_returns_result():
+    repo = _RegisterClaimRepo()
+    result = RegisterAndClaimPlayerHandler(repo).handle(
+        RegisterAndClaimPlayerCommand(token="  tok  ", username="  ana  ", password="secret")
+    )
+
+    assert result.account_guid == "acc-7"
+    assert result.player_guid == "player-200"
+    assert repo.last_payload["token"] == "tok"
+    assert repo.last_payload["username"] == "ana"
+    # The handler hashes before reaching the repository.
+    assert repo.last_payload["password_hash"] != "secret"
+
+
+def test_register_and_claim_handler_rejects_blank_token():
+    repo = _RegisterClaimRepo()
+    with pytest.raises(InvalidLinkTokenError):
+        RegisterAndClaimPlayerHandler(repo).handle(
+            RegisterAndClaimPlayerCommand(token="   ", username="ana", password="secret")
+        )
+    assert repo.last_payload is None
+
+
+def test_register_and_claim_handler_rejects_missing_credentials():
+    repo = _RegisterClaimRepo()
+    with pytest.raises(InvalidRegistrationDataError):
+        RegisterAndClaimPlayerHandler(repo).handle(
+            RegisterAndClaimPlayerCommand(token="tok", username="  ", password="secret")
+        )
+    with pytest.raises(InvalidRegistrationDataError):
+        RegisterAndClaimPlayerHandler(repo).handle(
+            RegisterAndClaimPlayerCommand(token="tok", username="ana", password="")
+        )
+
+
+def test_register_and_claim_handler_propagates_already_claimed():
+    repo = _RegisterClaimRepo(should_raise_already_claimed=True)
+    with pytest.raises(PlayerAlreadyClaimedError):
+        RegisterAndClaimPlayerHandler(repo).handle(
+            RegisterAndClaimPlayerCommand(token="tok", username="ana", password="secret")
+        )
+
+
+def test_inspect_claim_token_handler_returns_info():
+    info = InspectClaimTokenHandler(_InspectRepo()).handle(InspectClaimTokenQuery(token="  tok  "))
+
+    assert info.pena_name == "Los Amigos"
+    assert info.player_name == "Ana"
+    assert info.player_nickname == "Nani"
+
+
+def test_inspect_claim_token_handler_rejects_blank_token():
+    with pytest.raises(InvalidLinkTokenError):
+        InspectClaimTokenHandler(_InspectRepo()).handle(InspectClaimTokenQuery(token="   "))
