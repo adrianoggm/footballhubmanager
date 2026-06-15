@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Divider,
   Stack,
   TextField,
   Typography,
@@ -185,42 +186,91 @@ export default function ClaimPlayerPage({ auth }) {
                   {t('claim.invitedAs', { pena: info.pena_name, player: playerLabel })}
                 </Alert>
 
-                <Box component="form" onSubmit={handleSubmit}>
-                  <Stack spacing={2}>
-                    <TextField
-                      label={t('claim.usernameLabel')}
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      autoComplete="username"
-                      fullWidth
-                      required
-                    />
-                    <TextField
-                      label={t('claim.passwordLabel')}
-                      type="password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      autoComplete="new-password"
-                      fullWidth
-                      required
-                    />
-                    <TextField
-                      label={t('claim.confirmPasswordLabel')}
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                      autoComplete="new-password"
-                      fullWidth
-                      required
-                    />
+                {guestMode === 'register' ? (
+                  <Box component="form" onSubmit={handleSubmit}>
+                    <Stack spacing={2}>
+                      <TextField
+                        label={t('claim.usernameLabel')}
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        autoComplete="username"
+                        fullWidth
+                        required
+                      />
+                      <TextField
+                        label={t('claim.passwordLabel')}
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete="new-password"
+                        fullWidth
+                        required
+                      />
+                      <TextField
+                        label={t('claim.confirmPasswordLabel')}
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        autoComplete="new-password"
+                        fullWidth
+                        required
+                      />
 
-                    {submitError && <Alert severity="error">{submitError}</Alert>}
+                      {submitError && <Alert severity="error">{submitError}</Alert>}
 
-                    <Button type="submit" variant="contained" disabled={submitting} fullWidth>
-                      {submitting ? t('claim.submitting') : t('claim.submit')}
-                    </Button>
-                  </Stack>
-                </Box>
+                      <Button type="submit" variant="contained" disabled={submitting} fullWidth>
+                        {submitting ? t('claim.submitting') : t('claim.submit')}
+                      </Button>
+                    </Stack>
+                  </Box>
+                ) : (
+                  <Box component="form" onSubmit={handleLoginAndLink}>
+                    <Stack spacing={2}>
+                      <TextField
+                        label={t('claim.usernameLabel')}
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        autoComplete="username"
+                        fullWidth
+                        required
+                      />
+                      <TextField
+                        label={t('claim.passwordLabel')}
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete="current-password"
+                        fullWidth
+                        required
+                      />
+
+                      {submitError && <Alert severity="error">{submitError}</Alert>}
+
+                      <Button type="submit" variant="contained" disabled={submitting} fullWidth>
+                        {submitting ? t('claim.linking') : t('claim.linkAction')}
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
+
+                <Divider />
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {guestMode === 'register'
+                      ? t('claim.haveAccountQuestion')
+                      : t('claim.noAccountQuestion')}
+                  </Typography>
+                  <Button
+                    variant="text"
+                    size="small"
+                    disabled={submitting}
+                    onClick={() => switchGuestMode(guestMode === 'register' ? 'login' : 'register')}
+                  >
+                    {guestMode === 'register'
+                      ? t('claim.linkExistingAction')
+                      : t('claim.createNewAction')}
+                  </Button>
+                </Stack>
               </>
             )}
           </Stack>
