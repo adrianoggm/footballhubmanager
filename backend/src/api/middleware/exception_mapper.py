@@ -61,6 +61,8 @@ from core.domain.errors import (
     PenaMembershipUserProfileNotFoundError,
     PenaProfileAccessDeniedError,
     PenaProfileNotFoundError,
+    PlayerAlreadyClaimedError,
+    PlayerNotClaimableError,
     UserAlreadyLinkedError,
     UserInvalidNationalityError,
     UserProfileNotFoundError,
@@ -100,6 +102,14 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     UserAlreadyLinkedError: (status.HTTP_409_CONFLICT, "User is already linked to this pena"),
     UserProfileNotFoundError: (status.HTTP_404_NOT_FOUND, "User player profile not found"),
     PenaLinkAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
+    PlayerNotClaimableError: (
+        status.HTTP_404_NOT_FOUND,
+        "Player is not a claimable guest of this pena",
+    ),
+    PlayerAlreadyClaimedError: (
+        status.HTTP_409_CONFLICT,
+        "Player has already been linked to an account",
+    ),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
     InvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),

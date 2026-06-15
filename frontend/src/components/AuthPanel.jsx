@@ -14,6 +14,7 @@ import {
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useEffect, useMemo, useState } from 'react'
+import { translateNationalityLabel } from '../i18n/labels.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { normalizeNationalities } from '../services/catalogUtils.js'
 import { httpClient } from '../services/httpClient.js'
@@ -311,7 +312,7 @@ export default function AuthPanel({ auth }) {
               >
                 {nationalities.map((nationality) => (
                   <MenuItem key={nationality} value={nationality}>
-                    {nationality}
+                    {translateNationalityLabel(t, nationality)}
                   </MenuItem>
                 ))}
               </TextField>

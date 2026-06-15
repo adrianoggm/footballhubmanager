@@ -628,6 +628,7 @@ export default function AdminDashboard({
   const [deletingMatchEventGuid, setDeletingMatchEventGuid] = useState('')
   const [insightsScope, setInsightsScope] = useState('selected_season')
   const [tokenPayload, setTokenPayload] = useState(null)
+  const [claimLinkPayload, setClaimLinkPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
 
@@ -1792,6 +1793,16 @@ export default function AdminDashboard({
     }, t('dashboard.admin.notices.joinCodeGenerated'))
   }
 
+  const handleGenerateClaimLink = async (player) => {
+    if (!selectedPenaGuid || !player?.guid) {
+      return
+    }
+    await runAction(async () => {
+      const token = await adminService.createClaimToken(selectedPenaGuid, player.guid)
+      setClaimLinkPayload({ ...token, player })
+    }, t('dashboard.admin.notices.claimLinkGenerated'))
+  }
+
   const handleCreateGuestPlayer = async (registerInSelectedSeason) => {
     if (!selectedPenaGuid) {
       return
@@ -2552,6 +2563,7 @@ export default function AdminDashboard({
       memberFilters,
       guestForm,
       nationalities,
+      claimLinkPayload,
     },
     actions: {
       handleSelectHistoricalPlayers,
@@ -2563,6 +2575,8 @@ export default function AdminDashboard({
       handleCreateGuestPlayer,
       handleEditMembershipPlayer,
       handleRequestRemoveMembershipPlayer,
+      handleGenerateClaimLink,
+      onCloseClaimLink: () => setClaimLinkPayload(null),
       onMemberFilterField,
       onLabelsDraftField,
       onLabelColorDraftChange,
@@ -2571,6 +2585,7 @@ export default function AdminDashboard({
     helpers: {
       t,
       formatPlayerDisplayName,
+      formatEpochSeconds,
     },
   })
 

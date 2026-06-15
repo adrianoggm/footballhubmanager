@@ -83,11 +83,16 @@ create table if not exists pena_role (
 create table if not exists pena_link_token (
   token      varchar(128) primary key,
   id_pena    int not null,
+  id_player  int null,
   expires_at bigint not null,
   key idx_pena_link_token_expires_at (expires_at),
   key idx_pena_link_token_pena (id_pena),
+  key idx_pena_link_token_player (id_player),
   constraint fk_pena_link_token_pena
     foreign key (id_pena) references pena(id)
+    on delete cascade on update cascade,
+  constraint fk_pena_link_token_player
+    foreign key (id_player) references player(id)
     on delete cascade on update cascade
 ) engine=innodb;
 

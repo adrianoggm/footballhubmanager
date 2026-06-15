@@ -19,3 +19,18 @@ class LinkTokenResponse(BaseModel):
     token: str
     pena_guid: str
     expires_at: int
+    player_guid: str | None = None
+
+
+class ClaimTokenInfoResponse(BaseModel):
+    pena_guid: str
+    pena_name: str
+    player_guid: str
+    player_name: str
+    player_nickname: str | None = None
+    expires_at: int
+
+
+class ClaimAttachResponse(BaseModel):
+    pena_guid: str
+    player_guid: str

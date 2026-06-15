@@ -10,6 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { translateNationalityLabel } from '../../i18n/labels.js'
 import ProfileImageField from '../ProfileImageField.jsx'
 import AppearanceSettings from '../dashboard/AppearanceSettings.jsx'
 
@@ -76,7 +77,7 @@ export default function UserProfileSettingsDialog({
           >
             {nationalities.map((nationality) => (
               <MenuItem key={nationality} value={nationality}>
-                {nationality}
+                {translateNationalityLabel(t, nationality)}
               </MenuItem>
             ))}
           </TextField>
