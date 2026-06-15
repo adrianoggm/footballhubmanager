@@ -20,6 +20,7 @@ def _to_page(result: PenaPlayersPageResult) -> PenaPlayersPage:
                 nickname=item.nickname,
                 role=item.role,
                 position=item.position,
+                has_account=item.has_account,
             )
             for item in result.items
         ],

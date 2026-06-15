@@ -215,6 +215,10 @@ export class AdminService {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/link-tokens`, {})
   }
 
+  createClaimToken(penaGuid, playerGuid) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/players/${playerGuid}/claim-tokens`, {})
+  }
+
   createGuestPlayer(penaGuid, payload) {
     return httpClient.post(`${API_V1}/penas/${penaGuid}/players`, payload)
   }

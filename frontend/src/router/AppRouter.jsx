@@ -10,6 +10,7 @@ import RequireRole from './guards/RequireRole.jsx'
 import { resolveRoleHomePath } from './rolePaths.js'
 
 const AuthLandingPage = lazy(() => import('../pages/AuthLandingPage.jsx'))
+const ClaimPlayerPage = lazy(() => import('../pages/ClaimPlayerPage.jsx'))
 const LegalPage = lazy(() => import('../pages/LegalPage.jsx'))
 const SessionIncompletePage = lazy(() => import('../pages/SessionIncompletePage.jsx'))
 const AdminOverviewPage = lazy(() => import('../pages/admin/AdminOverviewPage.jsx'))
@@ -76,6 +77,9 @@ export default function AppRouter({ auth, onLogout }) {
           {/* Legal/info placeholders: public regardless of session. */}
           <Route element={<PublicLayout />}>
             <Route path="/legal/:section" element={<LegalPage />} />
+            {/* Invitation claim link: public so a brand-new invitee can register
+                and adopt their existing guest player without an account first. */}
+            <Route path="/claim/:token" element={<ClaimPlayerPage auth={auth} />} />
           </Route>
 
           <Route element={<RequireAuth isAuthenticated={isAuthenticated} />}>

@@ -7,7 +7,7 @@ from .pena_accountability_models import (
     PenaAccountabilitySettingsUpdate,
 )
 from .pena_labels_models import PenaLabelsInfo, PenaLabelsUpdate
-from .pena_link_models import PenaLinkToken
+from .pena_link_models import ClaimLink, ClaimRegistration, ClaimTokenInfo, PenaLinkToken
 from .pena_listing_models import PenaInfo, PenasPage, PenasPageResult, PenaSummary
 from .pena_membership_models import (
     PenaGuestPlayerCreate,
@@ -47,6 +47,9 @@ __all__ = [
     "PenaAccountabilityMemberAccountInfo",
     "PenaAccountabilityMemberAccountUpsert",
     "PenaAccountabilitySettingsUpdate",
+    "ClaimLink",
+    "ClaimRegistration",
+    "ClaimTokenInfo",
     "PenaInfo",
     "PenaLinkToken",
     "PenaLabelsInfo",

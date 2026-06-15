@@ -10,6 +10,7 @@ class PenaPlayerResponse(BaseModel):
     nickname: str | None
     role: str | None
     position: str | None
+    has_account: bool = False
 
 
 class PenaPlayersPageResponse(BaseModel):
