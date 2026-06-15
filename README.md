@@ -112,6 +112,35 @@ Target: **Kubernetes**. Images are published to **GHCR** on a semver tag and the
 is deployed with the Helm chart in [`deploy/helm/footballhub`](deploy/helm/footballhub).
 Full details in the [Deployment Guide](docs/deployment.md).
 
+### Flow at a glance
+
+```mermaid
+sequenceDiagram
+    actor Dev as Developer
+    participant GH as GitHub Actions
+    participant GHCR
+    actor Ops as Operator
+    participant Helm
+    participant Job as Migrate Job
+    participant DB as MySQL
+    participant API as Backend
+
+    Dev->>GH: git push tag vX.Y.Z
+    GH->>GHCR: build & push backend + frontend images
+    Ops->>Helm: helm upgrade --install (image.tag=X.Y.Z)
+    Helm->>Job: pre-upgrade hook, run "migrate"
+    Job->>DB: wait for DB, apply pending vN.sql
+    DB-->>Job: schema at head
+    Job-->>Helm: success (rollout blocked if it fails)
+    Helm->>API: roll out backend + frontend
+    API->>DB: startup check (STRICT): any pending?
+    API-->>Ops: serving via Ingress (/api to backend, / to frontend)
+```
+
+The key guarantee: the migration Job runs **before** the API rolls out and Helm
+blocks the release until it succeeds, so the backend never serves against a stale
+schema (and refuses to boot if it somehow would).
+
 ### 1. Build & publish images (on a tag)
 
 Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which builds and
@@ -143,6 +172,19 @@ In Kubernetes this runs as a **`pre-install,pre-upgrade` Helm hook Job** (backen
 image, `migrate`), so the chart blocks the rollout until the schema is current and
 the API never serves against a stale schema. The backend additionally refuses to
 start when migrations are pending (`STRICT_MIGRATION_CHECK=true`, the chart default).
+
+```mermaid
+flowchart TD
+    Start([Deploy a release]) --> Q{"Database already<br/>has data?"}
+    Q -->|No / fresh DB| M["migrate: apply v1..vN in order"]
+    Q -->|Yes, first time on the runner| S["stamp once: baseline to head"]
+    S --> L[Later releases run migrate]
+    M --> T[("schema_migrations<br/>updated")]
+    L --> T
+    T --> G{"Backend startup:<br/>pending migrations?"}
+    G -->|None| OK[API serves traffic]
+    G -->|Pending and STRICT| Fail[Fail fast at boot]
+```
 
 > **First deploy against a database that already has data:** baseline it once so the
 > runner does not try to re-apply versions that are physically present, then migrate
