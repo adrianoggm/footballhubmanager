@@ -1,0 +1,40 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "footballhub.fullname" . }}
+  labels:
+    {{- include "footballhub.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # API first: /api goes to the backend.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "footballhub.fullname" . }}-backend
+                port:
+                  number: 80
+          # Everything else is the SPA.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "footballhub.fullname" . }}-frontend
+                port:
+                  number: 80
+{{- end }}

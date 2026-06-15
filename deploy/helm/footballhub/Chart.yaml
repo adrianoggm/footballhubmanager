@@ -1,0 +1,6 @@
+apiVersion: v2
+name: footballhub
+description: FootballHubManager — backend API, frontend SPA, and forward-only DB migrations
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

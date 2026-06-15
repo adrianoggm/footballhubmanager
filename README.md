@@ -83,6 +83,9 @@ The project solves operational friction for community football organizers:
 - [x] Frontend lint/format/build checks (`eslint` + `prettier` + `vite build`)
 - [x] CI pipeline covering backend quality/tests and frontend quality/build
 - [x] Dependency audit hardening in frontend (`npm audit` currently clean)
+- [x] Container images (backend + frontend) published to GHCR on semver tag
+- [x] Forward-only DB migration runner with `schema_migrations` tracking (no Alembic)
+- [x] Kubernetes Helm chart with a pre-upgrade migration hook (in-cluster or external MySQL)
 
 ## Tech Stack
 
@@ -103,6 +106,77 @@ The project solves operational friction for community football organizers:
    - `just check` (backend format + lint + unit tests)
    - `just frontend-check` (frontend prettier check + eslint + build)
 
+## Deployment
+
+Target: **Kubernetes**. Images are published to **GHCR** on a semver tag and the app
+is deployed with the Helm chart in [`deploy/helm/footballhub`](deploy/helm/footballhub).
+Full details in the [Deployment Guide](docs/deployment.md).
+
+### 1. Build & publish images (on a tag)
+
+Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which builds and
+pushes both images to GHCR (tags `1.2.0`, `1.2`, `sha-<sha>`, `latest`):
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+| Image | Build context | Dockerfile |
+|-------|---------------|------------|
+| `ghcr.io/adrianoggm/footballhubmanager-backend` | repo root | `backend/docker/Dockerfile` |
+| `ghcr.io/adrianoggm/footballhubmanager-frontend` | `frontend/` | `frontend/Dockerfile` |
+
+The backend is a single image with multiple roles via its entrypoint: `serve`
+(default), `migrate`, `stamp [N]`, `status`. The frontend is a static SPA served by
+nginx; the Ingress routes `/api` to the backend and everything else to the frontend.
+
+### 2. Database migrations (no Alembic)
+
+The schema evolves through forward-only `versioning/sql/versions/vN.sql` files. A
+migration runner (`backend/src/db_migrations`) tracks applied versions in
+`schema_migrations` and applies only the pending ones. **MySQL's docker-entrypoint
+init (`actual.sql`) only runs on an empty volume**, so production always evolves via
+the runner — never the init script.
+
+In Kubernetes this runs as a **`pre-install,pre-upgrade` Helm hook Job** (backend
+image, `migrate`), so the chart blocks the rollout until the schema is current and
+the API never serves against a stale schema. The backend additionally refuses to
+start when migrations are pending (`STRICT_MIGRATION_CHECK=true`, the chart default).
+
+> **First deploy against a database that already has data:** baseline it once so the
+> runner does not try to re-apply versions that are physically present, then migrate
+> on later releases:
+>
+> ```bash
+> helm upgrade --install fhm deploy/helm/footballhub \
+>   --set image.tag=1.2.0 --set 'migrations.args={stamp}'
+> ```
+
+Locally: `just db-status`, `just db-migrate`, `just db-stamp [N]`.
+
+### 3. Install with Helm
+
+```bash
+# Production: external/managed MySQL (recommended)
+kubectl create secret generic fhm-db --from-literal=DB_PASSWORD='********'
+helm upgrade --install fhm deploy/helm/footballhub \
+  --set image.tag=1.2.0 \
+  --set mysql.enabled=false \
+  --set externalDatabase.host=your-db-host \
+  --set database.existingSecret=fhm-db \
+  --set ingress.host=app.example.com
+
+# Dev: in-cluster MySQL (StatefulSet). First install disables the migrate hook
+# because the DB is not up yet when pre-install hooks run, then upgrade:
+helm install fhm deploy/helm/footballhub \
+  --set image.tag=1.2.0 --set migrations.enabled=false --set app.strictMigrationCheck=false
+helm upgrade fhm deploy/helm/footballhub --set image.tag=1.2.0
+```
+
+`mysql.enabled` toggles the database mode (in-cluster StatefulSet vs external managed
+DB). See [`deploy/helm/README.md`](deploy/helm/README.md) and `values.yaml` for all options.
+
 ## Documentation
 
 - [Documentation Index](docs/README.md)
@@ -112,6 +186,7 @@ The project solves operational friction for community football organizers:
 - [Frontend Guide](docs/frontend.md)
 - [Frontend Implementation Planning](docs/frontend-implementation-planning.md)
 - [Docker Guide](docs/docker.md)
+- [Deployment Guide](docs/deployment.md)
 - [Database and SQL](docs/database.md)
 - [API Reference (v1)](docs/api.md)
 - [Testing Guide](docs/testing.md)
