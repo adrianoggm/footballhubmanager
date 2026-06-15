@@ -3,6 +3,35 @@
 Target: **Kubernetes** (future scaling). Registry: **GHCR**. Images are built and
 published on a **semver tag** (`vX.Y.Z`).
 
+## Flow overview
+
+```mermaid
+sequenceDiagram
+    actor Dev as Developer
+    participant GH as GitHub Actions
+    participant GHCR
+    actor Ops as Operator
+    participant Helm
+    participant Job as Migrate Job
+    participant DB as MySQL
+    participant API as Backend
+
+    Dev->>GH: git push tag vX.Y.Z
+    GH->>GHCR: build & push backend + frontend images
+    Ops->>Helm: helm upgrade --install (image.tag=X.Y.Z)
+    Helm->>Job: pre-upgrade hook, run "migrate"
+    Job->>DB: wait for DB, apply pending vN.sql
+    DB-->>Job: schema at head
+    Job-->>Helm: success (rollout blocked if it fails)
+    Helm->>API: roll out backend + frontend
+    API->>DB: startup check (STRICT): any pending?
+    API-->>Ops: serving via Ingress (/api to backend, / to frontend)
+```
+
+The migration Job runs **before** the API rolls out and Helm blocks the release
+until it succeeds, so the backend never serves against a stale schema (and refuses
+to boot if it somehow would).
+
 ## Images
 
 `./.github/workflows/release.yml` builds and pushes two images when you push a tag:
@@ -37,6 +66,19 @@ tracks applied versions in `schema_migrations` and applies only the pending ones
 > The MySQL docker-entrypoint init (`actual.sql`) **only runs on an empty data
 > volume**, so it cannot evolve a database that already holds production data.
 > Production always evolves through the **runner**, never through the init script.
+
+```mermaid
+flowchart TD
+    Start([Deploy a release]) --> Q{"Database already<br/>has data?"}
+    Q -->|No / fresh DB| M["migrate: apply v1..vN in order"]
+    Q -->|Yes, first time on the runner| S["stamp once: baseline to head"]
+    S --> L[Later releases run migrate]
+    M --> T[("schema_migrations<br/>updated")]
+    L --> T
+    T --> G{"Backend startup:<br/>pending migrations?"}
+    G -->|None| OK[API serves traffic]
+    G -->|Pending and STRICT| Fail[Fail fast at boot]
+```
 
 ### Commands (image entrypoint, or `just` locally)
 
