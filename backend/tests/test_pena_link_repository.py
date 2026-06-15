@@ -18,6 +18,7 @@ from persistence.infrastructure.entity import (
     PenaLinkToken,
     PenaMemberAccount,
     PenaPlayer,
+    PenaRole,
     Player,
     PlayerAccount,
     SeasonPlayer,
@@ -42,6 +43,7 @@ def _db_session() -> Session:
             PenaPlayer.__table__,
             PenaLinkToken.__table__,
             PenaMemberAccount.__table__,
+            PenaRole.__table__,
             SeasonPlayer.__table__,
             TeamPlayer.__table__,
             FootballMatchEvent.__table__,
@@ -356,3 +358,45 @@ def test_link_existing_account_requires_own_player():
 
     with pytest.raises(UserProfileNotFoundError):
         repo.link_existing_account_to_player(token="tok-link", account_id=9999)
+
+
+# --- consume_token_for_user (generic join must reject claim tokens) ---------------
+
+
+def test_consume_token_rejects_player_bound_claim_token():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    # A claim token (bound to guest player 200) must NOT work on the generic
+    # join path - that would create a duplicate membership for player 60.
+    _make_token(db, token="claim-tok", id_player=200)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(InvalidLinkTokenError):
+        repo.consume_token_for_user(token="claim-tok", account_id=50, nickname=None, position=None)
+
+    # No membership was created for the user's own player...
+    assert (
+        db.execute(
+            select(PenaPlayer).where(PenaPlayer.id_player == 60, PenaPlayer.id_pena == 100)
+        ).first()
+        is None
+    )
+    # ...and the claim token survives for the proper claim/attach flow.
+    assert db.execute(select(PenaLinkToken).where(PenaLinkToken.token == "claim-tok")).first()
+
+
+def test_consume_token_links_own_player_for_generic_token():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    _make_token(db, token="generic", id_player=None)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    repo.consume_token_for_user(token="generic", account_id=50, nickname="Nick", position="GK")
+
+    membership = db.execute(
+        select(PenaPlayer).where(PenaPlayer.id_player == 60, PenaPlayer.id_pena == 100)
+    ).scalar_one()
+    assert membership.nickname == "Nick"
+    assert db.execute(select(PenaLinkToken).where(PenaLinkToken.token == "generic")).first() is None

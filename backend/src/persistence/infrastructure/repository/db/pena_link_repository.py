@@ -303,7 +303,14 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
 
                 link = self.session.execute(
                     select(PenaLinkToken)
-                    .where(PenaLinkToken.token == token, PenaLinkToken.expires_at > now_ts)
+                    .where(
+                        PenaLinkToken.token == token,
+                        PenaLinkToken.expires_at > now_ts,
+                        # Generic join only: a player-bound claim token must go
+                        # through the claim/attach flow, never create a second
+                        # membership for the user's own player (would duplicate).
+                        PenaLinkToken.id_player.is_(None),
+                    )
                     .with_for_update()
                 ).scalar_one_or_none()
                 if not link:
