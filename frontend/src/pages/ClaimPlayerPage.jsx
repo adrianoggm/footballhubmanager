@@ -91,6 +91,21 @@ export default function ClaimPlayerPage({ auth }) {
     }
   }
 
+  // Escape hatch when signed in as the wrong account (e.g. it is already a
+  // member of this pena): drop the session and fall back to the sign-in form.
+  const handleUseAnotherAccount = async () => {
+    setSubmitError('')
+    setUsername('')
+    setPassword('')
+    setConfirmPassword('')
+    setGuestMode('login')
+    try {
+      await auth.logout()
+    } catch {
+      // The session is cleared locally regardless; ignore server errors.
+    }
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setSubmitError('')
@@ -177,6 +192,20 @@ export default function ClaimPlayerPage({ auth }) {
                 <Button variant="contained" onClick={handleAttach} disabled={submitting} fullWidth>
                   {submitting ? t('claim.linking') : t('claim.linkAction')}
                 </Button>
+                <Divider />
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {t('claim.notYouQuestion')}
+                  </Typography>
+                  <Button
+                    variant="text"
+                    size="small"
+                    disabled={submitting}
+                    onClick={handleUseAnotherAccount}
+                  >
+                    {t('claim.useAnotherAccount')}
+                  </Button>
+                </Stack>
               </>
             )}
 
