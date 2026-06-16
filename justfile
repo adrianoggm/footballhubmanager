@@ -35,6 +35,19 @@ db-reset:
 db-logs:
     docker compose -f docker/docker-compose.yml logs -f mysql
 
+# Show which schema migrations are applied vs pending.
+db-status:
+    {{venv_python}} backend/manage.py status
+
+# Apply all pending migrations (versioning/sql/versions/vN.sql) to the configured DB.
+db-migrate:
+    {{venv_python}} backend/manage.py migrate
+
+# Baseline an existing DB: mark migrations as applied WITHOUT running them.
+# Optionally cap with a version, e.g. `just db-stamp 11`.
+db-stamp version="":
+    {{venv_python}} backend/manage.py stamp {{version}}
+
 backend port="8000" host="127.0.0.1":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 
