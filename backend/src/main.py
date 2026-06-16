@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 from uvicorn import run
 
 # Logger
@@ -103,22 +103,38 @@ def _db_startup_retries() -> tuple[int, float]:
     return max(1, attempts), max(0.1, delay)
 
 
-def _ensure_profile_image_columns() -> None:
-    dialect_name = getattr(getattr(engine, "dialect", None), "name", None)
-    if dialect_name != "mysql":
+def _strict_migration_check() -> bool:
+    raw = os.getenv("STRICT_MIGRATION_CHECK")
+    return raw is not None and raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _verify_schema_migrations() -> None:
+    """Read-only check that the database schema is at head.
+
+    Migrations are applied out-of-band (the Kubernetes pre-upgrade Job runs the
+    ``migrate`` command), never by the API process. Here we only verify: when
+    ``STRICT_MIGRATION_CHECK`` is enabled we refuse to start against a stale schema
+    (fail fast and loud) instead of letting requests error at runtime; otherwise we
+    log a warning. Any problem reaching the migration metadata is non-fatal.
+    """
+    try:
+        from db_migrations import runner
+
+        migrations, applied = runner.status(engine)
+    except Exception as exc:
+        logger.warning("Skipped schema migration check: %s", exc)
         return
 
-    with engine.begin() as conn:
-        inspector = inspect(conn)
-        table_columns = {
-            "pena": {column["name"] for column in inspector.get_columns("pena")},
-            "player": {column["name"] for column in inspector.get_columns("player")},
-        }
+    pending = [migration.version for migration in migrations if migration.version not in applied]
+    if not pending:
+        logger.info("Schema is up to date (%s migration(s) applied).", len(applied))
+        return
 
-        if "image_url" not in table_columns["pena"]:
-            conn.execute(text("ALTER TABLE pena ADD COLUMN image_url LONGTEXT NULL"))
-        if "image_url" not in table_columns["player"]:
-            conn.execute(text("ALTER TABLE player ADD COLUMN image_url LONGTEXT NULL"))
+    message = f"Pending schema migrations: {', '.join(pending)}. Apply the migrate job."
+    if _strict_migration_check():
+        logger.error(message)
+        raise RuntimeError(message)
+    logger.warning(message)
 
 
 # Lifespan for startup/shutdown
@@ -153,7 +169,7 @@ async def lifespan(app: FastAPI):
         logger.error("Database connection failed after %s attempts: %s", max_attempts, last_error)
         raise last_error
 
-    _ensure_profile_image_columns()
+    _verify_schema_migrations()
 
     yield
 

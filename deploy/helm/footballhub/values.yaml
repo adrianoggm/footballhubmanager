@@ -1,0 +1,93 @@
+# Default values for the footballhub chart.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  registry: ghcr.io
+  owner: adrianoggm
+  pullPolicy: IfNotPresent
+  # Defaults to the chart appVersion when tag is empty.
+  tag: ""
+
+backend:
+  image:
+    repository: footballhubmanager-backend
+  replicas: 2
+  containerPort: 8000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+frontend:
+  image:
+    repository: footballhubmanager-frontend
+  replicas: 2
+  containerPort: 8080
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits: { cpu: 250m, memory: 128Mi }
+
+# Non-secret application configuration (rendered into a ConfigMap, shared by the
+# backend Deployment and the migration Job).
+app:
+  env: production
+  allowedHosts: "" # comma-separated; e.g. "api.example.com"
+  corsAllowedOrigins: "" # e.g. "https://app.example.com"
+  linkTokenTtlSeconds: 86400
+  sessionTtlSeconds: 3600
+  # Refuse to start the API if the schema has pending migrations (fail fast in
+  # prod). Disable for the in-cluster first-install two-step (see NOTES.txt).
+  strictMigrationCheck: true
+  extraEnv: {} # arbitrary extra non-secret env: KEY: value
+
+# Schema migrations run as a Helm pre-install,pre-upgrade hook Job (backend image,
+# args below). Helm blocks the rollout until it succeeds, so the API never serves
+# against an un-migrated schema.
+migrations:
+  enabled: true
+  # Use ["stamp"] (or ["stamp","<N>"]) for the FIRST deploy against an existing
+  # database to baseline it without re-running present migrations; ["migrate"]
+  # thereafter. See docs/deployment.md.
+  args: ["migrate"]
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+# Database connection. Two modes via `mysql.enabled`:
+#   true  -> an in-cluster MySQL StatefulSet (good for dev / small setups)
+#   false -> an external/managed database (recommended for production)
+database:
+  name: footballhub
+  user: footballuser
+  port: 3306
+  provider: mysql+pymysql
+  # Secret + key holding DB_PASSWORD. Leave existingSecret empty to let the chart
+  # create one from the password values below.
+  existingSecret: ""
+  passwordSecretKey: DB_PASSWORD
+
+mysql:
+  enabled: true
+  image: mysql:8.0
+  # Used only when mysql.enabled and database.existingSecret is empty.
+  rootPassword: changeme-root
+  password: changeme
+  storage:
+    size: 8Gi
+    storageClassName: "" # "" uses the cluster default
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: "1", memory: 1Gi }
+
+externalDatabase:
+  # Used only when mysql.enabled is false.
+  host: ""
+  # Password comes from database.existingSecret (recommended) or mysql.password.
+
+ingress:
+  enabled: true
+  className: ""
+  host: footballhub.local
+  annotations: {}
+  tls: [] # e.g. [{ secretName: footballhub-tls, hosts: [app.example.com] }]

@@ -20,8 +20,9 @@ services:
 
   backend:
     build:
-      context: ../backend
-      dockerfile: docker/Dockerfile
+      # Repo root: the image bundles app code AND versioning/sql migrations.
+      context: ..
+      dockerfile: backend/docker/Dockerfile
     depends_on:
       mysql:
         condition: service_healthy

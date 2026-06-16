@@ -1,0 +1,33 @@
+{{ include "footballhub.fullname" . }} deployed.
+
+Images:
+  backend:  {{ include "footballhub.backendImage" . }}
+  frontend: {{ include "footballhub.frontendImage" . }}
+
+Database: {{ if .Values.mysql.enabled }}in-cluster MySQL ({{ include "footballhub.dbHost" . }}){{ else }}external ({{ .Values.externalDatabase.host }}){{ end }}
+
+Migrations: {{ if .Values.migrations.enabled }}run as a pre-install/pre-upgrade hook ({{ .Values.migrations.args | toJson }}){{ else }}DISABLED{{ end }}
+
+{{- if and .Values.mysql.enabled .Values.migrations.enabled }}
+
+⚠ FIRST INSTALL with in-cluster MySQL:
+  Helm runs the migration hook BEFORE normal resources, so the MySQL StatefulSet
+  is not up yet on `helm install` and the hook would time out. Install once with
+  migrations disabled, then upgrade:
+
+    helm install {{ .Release.Name }} ./deploy/helm/footballhub \
+      --set migrations.enabled=false --set app.strictMigrationCheck=false
+    helm upgrade {{ .Release.Name }} ./deploy/helm/footballhub
+
+  (Production with an external/managed DB does not have this caveat.)
+{{- end }}
+
+{{- if not .Values.ingress.enabled }}
+
+Ingress is disabled — expose the services yourself (e.g. kubectl port-forward
+svc/{{ include "footballhub.fullname" . }}-frontend 8080:80).
+{{- end }}
+
+First deploy against an EXISTING database? Baseline it instead of migrating:
+  --set migrations.args="{stamp}"      # mark all present versions as applied
+Then switch back to {migrate} for subsequent releases. See docs/deployment.md.
