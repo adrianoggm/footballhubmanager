@@ -134,3 +134,68 @@ an Ingress maps `/api` → backend Service and `/` → frontend Service.
 
 > The Helm chart (Deployments, Services, Ingress, the migrate hook Job, Secrets/Config)
 > is the next step and depends on where MySQL lives (managed vs in-cluster).
+
+## HTTPS / TLS
+
+TLS terminates **at the Ingress**. Backend and frontend stay plain HTTP inside the
+cluster (backend on `:8000`, nginx on `:8080`); only the ingress speaks HTTPS to the
+internet. The pieces that make this work:
+
+- **Backend trusts the proxy.** uvicorn runs with `proxy_headers=True` and
+  `forwarded_allow_ips` (override via `FORWARDED_ALLOW_IPS`, default `*`). It reads
+  `X-Forwarded-Proto`/`-For` from the ingress, so `request.url.scheme` is `https` and
+  Swagger/redoc and any generated URLs use the right scheme. `*` is safe here because
+  the only thing that can reach the pod is the in-cluster ingress.
+- **Frontend uses a relative API base** (`VITE_API_BASE_URL` defaults to `""`), so the
+  SPA calls `/api/...` on its own origin and automatically inherits `https://`. No
+  mixed content, and the PWA service worker (which *requires* HTTPS in production) works.
+- **Auth is Bearer-token, not cookies** — there are no `Secure`/`SameSite` cookie flags
+  to set.
+
+### Enable TLS with cert-manager (recommended)
+
+Requires [cert-manager](https://cert-manager.io/) installed and a `ClusterIssuer`
+(e.g. `letsencrypt-prod`). The chart adds the `cert-manager.io/cluster-issuer`
+annotation; cert-manager issues and renews the cert into `ingress.tls.secretName`.
+
+```yaml
+# values-prod.yaml (excerpt)
+ingress:
+  enabled: true
+  className: nginx
+  host: app.example.com
+  tls:
+    enabled: true
+    secretName: footballhub-tls
+    clusterIssuer: letsencrypt-prod
+  forceHttpsRedirect: true   # turn on AFTER the cert is issued (avoids redirect loop)
+  hsts:
+    enabled: true            # turn on once HTTPS is stable
+
+app:
+  env: production
+  allowedHosts: "app.example.com"
+  corsAllowedOrigins: "https://app.example.com"
+```
+
+```bash
+helm upgrade --install footballhub ./deploy/helm/footballhub -f values-prod.yaml
+```
+
+Bring TLS up in two steps to avoid locking yourself out while the cert is pending:
+first deploy with `tls.enabled=true` but `forceHttpsRedirect=false`; once
+`kubectl get certificate` shows `Ready=True`, enable `forceHttpsRedirect` (and `hsts`).
+
+### Enable TLS with a pre-provisioned certificate
+
+Skip `clusterIssuer` and create the secret yourself (corporate CA, wildcard, etc.):
+
+```bash
+kubectl create secret tls footballhub-tls --cert=tls.crt --key=tls.key
+helm upgrade --install footballhub ./deploy/helm/footballhub \
+  --set ingress.tls.enabled=true --set ingress.host=app.example.com
+```
+
+> The redirect/HSTS annotations are written in the `nginx.ingress.kubernetes.io/*`
+> form. On a different ingress controller, set the equivalent via `ingress.annotations`
+> and leave `forceHttpsRedirect`/`hsts` off.

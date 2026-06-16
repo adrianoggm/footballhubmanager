@@ -22,7 +22,14 @@ Migrations: {{ if .Values.migrations.enabled }}run as a pre-install/pre-upgrade 
   (Production with an external/managed DB does not have this caveat.)
 {{- end }}
 
-{{- if not .Values.ingress.enabled }}
+{{- if .Values.ingress.enabled }}
+
+App URL: {{ if .Values.ingress.tls.enabled }}https{{ else }}http{{ end }}://{{ .Values.ingress.host }}/ (API under /api)
+{{- if not .Values.ingress.tls.enabled }}
+  TLS is OFF. To enable HTTPS, set ingress.tls.enabled=true (+ ingress.tls.clusterIssuer
+  for cert-manager). See docs/deployment.md → HTTPS / TLS.
+{{- end }}
+{{- else }}
 
 Ingress is disabled — expose the services yourself (e.g. kubectl port-forward
 svc/{{ include "footballhub.fullname" . }}-frontend 8080:80).

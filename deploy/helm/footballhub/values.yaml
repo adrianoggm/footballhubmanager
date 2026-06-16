@@ -90,4 +90,24 @@ ingress:
   className: ""
   host: footballhub.local
   annotations: {}
-  tls: [] # e.g. [{ secretName: footballhub-tls, hosts: [app.example.com] }]
+  # TLS terminates here at the ingress; the backend and frontend stay plain HTTP
+  # inside the cluster. uvicorn trusts X-Forwarded-Proto, so the app still sees
+  # the request as https.
+  tls:
+    enabled: false
+    # Secret holding the cert/key for `host`. With cert-manager (clusterIssuer
+    # set below) the cert is issued INTO this secret automatically; otherwise
+    # create it yourself: kubectl create secret tls <name> --cert=... --key=...
+    secretName: footballhub-tls
+    # cert-manager ClusterIssuer (e.g. "letsencrypt-prod"). When set, the chart
+    # adds the cert-manager.io/cluster-issuer annotation and the cert is
+    # auto-issued and auto-renewed. Requires cert-manager installed in-cluster.
+    clusterIssuer: ""
+  # Redirect HTTP -> HTTPS at the ingress (nginx-ingress annotations). Turn on
+  # once TLS works to avoid a redirect loop before the cert is ready.
+  forceHttpsRedirect: false
+  # Strict-Transport-Security header. Only enable once HTTPS is stable.
+  hsts:
+    enabled: false
+    maxAge: 31536000 # 1 year, in seconds
+    includeSubDomains: true
