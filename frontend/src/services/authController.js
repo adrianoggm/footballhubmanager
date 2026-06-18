@@ -42,6 +42,19 @@ export class AuthController {
       sessionStore.clear()
     }
   }
+
+  async restore() {
+    // Repopulate session metadata from the HttpOnly cookie on app load. A 401
+    // (no/expired cookie) simply means "not logged in".
+    try {
+      const session = await authService.session()
+      sessionStore.setSession(session)
+      return session
+    } catch {
+      sessionStore.clear()
+      return null
+    }
+  }
 }
 
 export const authController = new AuthController()

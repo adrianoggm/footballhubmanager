@@ -36,7 +36,9 @@ def test_extract_token_returns_none_when_no_token_present():
 
 def test_get_current_session_raises_401_when_missing_token():
     with pytest.raises(HTTPException) as exc:
-        dependencies.get_current_session(authorization=None, x_session_token=None, db=object())
+        dependencies.get_current_session(
+            authorization=None, x_session_token=None, session_cookie=None, db=object()
+        )
     assert exc.value.status_code == 401
     assert exc.value.detail == "Missing session token"
 
@@ -220,3 +222,64 @@ def test_authorize_player_access_maps_use_case_errors_to_http(monkeypatch, error
         )
     assert exc.value.status_code == 403
     assert exc.value.detail == detail
+
+
+def test_extract_token_falls_back_to_session_cookie():
+    # Header sources take precedence; cookie is the last resort.
+    assert dependencies._extract_token(None, None, "cookie-token") == "cookie-token"
+    assert dependencies._extract_token("Bearer hdr", None, "cookie-token") == "hdr"
+    assert dependencies._extract_token(None, "xtok", "cookie-token") == "xtok"
+    assert dependencies._extract_token(None, None, None) is None
+
+
+def test_get_current_session_reads_token_from_cookie(monkeypatch):
+    captured = {}
+
+    def _fake_get_session(_db, token):
+        captured["token"] = token
+        return _session(user_type="user")
+
+    monkeypatch.setattr(dependencies, "get_session", _fake_get_session)
+
+    session = dependencies.get_current_session(
+        authorization=None,
+        x_session_token=None,
+        session_cookie="cookie-token",
+        db=object(),
+    )
+    assert captured["token"] == "cookie-token"
+    assert session.user_type == "user"
+
+
+def test_set_session_cookie_is_httponly_and_samesite_strict(monkeypatch):
+    from fastapi import Response
+
+    monkeypatch.setenv("APP_ENV", "production")
+    response = Response()
+    dependencies.set_session_cookie(response, _session(user_type="admin"))
+
+    header = response.headers.get("set-cookie", "")
+    assert "session=token-1" in header
+    assert "HttpOnly" in header
+    assert "SameSite=strict" in header.replace("Strict", "strict")
+    assert "Secure" in header
+
+
+def test_set_session_cookie_omits_secure_in_dev(monkeypatch):
+    from fastapi import Response
+
+    monkeypatch.setenv("APP_ENV", "development")
+    response = Response()
+    dependencies.set_session_cookie(response, _session(user_type="user"))
+
+    assert "Secure" not in response.headers.get("set-cookie", "")
+
+
+def test_clear_session_cookie_expires_the_cookie():
+    from fastapi import Response
+
+    response = Response()
+    dependencies.clear_session_cookie(response)
+    header = response.headers.get("set-cookie", "")
+    assert "session=" in header
+    assert "Max-Age=0" in header or "expires=Thu, 01 Jan 1970" in header

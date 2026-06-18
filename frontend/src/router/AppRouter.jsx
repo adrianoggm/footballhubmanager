@@ -55,7 +55,7 @@ function CatchAllRedirect({ isAuthenticated, session }) {
 }
 
 export default function AppRouter({ auth, onLogout }) {
-  const isAuthenticated = Boolean(auth.token)
+  const isAuthenticated = Boolean(auth.session)
 
   return (
     <BrowserRouter>

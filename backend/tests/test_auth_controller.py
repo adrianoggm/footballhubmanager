@@ -21,7 +21,7 @@ from core.domain.errors import (
     UserInvalidNationalityError,
     UserUsernameExistsError,
 )
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 
 
 def _session(*, user_type: str, user_guid: str) -> SessionData:
@@ -118,12 +118,15 @@ def test_login_user_returns_session_response(monkeypatch):
         ),
     )
 
+    http_response = Response()
     response = auth_controller.login_user(
         LoginRequest(username="alice", password="secret"),
+        http_response,
         use_case=use_case,
         db=object(),
     )
 
+    assert "session=session-token" in http_response.headers.get("set-cookie", "")
     assert use_case.last_payload.username == "alice"
     assert response.token == "session-token"
     assert response.user_guid == "user-guid-7"
@@ -138,6 +141,7 @@ def test_login_user_maps_invalid_credentials():
     with pytest.raises(HTTPException) as exc:
         auth_controller.login_user(
             LoginRequest(username="alice", password="wrong"),
+            Response(),
             use_case=_UseCase(),
             db=object(),
         )
@@ -164,12 +168,15 @@ def test_login_admin_returns_session_response(monkeypatch):
         ),
     )
 
+    http_response = Response()
     response = auth_controller.login_admin(
         LoginRequest(username="root", password="secret"),
+        http_response,
         use_case=_UseCase(),
         db=object(),
     )
 
+    assert "session=session-token" in http_response.headers.get("set-cookie", "")
     assert response.token_type == "session"
     assert response.user_guid == "admin-guid-9"
     assert response.user_type == "admin"
@@ -183,6 +190,7 @@ def test_login_admin_maps_invalid_credentials():
     with pytest.raises(HTTPException) as exc:
         auth_controller.login_admin(
             LoginRequest(username="root", password="wrong"),
+            Response(),
             use_case=_UseCase(),
             db=object(),
         )
@@ -224,6 +232,7 @@ def test_register_user_returns_session_response(monkeypatch):
     )
     _stub_create_session(monkeypatch)
 
+    http_response = Response()
     response = auth_controller.register_user(
         RegisterUserRequest(
             username="u17",
@@ -233,10 +242,12 @@ def test_register_user_returns_session_response(monkeypatch):
             surname2=None,
             nationality="ES",
         ),
+        http_response,
         command_bus=bus,
         db=object(),
     )
 
+    assert "session=session-token" in http_response.headers.get("set-cookie", "")
     assert isinstance(bus.last_command, RegisterUserCommand)
     assert bus.last_command.username == "u17"
     assert response.user_guid == "user-guid-17"
@@ -272,6 +283,7 @@ def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
                 surname2=None,
                 nationality="ES",
             ),
+            Response(),
             command_bus=bus,
             db=db,
         )
@@ -298,6 +310,7 @@ def test_register_user_maps_errors(error, status_code, detail):
                 surname2=None,
                 nationality="ES",
             ),
+            Response(),
             command_bus=_RaisingCommandBus(error),
             db=object(),
         )
@@ -309,12 +322,15 @@ def test_register_admin_returns_session_response(monkeypatch):
     bus = _RegistrationCommandBus(RegisteredAdmin(admin_id=23, admin_guid="admin-guid-23"))
     _stub_create_session(monkeypatch)
 
+    http_response = Response()
     response = auth_controller.register_admin(
         RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
+        http_response,
         command_bus=bus,
         db=object(),
     )
 
+    assert "session=session-token" in http_response.headers.get("set-cookie", "")
     assert isinstance(bus.last_command, RegisterAdminCommand)
     assert bus.last_command.username == "a23"
     assert response.user_guid == "admin-guid-23"
@@ -341,6 +357,7 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
     with pytest.raises(RuntimeError):
         auth_controller.register_admin(
             RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
+            Response(),
             command_bus=bus,
             db=db,
         )
@@ -359,6 +376,7 @@ def test_register_admin_maps_errors(error, status_code, detail):
     with pytest.raises(HTTPException) as exc:
         auth_controller.register_admin(
             RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
+            Response(),
             command_bus=_RaisingCommandBus(error),
             db=object(),
         )
@@ -374,7 +392,9 @@ def test_logout_invalidates_session_and_returns_ok(monkeypatch):
 
     monkeypatch.setattr(auth_controller, "invalidate_session", _fake_invalidate)
 
+    http_response = Response()
     response = auth_controller.logout(
+        http_response,
         session=SessionData(
             token="tok-123",
             user_id=1,
@@ -387,6 +407,7 @@ def test_logout_invalidates_session_and_returns_ok(monkeypatch):
 
     assert calls == {"token": "tok-123"}
     assert response == {"status": "ok"}
+    assert "session=" in http_response.headers.get("set-cookie", "")
 
 
 def test_admin_registration_secret_disabled_when_env_unset(monkeypatch):
@@ -432,3 +453,18 @@ def test_registration_rejects_short_password(model):
         fields |= {"surname1": "S", "nationality": "ES"}
     with pytest.raises(ValidationError):
         model(**fields)
+
+
+def test_read_session_returns_metadata_without_token():
+    session = SessionData(
+        token="tok-secret",
+        user_id=3,
+        user_guid="guid-3",
+        user_type="admin",
+        expires_at=4242,
+    )
+    result = auth_controller.read_session(session=session)
+    assert result.user_guid == "guid-3"
+    assert result.user_type == "admin"
+    assert result.expires_at == 4242
+    assert not hasattr(result, "token")

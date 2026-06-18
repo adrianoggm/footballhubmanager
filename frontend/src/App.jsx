@@ -12,5 +12,11 @@ export default function App() {
     }
   }
 
+  // Hold the first paint until the cookie-based session check settles, so a
+  // reload doesn't bounce an authenticated user through the logged-out routes.
+  if (auth.status === 'restoring') {
+    return null
+  }
+
   return <AppRouter auth={auth} onLogout={handleLogout} />
 }

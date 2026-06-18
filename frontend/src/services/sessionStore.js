@@ -1,58 +1,37 @@
-import { httpClient } from './httpClient.js'
+const LEGACY_TOKEN_KEY = 'penahub.session.token'
+const LEGACY_SESSION_KEY = 'penahub.session.payload'
 
-const TOKEN_KEY = 'penahub.session.token'
-const SESSION_KEY = 'penahub.session.payload'
+// The session token now lives only in an HttpOnly cookie. This store keeps just
+// the non-sensitive metadata (role/guid) in memory for routing; it is repopulated
+// from GET /auth/session on reload.
+let currentSession = null
 
-const parseSession = (value) => {
-  if (!value) {
-    return null
-  }
+const clearLegacyStorage = () => {
   try {
-    return JSON.parse(value)
+    localStorage.removeItem(LEGACY_TOKEN_KEY)
+    localStorage.removeItem(LEGACY_SESSION_KEY)
   } catch {
-    return null
+    // Storage may be unavailable in private or embedded browser contexts.
   }
 }
 
 export const sessionStore = {
-  getToken() {
-    const session = this.getSession()
-    if (session?.token) {
-      return session.token
-    }
-    return localStorage.getItem(TOKEN_KEY)
-  },
   getSession() {
-    return parseSession(localStorage.getItem(SESSION_KEY))
+    return currentSession
   },
   setSession(session) {
-    if (!session?.token) {
+    if (!session?.user_type) {
       return
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    localStorage.setItem(TOKEN_KEY, session.token)
-    httpClient.setSessionToken(session.token)
-  },
-  setToken(token) {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token)
-      httpClient.setSessionToken(token)
+    currentSession = {
+      user_guid: session.user_guid,
+      user_type: session.user_type,
+      expires_at: session.expires_at,
     }
+    clearLegacyStorage()
   },
   clear() {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(SESSION_KEY)
-    httpClient.setSessionToken(null)
-  },
-  init() {
-    const session = this.getSession()
-    if (session?.token) {
-      httpClient.setSessionToken(session.token)
-      return
-    }
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (token) {
-      this.setToken(token)
-    }
+    currentSession = null
+    clearLegacyStorage()
   },
 }

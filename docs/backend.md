@@ -133,6 +133,8 @@ Most relevant variables:
 
 - `APP_HOST`, `APP_PORT`, `APP_RELOAD`, `APP_ENV`
 - `EXPOSE_INTERNAL_ERRORS` (default `false`; enables detailed 500 responses only for local/dev/test)
+- `RATE_LIMIT_ENABLED`, `RATE_LIMIT_REQUESTS`, `RATE_LIMIT_AUTH_REQUESTS`,
+  `RATE_LIMIT_WINDOW_SECONDS`
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PROVIDER`
 - `LINK_TOKEN_TTL_SECONDS`, `SESSION_TTL_SECONDS`
 - `SQL_ECHO`

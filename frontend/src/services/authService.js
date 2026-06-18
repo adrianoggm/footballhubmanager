@@ -20,6 +20,10 @@ export class AuthService {
   async logout() {
     return httpClient.post('/api/v1/auth/logout', {})
   }
+
+  async session() {
+    return httpClient.get('/api/v1/auth/session')
+  }
 }
 
 export const authService = new AuthService()
