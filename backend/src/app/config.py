@@ -1,16 +1,29 @@
 import logging
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_ENV_FILES = [
+    str(_BACKEND_DIR / "config" / ".local.env"),
+    str(_BACKEND_DIR / "config" / ".env"),
+]
+
+# Also load the .env files into os.environ so settings read via os.getenv
+# (not just the typed Configuration below) work in local runs. override=False
+# keeps real env vars and test monkeypatching authoritative; loading
+# .local.env first lets it win over .env for the same key.
+for _env_file in _ENV_FILES:
+    load_dotenv(_env_file, override=False)
+
 
 class Configuration(BaseSettings):
-    _backend_dir = Path(__file__).resolve().parents[2]
     model_config = SettingsConfigDict(
         env_file=[
-            str(_backend_dir / "config" / ".local.env"),
-            str(_backend_dir / "config" / ".env"),
+            str(_BACKEND_DIR / "config" / ".local.env"),
+            str(_BACKEND_DIR / "config" / ".env"),
         ],
         case_sensitive=False,
         extra="ignore",
