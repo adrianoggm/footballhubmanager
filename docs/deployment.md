@@ -137,6 +137,9 @@ an Ingress maps `/api` → backend Service and `/` → frontend Service.
 
 ## HTTPS / TLS
 
+> For an end-to-end, copy-paste runbook on a single cheap VPS (k3s + ingress-nginx +
+> cert-manager + this chart), see [vps-deployment.md](vps-deployment.md).
+
 TLS terminates **at the Ingress**. Backend and frontend stay plain HTTP inside the
 cluster (backend on `:8000`, nginx on `:8080`); only the ingress speaks HTTPS to the
 internet. The pieces that make this work:
