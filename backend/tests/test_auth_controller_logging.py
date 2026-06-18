@@ -2,7 +2,7 @@ import logging
 import os
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 
 # Required so importing auth controller does not fail during test collection.
 os.environ.setdefault("DB_HOST", "localhost")
@@ -34,7 +34,7 @@ def test_user_login_failure_logs_do_not_expose_username_or_password(caplog):
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(HTTPException) as exc:
-            auth_controller.login_user(payload, use_case=use_case, db=object())
+            auth_controller.login_user(payload, Response(), use_case=use_case, db=object())
 
     assert exc.value.status_code == 401
     assert "invalid credentials" in caplog.text.lower()
@@ -48,7 +48,7 @@ def test_admin_login_failure_logs_do_not_expose_username_or_password(caplog):
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(HTTPException) as exc:
-            auth_controller.login_admin(payload, use_case=use_case, db=object())
+            auth_controller.login_admin(payload, Response(), use_case=use_case, db=object())
 
     assert exc.value.status_code == 401
     assert "invalid credentials" in caplog.text.lower()
