@@ -13,6 +13,7 @@ if not logging.getLogger().handlers:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
+from api.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware, RateLimitRule
 from api.module import api_router
 from app.config import config as app_config
 from app.module import engine
@@ -29,7 +30,23 @@ logger = logging.getLogger(__name__)
 
 
 def _app_env() -> str:
-    return os.getenv("APP_ENV", "development").strip().lower()
+    return os.getenv("APP_ENV", "production").strip().lower()
+
+
+def _env_bool(name: str, *, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, *, default: int, minimum: int = 1) -> int:
+    raw_value = os.getenv(name)
+    try:
+        value = int(raw_value) if raw_value is not None else default
+    except ValueError:
+        value = default
+    return max(minimum, value)
 
 
 def _resolve_allowed_hosts() -> list[str]:
@@ -64,11 +81,7 @@ def _resolve_cors_origins() -> list[str]:
 
 
 def _resolve_cors_allow_credentials(origins: list[str]) -> bool:
-    raw_value = os.getenv("CORS_ALLOW_CREDENTIALS")
-    if raw_value is not None:
-        allow_credentials = raw_value.strip().lower() in {"1", "true", "yes", "on"}
-    else:
-        allow_credentials = False
+    allow_credentials = _env_bool("CORS_ALLOW_CREDENTIALS", default=False)
 
     # Browsers reject '*' when credentials are enabled, and it is insecure.
     if allow_credentials and "*" in origins:
@@ -78,15 +91,25 @@ def _resolve_cors_allow_credentials(origins: list[str]) -> bool:
 
 
 def _include_debug_error_detail() -> bool:
-    raw_value = os.getenv("EXPOSE_INTERNAL_ERRORS")
-    if raw_value is None:
-        return False
-    expose_internal_errors = raw_value.strip().lower() in {"1", "true", "yes", "on"}
-    if not expose_internal_errors:
+    if not _env_bool("EXPOSE_INTERNAL_ERRORS", default=False):
         return False
 
     app_env = _app_env()
     return app_env in {"dev", "development", "local", "test"}
+
+
+def _resolve_rate_limit_config() -> RateLimitConfig:
+    return RateLimitConfig(
+        enabled=_env_bool("RATE_LIMIT_ENABLED", default=True),
+        default_rule=RateLimitRule(
+            max_requests=_env_int("RATE_LIMIT_REQUESTS", default=300),
+            window_seconds=_env_int("RATE_LIMIT_WINDOW_SECONDS", default=60),
+        ),
+        auth_rule=RateLimitRule(
+            max_requests=_env_int("RATE_LIMIT_AUTH_REQUESTS", default=20),
+            window_seconds=_env_int("RATE_LIMIT_WINDOW_SECONDS", default=60),
+        ),
+    )
 
 
 def _db_startup_retries() -> tuple[int, float]:
@@ -199,6 +222,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
+app.add_middleware(RateLimitMiddleware, config=_resolve_rate_limit_config())
 
 
 # Global exception handler

@@ -34,6 +34,11 @@ app:
   env: production
   allowedHosts: "" # comma-separated; e.g. "api.example.com"
   corsAllowedOrigins: "" # e.g. "https://app.example.com"
+  rateLimit:
+    enabled: true
+    requests: 300
+    authRequests: 20
+    windowSeconds: 60
   linkTokenTtlSeconds: 86400
   sessionTtlSeconds: 3600
   # Refuse to start the API if the schema has pending migrations (fail fast in
