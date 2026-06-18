@@ -240,4 +240,8 @@ if __name__ == "__main__":
         port=app_config.APP_PORT,
         reload=app_config.APP_RELOAD,
         log_level="info",
+        # TLS terminates at the ingress; trust its forwarded headers so the app
+        # sees the real scheme (https) and client IP instead of the proxy's.
+        proxy_headers=True,
+        forwarded_allow_ips=os.getenv("FORWARDED_ALLOW_IPS", "*"),
     )

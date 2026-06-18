@@ -1,21 +1,36 @@
 {{- if .Values.ingress.enabled }}
+{{- $tls := .Values.ingress.tls }}
+{{- $ann := deepCopy (default dict .Values.ingress.annotations) }}
+{{- if and $tls.enabled $tls.clusterIssuer }}
+{{- $ann = set $ann "cert-manager.io/cluster-issuer" $tls.clusterIssuer }}
+{{- end }}
+{{- if .Values.ingress.forceHttpsRedirect }}
+{{- $ann = set $ann "nginx.ingress.kubernetes.io/ssl-redirect" "true" }}
+{{- $ann = set $ann "nginx.ingress.kubernetes.io/force-ssl-redirect" "true" }}
+{{- end }}
+{{- if .Values.ingress.hsts.enabled }}
+{{- $hstsHeader := printf "Strict-Transport-Security: max-age=%d%s" (int64 .Values.ingress.hsts.maxAge) (ternary "; includeSubDomains" "" .Values.ingress.hsts.includeSubDomains) }}
+{{- $ann = set $ann "nginx.ingress.kubernetes.io/configuration-snippet" (printf "more_set_headers \"%s\";\n" $hstsHeader) }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "footballhub.fullname" . }}
   labels:
     {{- include "footballhub.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  {{- if $ann }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- toYaml $ann | nindent 4 }}
   {{- end }}
 spec:
   {{- with .Values.ingress.className }}
   ingressClassName: {{ . }}
   {{- end }}
-  {{- with .Values.ingress.tls }}
+  {{- if $tls.enabled }}
   tls:
-    {{- toYaml . | nindent 4 }}
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ $tls.secretName | quote }}
   {{- end }}
   rules:
     - host: {{ .Values.ingress.host | quote }}
