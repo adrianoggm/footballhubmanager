@@ -227,7 +227,7 @@ def test_register_user_returns_session_response(monkeypatch):
     response = auth_controller.register_user(
         RegisterUserRequest(
             username="u17",
-            password="secret",
+            password="secret-pass-123",
             name="Ana",
             surname1="Lopez",
             surname2=None,
@@ -266,7 +266,7 @@ def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
         auth_controller.register_user(
             RegisterUserRequest(
                 username="u17",
-                password="secret",
+                password="secret-pass-123",
                 name="Ana",
                 surname1="Lopez",
                 surname2=None,
@@ -292,7 +292,7 @@ def test_register_user_maps_errors(error, status_code, detail):
         auth_controller.register_user(
             RegisterUserRequest(
                 username="u17",
-                password="secret",
+                password="secret-pass-123",
                 name="Ana",
                 surname1="Lopez",
                 surname2=None,
@@ -310,7 +310,7 @@ def test_register_admin_returns_session_response(monkeypatch):
     _stub_create_session(monkeypatch)
 
     response = auth_controller.register_admin(
-        RegisterAdminRequest(username="a23", password="secret", name="Admin"),
+        RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
         command_bus=bus,
         db=object(),
     )
@@ -340,7 +340,7 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
 
     with pytest.raises(RuntimeError):
         auth_controller.register_admin(
-            RegisterAdminRequest(username="a23", password="secret", name="Admin"),
+            RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
             command_bus=bus,
             db=db,
         )
@@ -358,7 +358,7 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
 def test_register_admin_maps_errors(error, status_code, detail):
     with pytest.raises(HTTPException) as exc:
         auth_controller.register_admin(
-            RegisterAdminRequest(username="a23", password="secret", name="Admin"),
+            RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
             command_bus=_RaisingCommandBus(error),
             db=object(),
         )
@@ -387,3 +387,48 @@ def test_logout_invalidates_session_and_returns_ok(monkeypatch):
 
     assert calls == {"token": "tok-123"}
     assert response == {"status": "ok"}
+
+
+def test_admin_registration_secret_disabled_when_env_unset(monkeypatch):
+    monkeypatch.delenv("ADMIN_REGISTRATION_SECRET", raising=False)
+    with pytest.raises(HTTPException) as exc:
+        auth_controller.require_admin_registration_secret(x_admin_registration_secret="anything")
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Admin registration is disabled"
+
+
+def test_admin_registration_secret_rejects_wrong_value(monkeypatch):
+    monkeypatch.setenv("ADMIN_REGISTRATION_SECRET", "expected-secret")
+    with pytest.raises(HTTPException) as exc:
+        auth_controller.require_admin_registration_secret(x_admin_registration_secret="wrong")
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Invalid admin registration secret"
+
+
+def test_admin_registration_secret_rejects_missing_header(monkeypatch):
+    monkeypatch.setenv("ADMIN_REGISTRATION_SECRET", "expected-secret")
+    with pytest.raises(HTTPException) as exc:
+        auth_controller.require_admin_registration_secret(x_admin_registration_secret=None)
+    assert exc.value.status_code == 403
+
+
+def test_admin_registration_secret_accepts_matching_value(monkeypatch):
+    monkeypatch.setenv("ADMIN_REGISTRATION_SECRET", "expected-secret")
+    # Returns None (no exception) when the header matches.
+    assert (
+        auth_controller.require_admin_registration_secret(
+            x_admin_registration_secret="expected-secret"
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize("model", [RegisterUserRequest, RegisterAdminRequest])
+def test_registration_rejects_short_password(model):
+    from pydantic import ValidationError
+
+    fields = {"username": "u", "password": "short", "name": "N"}
+    if model is RegisterUserRequest:
+        fields |= {"surname1": "S", "nationality": "ES"}
+    with pytest.raises(ValidationError):
+        model(**fields)

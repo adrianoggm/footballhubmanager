@@ -6,13 +6,27 @@ import urllib.request
 import uuid
 
 API_V1 = os.getenv("TEST_API_V1", "http://127.0.0.1:8000/api/v1")
+_ADMIN_REGISTRATION_HEADERS = {
+    "X-Admin-Registration-Secret": os.getenv(
+        "TEST_ADMIN_REGISTRATION_SECRET", "test-admin-registration-secret"
+    )
+}
 
 
-def _request(method: str, url: str, *, token: str | None = None, payload: dict | None = None):
+def _request(
+    method: str,
+    url: str,
+    *,
+    token: str | None = None,
+    payload: dict | None = None,
+    extra_headers: dict | None = None,
+):
     data = None
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    if extra_headers:
+        headers.update(extra_headers)
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
 
@@ -34,8 +48,13 @@ def _unique(prefix: str) -> str:
 
 def _register_admin():
     username = _unique("admin")
-    payload = {"username": username, "password": "secret123", "name": f"Pena {username}"}
-    status, data = _request("POST", f"{API_V1}/auth/admin/register", payload=payload)
+    payload = {"username": username, "password": "secret123456", "name": f"Pena {username}"}
+    status, data = _request(
+        "POST",
+        f"{API_V1}/auth/admin/register",
+        payload=payload,
+        extra_headers=_ADMIN_REGISTRATION_HEADERS,
+    )
     assert status == 200, data
     return data
 
@@ -44,7 +63,7 @@ def _register_user():
     username = _unique("user")
     payload = {
         "username": username,
-        "password": "secret123",
+        "password": "secret123456",
         "name": "Concurrent",
         "surname1": "User",
         "surname2": None,
