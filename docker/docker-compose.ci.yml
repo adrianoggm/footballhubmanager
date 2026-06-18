@@ -43,6 +43,10 @@ services:
       SESSION_TTL_SECONDS: 3600
       # Must match TEST_ADMIN_REGISTRATION_SECRET default in the integration helpers.
       ADMIN_REGISTRATION_SECRET: test-admin-registration-secret
+      # The integration suite registers many accounts from a single IP, which would
+      # trip the per-IP auth rate limit. The limiter has its own unit tests; disable
+      # it here so the flow tests aren't throttled.
+      RATE_LIMIT_ENABLED: "false"
     ports:
       - "8000:8000"
     healthcheck:
