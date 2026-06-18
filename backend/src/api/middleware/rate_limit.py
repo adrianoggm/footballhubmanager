@@ -31,10 +31,16 @@ class RateLimitDecision:
 
 
 class SlidingWindowRateLimiter:
+    # Sweep idle keys every N checks so the table doesn't grow unbounded with
+    # one-shot/rotating client IPs (their buckets expire but the dict entry lingers).
+    _SWEEP_EVERY = 1024
+
     def __init__(self, clock: Callable[[], float] = time.monotonic):
         self._clock = clock
         self._hits: dict[str, deque[float]] = {}
+        self._windows: dict[str, int] = {}
         self._lock = Lock()
+        self._checks_since_sweep = 0
 
     def check(self, key: str, rule: RateLimitRule) -> RateLimitDecision:
         now = self._clock()
@@ -43,7 +49,14 @@ class SlidingWindowRateLimiter:
         cutoff = now - window_seconds
 
         with self._lock:
+            self._checks_since_sweep += 1
+            if self._checks_since_sweep >= self._SWEEP_EVERY:
+                # Runs before the current key is (re)inserted; any key it drops has a
+                # fully-expired bucket, so recreating it empty below loses nothing.
+                self._sweep(now)
+
             bucket = self._hits.setdefault(key, deque())
+            self._windows[key] = window_seconds
             while bucket and bucket[0] <= cutoff:
                 bucket.popleft()
 
@@ -61,6 +74,19 @@ class SlidingWindowRateLimiter:
                 remaining=max_requests - len(bucket),
                 retry_after_seconds=0,
             )
+
+    def _sweep(self, now: float) -> None:
+        self._checks_since_sweep = 0
+        stale: list[str] = []
+        for stored_key, bucket in self._hits.items():
+            cutoff = now - self._windows.get(stored_key, 0)
+            while bucket and bucket[0] <= cutoff:
+                bucket.popleft()
+            if not bucket:
+                stale.append(stored_key)
+        for stored_key in stale:
+            del self._hits[stored_key]
+            self._windows.pop(stored_key, None)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

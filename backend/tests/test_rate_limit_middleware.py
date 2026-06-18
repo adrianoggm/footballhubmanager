@@ -35,6 +35,24 @@ def test_sliding_window_rate_limiter_is_scoped_by_key():
     assert limiter.check("127.0.0.1:auth", rule).allowed is False
 
 
+def test_sweep_evicts_idle_keys_without_dropping_active_ones():
+    current_time = 100.0
+    limiter = SlidingWindowRateLimiter(clock=lambda: current_time)
+    limiter._SWEEP_EVERY = 1  # sweep on every check for the test
+    rule = RateLimitRule(max_requests=5, window_seconds=10)
+
+    limiter.check("idle:auth", rule)
+    assert "idle:auth" in limiter._hits
+
+    # Advance past the window so idle's bucket is fully expired, then touch another
+    # key to trigger a sweep. The idle key is evicted; the active one survives.
+    current_time = 200.0
+    limiter.check("active:auth", rule)
+
+    assert "idle:auth" not in limiter._hits
+    assert "active:auth" in limiter._hits
+
+
 def test_rate_limit_middleware_rejects_when_limiter_denies():
     from api.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware
     from starlette.requests import Request

@@ -211,8 +211,13 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Middleware
+# Middleware. Starlette runs the LAST-added middleware outermost, so CORS must be
+# added last: otherwise short-circuit responses (e.g. a 429 from the rate limiter,
+# a 400 from TrustedHost) skip CORS and reach browsers without Access-Control
+# headers, surfacing as an opaque CORS error instead of the real status.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(RateLimitMiddleware, config=_resolve_rate_limit_config())
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
 cors_origins = _resolve_cors_origins()
 app.add_middleware(
     CORSMiddleware,
@@ -221,8 +226,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
-app.add_middleware(RateLimitMiddleware, config=_resolve_rate_limit_config())
 
 
 # Global exception handler
