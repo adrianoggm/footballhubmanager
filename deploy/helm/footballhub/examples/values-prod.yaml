@@ -1,0 +1,39 @@
+# Example production values for a single-node VPS (k3s) with HTTPS.
+# Copy, edit the host/passwords, and pass with: helm upgrade -f values-prod.yaml
+#
+# TLS bring-up is two-step (see docs/vps-deployment.md): deploy first with
+# forceHttpsRedirect=false, wait for the cert to be Ready, then flip it on.
+
+backend:
+  replicas: 1 # single node; bump once you have more nodes
+
+frontend:
+  replicas: 1
+
+app:
+  env: production
+  allowedHosts: "app.example.com" # <-- your domain
+  corsAllowedOrigins: "https://app.example.com" # <-- your domain, https
+  strictMigrationCheck: true
+
+# In-cluster MySQL is fine for a small single-node setup. For real production
+# prefer an external/managed DB (set mysql.enabled=false + externalDatabase.host).
+mysql:
+  enabled: true
+  rootPassword: "CHANGE-ME-root" # <-- change
+  password: "CHANGE-ME" # <-- change
+  storage:
+    size: 8Gi
+    storageClassName: "local-path" # k3s default storage class
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.example.com # <-- your domain
+  tls:
+    enabled: true
+    secretName: footballhub-tls
+    clusterIssuer: letsencrypt-prod
+  forceHttpsRedirect: false # turn ON after the cert is Ready (avoids redirect loop)
+  hsts:
+    enabled: false # turn ON once HTTPS is stable
