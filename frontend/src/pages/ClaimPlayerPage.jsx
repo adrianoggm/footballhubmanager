@@ -45,7 +45,7 @@ export default function ClaimPlayerPage({ auth }) {
 
   // An already-signed-in player links the guest profile to their existing
   // account (merge) instead of registering a new one.
-  const isLoggedInUser = Boolean(auth?.token) && auth?.session?.user_type === 'user'
+  const isLoggedInUser = auth?.session?.user_type === 'user'
 
   const switchGuestMode = (mode) => {
     setSubmitError('')

@@ -1,8 +1,9 @@
-import { httpClient } from './httpClient.js'
-
 const LEGACY_TOKEN_KEY = 'penahub.session.token'
 const LEGACY_SESSION_KEY = 'penahub.session.payload'
 
+// The session token now lives only in an HttpOnly cookie. This store keeps just
+// the non-sensitive metadata (role/guid) in memory for routing; it is repopulated
+// from GET /auth/session on reload.
 let currentSession = null
 
 const clearLegacyStorage = () => {
@@ -15,36 +16,22 @@ const clearLegacyStorage = () => {
 }
 
 export const sessionStore = {
-  getToken() {
-    return currentSession?.token ?? null
-  },
   getSession() {
     return currentSession
   },
   setSession(session) {
-    if (!session?.token) {
+    if (!session?.user_type) {
       return
     }
-    currentSession = session
-    clearLegacyStorage()
-    httpClient.setSessionToken(session.token)
-  },
-  setToken(token) {
-    if (token) {
-      currentSession = { token }
-      clearLegacyStorage()
-      httpClient.setSessionToken(token)
+    currentSession = {
+      user_guid: session.user_guid,
+      user_type: session.user_type,
+      expires_at: session.expires_at,
     }
+    clearLegacyStorage()
   },
   clear() {
     currentSession = null
     clearLegacyStorage()
-    httpClient.setSessionToken(null)
-  },
-  init() {
-    clearLegacyStorage()
-    if (currentSession?.token) {
-      httpClient.setSessionToken(currentSession.token)
-    }
   },
 }
