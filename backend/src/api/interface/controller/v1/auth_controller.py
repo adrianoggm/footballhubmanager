@@ -1,4 +1,6 @@
 import logging
+import os
+import secrets
 
 from api.dependencies.use_cases import (
     get_login_admin_use_case,
@@ -24,13 +26,39 @@ from core.application.commands.registration_commands import (
     RegisterAdminCommand,
     RegisterUserCommand,
 )
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from persistence.module import get_db
 from shared.application.bus.buses import CommandBus
 from sqlalchemy.orm import Session
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def require_admin_registration_secret(
+    x_admin_registration_secret: str | None = Header(
+        default=None, alias="X-Admin-Registration-Secret"
+    ),
+) -> None:
+    """Gate admin creation behind a server-side secret (fail closed).
+
+    Without ADMIN_REGISTRATION_SECRET set, admin registration is disabled, so the
+    endpoint can never be used for anonymous privilege escalation. Operators set the
+    secret to bootstrap/create admins.
+    """
+    expected = os.getenv("ADMIN_REGISTRATION_SECRET")
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin registration is disabled",
+        )
+    if not x_admin_registration_secret or not secrets.compare_digest(
+        x_admin_registration_secret, expected
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid admin registration secret",
+        )
 
 
 @router.post("/auth/login", response_model=LoginResponse)
@@ -119,7 +147,11 @@ def register_user(
     )
 
 
-@router.post("/auth/admin/register", response_model=LoginResponse)
+@router.post(
+    "/auth/admin/register",
+    response_model=LoginResponse,
+    dependencies=[Depends(require_admin_registration_secret)],
+)
 @map_exceptions
 def register_admin(
     payload: RegisterAdminRequest,
