@@ -88,8 +88,13 @@ The frontend is a role-based application, not only an auth playground.
 - API services:
   - `authService`, `adminService`, `userService`, `httpClient`.
 - Client session handling:
-  - `sessionStore` keeps the current session token in memory only and clears legacy
-    localStorage token keys on startup/logout.
+  - The session token lives only in an HttpOnly cookie set by the backend; JS never
+    reads it. `httpClient` sends it automatically (`credentials: 'include'`,
+    same-origin via ingress in prod and the vite proxy in dev).
+  - `sessionStore` keeps only non-sensitive session metadata (role/guid) in memory and
+    clears legacy localStorage token keys on startup/logout.
+  - `useAuth` restores that metadata from `GET /api/v1/auth/session` on load, so a
+    reload keeps the user signed in; it holds first paint while the check is in flight.
 - Analytics helpers:
   - `matchInsights.js` (comparison helpers and view-level transformations).
 
