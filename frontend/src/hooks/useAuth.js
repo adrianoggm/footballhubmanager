@@ -1,34 +1,42 @@
 import { useEffect, useState } from 'react'
 import { authController } from '../services/authController.js'
-import { sessionStore } from '../services/sessionStore.js'
 
-const initialState = {
+// 'restoring' while we check the cookie on load, so the router can hold off
+// instead of flashing the logged-out UI for an authenticated user on reload.
+const restoringState = {
+  status: 'restoring',
+  error: null,
+  session: null,
+}
+
+const loggedOutState = {
   status: 'idle',
-  token: null,
   error: null,
   session: null,
 }
 
 export function useAuth() {
-  const [state, setState] = useState(initialState)
+  const [state, setState] = useState(restoringState)
 
   useEffect(() => {
-    sessionStore.init()
-    const session = sessionStore.getSession()
-    if (session?.token) {
-      setState({ status: 'authenticated', token: session.token, error: null, session })
-      return
-    }
-    const token = sessionStore.getToken()
-    if (token) {
-      // Legacy token-only sessions (without metadata) are invalid for role-based UI.
-      sessionStore.clear()
-      setState(initialState)
+    let active = true
+    authController.restore().then((session) => {
+      if (!active) {
+        return
+      }
+      if (session?.user_type) {
+        setState({ status: 'authenticated', error: null, session })
+      } else {
+        setState(loggedOutState)
+      }
+    })
+    return () => {
+      active = false
     }
   }, [])
 
   const handleSuccess = (session) => {
-    setState({ status: 'authenticated', token: session.token, error: null, session })
+    setState({ status: 'authenticated', error: null, session })
   }
 
   const handleError = (error) => {
@@ -100,7 +108,7 @@ export function useAuth() {
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
     try {
       await authController.logout()
-      setState(initialState)
+      setState(loggedOutState)
     } catch (error) {
       handleError(error)
       throw error

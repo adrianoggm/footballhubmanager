@@ -74,7 +74,7 @@ from core.domain.errors import (
     UserAlreadyLinkedError,
     UserProfileNotFoundError,
 )
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 
 
 def _session(*, user_type: str, user_id: int = 7) -> SessionData:
@@ -589,12 +589,15 @@ def test_register_and_claim_player_success(monkeypatch):
 
     monkeypatch.setattr(penas_controller, "create_session", _fake_create_session)
 
+    http_response = Response()
     response = penas_controller.register_and_claim_player(
         RegisterAndClaimRequest(token="tok-claim", username="ana", password="secret"),
+        http_response,
         command_bus=bus,
         db=object(),
     )
 
+    assert "session=session-tok" in http_response.headers.get("set-cookie", "")
     assert response.token == "session-tok"
     assert response.user_guid == "acc-7"
     assert response.expires_at == 4242
@@ -616,6 +619,7 @@ def test_register_and_claim_player_maps_domain_errors(error, status_code, detail
     with pytest.raises(HTTPException) as exc:
         penas_controller.register_and_claim_player(
             RegisterAndClaimRequest(token="tok-claim", username="ana", password="secret"),
+            Response(),
             command_bus=_RaisingCommandBus(error),
             db=object(),
         )

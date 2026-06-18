@@ -87,8 +87,9 @@ The frontend is a role-based application, not only an auth playground.
     - `useMatchDetailDialog`
 - API services:
   - `authService`, `adminService`, `userService`, `httpClient`.
-- Client session persistence:
-  - `sessionStore` (session payload + token in localStorage).
+- Client session handling:
+  - `sessionStore` keeps the current session token in memory only and clears legacy
+    localStorage token keys on startup/logout.
 - Analytics helpers:
   - `matchInsights.js` (comparison helpers and view-level transformations).
 

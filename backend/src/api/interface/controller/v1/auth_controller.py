@@ -12,7 +12,10 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterAdminRequest,
     RegisterUserRequest,
 )
-from api.interface.controller.v1.model.response.auth_response import LoginResponse
+from api.interface.controller.v1.model.response.auth_response import (
+    LoginResponse,
+    SessionResponse,
+)
 from api.middleware.exception_mapper import map_exceptions
 from auth.application.use_cases.login import (
     InvalidCredentialsError,
@@ -20,13 +23,17 @@ from auth.application.use_cases.login import (
     LoginPayload,
     LoginUserUseCase,
 )
-from auth.dependencies import get_current_session
+from auth.dependencies import (
+    clear_session_cookie,
+    get_current_session,
+    set_session_cookie,
+)
 from auth.session import create_session, invalidate_session
 from core.application.commands.registration_commands import (
     RegisterAdminCommand,
     RegisterUserCommand,
 )
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from persistence.module import get_db
 from shared.application.bus.buses import CommandBus
 from sqlalchemy.orm import Session
@@ -65,6 +72,7 @@ def require_admin_registration_secret(
 @map_exceptions
 def login_user(
     payload: LoginRequest,
+    response: Response,
     use_case: LoginUserUseCase = Depends(get_login_user_use_case),
     db: Session = Depends(get_db),
 ):
@@ -75,6 +83,7 @@ def login_user(
         logger.warning("User login failed: invalid credentials")
         raise
     session = create_session(db, user_id=user.id, user_guid=user.guid, user_type="user")
+    set_session_cookie(response, session)
     logger.info("User login ok: %s", user.guid)
     return LoginResponse(
         token=session.token,
@@ -89,6 +98,7 @@ def login_user(
 @map_exceptions
 def login_admin(
     payload: LoginRequest,
+    response: Response,
     use_case: LoginAdminUseCase = Depends(get_login_admin_use_case),
     db: Session = Depends(get_db),
 ):
@@ -99,6 +109,7 @@ def login_admin(
         logger.warning("Admin login failed: invalid credentials")
         raise
     session = create_session(db, user_id=admin.id, user_guid=admin.guid, user_type="admin")
+    set_session_cookie(response, session)
     logger.info("Admin login ok: %s", admin.guid)
     return LoginResponse(
         token=session.token,
@@ -113,6 +124,7 @@ def login_admin(
 @map_exceptions
 def register_user(
     payload: RegisterUserRequest,
+    response: Response,
     command_bus: CommandBus = Depends(get_registration_command_bus),
     db: Session = Depends(get_db),
 ):
@@ -137,6 +149,7 @@ def register_user(
     except Exception:
         db.rollback()
         raise
+    set_session_cookie(response, session)
     logger.info("User register ok: %s", registered.account_guid)
     return LoginResponse(
         token=session.token,
@@ -155,6 +168,7 @@ def register_user(
 @map_exceptions
 def register_admin(
     payload: RegisterAdminRequest,
+    response: Response,
     command_bus: CommandBus = Depends(get_registration_command_bus),
     db: Session = Depends(get_db),
 ):
@@ -176,6 +190,7 @@ def register_admin(
     except Exception:
         db.rollback()
         raise
+    set_session_cookie(response, session)
     logger.info("Admin register ok: %s", registered.admin_guid)
     return LoginResponse(
         token=session.token,
@@ -186,7 +201,22 @@ def register_admin(
     )
 
 
+@router.get("/auth/session", response_model=SessionResponse)
+def read_session(session=Depends(get_current_session)):
+    """Restore session metadata from the cookie (used by the SPA on reload)."""
+    return SessionResponse(
+        expires_at=session.expires_at,
+        user_guid=session.user_guid,
+        user_type=session.user_type,
+    )
+
+
 @router.post("/auth/logout")
-def logout(session=Depends(get_current_session), db: Session = Depends(get_db)):
+def logout(
+    response: Response,
+    session=Depends(get_current_session),
+    db: Session = Depends(get_db),
+):
     invalidate_session(db, session.token)
+    clear_session_cookie(response)
     return {"status": "ok"}

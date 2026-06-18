@@ -43,6 +43,7 @@ from auth.dependencies import (
     get_current_session,
     require_admin,
     require_user,
+    set_session_cookie,
 )
 from auth.session import create_session
 from core.application.commands.pena_accountability_commands import (
@@ -78,7 +79,7 @@ from core.application.queries.pena_queries import (
     ListPenasForAdminQuery,
     ListPenasForUserQuery,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from persistence.module import get_db
 from shared.application.bus.buses import CommandBus, QueryBus
 from sqlalchemy.orm import Session
@@ -512,6 +513,7 @@ def inspect_claim_token(
 @map_exceptions
 def register_and_claim_player(
     payload: RegisterAndClaimRequest,
+    response: Response,
     command_bus: CommandBus = Depends(get_pena_link_command_bus),
     db: Session = Depends(get_db),
 ):
@@ -532,6 +534,7 @@ def register_and_claim_player(
     except Exception:
         db.rollback()
         raise
+    set_session_cookie(response, session)
     return LoginResponse(
         token=session.token,
         token_type="session",

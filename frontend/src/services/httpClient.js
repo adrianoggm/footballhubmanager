@@ -3,11 +3,6 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 export class HttpClient {
   constructor(baseUrl = API_BASE) {
     this.baseUrl = baseUrl
-    this.sessionToken = null
-  }
-
-  setSessionToken(token) {
-    this.sessionToken = token
   }
 
   async request(path, options = {}) {
@@ -16,12 +11,11 @@ export class HttpClient {
       ...(options.headers || {}),
     }
 
-    if (this.sessionToken) {
-      headers.Authorization = `Bearer ${this.sessionToken}`
-    }
-
+    // The session token lives in an HttpOnly cookie; send it automatically.
+    // Same-origin in prod (ingress) and dev (vite proxy), so 'include' is safe.
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...options,
+      credentials: 'include',
       headers,
     })
 
