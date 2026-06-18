@@ -1,58 +1,50 @@
 import { httpClient } from './httpClient.js'
 
-const TOKEN_KEY = 'penahub.session.token'
-const SESSION_KEY = 'penahub.session.payload'
+const LEGACY_TOKEN_KEY = 'penahub.session.token'
+const LEGACY_SESSION_KEY = 'penahub.session.payload'
 
-const parseSession = (value) => {
-  if (!value) {
-    return null
-  }
+let currentSession = null
+
+const clearLegacyStorage = () => {
   try {
-    return JSON.parse(value)
+    localStorage.removeItem(LEGACY_TOKEN_KEY)
+    localStorage.removeItem(LEGACY_SESSION_KEY)
   } catch {
-    return null
+    // Storage may be unavailable in private or embedded browser contexts.
   }
 }
 
 export const sessionStore = {
   getToken() {
-    const session = this.getSession()
-    if (session?.token) {
-      return session.token
-    }
-    return localStorage.getItem(TOKEN_KEY)
+    return currentSession?.token ?? null
   },
   getSession() {
-    return parseSession(localStorage.getItem(SESSION_KEY))
+    return currentSession
   },
   setSession(session) {
     if (!session?.token) {
       return
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    localStorage.setItem(TOKEN_KEY, session.token)
+    currentSession = session
+    clearLegacyStorage()
     httpClient.setSessionToken(session.token)
   },
   setToken(token) {
     if (token) {
-      localStorage.setItem(TOKEN_KEY, token)
+      currentSession = { token }
+      clearLegacyStorage()
       httpClient.setSessionToken(token)
     }
   },
   clear() {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(SESSION_KEY)
+    currentSession = null
+    clearLegacyStorage()
     httpClient.setSessionToken(null)
   },
   init() {
-    const session = this.getSession()
-    if (session?.token) {
-      httpClient.setSessionToken(session.token)
-      return
-    }
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (token) {
-      this.setToken(token)
+    clearLegacyStorage()
+    if (currentSession?.token) {
+      httpClient.setSessionToken(currentSession.token)
     }
   },
 }
