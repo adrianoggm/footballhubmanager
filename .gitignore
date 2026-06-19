@@ -199,6 +199,10 @@ public
 tmp/
 temp/
 
+# Local AI/audit artifacts
+.playwright-mcp/
+/*.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/settings.json
