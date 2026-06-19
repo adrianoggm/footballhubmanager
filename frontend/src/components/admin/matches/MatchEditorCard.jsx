@@ -1015,7 +1015,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                                 type="number"
                                 fullWidth
                                 label={t('dashboard.admin.matches.eventMinute')}
-                                value={matchEventDraft?.minute || ''}
+                                value={matchEventDraft?.minute ?? ''}
                                 onChange={onMatchEventDraftField('minute')}
                                 inputProps={{ min: 0 }}
                               />
@@ -1025,7 +1025,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                                 type="number"
                                 fullWidth
                                 label={t('dashboard.admin.matches.eventSecond')}
-                                value={matchEventDraft?.second || ''}
+                                value={matchEventDraft?.second ?? ''}
                                 onChange={onMatchEventDraftField('second')}
                                 inputProps={{ min: 0, max: 59 }}
                               />

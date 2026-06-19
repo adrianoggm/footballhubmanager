@@ -29,13 +29,17 @@ import {
   translatePositionLabel,
   translateRoleLabel,
 } from '../../i18n/labels.js'
+import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
-const labelChipSx = (color) => ({
-  backgroundColor: color || DEFAULT_LABEL_COLOR,
-  color: '#fff',
-  border: '1px solid rgba(15, 23, 42, 0.12)',
-})
+const labelChipSx = (color) => {
+  const background = color || DEFAULT_LABEL_COLOR
+  return {
+    backgroundColor: background,
+    color: readableTextColor(background),
+    border: '1px solid rgba(15, 23, 42, 0.12)',
+  }
+}
 
 const renderFilterValue = (selected, emptyLabel, translate) => {
   const values = Array.isArray(selected)

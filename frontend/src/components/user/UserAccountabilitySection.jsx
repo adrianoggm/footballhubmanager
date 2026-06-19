@@ -13,6 +13,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { useEffect, useMemo, useState } from 'react'
 import { userService } from '../../services/userService.js'
 import { LoadingState } from '../common'
@@ -287,7 +288,9 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
                           key={entry.player_guid}
                           sx={
                             entry.player_guid === currentPlayerGuid
-                              ? { '& td': { backgroundColor: 'rgba(14, 165, 233, 0.08)' } }
+                              ? (theme) => ({
+                                  '& td': { backgroundColor: alpha(theme.palette.info.main, 0.12) },
+                                })
                               : undefined
                           }
                         >

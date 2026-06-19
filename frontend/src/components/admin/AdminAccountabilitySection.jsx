@@ -597,23 +597,8 @@ export default function AdminAccountabilitySection({
                           `${entry.player_name || 'member'}-${entry.updated_at || 'unknown'}-${index}`
                         return (
                           <TableRow key={memberRowKey}>
-                            <TableCell>
-                              <Stack
-                                direction="row"
-                                spacing={1}
-                                alignItems="center"
-                                flexWrap="wrap"
-                                useFlexGap
-                              >
-                                <span>{playerLabel}</span>
-                                <Chip
-                                  size="small"
-                                  label={entry.player_guid}
-                                  variant="outlined"
-                                  sx={{ maxWidth: 170 }}
-                                />
-                              </Stack>
-                            </TableCell>
+                            {/* UX-10: GUID is an API detail — show only the readable name. */}
+                            <TableCell>{playerLabel}</TableCell>
                             <TableCell align="right">{formatMoney(entry.debt_cents)}</TableCell>
                             <TableCell align="right">
                               {formatMoney(entry.contribution_cents)}

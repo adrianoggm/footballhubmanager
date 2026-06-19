@@ -12,6 +12,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
@@ -112,12 +113,12 @@ export default function UserStandingsSection({
                           key={player.player_guid}
                           sx={
                             isCurrentPlayer
-                              ? {
+                              ? (theme) => ({
                                   '& td': {
-                                    backgroundColor: 'rgba(2, 136, 209, 0.09)',
+                                    backgroundColor: alpha(theme.palette.info.main, 0.12),
                                     fontWeight: 700,
                                   },
-                                }
+                                })
                               : undefined
                           }
                         >

@@ -2459,19 +2459,24 @@ export default function AdminDashboard({
     }
 
     setDeletingMatchEventGuid(eventGuid)
-    await runAction(async () => {
-      const updated = await adminService.deleteMatchEvent(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        eventGuid
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.matchEventDeleted'))
-    setDeletingMatchEventGuid('')
+    // FE-7: reset in finally so the row never gets stuck "deleting" on error,
+    // and so a 401-triggered logout/unmount doesn't run a stray state update.
+    try {
+      await runAction(async () => {
+        const updated = await adminService.deleteMatchEvent(
+          selectedPenaGuid,
+          selectedSeasonGuid,
+          selectedMatchGuid,
+          eventGuid
+        )
+        setSelectedMatchDetail(updated)
+        setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+        setMatchStatsDraft(buildMatchStatsDraft(updated))
+        await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+      }, t('dashboard.admin.notices.matchEventDeleted'))
+    } finally {
+      setDeletingMatchEventGuid('')
+    }
   }
 
   const onMatchStatsDraftField = (teamKey, playerGuid, field) => (event) => {

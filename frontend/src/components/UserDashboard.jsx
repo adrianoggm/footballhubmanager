@@ -21,6 +21,7 @@ import UserMatchesSection from './user/UserMatchesSection.jsx'
 import UserMembershipSection from './user/UserMembershipSection.jsx'
 import UserStandingsSection from './user/UserStandingsSection.jsx'
 import { DashboardContext } from '../context/dashboardContext.js'
+import { readableTextColor } from '../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
 import { useForm } from '../hooks/useForm.js'
 import { translateRoleLabel } from '../i18n/labels.js'
@@ -56,10 +57,13 @@ const defaultMembershipForm = () => ({
 
 const asText = (value) => value ?? ''
 
-const labelChipSx = (color) => ({
-  backgroundColor: color || DEFAULT_LABEL_COLOR,
-  color: '#fff',
-})
+const labelChipSx = (color) => {
+  const background = color || DEFAULT_LABEL_COLOR
+  return {
+    backgroundColor: background,
+    color: readableTextColor(background),
+  }
+}
 
 const formatDate = (value) => {
   if (!value) {
