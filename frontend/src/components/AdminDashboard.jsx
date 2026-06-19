@@ -29,6 +29,7 @@ import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useFetchWithStaleCheck } from '../hooks/useFetchWithStaleCheck.js'
 import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
+import { useInvitations } from '../hooks/useInvitations.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
@@ -630,8 +631,6 @@ export default function AdminDashboard({
   const [matchStatsLoading, setMatchStatsLoading] = useState(false)
   const [deletingMatchEventGuid, setDeletingMatchEventGuid] = useState('')
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [tokenPayload, setTokenPayload] = useState(null)
-  const [claimLinkPayload, setClaimLinkPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
 
@@ -1131,6 +1130,14 @@ export default function AdminDashboard({
       setLoading(false)
     }
   }
+
+  const {
+    tokenPayload,
+    claimLinkPayload,
+    handleGenerateJoinCode,
+    handleGenerateClaimLink,
+    closeClaimLink,
+  } = useInvitations({ selectedPenaGuid, runAction, t })
 
   const loadStandings = async (penaGuid, seasonGuid, filters = standingsFilters) => {
     const standingsPage = await adminService.listStandings(penaGuid, seasonGuid, {
@@ -1810,26 +1817,6 @@ export default function AdminDashboard({
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.detailedMatchCreated'))
-  }
-
-  const handleGenerateJoinCode = async () => {
-    if (!selectedPenaGuid) {
-      return
-    }
-    await runAction(async () => {
-      const token = await adminService.createLinkToken(selectedPenaGuid)
-      setTokenPayload(token)
-    }, t('dashboard.admin.notices.joinCodeGenerated'))
-  }
-
-  const handleGenerateClaimLink = async (player) => {
-    if (!selectedPenaGuid || !player?.guid) {
-      return
-    }
-    await runAction(async () => {
-      const token = await adminService.createClaimToken(selectedPenaGuid, player.guid)
-      setClaimLinkPayload({ ...token, player })
-    }, t('dashboard.admin.notices.claimLinkGenerated'))
   }
 
   const handleCreateGuestPlayer = async (registerInSelectedSeason) => {
@@ -2624,7 +2611,7 @@ export default function AdminDashboard({
       handleEditMembershipPlayer,
       handleRequestRemoveMembershipPlayer,
       handleGenerateClaimLink,
-      onCloseClaimLink: () => setClaimLinkPayload(null),
+      onCloseClaimLink: closeClaimLink,
       onMemberFilterField,
       onLabelsDraftField,
       onLabelColorDraftChange,
