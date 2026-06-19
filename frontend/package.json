@@ -11,7 +11,9 @@
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,css}\" \"*.{js,json,md,html}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,css}\" \"*.{js,json,md,html}\"",
-    "check": "npm run format:check && npm run lint && npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run format:check && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -35,7 +37,8 @@
     "globals": "^16.0.0",
     "prettier": "^3.5.3",
     "vite": "^7.3.1",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^3.2.6"
   },
   "overrides": {
     "serialize-javascript": "7.0.3"
