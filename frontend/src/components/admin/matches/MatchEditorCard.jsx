@@ -22,9 +22,10 @@ import {
   Typography,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { translatePositionLabel } from '../../../i18n/labels.js'
-import { playGoalkeeperAlarm } from './goalkeeperAlarm.js'
+import ManualEventForm from './ManualEventForm.jsx'
+import { useGoalkeeperAlarm } from './useGoalkeeperAlarm.js'
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../../MatchDetailViewer.jsx'
 
@@ -42,18 +43,6 @@ import {
   trackingLabel,
 } from './trackingHelpers.js'
 
-const MATCH_EVENT_TYPES = [
-  'goal',
-  'assist',
-  'save',
-  'foul',
-  'yellow_card',
-  'red_card',
-  'sanction',
-  'other',
-]
-
-const MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER = new Set(['other'])
 const QUICK_TRACKING_EVENT_TYPES = ['goal', 'assist', 'save', 'yellow_card', 'red_card']
 const QUICK_TRACKING_EVENT_CONFIG = [
   { eventType: 'goal', color: 'success' },
@@ -529,10 +518,6 @@ export default function MatchEditorCard({ state, actions, helpers }) {
   const [rotationMinutesInput, setRotationMinutesInput] = useState(() =>
     String(Math.round(goalkeeperRotationSeconds / 60))
   )
-  const [rotationAlarmActive, setRotationAlarmActive] = useState(false)
-  const [rotationAlarmCycle, setRotationAlarmCycle] = useState(0)
-  const lastRotationCycleRef = useRef(null)
-  const alarmStopRef = useRef(null)
 
   // Keep the editable field in sync with the persisted value (after save / when
   // switching matches), without clobbering edits to an unrelated field.
@@ -540,56 +525,12 @@ export default function MatchEditorCard({ state, actions, helpers }) {
     setRotationMinutesInput(String(Math.round(goalkeeperRotationSeconds / 60)))
   }, [goalkeeperRotationSeconds, selectedMatchDetail?.guid])
 
-  // Reset the cycle baseline whenever the interval, the match or the live state
-  // changes, so tuning the interval mid-match never fires the alarm retroactively.
-  useEffect(() => {
-    lastRotationCycleRef.current = null
-  }, [goalkeeperRotationSeconds, selectedMatchDetail?.guid, trackingIsLive])
-
-  useEffect(() => {
-    if (!trackingIsLive || goalkeeperRotationSeconds <= 0) {
-      return
-    }
-    const currentCycle = Math.floor(displayedElapsed / goalkeeperRotationSeconds)
-    if (lastRotationCycleRef.current === null) {
-      // First observation while live: adopt the current cycle as the baseline so
-      // reopening the match mid-cycle does not replay an already-passed boundary.
-      lastRotationCycleRef.current = currentCycle
-      return
-    }
-    if (currentCycle > lastRotationCycleRef.current && currentCycle >= 1) {
-      lastRotationCycleRef.current = currentCycle
-      alarmStopRef.current?.()
-      alarmStopRef.current = playGoalkeeperAlarm(5000)
-      setRotationAlarmCycle(currentCycle)
-      setRotationAlarmActive(true)
-    }
-  }, [trackingIsLive, goalkeeperRotationSeconds, displayedElapsed])
-
-  // Silence and clear the alarm when the match leaves the live state or changes.
-  useEffect(() => {
-    if (trackingIsLive) {
-      return
-    }
-    alarmStopRef.current?.()
-    alarmStopRef.current = null
-    setRotationAlarmActive(false)
-  }, [trackingIsLive, selectedMatchDetail?.guid])
-
-  // Stop any scheduled audio on unmount.
-  useEffect(
-    () => () => {
-      alarmStopRef.current?.()
-      alarmStopRef.current = null
-    },
-    []
-  )
-
-  const dismissRotationAlarm = () => {
-    alarmStopRef.current?.()
-    alarmStopRef.current = null
-    setRotationAlarmActive(false)
-  }
+  const { rotationAlarmActive, rotationAlarmCycle, dismissRotationAlarm } = useGoalkeeperAlarm({
+    trackingIsLive,
+    goalkeeperRotationSeconds,
+    displayedElapsed,
+    matchGuid: selectedMatchDetail?.guid,
+  })
 
   const handleApplyRotation = () => {
     const minutes = Math.min(120, Math.max(0, Math.floor(Number(rotationMinutesInput) || 0)))
@@ -1015,167 +956,18 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                   </Stack>
 
                   {!timelineLocked && (
-                    <>
-                      <Divider />
-
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => setShowManualEvent((previous) => !previous)}
-                        sx={{ alignSelf: 'flex-start' }}
-                      >
-                        {showManualEvent
-                          ? t('dashboard.admin.matches.manualEventHide')
-                          : t('dashboard.admin.matches.manualEventShow')}
-                      </Button>
-
-                      <Collapse in={showManualEvent}>
-                        <Stack spacing={2}>
-                          <Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                              {t('dashboard.admin.matches.manualEventTitle')}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {t('dashboard.admin.matches.manualEventDescription')}
-                            </Typography>
-                          </Box>
-
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                select
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventType')}
-                                value={matchEventDraft?.event_type || 'goal'}
-                                onChange={onMatchEventDraftField('event_type')}
-                              >
-                                {MATCH_EVENT_TYPES.map((eventType) => (
-                                  <MenuItem key={eventType} value={eventType}>
-                                    {t(`dashboard.admin.matches.eventTypes.${eventType}`)}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                select
-                                fullWidth
-                                label={t('dashboard.admin.matches.teamSide')}
-                                value={matchEventDraft?.team_side || 'home'}
-                                onChange={onMatchEventDraftField('team_side')}
-                              >
-                                {['home', 'away', 'neutral'].map((teamSide) => (
-                                  <MenuItem key={teamSide} value={teamSide}>
-                                    {t(`dashboard.admin.matches.teamSides.${teamSide}`)}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                select
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventAction')}
-                                value={matchEventDraft?.value_delta || '1'}
-                                onChange={onMatchEventDraftField('value_delta')}
-                              >
-                                <MenuItem value="1">
-                                  {t('dashboard.admin.matches.eventDeltaAdd')}
-                                </MenuItem>
-                                <MenuItem value="-1">
-                                  {t('dashboard.admin.matches.eventDeltaSubtract')}
-                                </MenuItem>
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                select
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventPlayer')}
-                                value={matchEventDraft?.player_guid || ''}
-                                onChange={onMatchEventDraftField('player_guid')}
-                                disabled={
-                                  !primaryEventPlayers.length &&
-                                  !MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER.has(
-                                    matchEventDraft?.event_type || ''
-                                  )
-                                }
-                              >
-                                <MenuItem value="">
-                                  {MATCH_EVENT_TYPES_WITH_OPTIONAL_PLAYER.has(
-                                    matchEventDraft?.event_type || ''
-                                  )
-                                    ? t('dashboard.admin.matches.eventPlayerOptional')
-                                    : t('dashboard.admin.matches.eventPlayerSelect')}
-                                </MenuItem>
-                                {primaryEventPlayers.map((player) => (
-                                  <MenuItem key={player.guid} value={player.guid}>
-                                    {player.label}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                select
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventRelatedPlayer')}
-                                value={matchEventDraft?.related_player_guid || ''}
-                                onChange={onMatchEventDraftField('related_player_guid')}
-                              >
-                                <MenuItem value="">
-                                  {t('dashboard.admin.matches.eventRelatedPlayerOptional')}
-                                </MenuItem>
-                                {relatedEventPlayers.map((player) => (
-                                  <MenuItem key={player.guid} value={player.guid}>
-                                    {player.label}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
-                            </Grid>
-                            <Grid item xs={6} md={2}>
-                              <TextField
-                                type="number"
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventMinute')}
-                                value={matchEventDraft?.minute ?? ''}
-                                onChange={onMatchEventDraftField('minute')}
-                                inputProps={{ min: 0 }}
-                              />
-                            </Grid>
-                            <Grid item xs={6} md={2}>
-                              <TextField
-                                type="number"
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventSecond')}
-                                value={matchEventDraft?.second ?? ''}
-                                onChange={onMatchEventDraftField('second')}
-                                inputProps={{ min: 0, max: 59 }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                              <TextField
-                                fullWidth
-                                label={t('dashboard.admin.matches.eventNote')}
-                                value={matchEventDraft?.note || ''}
-                                onChange={onMatchEventDraftField('note')}
-                                placeholder={t('dashboard.admin.matches.eventNotePlaceholder')}
-                              />
-                            </Grid>
-                          </Grid>
-
-                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                            <Button
-                              variant="contained"
-                              onClick={handleCreateMatchEvent}
-                              disabled={loading || matchStatsLoading}
-                            >
-                              {t('dashboard.admin.matches.createEvent')}
-                            </Button>
-                          </Stack>
-                        </Stack>
-                      </Collapse>
-                    </>
+                    <ManualEventForm
+                      show={showManualEvent}
+                      onToggle={() => setShowManualEvent((previous) => !previous)}
+                      matchEventDraft={matchEventDraft}
+                      onMatchEventDraftField={onMatchEventDraftField}
+                      handleCreateMatchEvent={handleCreateMatchEvent}
+                      primaryEventPlayers={primaryEventPlayers}
+                      relatedEventPlayers={relatedEventPlayers}
+                      loading={loading}
+                      matchStatsLoading={matchStatsLoading}
+                      t={t}
+                    />
                   )}
                 </Stack>
               </CardContent>
