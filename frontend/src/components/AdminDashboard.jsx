@@ -25,8 +25,6 @@ import {
   Typography,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
-import { useAdminMatches } from '../hooks/useAdminMatches.js'
-import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
@@ -2594,7 +2592,8 @@ export default function AdminDashboard({
     ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
     : t('dashboard.admin.status.noSeasonSelected')
 
-  const playersSection = useAdminPlayers({
+  // Plain view-model bundles for the section components.
+  const playersSection = {
     state: {
       selectedSeason,
       selectedSeasonLabel,
@@ -2640,9 +2639,9 @@ export default function AdminDashboard({
       formatPlayerDisplayName,
       formatEpochSeconds,
     },
-  })
+  }
 
-  const matchesSection = useAdminMatches({
+  const matchesSection = {
     state: {
       selectedSeasonGuid,
       selectedSeason,
@@ -2695,7 +2694,7 @@ export default function AdminDashboard({
       formatElapsedDuration,
       formatPlayerDisplayName,
     },
-  })
+  }
 
   const adminNavItems = adminSections.map((section) => {
     const locked = Boolean(section.requiresSeason) && !hasSeason
