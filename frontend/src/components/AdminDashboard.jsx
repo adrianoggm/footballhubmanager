@@ -1214,6 +1214,39 @@ export default function AdminDashboard({
     return detail
   }
 
+  // While a match is being tracked, poll its detail so another admin's
+  // pause/stop/events don't leave this client's clock/score stale. This only
+  // refreshes selectedMatchDetail so in-progress edits survive.
+  const selectedTrackingStatus = selectedMatchDetail?.tracking_status
+  useEffect(() => {
+    const status = String(selectedTrackingStatus || '').toLowerCase()
+    const isTiming = ['live', 'in_progress', 'paused'].includes(status)
+    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !isTiming) {
+      return undefined
+    }
+    let cancelled = false
+    const intervalId = setInterval(async () => {
+      try {
+        const detail = await adminService.getMatchDetail(
+          selectedPenaGuid,
+          selectedSeasonGuid,
+          selectedMatchGuid
+        )
+        // Stale guard: ignore if the selection changed while the request was in flight.
+        if (cancelled || detail?.guid !== selectedMatchGuid) {
+          return
+        }
+        setSelectedMatchDetail(detail)
+      } catch {
+        // Transient poll failure: keep the last good detail; the next tick retries.
+      }
+    }, 5000)
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [selectedPenaGuid, selectedSeasonGuid, selectedMatchGuid, selectedTrackingStatus])
+
   const loadPenaData = async (penaGuid) => {
     const requestId = penaDataRequestIdRef.current + 1
     penaDataRequestIdRef.current = requestId
