@@ -857,18 +857,43 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                   </Box>
 
                   {rotationAlarmActive && (
-                    <Alert
-                      severity="error"
-                      action={
-                        <Button color="inherit" size="small" onClick={dismissRotationAlarm}>
+                    <Box
+                      role="alert"
+                      sx={(theme) => ({
+                        borderRadius: 2,
+                        px: 2,
+                        py: 1.5,
+                        color: theme.palette.error.contrastText,
+                        backgroundColor: theme.palette.error.main,
+                        animation: 'gkAlarmFlash 0.9s steps(1, end) infinite',
+                        '@keyframes gkAlarmFlash': {
+                          '0%, 100%': { backgroundColor: theme.palette.error.main },
+                          '50%': { backgroundColor: theme.palette.warning.main },
+                        },
+                        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                      })}
+                    >
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1.5}
+                        alignItems={{ sm: 'center' }}
+                        justifyContent="space-between"
+                      >
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                          {t('dashboard.admin.matches.goalkeeperRotationAlarm', {
+                            cycle: rotationAlarmCycle,
+                          })}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          color="inherit"
+                          onClick={dismissRotationAlarm}
+                          sx={{ color: 'error.main', fontWeight: 700, flexShrink: 0 }}
+                        >
                           {t('dashboard.admin.matches.goalkeeperRotationSilence')}
                         </Button>
-                      }
-                    >
-                      {t('dashboard.admin.matches.goalkeeperRotationAlarm', {
-                        cycle: rotationAlarmCycle,
-                      })}
-                    </Alert>
+                      </Stack>
+                    </Box>
                   )}
 
                   <Box
@@ -908,15 +933,22 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                       >
                         {t('dashboard.admin.matches.goalkeeperRotationApply')}
                       </Button>
-                      <Typography variant="body2" color="text.secondary">
-                        {!goalkeeperRotationEnabled
-                          ? t('dashboard.admin.matches.goalkeeperRotationDisabled')
-                          : secondsToNextRotation != null
-                            ? t('dashboard.admin.matches.goalkeeperRotationNext', {
-                                time: formatElapsedDuration(secondsToNextRotation),
-                              })
+                      {goalkeeperRotationEnabled && secondsToNextRotation != null ? (
+                        <Chip
+                          color={secondsToNextRotation <= 60 ? 'warning' : 'default'}
+                          variant={secondsToNextRotation <= 60 ? 'filled' : 'outlined'}
+                          label={t('dashboard.admin.matches.goalkeeperRotationNext', {
+                            time: formatElapsedDuration(secondsToNextRotation),
+                          })}
+                          sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          {!goalkeeperRotationEnabled
+                            ? t('dashboard.admin.matches.goalkeeperRotationDisabled')
                             : t('dashboard.admin.matches.goalkeeperRotationHint')}
-                      </Typography>
+                        </Typography>
+                      )}
                     </Stack>
                   </Box>
 
