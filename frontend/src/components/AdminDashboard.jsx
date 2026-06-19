@@ -595,6 +595,10 @@ export default function AdminDashboard({
 }) {
   const { language, t } = useI18n()
   const { showToast } = useToast()
+  // FE-2: synchronous single-flight guard for match-event creation. `loading`
+  // flips asynchronously, so two taps in the same tick both pass it; this ref
+  // blocks the duplicate dispatch immediately.
+  const matchEventBusyRef = useRef(false)
   const seasonMatchesRequestIdRef = useRef(0)
   const penaDataRequestIdRef = useRef(0)
   const [loading, setLoading] = useState(false)
@@ -2343,33 +2347,47 @@ export default function AdminDashboard({
     if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
       return
     }
-
-    await runAction(async () => {
-      const updated = await adminService.createMatchEvent(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        {
-          event_type: eventType,
-          team_side: teamSide,
-          player_guid: playerGuid || null,
-          related_player_guid: relatedPlayerGuid || null,
-          note: note || null,
-          elapsed_seconds: elapsedSeconds,
-          value_delta: valueDelta,
+    // FE-2: drop duplicate dispatches from a double-tap before `loading` flips.
+    if (matchEventBusyRef.current) {
+      return
+    }
+    matchEventBusyRef.current = true
+    try {
+      await runAction(async () => {
+        const updated = await adminService.createMatchEvent(
+          selectedPenaGuid,
+          selectedSeasonGuid,
+          selectedMatchGuid,
+          {
+            event_type: eventType,
+            team_side: teamSide,
+            player_guid: playerGuid || null,
+            related_player_guid: relatedPlayerGuid || null,
+            note: note || null,
+            elapsed_seconds: elapsedSeconds,
+            value_delta: valueDelta,
+          }
+        )
+        setSelectedMatchDetail(updated)
+        setMatchLineupsDraft(buildMatchLineupsDraft(updated))
+        setMatchStatsDraft(buildMatchStatsDraft(updated))
+        if (resetDraft) {
+          setMatchEventDraft(defaultMatchEventDraft())
         }
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      if (resetDraft) {
-        setMatchEventDraft(defaultMatchEventDraft())
-      }
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, successMessage)
+        await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
+      }, successMessage)
+    } finally {
+      matchEventBusyRef.current = false
+    }
   }
 
-  const handleQuickMatchEvent = async ({ eventType, teamSide, playerGuid, valueDelta }) => {
+  const handleQuickMatchEvent = async ({
+    eventType,
+    teamSide,
+    playerGuid,
+    valueDelta,
+    elapsedSeconds = null,
+  }) => {
     if (!selectedMatchDetail) {
       return
     }
@@ -2382,6 +2400,8 @@ export default function AdminDashboard({
       teamSide,
       playerGuid,
       valueDelta,
+      // FE-6: stamp the live minute so quick goals/saves land on the timeline.
+      elapsedSeconds,
       successMessage: t('dashboard.admin.notices.matchEventCreated'),
     })
   }

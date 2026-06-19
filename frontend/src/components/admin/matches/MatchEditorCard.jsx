@@ -20,7 +20,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { translatePositionLabel } from '../../../i18n/labels.js'
 import { playGoalkeeperAlarm } from './goalkeeperAlarm.js'
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
@@ -85,7 +85,19 @@ const buildPlayerEventCounts = (events) => {
   return byPlayer
 }
 
-function TrackingMetricControl({ label, value, color, disabled, onDecrease, onIncrease }) {
+function TrackingMetricControl({
+  label,
+  value,
+  color,
+  disabled,
+  onDecrease,
+  onIncrease,
+  playerName,
+}) {
+  // a11y context for screen readers (audit UX-5): the bare -/+ glyphs carry no
+  // meaning, so describe the metric and player on each control and announce the
+  // count politely when it changes.
+  const context = playerName ? `${label} · ${playerName}` : label
   return (
     <Box
       sx={{
@@ -101,7 +113,13 @@ function TrackingMetricControl({ label, value, color, disabled, onDecrease, onIn
         <Typography variant="caption" color="text.secondary">
           {label}
         </Typography>
-        <Typography variant="h6" color={`${color}.main`} sx={{ fontWeight: 700, lineHeight: 1 }}>
+        <Typography
+          variant="h6"
+          color={`${color}.main`}
+          sx={{ fontWeight: 700, lineHeight: 1 }}
+          aria-live="polite"
+          aria-label={`${context}: ${clampTrackedValue(value)}`}
+        >
           {clampTrackedValue(value)}
         </Typography>
         <Stack direction="row" spacing={0.75}>
@@ -111,6 +129,7 @@ function TrackingMetricControl({ label, value, color, disabled, onDecrease, onIn
             color={color}
             onClick={onDecrease}
             disabled={disabled}
+            aria-label={`−1 ${context}`}
             sx={{ minWidth: 0, flex: 1 }}
           >
             -
@@ -121,6 +140,7 @@ function TrackingMetricControl({ label, value, color, disabled, onDecrease, onIn
             color={color}
             onClick={onIncrease}
             disabled={disabled}
+            aria-label={`+1 ${context}`}
             sx={{ minWidth: 0, flex: 1 }}
           >
             +
@@ -187,6 +207,7 @@ function TrackingPlayerCard({
               value={eventCounts[eventType] || 0}
               color={color}
               disabled={disabled}
+              playerName={formatPlayerDisplayName(player)}
               onDecrease={() =>
                 onAdjust({
                   eventType,
@@ -446,6 +467,16 @@ export default function MatchEditorCard({ state, actions, helpers }) {
     !officiallyClosed && trackingIsLive && !loading && !matchStatsLoading
   )
   const displayedElapsed = resolveDisplayedElapsed(selectedMatchDetail, nowEpoch)
+  // FE-6: stamp the running clock onto quick events so live goals/saves get a
+  // minute on the timeline instead of posting elapsed_seconds: null.
+  const handleQuickAdjust = useCallback(
+    (payload) =>
+      handleQuickMatchEvent({
+        ...payload,
+        elapsedSeconds: trackingIsLive ? displayedElapsed : null,
+      }),
+    [handleQuickMatchEvent, trackingIsLive, displayedElapsed]
+  )
   const goalkeeperRotationSeconds = Number(selectedMatchDetail?.goalkeeper_rotation_seconds || 0)
   const goalkeeperRotationEnabled = goalkeeperRotationSeconds > 0
   // Seconds left until the next goalkeeper rotation cycle while the clock runs.
@@ -844,7 +875,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                       score={selectedTrackedScore?.home ?? selectedMatchDetail.home_team.score}
                       eventCountsByPlayer={eventCountsByPlayer}
                       disabled={!quickTrackingEnabled}
-                      onAdjust={handleQuickMatchEvent}
+                      onAdjust={handleQuickAdjust}
                       formatPlayerDisplayName={formatPlayerDisplayName}
                       t={t}
                     />
@@ -854,7 +885,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
                       score={selectedTrackedScore?.away ?? selectedMatchDetail.away_team.score}
                       eventCountsByPlayer={eventCountsByPlayer}
                       disabled={!quickTrackingEnabled}
-                      onAdjust={handleQuickMatchEvent}
+                      onAdjust={handleQuickAdjust}
                       formatPlayerDisplayName={formatPlayerDisplayName}
                       t={t}
                     />
