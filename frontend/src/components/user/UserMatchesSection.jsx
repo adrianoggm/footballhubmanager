@@ -1,18 +1,6 @@
-import {
-  Button,
-  Card,
-  CardContent,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material'
+import { Button, Card, CardContent, Stack, Typography } from '@mui/material'
 
-import { EmptyState, StatusChip } from '../common'
+import { EmptyState, PaginatedTable, StatusChip } from '../common'
 
 /**
  * Read-only season match list with a detail action.
@@ -26,59 +14,48 @@ export default function UserMatchesSection({
   t,
   formatDate,
 }) {
+  const columns = [
+    { key: 'date', label: t('dashboard.user.table.date'), render: (m) => formatDate(m.match_date) },
+    { key: 'home', label: t('dashboard.user.table.home'), render: (m) => m.home_team_name },
+    { key: 'away', label: t('dashboard.user.table.away'), render: (m) => m.away_team_name },
+    {
+      key: 'status',
+      label: t('dashboard.user.table.status'),
+      render: (m) => <StatusChip status={m.status} trackingStatus={m.tracking_status} t={t} />,
+    },
+    {
+      key: 'result',
+      label: t('dashboard.user.table.result'),
+      render: (m) => `${m.home_score} - ${m.away_score}`,
+    },
+    {
+      key: 'actions',
+      label: t('dashboard.user.table.actions'),
+      render: (m) => (
+        <Button
+          size="small"
+          variant="text"
+          onClick={() => onOpenMatchDetail(m.guid)}
+          disabled={matchDetailLoading}
+        >
+          {t('dashboard.common.matchDetail.viewAction')}
+        </Button>
+      ),
+    },
+  ]
+
   return (
     <Card id={anchorId} data-sitemap-anchor>
       <CardContent>
         <Stack spacing={1.5}>
           <Typography variant="h6">{t('dashboard.user.matchesTitle')}</Typography>
-          {!orderedSeasonMatches.length && (
-            <EmptyState title={t('dashboard.user.noMatchesForSeason')} dense />
-          )}
-          {orderedSeasonMatches.length > 0 && (
-            <TableContainer>
-              <Table size="small" sx={{ minWidth: 640 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{t('dashboard.user.table.date')}</TableCell>
-                    <TableCell>{t('dashboard.user.table.home')}</TableCell>
-                    <TableCell>{t('dashboard.user.table.away')}</TableCell>
-                    <TableCell>{t('dashboard.user.table.status')}</TableCell>
-                    <TableCell>{t('dashboard.user.table.result')}</TableCell>
-                    <TableCell>{t('dashboard.user.table.actions')}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {orderedSeasonMatches.map((match) => (
-                    <TableRow key={match.guid}>
-                      <TableCell>{formatDate(match.match_date)}</TableCell>
-                      <TableCell>{match.home_team_name}</TableCell>
-                      <TableCell>{match.away_team_name}</TableCell>
-                      <TableCell>
-                        <StatusChip
-                          status={match.status}
-                          trackingStatus={match.tracking_status}
-                          t={t}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {match.home_score} - {match.away_score}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          variant="text"
-                          onClick={() => onOpenMatchDetail(match.guid)}
-                          disabled={matchDetailLoading}
-                        >
-                          {t('dashboard.common.matchDetail.viewAction')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+          <PaginatedTable
+            columns={columns}
+            rows={orderedSeasonMatches}
+            getRowKey={(m) => m.guid}
+            minWidth={640}
+            emptyState={<EmptyState title={t('dashboard.user.noMatchesForSeason')} dense />}
+          />
         </Stack>
       </CardContent>
     </Card>
