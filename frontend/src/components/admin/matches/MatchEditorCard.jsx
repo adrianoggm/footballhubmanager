@@ -25,8 +25,9 @@ import { alpha } from '@mui/material/styles'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { translatePositionLabel } from '../../../i18n/labels.js'
 import ManualEventForm from './ManualEventForm.jsx'
+import MatchLineupsTab from './MatchLineupsTab.jsx'
+import MatchStatsTab from './MatchStatsTab.jsx'
 import { useGoalkeeperAlarm } from './useGoalkeeperAlarm.js'
-import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import MatchDetailViewer from '../../MatchDetailViewer.jsx'
 
 // During live tracking a 1-second clock tick re-renders this editor; the
@@ -285,86 +286,6 @@ const TrackingTeamPanel = memo(function TrackingTeamPanel({
         </Stack>
       </CardContent>
     </Card>
-  )
-})
-
-const TeamStatsTable = memo(function TeamStatsTable({
-  teamKey,
-  team,
-  draftPlayers,
-  onMatchStatsDraftField,
-  formatPlayerDisplayName,
-  t,
-}) {
-  return (
-    <>
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        {t('dashboard.admin.matches.teamStats', { team: team.team_name })}
-      </Typography>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-            <TableCell>{t('dashboard.admin.matches.goals')}</TableCell>
-            <TableCell>{t('dashboard.admin.matches.assists')}</TableCell>
-            <TableCell>{t('dashboard.admin.matches.saves')}</TableCell>
-            <TableCell>{t('dashboard.admin.matches.rating')}</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {team.players.map((player) => {
-            const draft = (draftPlayers || []).find(
-              (item) => item.player_guid === player.player_guid
-            )
-            return (
-              <TableRow key={player.player_guid}>
-                <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={draft?.goals ?? '0'}
-                    onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'goals')}
-                    inputProps={{ min: 0 }}
-                    sx={{ maxWidth: 90 }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={draft?.assists ?? '0'}
-                    onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'assists')}
-                    inputProps={{ min: 0 }}
-                    sx={{ maxWidth: 90 }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={draft?.saves ?? '0'}
-                    onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'saves')}
-                    inputProps={{ min: 0 }}
-                    sx={{ maxWidth: 90 }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={draft?.rating ?? '0'}
-                    onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'rating')}
-                    inputProps={{ min: 0, step: 0.1 }}
-                    sx={{ maxWidth: 90 }}
-                  />
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </>
   )
 })
 
@@ -975,137 +896,34 @@ export default function MatchEditorCard({ state, actions, helpers }) {
           )}
 
           {editorTab === 'lineups' && (
-            <Stack spacing={2}>
-              {hasLineupAudit && (
-                <Alert severity="warning">
-                  {t('dashboard.admin.matches.lineupAuditHint', {
-                    count: selectedMatchDetail.lineup_change_count,
-                  })}
-                </Alert>
-              )}
-
-              <LineupDragBuilder
-                players={matchEditorLineupPlayers}
-                homeGuids={matchDraftHomeGuids}
-                awayGuids={matchDraftAwayGuids}
-                onChange={onMatchLineupsDraftChange}
-                availableTitle={t('dashboard.admin.matches.availablePlayers')}
-                homeTitle={
-                  selectedMatchDetail.home_team.team_name || t('dashboard.admin.matches.homeLineup')
-                }
-                awayTitle={
-                  selectedMatchDetail.away_team.team_name || t('dashboard.admin.matches.awayLineup')
-                }
-                helperText={t('dashboard.admin.matches.lineupBoardHint')}
-                emptyText={t('dashboard.admin.matches.lineupEmpty')}
-                addHomeText={t('dashboard.admin.matches.addToHome')}
-                addAwayText={t('dashboard.admin.matches.addToAway')}
-                moveHomeText={t('dashboard.admin.matches.moveToHome')}
-                moveAwayText={t('dashboard.admin.matches.moveToAway')}
-                removeText={t('dashboard.admin.matches.removeFromLineup')}
-                disabled={loading || matchStatsLoading}
-              />
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant="contained"
-                  onClick={handleSaveMatchLineups}
-                  disabled={loading || matchStatsLoading}
-                >
-                  {t('dashboard.admin.matches.saveLineups')}
-                </Button>
-              </Stack>
-            </Stack>
+            <MatchLineupsTab
+              selectedMatchDetail={selectedMatchDetail}
+              hasLineupAudit={hasLineupAudit}
+              matchEditorLineupPlayers={matchEditorLineupPlayers}
+              matchDraftHomeGuids={matchDraftHomeGuids}
+              matchDraftAwayGuids={matchDraftAwayGuids}
+              onMatchLineupsDraftChange={onMatchLineupsDraftChange}
+              handleSaveMatchLineups={handleSaveMatchLineups}
+              loading={loading}
+              matchStatsLoading={matchStatsLoading}
+              t={t}
+            />
           )}
 
           {editorTab === 'stats' && (
-            <Stack spacing={2}>
-              <Box>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1}
-                  alignItems={{ sm: 'center' }}
-                  justifyContent="space-between"
-                >
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {t('dashboard.admin.matches.reportSectionTitle')}
-                  </Typography>
-                  {officiallyClosed || trackingFinished ? (
-                    <Chip
-                      size="small"
-                      color="primary"
-                      label={t('dashboard.admin.matches.workflowRecommended')}
-                    />
-                  ) : null}
-                </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.matches.manualResultTitle', {
-                    home: selectedMatchDetail.home_team.team_name,
-                    away: selectedMatchDetail.away_team.team_name,
-                  })}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.matches.manualResultDescription')}
-                </Typography>
-              </Box>
-
-              <Alert severity="info">{t('dashboard.admin.matches.manualResultHint')}</Alert>
-
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.matches.status')}:
-                </Typography>
-                <Chip
-                  size="small"
-                  color={selectedMatchDetail.status === 'closed' ? 'success' : 'warning'}
-                  label={
-                    selectedMatchDetail.status === 'closed'
-                      ? t('dashboard.admin.matches.statusClosed')
-                      : t('dashboard.admin.matches.statusOpen')
-                  }
-                />
-                <Chip
-                  size="small"
-                  color={trackingChipColor(selectedMatchDetail.tracking_status)}
-                  label={trackingLabel(selectedMatchDetail.tracking_status, t)}
-                />
-                <Chip size="small" variant="outlined" label={officialScoreLabel} />
-              </Stack>
-
-              {selectedMatchDetail.status === 'closed' && (
-                <Alert severity="warning">
-                  {t('dashboard.admin.matches.closedMatchEditableHint')}
-                </Alert>
-              )}
-
-              <Grid container spacing={2}>
-                {[
-                  { key: 'home_team', team: selectedMatchDetail.home_team },
-                  { key: 'away_team', team: selectedMatchDetail.away_team },
-                ].map(({ key, team }) => (
-                  <Grid key={key} item xs={12} lg={6} sx={{ minWidth: 0 }}>
-                    <TeamStatsTable
-                      teamKey={key}
-                      team={team}
-                      draftPlayers={matchStatsDraft[key]?.players}
-                      onMatchStatsDraftField={onMatchStatsDraftField}
-                      formatPlayerDisplayName={formatPlayerDisplayName}
-                      t={t}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant="contained"
-                  onClick={handleSaveMatchStats}
-                  disabled={loading || matchStatsLoading}
-                >
-                  {t('dashboard.admin.matches.saveStats')}
-                </Button>
-              </Stack>
-            </Stack>
+            <MatchStatsTab
+              selectedMatchDetail={selectedMatchDetail}
+              officiallyClosed={officiallyClosed}
+              trackingFinished={trackingFinished}
+              officialScoreLabel={officialScoreLabel}
+              matchStatsDraft={matchStatsDraft}
+              onMatchStatsDraftField={onMatchStatsDraftField}
+              formatPlayerDisplayName={formatPlayerDisplayName}
+              handleSaveMatchStats={handleSaveMatchStats}
+              loading={loading}
+              matchStatsLoading={matchStatsLoading}
+              t={t}
+            />
           )}
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
