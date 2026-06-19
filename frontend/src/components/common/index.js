@@ -7,5 +7,12 @@ export { default as LoadingState } from './LoadingState.jsx'
 export { default as PaginatedTable } from './PaginatedTable.jsx'
 export { default as SectionHeader } from './SectionHeader.jsx'
 export { default as StatCard } from './StatCard.jsx'
+export { default as StatusChip } from './StatusChip.jsx'
 export { default as ToastProvider } from './ToastProvider.jsx'
+export {
+  isLiveTrackingStatus,
+  isPausedTrackingStatus,
+  trackingChipColor,
+  trackingLabel,
+} from './trackingStatus.js'
 export { getSurfaceGeometry } from './surfaceGeometry.js'

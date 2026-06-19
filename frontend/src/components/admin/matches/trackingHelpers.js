@@ -1,12 +1,16 @@
 // Pure helpers for match tracking status/score, shared by the matches section
-// and its extracted cards.
+// and its extracted cards. The status mapping (live/paused/chip color/label)
+// now lives in components/common/trackingStatus.js so the user dashboard can
+// reuse it; re-exported here for back-compat with existing admin imports.
 
-export const isLiveTrackingStatus = (value) => {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-  return normalized === 'live' || normalized === 'in_progress'
-}
+export {
+  isLiveTrackingStatus,
+  isPausedTrackingStatus,
+  trackingChipColor,
+  trackingLabel,
+} from '../../common/trackingStatus.js'
+
+import { isLiveTrackingStatus } from '../../common/trackingStatus.js'
 
 export const clampTrackedValue = (value) => Math.max(0, Number(value || 0))
 
@@ -44,38 +48,5 @@ export const buildTrackedTeamScore = (detail) => {
   return {
     home: clampTrackedValue(totals.home),
     away: clampTrackedValue(totals.away),
-  }
-}
-
-export const isPausedTrackingStatus = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase() === 'paused'
-
-export const trackingChipColor = (status) => {
-  switch (String(status || '').toLowerCase()) {
-    case 'live':
-    case 'in_progress':
-      return 'success'
-    case 'paused':
-      return 'warning'
-    case 'finished':
-      return 'info'
-    default:
-      return 'default'
-  }
-}
-
-export const trackingLabel = (status, t) => {
-  switch (String(status || '').toLowerCase()) {
-    case 'live':
-    case 'in_progress':
-      return t('dashboard.common.matchDetail.trackingLive')
-    case 'paused':
-      return t('dashboard.common.matchDetail.trackingPaused')
-    case 'finished':
-      return t('dashboard.common.matchDetail.trackingFinished')
-    default:
-      return t('dashboard.common.matchDetail.trackingNotStarted')
   }
 }

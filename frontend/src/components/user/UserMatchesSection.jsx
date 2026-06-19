@@ -12,6 +12,8 @@ import {
   Typography,
 } from '@mui/material'
 
+import { StatusChip } from '../common'
+
 /**
  * Read-only season match list with a detail action.
  * Extracted from the UserDashboard monolith.
@@ -54,9 +56,11 @@ export default function UserMatchesSection({
                       <TableCell>{match.home_team_name}</TableCell>
                       <TableCell>{match.away_team_name}</TableCell>
                       <TableCell>
-                        {String(match.status || '').toLowerCase() === 'closed'
-                          ? t('dashboard.user.statusClosed')
-                          : t('dashboard.user.statusOpen')}
+                        <StatusChip
+                          status={match.status}
+                          trackingStatus={match.tracking_status}
+                          t={t}
+                        />
                       </TableCell>
                       <TableCell>
                         {match.home_score} - {match.away_score}
