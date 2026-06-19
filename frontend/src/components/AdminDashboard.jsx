@@ -31,6 +31,7 @@ import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
+import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
@@ -593,6 +594,7 @@ export default function AdminDashboard({
   onSectionChange = null,
 }) {
   const { language, t } = useI18n()
+  const { showToast } = useToast()
   const seasonMatchesRequestIdRef = useRef(0)
   const penaDataRequestIdRef = useRef(0)
   const [loading, setLoading] = useState(false)
@@ -600,8 +602,6 @@ export default function AdminDashboard({
   const [pendingDeleteMatch, setPendingDeleteMatch] = useState(null)
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
-  const [notice, setNotice] = useState('')
-  const [noticeSeverity, setNoticeSeverity] = useState('success')
   const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
 
   const [penas, setPenas] = useState([])
@@ -1107,17 +1107,15 @@ export default function AdminDashboard({
   const runAction = async (action, successMessage) => {
     setLoading(true)
     setError(null)
-    setNotice('')
-    setNoticeSeverity('success')
     try {
       await action()
+      // UX-3: transient success feedback is a toast (auto-dismisses, visible
+      // wherever the user is looking) instead of a static inline Alert.
       if (successMessage) {
         if (typeof successMessage === 'string') {
-          setNotice(successMessage)
-          setNoticeSeverity('success')
-        } else {
-          setNotice(successMessage.message || '')
-          setNoticeSeverity(successMessage.severity || 'success')
+          showToast(successMessage, 'success')
+        } else if (successMessage.message) {
+          showToast(successMessage.message, successMessage.severity || 'success')
         }
       }
     } catch (actionError) {
@@ -1676,11 +1674,11 @@ export default function AdminDashboard({
       await loadPenaData(selectedPenaGuid)
       applySeasonContext(createdSeason.guid)
       await loadStandings(selectedPenaGuid, createdSeason.guid)
-      setNoticeSeverity('success')
-      setNotice(
+      showToast(
         importedCount
           ? t('dashboard.admin.notices.seasonCreatedWithImported', { count: importedCount })
-          : t('dashboard.admin.notices.seasonCreated')
+          : t('dashboard.admin.notices.seasonCreated'),
+        'success'
       )
     }, '')
   }
@@ -2151,8 +2149,6 @@ export default function AdminDashboard({
 
     setDeletingMatchGuid(match.guid)
     setError(null)
-    setNotice('')
-    setNoticeSeverity('success')
     try {
       if (import.meta.env.DEV) {
         console.debug('[AdminDashboard] delete request start', { matchGuid: match.guid })
@@ -2173,8 +2169,7 @@ export default function AdminDashboard({
         }
         setError(refreshError)
       }
-      setNoticeSeverity('success')
-      setNotice(t('dashboard.admin.notices.matchDeleted'))
+      showToast(t('dashboard.admin.notices.matchDeleted'), 'success')
     } catch (deleteError) {
       // Rollback optimistic state only if delete itself failed.
       setHiddenDeletedMatchGuids((current) => current.filter((guid) => guid !== match.guid))
@@ -2831,7 +2826,6 @@ export default function AdminDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        {notice && <Alert severity={noticeSeverity}>{notice}</Alert>}
 
         {!selectedPenaGuid && (
           <EmptyState
