@@ -2,7 +2,6 @@ import {
   Card,
   CardContent,
   Chip,
-  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -16,7 +15,7 @@ import { alpha } from '@mui/material/styles'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
-import { EmptyState } from '../common'
+import { EmptyState, LoadingState } from '../common'
 
 const labelChipSx = (color) => {
   const background = color || DEFAULT_LABEL_COLOR
@@ -43,7 +42,7 @@ export default function UserStandingsSection({
       <CardContent>
         <Stack spacing={1.5}>
           <Typography variant="h6">{t('dashboard.user.standingsTitle')}</Typography>
-          {seasonDataLoading && <LinearProgress />}
+          {seasonDataLoading && <LoadingState variant="skeleton" rows={5} />}
           {!seasonDataLoading && !standings.length && (
             <EmptyState title={t('dashboard.user.noStandingsForSeason')} dense />
           )}

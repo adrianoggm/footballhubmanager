@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  LinearProgress,
   MenuItem,
   Stack,
   Table,
@@ -31,6 +30,7 @@ import {
 } from '../../i18n/labels.js'
 import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
+import { LoadingState } from '../common'
 
 const labelChipSx = (color) => {
   const background = color || DEFAULT_LABEL_COLOR
@@ -268,7 +268,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                   </Typography>
                 </Stack>
 
-                {seasonRosterLoading && <LinearProgress />}
+                {seasonRosterLoading && <LoadingState variant="skeleton" rows={5} />}
 
                 {selectedSeasonGuid && !seasonRosterLoading && (
                   <>
