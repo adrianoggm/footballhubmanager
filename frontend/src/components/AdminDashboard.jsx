@@ -26,6 +26,7 @@ import {
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
+import { useFetchWithStaleCheck } from '../hooks/useFetchWithStaleCheck.js'
 import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
@@ -597,8 +598,8 @@ export default function AdminDashboard({
   // flips asynchronously, so two taps in the same tick both pass it; this ref
   // blocks the duplicate dispatch immediately.
   const matchEventBusyRef = useRef(false)
-  const seasonMatchesRequestIdRef = useRef(0)
-  const penaDataRequestIdRef = useRef(0)
+  const seasonMatchesFetch = useFetchWithStaleCheck()
+  const penaDataFetch = useFetchWithStaleCheck()
   const [loading, setLoading] = useState(false)
   const [deletingMatchGuid, setDeletingMatchGuid] = useState('')
   const [pendingDeleteMatch, setPendingDeleteMatch] = useState(null)
@@ -1164,42 +1165,40 @@ export default function AdminDashboard({
     )
   }
 
-  const loadSeasonMatches = async (penaGuid, seasonGuid) => {
-    const requestId = seasonMatchesRequestIdRef.current + 1
-    seasonMatchesRequestIdRef.current = requestId
-
-    if (!seasonGuid) {
-      if (requestId !== seasonMatchesRequestIdRef.current) {
+  const loadSeasonMatches = async (penaGuid, seasonGuid) =>
+    seasonMatchesFetch.run(async ({ isStale }) => {
+      if (!seasonGuid) {
+        if (isStale()) {
+          return
+        }
+        setSeasonMatches([])
+        setHiddenDeletedMatchGuids([])
+        setSelectedMatchGuid('')
+        setSelectedMatchDetail(null)
+        setMatchLineupsDraft(null)
+        setMatchStatsDraft(null)
+        setMatchEventDraft(defaultMatchEventDraft())
+        setDeletingMatchEventGuid('')
         return
       }
-      setSeasonMatches([])
-      setHiddenDeletedMatchGuids([])
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setMatchEventDraft(defaultMatchEventDraft())
-      setDeletingMatchEventGuid('')
-      return
-    }
-    const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, {
-      pageSize: 100,
+      const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, {
+        pageSize: 100,
+      })
+      if (isStale()) {
+        return
+      }
+      const nextMatches = matchesPage.items || []
+      setSeasonMatches(nextMatches)
+      const stillExists = nextMatches.some((item) => item.guid === selectedMatchGuid)
+      if (!stillExists) {
+        setSelectedMatchGuid('')
+        setSelectedMatchDetail(null)
+        setMatchLineupsDraft(null)
+        setMatchStatsDraft(null)
+        setMatchEventDraft(defaultMatchEventDraft())
+        setDeletingMatchEventGuid('')
+      }
     })
-    if (requestId !== seasonMatchesRequestIdRef.current) {
-      return
-    }
-    const nextMatches = matchesPage.items || []
-    setSeasonMatches(nextMatches)
-    const stillExists = nextMatches.some((item) => item.guid === selectedMatchGuid)
-    if (!stillExists) {
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setMatchEventDraft(defaultMatchEventDraft())
-      setDeletingMatchEventGuid('')
-    }
-  }
 
   const loadMatchDetail = async (penaGuid, seasonGuid, matchGuid) => {
     const detail = await adminService.getMatchDetail(penaGuid, seasonGuid, matchGuid)
@@ -1245,89 +1244,86 @@ export default function AdminDashboard({
     }
   }, [selectedPenaGuid, selectedSeasonGuid, selectedMatchGuid, selectedTrackingStatus])
 
-  const loadPenaData = async (penaGuid) => {
-    const requestId = penaDataRequestIdRef.current + 1
-    penaDataRequestIdRef.current = requestId
-    const isStale = () => requestId !== penaDataRequestIdRef.current
+  const loadPenaData = async (penaGuid) =>
+    penaDataFetch.run(async ({ isStale }) => {
+      try {
+        const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
+          adminService.getActiveSeason(penaGuid).catch((requestError) => {
+            if (requestError.status === 404) {
+              return null
+            }
+            throw requestError
+          }),
+          adminService.listSeasons(penaGuid, { pageSize: 100 }),
+          shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
+          shouldLoadPenaLabels
+            ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
+            : Promise.resolve(null),
+        ])
+        if (isStale()) {
+          return
+        }
 
-    try {
-      const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
-        adminService.getActiveSeason(penaGuid).catch((requestError) => {
-          if (requestError.status === 404) {
-            return null
-          }
-          throw requestError
-        }),
-        adminService.listSeasons(penaGuid, { pageSize: 100 }),
-        shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
-        shouldLoadPenaLabels
-          ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
-          : Promise.resolve(null),
-      ])
-      if (isStale()) {
-        return
-      }
+        const seasonItems = seasonsPage.items || []
+        const nextLabels = shouldLoadPenaLabels ? sanitizePenaLabels(labels) : penaLabels
+        setActiveSeason(active)
+        setSeasonList(seasonItems)
+        setMemberFilters(defaultLabelFilters())
+        setStandingsFilters(defaultLabelFilters())
 
-      const seasonItems = seasonsPage.items || []
-      const nextLabels = shouldLoadPenaLabels ? sanitizePenaLabels(labels) : penaLabels
-      setActiveSeason(active)
-      setSeasonList(seasonItems)
-      setMemberFilters(defaultLabelFilters())
-      setStandingsFilters(defaultLabelFilters())
+        if (shouldLoadHistoricalPlayers) {
+          setHistoricalPlayers(penaPlayers || [])
+        }
 
-      if (shouldLoadHistoricalPlayers) {
-        setHistoricalPlayers(penaPlayers || [])
-      }
+        if (shouldLoadPenaLabels) {
+          setPenaLabels(nextLabels)
+          setLabelsDraft(defaultLabelsDraft(nextLabels))
+          setGuestForm((prev) => ({
+            ...prev,
+            role: hasLabel(nextLabels.role_labels, prev.role)
+              ? prev.role
+              : pickPreferredLabel(nextLabels.role_labels, 'guest'),
+            position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
+          }))
+          setMembershipDraft((prev) => ({
+            ...prev,
+            role: hasLabel(nextLabels.role_labels, prev.role) ? prev.role : '',
+            position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
+          }))
+        }
 
-      if (shouldLoadPenaLabels) {
-        setPenaLabels(nextLabels)
-        setLabelsDraft(defaultLabelsDraft(nextLabels))
+        const nextRange = buildNextSeasonDateRange(seasonItems)
+        const pointsReference = active || seasonItems[0]
+        setSeasonForm({
+          ...nextRange,
+          points_win: pointsReference?.points_win ?? 3,
+          points_draw: pointsReference?.points_draw ?? 1,
+          points_loss: pointsReference?.points_loss ?? 0,
+        })
+
+        const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
+        const resolvedSeasonGuid =
+          selectedSeasonGuid && seasonItems.some((item) => item.guid === selectedSeasonGuid)
+            ? selectedSeasonGuid
+            : fallbackSeasonGuid
+        setSelectedSeasonGuid(resolvedSeasonGuid)
+        setSelectedHistoricalGuids([])
+        setEditingMembershipPlayer(null)
+        setMembershipDraft(defaultMembershipDraft)
+        setPendingRemoveMembershipPlayer(null)
         setGuestForm((prev) => ({
           ...prev,
           role: hasLabel(nextLabels.role_labels, prev.role)
             ? prev.role
             : pickPreferredLabel(nextLabels.role_labels, 'guest'),
-          position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
         }))
-        setMembershipDraft((prev) => ({
-          ...prev,
-          role: hasLabel(nextLabels.role_labels, prev.role) ? prev.role : '',
-          position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
-        }))
+      } catch (requestError) {
+        if (isStale()) {
+          return
+        }
+        throw requestError
       }
-
-      const nextRange = buildNextSeasonDateRange(seasonItems)
-      const pointsReference = active || seasonItems[0]
-      setSeasonForm({
-        ...nextRange,
-        points_win: pointsReference?.points_win ?? 3,
-        points_draw: pointsReference?.points_draw ?? 1,
-        points_loss: pointsReference?.points_loss ?? 0,
-      })
-
-      const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
-      const resolvedSeasonGuid =
-        selectedSeasonGuid && seasonItems.some((item) => item.guid === selectedSeasonGuid)
-          ? selectedSeasonGuid
-          : fallbackSeasonGuid
-      setSelectedSeasonGuid(resolvedSeasonGuid)
-      setSelectedHistoricalGuids([])
-      setEditingMembershipPlayer(null)
-      setMembershipDraft(defaultMembershipDraft)
-      setPendingRemoveMembershipPlayer(null)
-      setGuestForm((prev) => ({
-        ...prev,
-        role: hasLabel(nextLabels.role_labels, prev.role)
-          ? prev.role
-          : pickPreferredLabel(nextLabels.role_labels, 'guest'),
-      }))
-    } catch (requestError) {
-      if (isStale()) {
-        return
-      }
-      throw requestError
-    }
-  }
+    })
 
   const loadDashboard = async () => {
     setInitializing(true)
@@ -2166,7 +2162,7 @@ export default function AdminDashboard({
     const deletedWasSelected = selectedMatchGuid === match.guid
 
     // Cancel any in-flight matches fetch to avoid stale overwrite.
-    seasonMatchesRequestIdRef.current += 1
+    seasonMatchesFetch.invalidate()
 
     // Optimistic update: remove from table right away.
     setHiddenDeletedMatchGuids((current) =>
