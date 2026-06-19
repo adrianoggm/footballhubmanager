@@ -273,7 +273,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                 {selectedSeasonGuid && !seasonRosterLoading && (
                   <>
                     <TableContainer>
-                      <Table size="small">
+                      <Table size="small" sx={{ minWidth: 820 }}>
                         <TableHead>
                           <TableRow>
                             <TableCell>{t('dashboard.admin.table.player')}</TableCell>
@@ -445,7 +445,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     </Stack>
 
                     <TableContainer>
-                      <Table size="small">
+                      <Table size="small" sx={{ minWidth: 820 }}>
                         <TableHead>
                           <TableRow>
                             <TableCell>{t('dashboard.admin.table.player')}</TableCell>

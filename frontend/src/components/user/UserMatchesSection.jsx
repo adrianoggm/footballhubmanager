@@ -12,7 +12,7 @@ import {
   Typography,
 } from '@mui/material'
 
-import { StatusChip } from '../common'
+import { EmptyState, StatusChip } from '../common'
 
 /**
  * Read-only season match list with a detail action.
@@ -32,13 +32,11 @@ export default function UserMatchesSection({
         <Stack spacing={1.5}>
           <Typography variant="h6">{t('dashboard.user.matchesTitle')}</Typography>
           {!orderedSeasonMatches.length && (
-            <Typography variant="body2" color="text.secondary">
-              {t('dashboard.user.noMatchesForSeason')}
-            </Typography>
+            <EmptyState title={t('dashboard.user.noMatchesForSeason')} dense />
           )}
           {orderedSeasonMatches.length > 0 && (
             <TableContainer>
-              <Table size="small">
+              <Table size="small" sx={{ minWidth: 640 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell>{t('dashboard.user.table.date')}</TableCell>
