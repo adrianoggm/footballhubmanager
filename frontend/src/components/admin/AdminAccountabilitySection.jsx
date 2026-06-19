@@ -682,24 +682,25 @@ export default function AdminAccountabilitySection({
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} sm={6} lg={2}>
+                <Grid item xs={12} lg={8}>
+                  <TextField
+                    label={t('dashboard.admin.accountability.note')}
+                    value={expenseDraft.note}
+                    onChange={onExpenseDraftField('note')}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12} lg={4}>
                   <Button
                     variant="contained"
+                    size="large"
                     onClick={handleAddExpense}
-                    sx={{ height: '100%', width: '100%' }}
+                    sx={{ width: '100%' }}
                   >
                     {t('dashboard.admin.accountability.addExpense')}
                   </Button>
                 </Grid>
               </Grid>
-              <Box>
-                <TextField
-                  label={t('dashboard.admin.accountability.note')}
-                  value={expenseDraft.note}
-                  onChange={onExpenseDraftField('note')}
-                  fullWidth
-                />
-              </Box>
 
               {!expenses.length && (
                 <Typography variant="body2" color="text.secondary">
