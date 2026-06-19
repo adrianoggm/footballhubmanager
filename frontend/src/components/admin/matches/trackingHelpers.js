@@ -10,7 +10,7 @@ export {
   trackingLabel,
 } from '../../common/trackingStatus.js'
 
-import { isLiveTrackingStatus } from '../../common/trackingStatus.js'
+import { isLiveTrackingStatus, isPausedTrackingStatus } from '../../common/trackingStatus.js'
 
 export const clampTrackedValue = (value) => Math.max(0, Number(value || 0))
 
@@ -18,14 +18,23 @@ export const resolveDisplayedElapsed = (matchDetail, nowEpoch) => {
   if (!matchDetail) {
     return 0
   }
-  if (!isLiveTrackingStatus(matchDetail.tracking_status) || !matchDetail.started_at_epoch) {
-    return Number(matchDetail.elapsed_seconds || 0)
+  const storedElapsed = Number(matchDetail.elapsed_seconds || 0)
+  const isTiming =
+    isLiveTrackingStatus(matchDetail.tracking_status) ||
+    isPausedTrackingStatus(matchDetail.tracking_status)
+  // Only the live/paused clock is computed from epochs; not-started and
+  // finished matches use the stored elapsed so the timer doesn't keep ticking.
+  if (!isTiming || !matchDetail.started_at_epoch) {
+    return storedElapsed
   }
-  // Mirror the backend clock: paused intervals are excluded so the live timer
-  // resumes where it stopped instead of counting the time spent paused.
-  const liveElapsed =
-    nowEpoch - matchDetail.started_at_epoch - Number(matchDetail.total_paused_seconds || 0)
-  return Math.max(Number(matchDetail.elapsed_seconds || 0), liveElapsed)
+  // Mirror the backend clock: exclude both completed pauses and any in-progress
+  // pause segment. paused_at_epoch is set while paused, so time since then does
+  // not count.
+  const effectivePaused =
+    Number(matchDetail.total_paused_seconds || 0) +
+    (matchDetail.paused_at_epoch ? Math.max(nowEpoch - Number(matchDetail.paused_at_epoch), 0) : 0)
+  const liveElapsed = nowEpoch - Number(matchDetail.started_at_epoch) - effectivePaused
+  return Math.max(storedElapsed, liveElapsed)
 }
 
 export const buildTrackedTeamScore = (detail) => {

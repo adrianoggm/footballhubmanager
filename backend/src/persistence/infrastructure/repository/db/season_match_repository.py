@@ -1678,6 +1678,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             ended_at_epoch=football_match.ended_at_epoch,
             elapsed_seconds=self._match_elapsed_seconds(football_match),
             total_paused_seconds=int(football_match.total_paused_seconds or 0),
+            paused_at_epoch=football_match.paused_at_epoch,
             goalkeeper_rotation_seconds=int(
                 getattr(football_match, "goalkeeper_rotation_seconds", 0) or 0
             ),

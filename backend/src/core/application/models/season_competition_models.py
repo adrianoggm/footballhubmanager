@@ -201,6 +201,7 @@ class SeasonMatchDetailInfo:
     events: list[SeasonMatchEventInfo]
     lineup_change_count: int = 0
     lineup_updated_at_epoch: int | None = None
+    paused_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)

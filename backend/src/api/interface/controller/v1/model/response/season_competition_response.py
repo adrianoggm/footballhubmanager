@@ -221,6 +221,7 @@ class SeasonMatchDetailResponse(BaseModel):
     events: list[SeasonMatchEventResponse]
     lineup_change_count: int = 0
     lineup_updated_at_epoch: int | None = None
+    paused_at_epoch: int | None = None
 
 
 class SeasonMatchSummaryResponse(BaseModel):

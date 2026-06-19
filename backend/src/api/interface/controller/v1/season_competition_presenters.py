@@ -128,6 +128,7 @@ def to_season_match_detail_response(item: SeasonMatchDetailInfo) -> SeasonMatchD
         events=[to_season_match_event_response(event) for event in item.events],
         lineup_change_count=item.lineup_change_count,
         lineup_updated_at_epoch=item.lineup_updated_at_epoch,
+        paused_at_epoch=item.paused_at_epoch,
     )
 
 
