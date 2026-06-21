@@ -21,11 +21,13 @@ import UserMatchesSection from './user/UserMatchesSection.jsx'
 import UserMembershipSection from './user/UserMembershipSection.jsx'
 import UserStandingsSection from './user/UserStandingsSection.jsx'
 import { DashboardContext } from '../context/dashboardContext.js'
+import { readableTextColor } from '../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
 import { useForm } from '../hooks/useForm.js'
 import { translateRoleLabel } from '../i18n/labels.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
+import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
@@ -55,10 +57,13 @@ const defaultMembershipForm = () => ({
 
 const asText = (value) => value ?? ''
 
-const labelChipSx = (color) => ({
-  backgroundColor: color || DEFAULT_LABEL_COLOR,
-  color: '#fff',
-})
+const labelChipSx = (color) => {
+  const background = color || DEFAULT_LABEL_COLOR
+  return {
+    backgroundColor: background,
+    color: readableTextColor(background),
+  }
+}
 
 const formatDate = (value) => {
   if (!value) {
@@ -125,10 +130,10 @@ export default function UserDashboard({
   onSectionChange = null,
 }) {
   const { t } = useI18n()
+  const { showToast } = useToast()
   const [initializing, setInitializing] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [notice, setNotice] = useState('')
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
 
   const [profile, setProfile] = useState(null)
@@ -269,11 +274,11 @@ export default function UserDashboard({
   const runAction = async (action, successMessage = '') => {
     setLoading(true)
     setError(null)
-    setNotice('')
     try {
       await action()
+      // UX-3: transient success feedback as an auto-dismissing toast.
       if (successMessage) {
-        setNotice(successMessage)
+        showToast(successMessage, 'success')
       }
       return true
     } catch (actionError) {
@@ -828,7 +833,6 @@ export default function UserDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        {notice && <Alert severity="success">{notice}</Alert>}
 
         {visibleUserSectionId === 'join' && (
           <UserJoinSection

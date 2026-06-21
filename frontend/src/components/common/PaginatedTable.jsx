@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from 'react'
  *  - size?: 'small' | 'medium' (default 'small')
  *  - onRowClick?: (row, index) => void
  *  - labelRowsPerPage?: string
+ *  - minWidth?: number
  */
 export default function PaginatedTable({
   columns = [],
@@ -35,6 +36,7 @@ export default function PaginatedTable({
   size = 'small',
   onRowClick = null,
   labelRowsPerPage,
+  minWidth,
 }) {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage)
@@ -65,7 +67,7 @@ export default function PaginatedTable({
   return (
     <Box sx={{ width: '100%' }}>
       <TableContainer>
-        <Table size={size}>
+        <Table size={size} sx={minWidth ? { minWidth } : undefined}>
           <TableHead>
             <TableRow>
               {columns.map((column) => (

@@ -300,6 +300,7 @@ def to_match_detail(item: MatchDetailResult) -> SeasonMatchDetailInfo:
         events=[to_match_event(event) for event in item.events],
         lineup_change_count=item.lineup_change_count,
         lineup_updated_at_epoch=item.lineup_updated_at_epoch,
+        paused_at_epoch=item.paused_at_epoch,
     )
 
 

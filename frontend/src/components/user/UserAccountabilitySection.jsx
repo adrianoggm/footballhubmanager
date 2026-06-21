@@ -13,9 +13,14 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { useEffect, useMemo, useState } from 'react'
 import { userService } from '../../services/userService.js'
 import { LoadingState } from '../common'
+import {
+  resolveBudgetVisibility,
+  resolveExpensesVisibility,
+} from '../common/accountabilityVisibility.js'
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -88,8 +93,8 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
 
   const memberAccounts = accountability?.member_accounts || []
   const expenses = accountability?.expenses || []
-  const budgetVisibility = accountability?.transparency?.budget || 'summary'
-  const expensesVisibility = accountability?.transparency?.expenses || 'summary'
+  const budgetVisibility = resolveBudgetVisibility(accountability)
+  const expensesVisibility = resolveExpensesVisibility(accountability)
   const myAccount =
     accountability?.my_account ||
     memberAccounts.find((entry) => entry.player_guid === currentPlayerGuid) ||
@@ -287,7 +292,9 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
                           key={entry.player_guid}
                           sx={
                             entry.player_guid === currentPlayerGuid
-                              ? { '& td': { backgroundColor: 'rgba(14, 165, 233, 0.08)' } }
+                              ? (theme) => ({
+                                  '& td': { backgroundColor: alpha(theme.palette.info.main, 0.12) },
+                                })
                               : undefined
                           }
                         >
