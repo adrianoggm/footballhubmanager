@@ -43,6 +43,12 @@ import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import AdminOverviewSection from './admin/AdminOverviewSection.jsx'
+import {
+  buildMatchLineupsDraft,
+  buildMatchStatsDraft,
+  defaultMatchEventDraft,
+  parseMatchEventElapsedDraft,
+} from './admin/matches/matchDrafts.js'
 import { EditMembershipDialog, EditSeasonPlayerDialog } from './admin/PlayerEditDialogs.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import { ConfirmDialog, EmptyState } from './common'
@@ -75,17 +81,6 @@ const defaultMatchForm = () => ({
   away_team_name: '',
   home_player_guids: [],
   away_player_guids: [],
-})
-
-const defaultMatchEventDraft = () => ({
-  event_type: 'goal',
-  team_side: 'home',
-  player_guid: '',
-  related_player_guid: '',
-  note: '',
-  minute: '',
-  second: '',
-  value_delta: '1',
 })
 
 const defaultGuestForm = () => ({
@@ -483,52 +478,6 @@ const buildLineupPlayerOptions = (...groups) => {
       })
     })
   return Array.from(byGuid.values())
-}
-
-const buildTeamStatsDraft = (team) => ({
-  players: (team?.players || []).map((player) => ({
-    player_guid: player.player_guid,
-    goals: String(player.goals ?? 0),
-    assists: String(player.assists ?? 0),
-    saves: String(player.saves ?? 0),
-    rating: String(player.rating ?? 0),
-  })),
-})
-
-const buildMatchStatsDraft = (detail) => ({
-  home_team: buildTeamStatsDraft(detail?.home_team),
-  away_team: buildTeamStatsDraft(detail?.away_team),
-})
-
-const buildMatchLineupsDraft = (detail) => ({
-  home_player_guids: (detail?.home_team?.players || []).map((player) => player.player_guid),
-  away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
-})
-
-const parseMatchEventElapsedDraft = (draft) => {
-  const minuteValue = String(draft?.minute ?? '').trim()
-  const secondValue = String(draft?.second ?? '').trim()
-  if (!minuteValue && !secondValue) {
-    return { isValid: true, hasValue: false, value: null }
-  }
-
-  const minutes = Number(minuteValue || 0)
-  const seconds = Number(secondValue || 0)
-  if (
-    !Number.isInteger(minutes) ||
-    minutes < 0 ||
-    !Number.isInteger(seconds) ||
-    seconds < 0 ||
-    seconds > 59
-  ) {
-    return { isValid: false, hasValue: true, value: null }
-  }
-
-  return {
-    isValid: true,
-    hasValue: true,
-    value: minutes * 60 + seconds,
-  }
 }
 
 const MATCH_EVENT_TYPES_REQUIRING_PLAYER = new Set([
