@@ -22,6 +22,10 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { adminService } from '../../services/adminService.js'
 import { LoadingState } from '../common'
+import {
+  resolveBudgetVisibility,
+  resolveExpensesVisibility,
+} from '../common/accountabilityVisibility.js'
 
 const ACCOUNTABILITY_TRANSPARENCY_LEVELS = ['private', 'summary', 'full']
 
@@ -437,7 +441,7 @@ export default function AdminAccountabilitySection({
                 <TextField
                   select
                   label={t('dashboard.admin.accountability.budgetVisibility')}
-                  value={accountability?.transparency?.budget || 'summary'}
+                  value={resolveBudgetVisibility(accountability)}
                   onChange={handleTransparencyChange('budget')}
                   fullWidth
                 >
@@ -452,7 +456,7 @@ export default function AdminAccountabilitySection({
                 <TextField
                   select
                   label={t('dashboard.admin.accountability.expensesVisibility')}
-                  value={accountability?.transparency?.expenses || 'summary'}
+                  value={resolveExpensesVisibility(accountability)}
                   onChange={handleTransparencyChange('expenses')}
                   fullWidth
                 >
