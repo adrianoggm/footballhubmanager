@@ -1,10 +1,12 @@
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Grid,
   MenuItem,
   Stack,
@@ -107,6 +109,17 @@ export default function AdminAccountabilitySection({
   }, [accountability?.currency])
 
   const formatMoney = (valueInCents) => moneyFormatter.format(Number(valueInCents || 0) / 100)
+
+  // Suggested expense categories (localized). freeSolo keeps custom/legacy
+  // free-text categories working, so this only guides without constraining.
+  const categoryPresets = useMemo(
+    () =>
+      t('dashboard.admin.accountability.expenseCategoryPresets')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [t]
+  )
 
   useEffect(() => {
     let active = true
@@ -489,7 +502,12 @@ export default function AdminAccountabilitySection({
                   value={fundsDraft.currency}
                   onChange={onFundsField('currency')}
                 />
-                <Button variant="contained" onClick={handleSaveFunds}>
+                <Button
+                  variant="contained"
+                  onClick={handleSaveFunds}
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+                >
                   {t('dashboard.admin.accountability.saveFunds')}
                 </Button>
               </Stack>
@@ -556,10 +574,15 @@ export default function AdminAccountabilitySection({
               </Grid>
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Button variant="contained" onClick={handleSaveMemberAccount}>
+                <Button
+                  variant="contained"
+                  onClick={handleSaveMemberAccount}
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+                >
                   {t('dashboard.admin.accountability.saveMemberAccount')}
                 </Button>
-                <Button variant="outlined" onClick={handleClearMemberDraft}>
+                <Button variant="outlined" onClick={handleClearMemberDraft} disabled={loading}>
                   {t('dashboard.admin.accountability.clearMemberAccount')}
                 </Button>
               </Stack>
@@ -655,11 +678,20 @@ export default function AdminAccountabilitySection({
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} lg={2}>
-                  <TextField
-                    label={t('dashboard.admin.accountability.expenseCategory')}
-                    value={expenseDraft.category}
-                    onChange={onExpenseDraftField('category')}
-                    fullWidth
+                  <Autocomplete
+                    freeSolo
+                    options={categoryPresets}
+                    inputValue={expenseDraft.category}
+                    onInputChange={(_event, newValue) =>
+                      setExpenseDraft((current) => ({ ...current, category: newValue }))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t('dashboard.admin.accountability.expenseCategory')}
+                        fullWidth
+                      />
+                    )}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} lg={2}>
@@ -695,6 +727,8 @@ export default function AdminAccountabilitySection({
                     variant="contained"
                     size="large"
                     onClick={handleAddExpense}
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
                     sx={{ width: '100%' }}
                   >
                     {t('dashboard.admin.accountability.addExpense')}
