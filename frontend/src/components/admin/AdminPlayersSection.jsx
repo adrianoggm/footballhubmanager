@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  LinearProgress,
   MenuItem,
   Stack,
   Table,
@@ -29,13 +28,18 @@ import {
   translatePositionLabel,
   translateRoleLabel,
 } from '../../i18n/labels.js'
+import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
+import { LoadingState } from '../common'
 
-const labelChipSx = (color) => ({
-  backgroundColor: color || DEFAULT_LABEL_COLOR,
-  color: '#fff',
-  border: '1px solid rgba(15, 23, 42, 0.12)',
-})
+const labelChipSx = (color) => {
+  const background = color || DEFAULT_LABEL_COLOR
+  return {
+    backgroundColor: background,
+    color: readableTextColor(background),
+    border: '1px solid rgba(15, 23, 42, 0.12)',
+  }
+}
 
 const renderFilterValue = (selected, emptyLabel, translate) => {
   const values = Array.isArray(selected)
@@ -264,12 +268,12 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                   </Typography>
                 </Stack>
 
-                {seasonRosterLoading && <LinearProgress />}
+                {seasonRosterLoading && <LoadingState variant="skeleton" rows={5} />}
 
                 {selectedSeasonGuid && !seasonRosterLoading && (
                   <>
                     <TableContainer>
-                      <Table size="small">
+                      <Table size="small" sx={{ minWidth: 820 }}>
                         <TableHead>
                           <TableRow>
                             <TableCell>{t('dashboard.admin.table.player')}</TableCell>
@@ -441,7 +445,7 @@ export default function AdminPlayersSection({ state, actions, helpers }) {
                     </Stack>
 
                     <TableContainer>
-                      <Table size="small">
+                      <Table size="small" sx={{ minWidth: 820 }}>
                         <TableHead>
                           <TableRow>
                             <TableCell>{t('dashboard.admin.table.player')}</TableCell>

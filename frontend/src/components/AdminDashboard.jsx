@@ -24,13 +24,15 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
-import { useAdminMatches } from '../hooks/useAdminMatches.js'
-import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
+import { useFetchWithStaleCheck } from '../hooks/useFetchWithStaleCheck.js'
 import { useForm } from '../hooks/useForm.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
+import { useInvitations } from '../hooks/useInvitations.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
+import { useMatchTracking } from '../hooks/useMatchTracking.js'
+import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
@@ -42,6 +44,12 @@ import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import AdminOverviewSection from './admin/AdminOverviewSection.jsx'
+import {
+  buildLineupPlayerOptions,
+  formatPlayerDisplayName,
+  normalizePlayerGuids,
+  setUnionSize,
+} from './admin/matches/lineupHelpers.js'
 import { EditMembershipDialog, EditSeasonPlayerDialog } from './admin/PlayerEditDialogs.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import { ConfirmDialog, EmptyState } from './common'
@@ -74,17 +82,6 @@ const defaultMatchForm = () => ({
   away_team_name: '',
   home_player_guids: [],
   away_player_guids: [],
-})
-
-const defaultMatchEventDraft = () => ({
-  event_type: 'goal',
-  team_side: 'home',
-  player_guid: '',
-  related_player_guid: '',
-  note: '',
-  minute: '',
-  second: '',
-  value_delta: '1',
 })
 
 const defaultGuestForm = () => ({
@@ -216,12 +213,6 @@ const defaultLabelsDraft = (labels = defaultPenaLabels()) => ({
   position_colors: { ...(labels.position_colors || {}) },
 })
 
-const splitGuids = (value) =>
-  value
-    .split(/[\n,]/g)
-    .map((item) => item.trim())
-    .filter(Boolean)
-
 const normalizeLabelList = (value) => {
   const seen = new Set()
   return value
@@ -304,18 +295,6 @@ const pickPreferredLabel = (options, preferred) => {
   )
   return preferredLabel || options[0] || ''
 }
-
-const normalizePlayerGuids = (value) => {
-  if (Array.isArray(value)) {
-    return Array.from(new Set(value.map((item) => String(item || '').trim()).filter(Boolean)))
-  }
-  if (typeof value === 'string') {
-    return Array.from(new Set(splitGuids(value)))
-  }
-  return []
-}
-
-const setUnionSize = (left, right) => new Set([...left, ...right]).size
 
 const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
   overview: 'dashboard.admin.heroSections.overview',
@@ -455,98 +434,6 @@ function SectionLoader() {
   )
 }
 
-const formatPlayerDisplayName = (player) => {
-  const fullName = [player.name, player.surname1, player.surname2].filter(Boolean).join(' ')
-  if (player.nickname && fullName) {
-    return `${player.nickname} (${fullName})`
-  }
-  if (player.nickname) {
-    return player.nickname
-  }
-  return fullName || player.player_guid || player.guid || ''
-}
-
-const buildLineupPlayerOptions = (...groups) => {
-  const byGuid = new Map()
-  groups
-    .flat()
-    .filter(Boolean)
-    .forEach((player) => {
-      const guid = String(player.player_guid || player.guid || '').trim()
-      if (!guid || byGuid.has(guid)) {
-        return
-      }
-      byGuid.set(guid, {
-        guid,
-        label: formatPlayerDisplayName(player) || guid,
-      })
-    })
-  return Array.from(byGuid.values())
-}
-
-const buildTeamStatsDraft = (team) => ({
-  players: (team?.players || []).map((player) => ({
-    player_guid: player.player_guid,
-    goals: String(player.goals ?? 0),
-    assists: String(player.assists ?? 0),
-    saves: String(player.saves ?? 0),
-    rating: String(player.rating ?? 0),
-  })),
-})
-
-const buildMatchStatsDraft = (detail) => ({
-  home_team: buildTeamStatsDraft(detail?.home_team),
-  away_team: buildTeamStatsDraft(detail?.away_team),
-})
-
-const buildMatchLineupsDraft = (detail) => ({
-  home_player_guids: (detail?.home_team?.players || []).map((player) => player.player_guid),
-  away_player_guids: (detail?.away_team?.players || []).map((player) => player.player_guid),
-})
-
-const parseMatchEventElapsedDraft = (draft) => {
-  const minuteValue = String(draft?.minute ?? '').trim()
-  const secondValue = String(draft?.second ?? '').trim()
-  if (!minuteValue && !secondValue) {
-    return { isValid: true, hasValue: false, value: null }
-  }
-
-  const minutes = Number(minuteValue || 0)
-  const seconds = Number(secondValue || 0)
-  if (
-    !Number.isInteger(minutes) ||
-    minutes < 0 ||
-    !Number.isInteger(seconds) ||
-    seconds < 0 ||
-    seconds > 59
-  ) {
-    return { isValid: false, hasValue: true, value: null }
-  }
-
-  return {
-    isValid: true,
-    hasValue: true,
-    value: minutes * 60 + seconds,
-  }
-}
-
-const MATCH_EVENT_TYPES_REQUIRING_PLAYER = new Set([
-  'goal',
-  'assist',
-  'save',
-  'foul',
-  'yellow_card',
-  'red_card',
-  'sanction',
-])
-
-const isLiveTrackingStatus = (value) => {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-  return normalized === 'live' || normalized === 'in_progress'
-}
-
 const collectPagedItems = async (fetchPage, { maxConcurrent = 3 } = {}) => {
   const firstResponse = await fetchPage(1)
   const firstItems = firstResponse.items || []
@@ -593,15 +480,11 @@ export default function AdminDashboard({
   onSectionChange = null,
 }) {
   const { language, t } = useI18n()
-  const seasonMatchesRequestIdRef = useRef(0)
-  const penaDataRequestIdRef = useRef(0)
+  const { showToast } = useToast()
+  const penaDataFetch = useFetchWithStaleCheck()
   const [loading, setLoading] = useState(false)
-  const [deletingMatchGuid, setDeletingMatchGuid] = useState('')
-  const [pendingDeleteMatch, setPendingDeleteMatch] = useState(null)
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
-  const [notice, setNotice] = useState('')
-  const [noticeSeverity, setNoticeSeverity] = useState('success')
   const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
 
   const [penas, setPenas] = useState([])
@@ -616,19 +499,7 @@ export default function AdminDashboard({
   const [historicalPlayers, setHistoricalPlayers] = useState([])
   const [selectedHistoricalGuids, setSelectedHistoricalGuids] = useState([])
   const [standings, setStandings] = useState([])
-  const [seasonMatches, setSeasonMatches] = useState([])
-  const [hiddenDeletedMatchGuids, setHiddenDeletedMatchGuids] = useState([])
-  const [seasonMatchesLoading, setSeasonMatchesLoading] = useState(false)
-  const [selectedMatchGuid, setSelectedMatchGuid] = useState('')
-  const [selectedMatchDetail, setSelectedMatchDetail] = useState(null)
-  const [matchLineupsDraft, setMatchLineupsDraft] = useState(null)
-  const [matchStatsDraft, setMatchStatsDraft] = useState(null)
-  const [matchEventDraft, setMatchEventDraft] = useState(defaultMatchEventDraft)
-  const [matchStatsLoading, setMatchStatsLoading] = useState(false)
-  const [deletingMatchEventGuid, setDeletingMatchEventGuid] = useState('')
   const [insightsScope, setInsightsScope] = useState('selected_season')
-  const [tokenPayload, setTokenPayload] = useState(null)
-  const [claimLinkPayload, setClaimLinkPayload] = useState(null)
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
   const [nationalities, setNationalities] = useState([])
 
@@ -856,32 +727,6 @@ export default function AdminDashboard({
     [seasonRoster]
   )
 
-  const matchEditorLineupPlayers = useMemo(
-    () =>
-      buildLineupPlayerOptions(
-        seasonRoster,
-        selectedMatchDetail?.home_team?.players || [],
-        selectedMatchDetail?.away_team?.players || []
-      ),
-    [seasonRoster, selectedMatchDetail]
-  )
-
-  const matchEventPlayerGuids = useMemo(
-    () => ({
-      home: new Set(
-        (selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid)
-      ),
-      away: new Set(
-        (selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid)
-      ),
-      all: new Set([
-        ...(selectedMatchDetail?.home_team?.players || []).map((player) => player.player_guid),
-        ...(selectedMatchDetail?.away_team?.players || []).map((player) => player.player_guid),
-      ]),
-    }),
-    [selectedMatchDetail]
-  )
-
   const matchFormHomeGuids = useMemo(
     () => normalizePlayerGuids(matchForm.home_player_guids),
     [matchForm.home_player_guids]
@@ -891,51 +736,6 @@ export default function AdminDashboard({
     () => normalizePlayerGuids(matchForm.away_player_guids),
     [matchForm.away_player_guids]
   )
-
-  const matchDraftHomeGuids = useMemo(
-    () => normalizePlayerGuids(matchLineupsDraft?.home_player_guids),
-    [matchLineupsDraft]
-  )
-
-  const matchDraftAwayGuids = useMemo(
-    () => normalizePlayerGuids(matchLineupsDraft?.away_player_guids),
-    [matchLineupsDraft]
-  )
-
-  const hiddenDeletedMatchGuidSet = useMemo(
-    () => new Set(hiddenDeletedMatchGuids),
-    [hiddenDeletedMatchGuids]
-  )
-
-  const visibleSeasonMatches = useMemo(
-    () => seasonMatches.filter((match) => !hiddenDeletedMatchGuidSet.has(match.guid)),
-    [seasonMatches, hiddenDeletedMatchGuidSet]
-  )
-
-  const overviewSeasonMatches = useMemo(
-    () =>
-      [...visibleSeasonMatches]
-        .sort((left, right) => {
-          if (left.match_date === right.match_date) {
-            return String(right.guid || '').localeCompare(String(left.guid || ''))
-          }
-          return String(right.match_date || '').localeCompare(String(left.match_date || ''))
-        })
-        .slice(0, 5),
-    [visibleSeasonMatches]
-  )
-
-  const overviewMatchesSummary = useMemo(() => {
-    const total = visibleSeasonMatches.length
-    const closed = visibleSeasonMatches.filter(
-      (match) => String(match.status || '').toLowerCase() === 'closed'
-    ).length
-    return {
-      total,
-      closed,
-      open: Math.max(0, total - closed),
-    }
-  }, [visibleSeasonMatches])
 
   const insightsComparison = useMemo(
     () => compareMatchInsightSummaries(insightsReport, insightsComparisonReport),
@@ -961,44 +761,6 @@ export default function AdminDashboard({
       home_player_guids: homePlayerGuids,
       away_player_guids: awayPlayerGuids,
     }))
-  }
-
-  const onMatchLineupsDraftChange = ({ homePlayerGuids, awayPlayerGuids }) => {
-    setMatchLineupsDraft((prev) => {
-      if (!prev) {
-        return prev
-      }
-      return {
-        ...prev,
-        home_player_guids: homePlayerGuids,
-        away_player_guids: awayPlayerGuids,
-      }
-    })
-  }
-
-  const onMatchEventDraftField = (name) => (event) => {
-    const value = event.target.value
-    setMatchEventDraft((prev) => {
-      const next = {
-        ...(prev || defaultMatchEventDraft()),
-        [name]: value,
-      }
-      if (name === 'team_side') {
-        const allowedPlayers =
-          value === 'home'
-            ? matchEventPlayerGuids.home
-            : value === 'away'
-              ? matchEventPlayerGuids.away
-              : matchEventPlayerGuids.all
-        if (next.player_guid && !allowedPlayers.has(next.player_guid)) {
-          next.player_guid = ''
-        }
-      }
-      if (name === 'player_guid' && value && next.related_player_guid === value) {
-        next.related_player_guid = ''
-      }
-      return next
-    })
   }
 
   const onLabelColorDraftChange = (group, label) => (event) => {
@@ -1095,29 +857,18 @@ export default function AdminDashboard({
     }, t('dashboard.admin.notices.labelsUpdated'))
   }
 
-  const closeMatchEditor = () => {
-    setSelectedMatchGuid('')
-    setSelectedMatchDetail(null)
-    setMatchLineupsDraft(null)
-    setMatchStatsDraft(null)
-    setMatchEventDraft(defaultMatchEventDraft())
-    setDeletingMatchEventGuid('')
-  }
-
   const runAction = async (action, successMessage) => {
     setLoading(true)
     setError(null)
-    setNotice('')
-    setNoticeSeverity('success')
     try {
       await action()
+      // UX-3: transient success feedback is a toast (auto-dismisses, visible
+      // wherever the user is looking) instead of a static inline Alert.
       if (successMessage) {
         if (typeof successMessage === 'string') {
-          setNotice(successMessage)
-          setNoticeSeverity('success')
-        } else {
-          setNotice(successMessage.message || '')
-          setNoticeSeverity(successMessage.severity || 'success')
+          showToast(successMessage, 'success')
+        } else if (successMessage.message) {
+          showToast(successMessage.message, successMessage.severity || 'success')
         }
       }
     } catch (actionError) {
@@ -1130,6 +881,14 @@ export default function AdminDashboard({
       setLoading(false)
     }
   }
+
+  const {
+    tokenPayload,
+    claimLinkPayload,
+    handleGenerateJoinCode,
+    handleGenerateClaimLink,
+    closeClaimLink,
+  } = useInvitations({ selectedPenaGuid, runAction, t })
 
   const loadStandings = async (penaGuid, seasonGuid, filters = standingsFilters) => {
     const standingsPage = await adminService.listStandings(penaGuid, seasonGuid, {
@@ -1164,137 +923,147 @@ export default function AdminDashboard({
     )
   }
 
-  const loadSeasonMatches = async (penaGuid, seasonGuid) => {
-    const requestId = seasonMatchesRequestIdRef.current + 1
-    seasonMatchesRequestIdRef.current = requestId
-
-    if (!seasonGuid) {
-      if (requestId !== seasonMatchesRequestIdRef.current) {
-        return
-      }
-      setSeasonMatches([])
-      setHiddenDeletedMatchGuids([])
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setMatchEventDraft(defaultMatchEventDraft())
-      setDeletingMatchEventGuid('')
-      return
-    }
-    const matchesPage = await adminService.listSeasonMatches(penaGuid, seasonGuid, {
-      pageSize: 100,
-    })
-    if (requestId !== seasonMatchesRequestIdRef.current) {
-      return
-    }
-    const nextMatches = matchesPage.items || []
-    setSeasonMatches(nextMatches)
-    const stillExists = nextMatches.some((item) => item.guid === selectedMatchGuid)
-    if (!stillExists) {
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setMatchEventDraft(defaultMatchEventDraft())
-      setDeletingMatchEventGuid('')
-    }
+  // A match mutation changes scores, so the sibling standings + roster must
+  // refresh too. The match list refresh is owned by useMatchTracking.
+  const refreshStandingsAndRoster = async (penaGuid, seasonGuid) => {
+    await Promise.all([
+      loadStandings(penaGuid, seasonGuid),
+      loadSeasonRoster(penaGuid, seasonGuid).then(setSeasonRoster),
+    ])
   }
 
-  const loadMatchDetail = async (penaGuid, seasonGuid, matchGuid) => {
-    const detail = await adminService.getMatchDetail(penaGuid, seasonGuid, matchGuid)
-    setSelectedMatchGuid(matchGuid)
-    setSelectedMatchDetail(detail)
-    setMatchLineupsDraft(buildMatchLineupsDraft(detail))
-    setMatchStatsDraft(buildMatchStatsDraft(detail))
-    setMatchEventDraft(defaultMatchEventDraft())
-    setDeletingMatchEventGuid('')
-    return detail
-  }
+  const matchTracking = useMatchTracking({
+    selectedPenaGuid,
+    selectedSeasonGuid,
+    seasonRoster,
+    seasonList,
+    initializing,
+    runAction,
+    setError,
+    onUnauthorized: onLogout,
+    showToast,
+    t,
+    refreshStandingsAndRoster,
+  })
+  const {
+    seasonMatchesLoading,
+    visibleSeasonMatches,
+    overviewSeasonMatches,
+    overviewMatchesSummary,
+    selectedMatchGuid,
+    deletingMatchGuid,
+    pendingDeleteMatch,
+    matchStatsLoading,
+    selectedMatchDetail,
+    matchLineupsDraft,
+    matchStatsDraft,
+    matchEventDraft,
+    deletingMatchEventGuid,
+    matchEditorLineupPlayers,
+    matchDraftHomeGuids,
+    matchDraftAwayGuids,
+    loadSeasonMatches,
+    handleOpenMatchStats,
+    handleRequestDeleteSeasonMatch,
+    handleCancelDeleteSeasonMatch,
+    handleDeleteSeasonMatch,
+    onMatchLineupsDraftChange,
+    handleSaveMatchLineups,
+    onMatchEventDraftField,
+    handleStartMatch,
+    handleStopMatch,
+    handlePauseMatch,
+    handleResumeMatch,
+    handleSetGoalkeeperRotation,
+    handleQuickMatchEvent,
+    handleCreateMatchEvent,
+    handleDeleteMatchEvent,
+    onMatchStatsDraftField,
+    handleSaveMatchStats,
+    closeMatchEditor,
+    resetSelection: resetMatchSelection,
+  } = matchTracking
 
-  const loadPenaData = async (penaGuid) => {
-    const requestId = penaDataRequestIdRef.current + 1
-    penaDataRequestIdRef.current = requestId
-    const isStale = () => requestId !== penaDataRequestIdRef.current
+  const loadPenaData = async (penaGuid) =>
+    penaDataFetch.run(async ({ isStale }) => {
+      try {
+        const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
+          adminService.getActiveSeason(penaGuid).catch((requestError) => {
+            if (requestError.status === 404) {
+              return null
+            }
+            throw requestError
+          }),
+          adminService.listSeasons(penaGuid, { pageSize: 100 }),
+          shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
+          shouldLoadPenaLabels
+            ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
+            : Promise.resolve(null),
+        ])
+        if (isStale()) {
+          return
+        }
 
-    try {
-      const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
-        adminService.getActiveSeason(penaGuid).catch((requestError) => {
-          if (requestError.status === 404) {
-            return null
-          }
-          throw requestError
-        }),
-        adminService.listSeasons(penaGuid, { pageSize: 100 }),
-        shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
-        shouldLoadPenaLabels
-          ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
-          : Promise.resolve(null),
-      ])
-      if (isStale()) {
-        return
-      }
+        const seasonItems = seasonsPage.items || []
+        const nextLabels = shouldLoadPenaLabels ? sanitizePenaLabels(labels) : penaLabels
+        setActiveSeason(active)
+        setSeasonList(seasonItems)
+        setMemberFilters(defaultLabelFilters())
+        setStandingsFilters(defaultLabelFilters())
 
-      const seasonItems = seasonsPage.items || []
-      const nextLabels = shouldLoadPenaLabels ? sanitizePenaLabels(labels) : penaLabels
-      setActiveSeason(active)
-      setSeasonList(seasonItems)
-      setMemberFilters(defaultLabelFilters())
-      setStandingsFilters(defaultLabelFilters())
+        if (shouldLoadHistoricalPlayers) {
+          setHistoricalPlayers(penaPlayers || [])
+        }
 
-      if (shouldLoadHistoricalPlayers) {
-        setHistoricalPlayers(penaPlayers || [])
-      }
+        if (shouldLoadPenaLabels) {
+          setPenaLabels(nextLabels)
+          setLabelsDraft(defaultLabelsDraft(nextLabels))
+          setGuestForm((prev) => ({
+            ...prev,
+            role: hasLabel(nextLabels.role_labels, prev.role)
+              ? prev.role
+              : pickPreferredLabel(nextLabels.role_labels, 'guest'),
+            position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
+          }))
+          setMembershipDraft((prev) => ({
+            ...prev,
+            role: hasLabel(nextLabels.role_labels, prev.role) ? prev.role : '',
+            position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
+          }))
+        }
 
-      if (shouldLoadPenaLabels) {
-        setPenaLabels(nextLabels)
-        setLabelsDraft(defaultLabelsDraft(nextLabels))
+        const nextRange = buildNextSeasonDateRange(seasonItems)
+        const pointsReference = active || seasonItems[0]
+        setSeasonForm({
+          ...nextRange,
+          points_win: pointsReference?.points_win ?? 3,
+          points_draw: pointsReference?.points_draw ?? 1,
+          points_loss: pointsReference?.points_loss ?? 0,
+        })
+
+        const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
+        const resolvedSeasonGuid =
+          selectedSeasonGuid && seasonItems.some((item) => item.guid === selectedSeasonGuid)
+            ? selectedSeasonGuid
+            : fallbackSeasonGuid
+        setSelectedSeasonGuid(resolvedSeasonGuid)
+        setSelectedHistoricalGuids([])
+        setEditingMembershipPlayer(null)
+        setMembershipDraft(defaultMembershipDraft)
+        setPendingRemoveMembershipPlayer(null)
         setGuestForm((prev) => ({
           ...prev,
           role: hasLabel(nextLabels.role_labels, prev.role)
             ? prev.role
             : pickPreferredLabel(nextLabels.role_labels, 'guest'),
-          position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
         }))
-        setMembershipDraft((prev) => ({
-          ...prev,
-          role: hasLabel(nextLabels.role_labels, prev.role) ? prev.role : '',
-          position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
-        }))
+      } catch (requestError) {
+        if (isStale()) {
+          return
+        }
+        throw requestError
       }
-
-      const nextRange = buildNextSeasonDateRange(seasonItems)
-      const pointsReference = active || seasonItems[0]
-      setSeasonForm({
-        ...nextRange,
-        points_win: pointsReference?.points_win ?? 3,
-        points_draw: pointsReference?.points_draw ?? 1,
-        points_loss: pointsReference?.points_loss ?? 0,
-      })
-
-      const fallbackSeasonGuid = active?.guid || seasonItems[0]?.guid || ''
-      const resolvedSeasonGuid =
-        selectedSeasonGuid && seasonItems.some((item) => item.guid === selectedSeasonGuid)
-          ? selectedSeasonGuid
-          : fallbackSeasonGuid
-      setSelectedSeasonGuid(resolvedSeasonGuid)
-      setSelectedHistoricalGuids([])
-      setEditingMembershipPlayer(null)
-      setMembershipDraft(defaultMembershipDraft)
-      setPendingRemoveMembershipPlayer(null)
-      setGuestForm((prev) => ({
-        ...prev,
-        role: hasLabel(nextLabels.role_labels, prev.role)
-          ? prev.role
-          : pickPreferredLabel(nextLabels.role_labels, 'guest'),
-      }))
-    } catch (requestError) {
-      if (isStale()) {
-        return
-      }
-      throw requestError
-    }
-  }
+    })
 
   const loadDashboard = async () => {
     setInitializing(true)
@@ -1325,11 +1094,9 @@ export default function AdminDashboard({
         setMemberFilters(defaultLabelFilters())
         setStandingsFilters(defaultLabelFilters())
         setStandings([])
-        setSeasonMatches([])
-        setSelectedMatchGuid('')
-        setSelectedMatchDetail(null)
-        setMatchLineupsDraft(null)
-        setMatchStatsDraft(null)
+        // The season-matches list is cleared by useMatchTracking's own effect
+        // once selectedPenaGuid drops to ''; here we only clear the selection.
+        resetMatchSelection()
       }
     } catch (requestError) {
       if (requestError?.status === 401) {
@@ -1525,55 +1292,6 @@ export default function AdminDashboard({
     resetInsightsReport()
   }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
-  // Season matches feed the always-visible "season matches" summary card, so they
-  // load for every section once a pena + season are selected.
-  useEffect(() => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
-      setSeasonMatches([])
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setSeasonMatchesLoading(false)
-      return
-    }
-    if (!seasonList.some((season) => season.guid === selectedSeasonGuid)) {
-      setSeasonMatches([])
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setSeasonMatchesLoading(false)
-      return
-    }
-
-    let activeRequest = true
-    setSeasonMatchesLoading(true)
-    ;(async () => {
-      try {
-        await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-      } catch (requestError) {
-        if (!activeRequest) {
-          return
-        }
-        if (requestError?.status === 401) {
-          await onLogout()
-          return
-        }
-        setError(requestError)
-      } finally {
-        if (activeRequest) {
-          setSeasonMatchesLoading(false)
-        }
-      }
-    })()
-
-    return () => {
-      activeRequest = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, seasonList, initializing])
-
   useEffect(() => {
     const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
     setSelectedHistoricalGuids((current) => current.filter((guid) => availableGuids.has(guid)))
@@ -1611,7 +1329,6 @@ export default function AdminDashboard({
   const applySeasonContext = (nextSeasonGuid) => {
     setSelectedSeasonGuid(nextSeasonGuid)
     setSelectedHistoricalGuids([])
-    setHiddenDeletedMatchGuids([])
     setPendingDeleteSeason(null)
     setEditingSeasonPlayer(null)
     setSeasonPlayerDraft(defaultSeasonPlayerDraft)
@@ -1621,13 +1338,11 @@ export default function AdminDashboard({
       home_player_guids: [],
       away_player_guids: [],
     }))
-    setSelectedMatchGuid('')
-    setSelectedMatchDetail(null)
-    setMatchLineupsDraft(null)
-    setMatchStatsDraft(null)
+    // The match list + hidden-delete set are reconciled by useMatchTracking's
+    // loading effect when selectedSeasonGuid changes; clear the selection here.
+    resetMatchSelection()
     if (!nextSeasonGuid) {
       setStandings([])
-      setSeasonMatches([])
     }
   }
 
@@ -1676,11 +1391,11 @@ export default function AdminDashboard({
       await loadPenaData(selectedPenaGuid)
       applySeasonContext(createdSeason.guid)
       await loadStandings(selectedPenaGuid, createdSeason.guid)
-      setNoticeSeverity('success')
-      setNotice(
+      showToast(
         importedCount
           ? t('dashboard.admin.notices.seasonCreatedWithImported', { count: importedCount })
-          : t('dashboard.admin.notices.seasonCreated')
+          : t('dashboard.admin.notices.seasonCreated'),
+        'success'
       )
     }, '')
   }
@@ -1781,26 +1496,6 @@ export default function AdminDashboard({
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
       ])
     }, t('dashboard.admin.notices.detailedMatchCreated'))
-  }
-
-  const handleGenerateJoinCode = async () => {
-    if (!selectedPenaGuid) {
-      return
-    }
-    await runAction(async () => {
-      const token = await adminService.createLinkToken(selectedPenaGuid)
-      setTokenPayload(token)
-    }, t('dashboard.admin.notices.joinCodeGenerated'))
-  }
-
-  const handleGenerateClaimLink = async (player) => {
-    if (!selectedPenaGuid || !player?.guid) {
-      return
-    }
-    await runAction(async () => {
-      const token = await adminService.createClaimToken(selectedPenaGuid, player.guid)
-      setClaimLinkPayload({ ...token, player })
-    }, t('dashboard.admin.notices.claimLinkGenerated'))
   }
 
   const handleCreateGuestPlayer = async (registerInSelectedSeason) => {
@@ -2058,25 +1753,6 @@ export default function AdminDashboard({
     )
   }
 
-  const handleOpenMatchStats = async (matchGuid) => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
-      return
-    }
-    setMatchStatsLoading(true)
-    setError(null)
-    try {
-      await loadMatchDetail(selectedPenaGuid, selectedSeasonGuid, matchGuid)
-    } catch (requestError) {
-      if (requestError?.status === 401) {
-        await onLogout()
-        return
-      }
-      setError(requestError)
-    } finally {
-      setMatchStatsLoading(false)
-    }
-  }
-
   const handleOpenOverviewMatchDetail = async (matchGuid) => {
     if (!selectedPenaGuid || !selectedSeasonGuid || !matchGuid) {
       return
@@ -2102,437 +1778,6 @@ export default function AdminDashboard({
     })
   }
 
-  const handleRequestDeleteSeasonMatch = (match) => {
-    if (!match?.guid) {
-      return
-    }
-    setPendingDeleteMatch(match)
-  }
-
-  const handleCancelDeleteSeasonMatch = () => {
-    if (deletingMatchGuid) {
-      return
-    }
-    setPendingDeleteMatch(null)
-  }
-
-  const handleDeleteSeasonMatch = async () => {
-    const match = pendingDeleteMatch
-    if (!selectedPenaGuid || !selectedSeasonGuid || !match?.guid) {
-      return
-    }
-    setPendingDeleteMatch(null)
-
-    const previousSeasonMatches = seasonMatches
-    const previousSelectedMatchGuid = selectedMatchGuid
-    const previousSelectedMatchDetail = selectedMatchDetail
-    const previousMatchLineupsDraft = matchLineupsDraft
-    const previousMatchStatsDraft = matchStatsDraft
-    const previousMatchEventDraft = matchEventDraft
-    const previousDeletingMatchEventGuid = deletingMatchEventGuid
-    const deletedWasSelected = selectedMatchGuid === match.guid
-
-    // Cancel any in-flight matches fetch to avoid stale overwrite.
-    seasonMatchesRequestIdRef.current += 1
-
-    // Optimistic update: remove from table right away.
-    setHiddenDeletedMatchGuids((current) =>
-      current.includes(match.guid) ? current : [...current, match.guid]
-    )
-    setSeasonMatches((current) => current.filter((item) => item.guid !== match.guid))
-    if (deletedWasSelected) {
-      setSelectedMatchGuid('')
-      setSelectedMatchDetail(null)
-      setMatchLineupsDraft(null)
-      setMatchStatsDraft(null)
-      setMatchEventDraft(defaultMatchEventDraft())
-      setDeletingMatchEventGuid('')
-    }
-
-    setDeletingMatchGuid(match.guid)
-    setError(null)
-    setNotice('')
-    setNoticeSeverity('success')
-    try {
-      if (import.meta.env.DEV) {
-        console.debug('[AdminDashboard] delete request start', { matchGuid: match.guid })
-      }
-      await adminService.deleteSeasonMatch(selectedPenaGuid, selectedSeasonGuid, match.guid)
-      if (import.meta.env.DEV) {
-        console.debug('[AdminDashboard] delete request success', { matchGuid: match.guid })
-      }
-      try {
-        await Promise.all([
-          loadStandings(selectedPenaGuid, selectedSeasonGuid),
-          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        ])
-      } catch (refreshError) {
-        if (refreshError?.status === 401) {
-          await onLogout()
-          return
-        }
-        setError(refreshError)
-      }
-      setNoticeSeverity('success')
-      setNotice(t('dashboard.admin.notices.matchDeleted'))
-    } catch (deleteError) {
-      // Rollback optimistic state only if delete itself failed.
-      setHiddenDeletedMatchGuids((current) => current.filter((guid) => guid !== match.guid))
-      setSeasonMatches(previousSeasonMatches)
-      if (deletedWasSelected) {
-        setSelectedMatchGuid(previousSelectedMatchGuid)
-        setSelectedMatchDetail(previousSelectedMatchDetail)
-        setMatchLineupsDraft(previousMatchLineupsDraft)
-        setMatchStatsDraft(previousMatchStatsDraft)
-        setMatchEventDraft(previousMatchEventDraft)
-        setDeletingMatchEventGuid(previousDeletingMatchEventGuid)
-      }
-      if (deleteError?.status === 401) {
-        await onLogout()
-        return
-      }
-      if (import.meta.env.DEV) {
-        console.debug('[AdminDashboard] delete request error', {
-          matchGuid: match.guid,
-          status: deleteError?.status,
-          message: deleteError?.message,
-        })
-      }
-      setError(deleteError)
-    } finally {
-      setDeletingMatchGuid('')
-    }
-  }
-
-  const handleSaveMatchLineups = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !matchLineupsDraft) {
-      return
-    }
-    const homePlayerGuids = normalizePlayerGuids(matchLineupsDraft.home_player_guids)
-    const awayPlayerGuids = normalizePlayerGuids(matchLineupsDraft.away_player_guids)
-    if (!homePlayerGuids.length || !awayPlayerGuids.length) {
-      setError(new Error(t('dashboard.admin.errors.lineupsRequired')))
-      return
-    }
-    if (
-      setUnionSize(homePlayerGuids, awayPlayerGuids) !==
-      homePlayerGuids.length + awayPlayerGuids.length
-    ) {
-      setError(new Error(t('dashboard.admin.errors.lineupsOverlap')))
-      return
-    }
-
-    await runAction(
-      async () => {
-        const updated = await adminService.updateMatchLineups(
-          selectedPenaGuid,
-          selectedSeasonGuid,
-          selectedMatchGuid,
-          {
-            home_team: { player_guids: homePlayerGuids },
-            away_team: { player_guids: awayPlayerGuids },
-          }
-        )
-        setSelectedMatchDetail(updated)
-        setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-        setMatchStatsDraft(buildMatchStatsDraft(updated))
-        await Promise.all([
-          loadStandings(selectedPenaGuid, selectedSeasonGuid),
-          loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-          loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
-        ])
-      },
-      {
-        message: t('dashboard.admin.notices.lineupsUpdatedWarning'),
-        severity: 'warning',
-      }
-    )
-  }
-
-  const handleStartMatch = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.startMatch(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.matchTrackingStarted'))
-  }
-
-  const handleStopMatch = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.stopMatch(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.matchTrackingStopped'))
-  }
-
-  const handlePauseMatch = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.pauseMatch(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid
-      )
-      setSelectedMatchDetail(updated)
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.matchTrackingPaused'))
-  }
-
-  const handleResumeMatch = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.resumeMatch(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid
-      )
-      setSelectedMatchDetail(updated)
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.matchTrackingResumed'))
-  }
-
-  const handleSetGoalkeeperRotation = async (rotationSeconds) => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.setGoalkeeperRotation(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        rotationSeconds
-      )
-      setSelectedMatchDetail(updated)
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.goalkeeperRotationUpdated'))
-  }
-
-  const createMatchEventAndRefresh = async ({
-    eventType,
-    teamSide,
-    playerGuid = '',
-    relatedPlayerGuid = '',
-    note = '',
-    elapsedSeconds = null,
-    valueDelta = 1,
-    successMessage,
-    resetDraft = false,
-  }) => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid) {
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.createMatchEvent(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        {
-          event_type: eventType,
-          team_side: teamSide,
-          player_guid: playerGuid || null,
-          related_player_guid: relatedPlayerGuid || null,
-          note: note || null,
-          elapsed_seconds: elapsedSeconds,
-          value_delta: valueDelta,
-        }
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      if (resetDraft) {
-        setMatchEventDraft(defaultMatchEventDraft())
-      }
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, successMessage)
-  }
-
-  const handleQuickMatchEvent = async ({ eventType, teamSide, playerGuid, valueDelta }) => {
-    if (!selectedMatchDetail) {
-      return
-    }
-    if (!isLiveTrackingStatus(selectedMatchDetail.tracking_status)) {
-      setError(new Error(t('dashboard.admin.errors.matchTrackingLiveRequired')))
-      return
-    }
-    await createMatchEventAndRefresh({
-      eventType,
-      teamSide,
-      playerGuid,
-      valueDelta,
-      successMessage: t('dashboard.admin.notices.matchEventCreated'),
-    })
-  }
-
-  const handleCreateMatchEvent = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !selectedMatchDetail) {
-      return
-    }
-
-    const elapsed = parseMatchEventElapsedDraft(matchEventDraft)
-    if (!elapsed.isValid) {
-      setError(new Error(t('dashboard.admin.errors.invalidMatchEventElapsed')))
-      return
-    }
-    if (!isLiveTrackingStatus(selectedMatchDetail.tracking_status) && !elapsed.hasValue) {
-      setError(new Error(t('dashboard.admin.errors.matchEventElapsedRequired')))
-      return
-    }
-
-    const eventType = String(matchEventDraft.event_type || '')
-      .trim()
-      .toLowerCase()
-    const playerGuid = String(matchEventDraft.player_guid || '').trim()
-    const relatedPlayerGuid = String(matchEventDraft.related_player_guid || '').trim()
-    const valueDelta = Number(matchEventDraft.value_delta || 1)
-    if (![1, -1].includes(valueDelta)) {
-      setError(new Error(t('dashboard.admin.errors.invalidMatchEventDelta')))
-      return
-    }
-    if (MATCH_EVENT_TYPES_REQUIRING_PLAYER.has(eventType) && !playerGuid) {
-      setError(new Error(t('dashboard.admin.errors.matchEventPlayerRequired')))
-      return
-    }
-    if (playerGuid && relatedPlayerGuid && playerGuid === relatedPlayerGuid) {
-      setError(new Error(t('dashboard.admin.errors.matchEventPlayersMustDiffer')))
-      return
-    }
-
-    await createMatchEventAndRefresh({
-      eventType: matchEventDraft.event_type,
-      teamSide: matchEventDraft.team_side,
-      playerGuid,
-      relatedPlayerGuid,
-      note: String(matchEventDraft.note || '').trim(),
-      elapsedSeconds: elapsed.value,
-      valueDelta,
-      successMessage: t('dashboard.admin.notices.matchEventCreated'),
-      resetDraft: true,
-    })
-  }
-
-  const handleDeleteMatchEvent = async (eventGuid) => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !eventGuid) {
-      return
-    }
-
-    setDeletingMatchEventGuid(eventGuid)
-    await runAction(async () => {
-      const updated = await adminService.deleteMatchEvent(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        eventGuid
-      )
-      setSelectedMatchDetail(updated)
-      setMatchLineupsDraft(buildMatchLineupsDraft(updated))
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      await loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid)
-    }, t('dashboard.admin.notices.matchEventDeleted'))
-    setDeletingMatchEventGuid('')
-  }
-
-  const onMatchStatsDraftField = (teamKey, playerGuid, field) => (event) => {
-    const value = event.target.value
-    setMatchStatsDraft((prev) => {
-      if (!prev) {
-        return prev
-      }
-      return {
-        ...prev,
-        [teamKey]: {
-          ...prev[teamKey],
-          players: (prev[teamKey]?.players || []).map((player) =>
-            player.player_guid === playerGuid ? { ...player, [field]: value } : player
-          ),
-        },
-      }
-    })
-  }
-
-  const parseStatsPayload = (values) => {
-    const goals = Number(values.goals)
-    const assists = Number(values.assists)
-    const saves = Number(values.saves)
-    const rating = Number(values.rating)
-    const integers = [goals, assists, saves]
-    const invalidIntegers = integers.some((item) => !Number.isInteger(item) || item < 0)
-    if (invalidIntegers || Number.isNaN(rating) || rating < 0) {
-      return null
-    }
-    return {
-      player_guid: values.player_guid,
-      goals,
-      assists,
-      saves,
-      rating,
-    }
-  }
-
-  const handleSaveMatchStats = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedMatchGuid || !matchStatsDraft) {
-      return
-    }
-
-    const homePlayers = (matchStatsDraft.home_team?.players || []).map(parseStatsPayload)
-    const awayPlayers = (matchStatsDraft.away_team?.players || []).map(parseStatsPayload)
-    if (
-      !homePlayers.length ||
-      !awayPlayers.length ||
-      homePlayers.some((item) => !item) ||
-      awayPlayers.some((item) => !item)
-    ) {
-      setError(new Error(t('dashboard.admin.errors.invalidMatchStats')))
-      return
-    }
-
-    await runAction(async () => {
-      const updated = await adminService.updateMatchStats(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        selectedMatchGuid,
-        {
-          home_team: { players: homePlayers },
-          away_team: { players: awayPlayers },
-        }
-      )
-      setSelectedMatchDetail(updated)
-      setMatchStatsDraft(buildMatchStatsDraft(updated))
-      await Promise.all([
-        loadStandings(selectedPenaGuid, selectedSeasonGuid),
-        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
-      ])
-    }, t('dashboard.admin.notices.matchStatsUpdated'))
-  }
-
   const activeSeasonLabel = activeSeason
     ? `${formatDate(activeSeason.start_date)} - ${formatDate(activeSeason.end_date)}`
     : t('dashboard.admin.status.noActiveSeason')
@@ -2541,7 +1786,8 @@ export default function AdminDashboard({
     ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
     : t('dashboard.admin.status.noSeasonSelected')
 
-  const playersSection = useAdminPlayers({
+  // Plain view-model bundles for the section components.
+  const playersSection = {
     state: {
       selectedSeason,
       selectedSeasonLabel,
@@ -2576,7 +1822,7 @@ export default function AdminDashboard({
       handleEditMembershipPlayer,
       handleRequestRemoveMembershipPlayer,
       handleGenerateClaimLink,
-      onCloseClaimLink: () => setClaimLinkPayload(null),
+      onCloseClaimLink: closeClaimLink,
       onMemberFilterField,
       onLabelsDraftField,
       onLabelColorDraftChange,
@@ -2587,9 +1833,9 @@ export default function AdminDashboard({
       formatPlayerDisplayName,
       formatEpochSeconds,
     },
-  })
+  }
 
-  const matchesSection = useAdminMatches({
+  const matchesSection = {
     state: {
       selectedSeasonGuid,
       selectedSeason,
@@ -2642,7 +1888,7 @@ export default function AdminDashboard({
       formatElapsedDuration,
       formatPlayerDisplayName,
     },
-  })
+  }
 
   const adminNavItems = adminSections.map((section) => {
     const locked = Boolean(section.requiresSeason) && !hasSeason
@@ -2831,7 +2077,6 @@ export default function AdminDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        {notice && <Alert severity={noticeSeverity}>{notice}</Alert>}
 
         {!selectedPenaGuid && (
           <EmptyState

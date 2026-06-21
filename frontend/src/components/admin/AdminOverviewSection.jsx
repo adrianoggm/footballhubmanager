@@ -15,6 +15,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { EmptyState } from '../common'
 
 /**
  * Admin overview: invite-code generation, standings snapshot, and season-matches
@@ -94,9 +95,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
                 </Button>
               </Stack>
               {!selectedSeasonGuid && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.overview.selectSeasonToLoad')}
-                </Typography>
+                <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
               )}
               {selectedSeasonGuid && (
                 <TableContainer>
@@ -170,9 +169,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
               </Stack>
 
               {!selectedSeasonGuid && (
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.overview.selectSeasonToLoad')}
-                </Typography>
+                <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
               )}
 
               {selectedSeasonGuid && (
@@ -202,9 +199,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
                   </Stack>
 
                   {!overviewSeasonMatches.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.overview.noMatchesForSeason')}
-                    </Typography>
+                    <EmptyState title={t('dashboard.admin.overview.noMatchesForSeason')} dense />
                   )}
 
                   {overviewSeasonMatches.length > 0 && (

@@ -478,6 +478,8 @@ export const messages = {
           expensesDescription: 'Register each expense to keep a transparent accounting trail.',
           expenseTitle: 'Expense title',
           expenseCategory: 'Category',
+          expenseCategoryPresets:
+            'General,Equipment,Referee,Venue,Food & drink,Travel,Fees,Fines,Other',
           expenseDate: 'Date',
           expenseAmount: 'Amount',
           addExpense: 'Add expense',
@@ -1487,6 +1489,8 @@ export const messages = {
           expensesDescription: 'Registra cada gasto para mantener una contabilidad clara.',
           expenseTitle: 'Concepto',
           expenseCategory: 'Categoría',
+          expenseCategoryPresets:
+            'General,Material,Arbitraje,Instalación,Comida y bebida,Desplazamiento,Cuotas,Multas,Otros',
           expenseDate: 'Fecha',
           expenseAmount: 'Importe',
           addExpense: 'Añadir gasto',

@@ -1,7 +1,6 @@
 import {
   Button,
   Chip,
-  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -11,6 +10,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { EmptyState, LoadingState } from '../../common'
 import { trackingChipColor, trackingLabel } from './trackingHelpers.js'
 
 /**
@@ -38,20 +38,16 @@ export default function MatchListCard({
       <Typography variant="body2" color="text.secondary">
         {t('dashboard.admin.matches.seasonMatchesDescription')}
       </Typography>
-      {seasonMatchesLoading && <LinearProgress />}
+      {seasonMatchesLoading && <LoadingState variant="skeleton" rows={4} />}
       {!selectedSeasonGuid && (
-        <Typography variant="body2" color="text.secondary">
-          {t('dashboard.admin.overview.selectSeasonToLoad')}
-        </Typography>
+        <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
       )}
       {selectedSeasonGuid && !seasonMatchesLoading && !visibleSeasonMatches.length && (
-        <Typography variant="body2" color="text.secondary">
-          {t('dashboard.admin.matches.noMatchesYet')}
-        </Typography>
+        <EmptyState title={t('dashboard.admin.matches.noMatchesYet')} dense />
       )}
       {selectedSeasonGuid && !seasonMatchesLoading && visibleSeasonMatches.length > 0 && (
         <TableContainer>
-          <Table size="small">
+          <Table size="small" sx={{ minWidth: 760 }}>
             <TableHead>
               <TableRow>
                 <TableCell>{t('dashboard.admin.matches.date')}</TableCell>

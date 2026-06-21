@@ -466,8 +466,8 @@ export default function MatchDetailViewer({
         </Typography>
         {highlights.length > 0 ? (
           <Stack spacing={0.75}>
-            {highlights.map((highlight) => (
-              <Alert key={highlight} severity="info" sx={{ py: 0 }}>
+            {highlights.map((highlight, index) => (
+              <Alert key={`${index}-${highlight}`} severity="info" sx={{ py: 0 }}>
                 {highlight}
               </Alert>
             ))}

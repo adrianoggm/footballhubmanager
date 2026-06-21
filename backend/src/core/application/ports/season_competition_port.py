@@ -143,6 +143,9 @@ class MatchDetailResult:
     events: list[MatchEventResult]
     lineup_change_count: int = 0
     lineup_updated_at_epoch: int | None = None
+    # Epoch when the clock was paused (None while running). The frontend needs it
+    # to exclude the in-progress pause segment from the displayed live clock.
+    paused_at_epoch: int | None = None
 
 
 @dataclass(frozen=True)

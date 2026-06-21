@@ -2,7 +2,6 @@ import {
   Card,
   CardContent,
   Chip,
-  LinearProgress,
   Stack,
   Table,
   TableBody,
@@ -12,13 +11,19 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
+import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
+import { EmptyState, LoadingState } from '../common'
 
-const labelChipSx = (color) => ({
-  backgroundColor: color || DEFAULT_LABEL_COLOR,
-  color: '#fff',
-})
+const labelChipSx = (color) => {
+  const background = color || DEFAULT_LABEL_COLOR
+  return {
+    backgroundColor: background,
+    color: readableTextColor(background),
+  }
+}
 
 /**
  * Read-only season standings with the current player's row highlighted and a
@@ -37,11 +42,9 @@ export default function UserStandingsSection({
       <CardContent>
         <Stack spacing={1.5}>
           <Typography variant="h6">{t('dashboard.user.standingsTitle')}</Typography>
-          {seasonDataLoading && <LinearProgress />}
+          {seasonDataLoading && <LoadingState variant="skeleton" rows={5} />}
           {!seasonDataLoading && !standings.length && (
-            <Typography variant="body2" color="text.secondary">
-              {t('dashboard.user.noStandingsForSeason')}
-            </Typography>
+            <EmptyState title={t('dashboard.user.noStandingsForSeason')} dense />
           )}
           {!seasonDataLoading && standings.length > 0 && (
             <Stack spacing={1.5}>
@@ -88,7 +91,7 @@ export default function UserStandingsSection({
                 </Typography>
               )}
               <TableContainer>
-                <Table size="small">
+                <Table size="small" sx={{ minWidth: 760 }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>{t('dashboard.user.table.rank')}</TableCell>
@@ -112,12 +115,12 @@ export default function UserStandingsSection({
                           key={player.player_guid}
                           sx={
                             isCurrentPlayer
-                              ? {
+                              ? (theme) => ({
                                   '& td': {
-                                    backgroundColor: 'rgba(2, 136, 209, 0.09)',
+                                    backgroundColor: alpha(theme.palette.info.main, 0.12),
                                     fontWeight: 700,
                                   },
-                                }
+                                })
                               : undefined
                           }
                         >
