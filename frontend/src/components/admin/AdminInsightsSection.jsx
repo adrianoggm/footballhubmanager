@@ -8,6 +8,7 @@ import {
   Grid,
   LinearProgress,
   MenuItem,
+  Slider,
   Stack,
   Tab,
   Tabs,
@@ -18,6 +19,8 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -445,23 +448,88 @@ function PairingWinRateRow({ label, winRate, formatPercent }) {
   )
 }
 
-// Interactive chord graph of the top pairs. Nodes sit on a circle; each pair is a
-// curved edge (width = matches together, colour = pair win rate). Selecting an
-// edge or a node highlights it and drives the detail panel: an edge reveals the
-// pair win rate plus each player's individual win rate, a node reveals the
-// player's own win rate. Both encodings come straight from the report — no extra
-// fetches. The SVG scales fluidly (viewBox + width:100%), so it stays responsive.
-function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
+function PairingTooltip({ lines }) {
+  return (
+    <Stack spacing={0.25}>
+      {lines.map((line, index) => (
+        <Typography
+          key={index}
+          variant="caption"
+          sx={{ fontWeight: index === 0 ? 700 : 400, whiteSpace: 'nowrap' }}
+        >
+          {line}
+        </Typography>
+      ))}
+    </Stack>
+  )
+}
+
+// Ranked list view of the pairs — cleaner / more "app-like" than the graph, and
+// shows the pair win rate plus each player's individual win rate inline.
+function PairingList({ pairs, t, formatPercent }) {
+  const theme = useTheme()
+  return (
+    <Stack spacing={1}>
+      {pairs.map((pair) => (
+        <Stack
+          key={pairKey(pair)}
+          spacing={0.6}
+          sx={{ p: 1.1, ...buildInsightInsetSx(theme, INSIGHT_ACCENTS.matches) }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap title={pair.label}>
+              {pair.label}
+            </Typography>
+            <Chip
+              size="small"
+              color={getRateColor(pair.win_rate)}
+              label={formatPercent(pair.win_rate)}
+            />
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={Math.max(0, Math.min(100, Math.round((pair.win_rate || 0) * 100)))}
+            sx={{
+              height: 6,
+              borderRadius: 999,
+              backgroundColor: alpha(theme.palette.text.primary, 0.08),
+              '& .MuiLinearProgress-bar': { backgroundColor: winRateColor(pair.win_rate) },
+            }}
+          />
+          <Stack direction="row" spacing={1} justifyContent="space-between">
+            <Typography variant="caption" color="text.secondary">
+              {`${t('dashboard.admin.table.played')}: ${pair.matches} · ${pair.wins}-${pair.draws}-${pair.losses}`}
+            </Typography>
+          </Stack>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.4, sm: 2 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <PairingWinRateRow
+                label={pair.left_label}
+                winRate={pair.left_win_rate}
+                formatPercent={formatPercent}
+              />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <PairingWinRateRow
+                label={pair.right_label}
+                winRate={pair.right_win_rate}
+                formatPercent={formatPercent}
+              />
+            </Box>
+          </Stack>
+        </Stack>
+      ))}
+    </Stack>
+  )
+}
+
+// Interactive chord graph of the pairs. Nodes sit on a circle; each pair is a
+// curved edge (width = matches together, colour = pair win rate). Hovering shows a
+// styled tooltip (matches + win rates); selecting an edge/node highlights it and
+// drives the detail panel. The SVG scales fluidly (viewBox + width:100%).
+function PairingGraph({ pairs, t, formatPercent }) {
   const theme = useTheme()
   const [selected, setSelected] = useState(null)
-
-  if (!pairs.length) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        {emptyText}
-      </Typography>
-    )
-  }
 
   const order = []
   const nodeByGuid = {}
@@ -538,33 +606,44 @@ function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
             const hot = isEdgeHot(pair)
             const path = `M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}`
             return (
-              <g
+              <Tooltip
                 key={pairKey(pair)}
-                style={{ cursor: 'pointer' }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  selectEdge(pair)
-                }}
+                arrow
+                title={
+                  <PairingTooltip
+                    lines={[
+                      pair.label,
+                      `${t('dashboard.admin.table.played')}: ${pair.matches} (${pair.wins}-${pair.draws}-${pair.losses})`,
+                      `${t('dashboard.admin.standings.pairingPairWinRate')}: ${formatPercent(pair.win_rate)}`,
+                      `${pair.left_label}: ${formatPercent(pair.left_win_rate)}`,
+                      `${pair.right_label}: ${formatPercent(pair.right_win_rate)}`,
+                    ]}
+                  />
+                }
               >
-                {/* wide transparent hit area — easier to click / tap */}
-                <path d={path} fill="none" stroke="transparent" strokeWidth={16}>
-                  <title>
-                    {`${pair.label} · ${t('dashboard.admin.table.played')}: ${pair.matches} · ${formatPercent(pair.win_rate)}`}
-                  </title>
-                </path>
-                <path
-                  d={path}
-                  fill="none"
-                  stroke={winRateColor(pair.win_rate)}
-                  strokeOpacity={hot === false ? 0.12 : hot ? 1 : 0.85}
-                  strokeWidth={(1.5 + ((pair.matches || 0) / maxMatches) * 6) * (hot ? 1.5 : 1)}
-                  strokeLinecap="round"
-                  style={{
-                    pointerEvents: 'none',
-                    transition: 'stroke-opacity .15s, stroke-width .15s',
+                <g
+                  style={{ cursor: 'pointer' }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectEdge(pair)
                   }}
-                />
-              </g>
+                >
+                  {/* wide transparent hit area — easier to click / tap / hover */}
+                  <path d={path} fill="none" stroke="transparent" strokeWidth={16} />
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke={winRateColor(pair.win_rate)}
+                    strokeOpacity={hot === false ? 0.12 : hot ? 1 : 0.85}
+                    strokeWidth={(1.5 + ((pair.matches || 0) / maxMatches) * 6) * (hot ? 1.5 : 1)}
+                    strokeLinecap="round"
+                    style={{
+                      pointerEvents: 'none',
+                      transition: 'stroke-opacity .15s, stroke-width .15s',
+                    }}
+                  />
+                </g>
+              </Tooltip>
             )
           })}
           {order.map((guid) => {
@@ -574,43 +653,55 @@ function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
             const labelOutside = point.y < center
             const hot = isNodeHot(guid)
             return (
-              <g
+              <Tooltip
                 key={guid}
-                style={{ cursor: 'pointer' }}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  selectNode(guid)
-                }}
+                arrow
+                title={
+                  <PairingTooltip
+                    lines={[
+                      node.label,
+                      `${t('dashboard.admin.standings.winRateColumn')}: ${formatPercent(node.winRate)}`,
+                      `${t('dashboard.admin.table.played')}: ${node.degree}`,
+                    ]}
+                  />
+                }
               >
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r={hot ? nodeRadius + 2 : nodeRadius}
-                  fill={nodeColor}
-                  fillOpacity={hot === false ? 0.3 : 1}
-                  stroke={
-                    hot
-                      ? winRateColor(node.winRate)
-                      : alpha(theme.palette.background.paper, isDark ? 0.9 : 1)
-                  }
-                  strokeWidth={hot ? 3 : 2}
-                  style={{ transition: 'r .15s, fill-opacity .15s' }}
+                <g
+                  style={{ cursor: 'pointer' }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectNode(guid)
+                  }}
                 >
-                  <title>
-                    {`${node.label} · ${formatPercent(node.winRate)} · ${t('dashboard.admin.table.played')}: ${node.degree}`}
-                  </title>
-                </circle>
-                <text
-                  x={point.x}
-                  y={labelOutside ? point.y - nodeRadius - 5 : point.y + nodeRadius + 11}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fontWeight="600"
-                  fill={hot === false ? theme.palette.text.disabled : theme.palette.text.secondary}
-                >
-                  {pairingNodeLabel(node.label)}
-                </text>
-              </g>
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={hot ? nodeRadius + 2 : nodeRadius}
+                    fill={nodeColor}
+                    fillOpacity={hot === false ? 0.3 : 1}
+                    stroke={
+                      hot
+                        ? winRateColor(node.winRate)
+                        : alpha(theme.palette.background.paper, isDark ? 0.9 : 1)
+                    }
+                    strokeWidth={hot ? 3 : 2}
+                    style={{ transition: 'r .15s, fill-opacity .15s' }}
+                  />
+                  <text
+                    x={point.x}
+                    y={labelOutside ? point.y - nodeRadius - 5 : point.y + nodeRadius + 11}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="600"
+                    fill={
+                      hot === false ? theme.palette.text.disabled : theme.palette.text.secondary
+                    }
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {pairingNodeLabel(node.label)}
+                  </text>
+                </g>
+              </Tooltip>
             )
           })}
         </svg>
@@ -699,6 +790,80 @@ function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
           </Typography>
         </Stack>
       </Stack>
+    </Stack>
+  )
+}
+
+// Wraps the pairing views: a toolbar to switch graph/list and a min-matches
+// filter (client-side), then renders the chosen view over the filtered pairs.
+function PairingExplorer({ pairs, emptyText, t, formatPercent }) {
+  const theme = useTheme()
+  const [view, setView] = useState('graph')
+  const [minMatches, setMinMatches] = useState(1)
+
+  if (!pairs.length) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {emptyText}
+      </Typography>
+    )
+  }
+
+  const maxMatches = Math.max(...pairs.map((pair) => pair.matches || 0), 1)
+  const filtered = pairs.filter((pair) => (pair.matches || 0) >= minMatches)
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        alignItems={{ sm: 'center' }}
+        justifyContent="space-between"
+      >
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={view}
+          onChange={(_, next) => next && setView(next)}
+        >
+          <ToggleButton value="graph">
+            {t('dashboard.admin.standings.pairingViewGraph')}
+          </ToggleButton>
+          <ToggleButton value="list">{t('dashboard.admin.standings.pairingViewList')}</ToggleButton>
+        </ToggleButtonGroup>
+        {maxMatches > 1 && (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            sx={{ minWidth: 180, flex: 1, maxWidth: 280 }}
+          >
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {t('dashboard.admin.standings.pairingMinMatches', { count: minMatches })}
+            </Typography>
+            <Slider
+              size="small"
+              min={1}
+              max={maxMatches}
+              value={minMatches}
+              onChange={(_, value) => setMinMatches(value)}
+              valueLabelDisplay="auto"
+            />
+          </Stack>
+        )}
+      </Stack>
+
+      {!filtered.length && (
+        <Typography variant="body2" color="text.secondary">
+          {t('dashboard.admin.standings.pairingNoneForFilter')}
+        </Typography>
+      )}
+      {filtered.length > 0 && view === 'graph' && (
+        <PairingGraph pairs={filtered} t={t} formatPercent={formatPercent} />
+      )}
+      {filtered.length > 0 && view === 'list' && (
+        <PairingList pairs={filtered} t={t} formatPercent={formatPercent} />
+      )}
     </Stack>
   )
 }
@@ -1582,7 +1747,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                       <Typography variant="body2" color="text.secondary">
                         {t('dashboard.admin.standings.pairingNetworkDescription')}
                       </Typography>
-                      <PairingNetwork
+                      <PairingExplorer
                         pairs={pairingPairs}
                         emptyText={t('dashboard.admin.standings.insightsNoData')}
                         t={t}
