@@ -743,6 +743,7 @@ export const messages = {
           insightsTabTrends: 'Trends',
           insightsTabRankings: 'Rankings',
           insightsTabMatrix: 'Matrix',
+          insightsTabProfiles: 'Profiles',
           insightsScopeLabel: 'Analysis scope',
           insightsScopeSelectedSeason: 'Selected season',
           insightsScopeAllSeasons: 'All seasons',
@@ -789,6 +790,31 @@ export const messages = {
           leadersScorers: 'Top scorers',
           leadersAssisters: 'Top assisters',
           leadersSavers: 'Top savers',
+          radarTitle: 'Player Profile Radar',
+          radarDescription:
+            'Top scorer, assister and saver compared across normalized axes (each axis scaled to its leader).',
+          radarAxisRating: 'Rating',
+          radarAxisWinRate: 'Win rate',
+          positionContributionTitle: 'Contribution by Position',
+          positionContributionDescription:
+            'Goals and assists grouped by the position recorded for each player.',
+          ratingDistributionTitle: 'Rating Distribution',
+          ratingDistributionDescription:
+            'How rated performances spread across the 0–10 scale. Unrated appearances are excluded.',
+          ratingDistributionCount: 'Performances',
+          pairingNetworkTitle: 'Pairing Network',
+          pairingNetworkDescription:
+            'Top winning pairs as a chord graph — link thickness is matches together, colour is win rate, node size is how often the player appears.',
+          pairingLegendWinRate: 'Colour = win rate',
+          pairingLegendThickness: 'Thickness = matches together',
+          unknownPosition: 'No position',
+          goalMomentumTitle: 'Goal Momentum',
+          goalMomentumDescription:
+            'When goals tend to happen: cumulative goals across the match, summed over all live-tracked matches in scope.',
+          goalMomentumCumulative: 'Cumulative goals',
+          goalBucketsTitle: 'Goals by Time Band',
+          goalBucketsDescription:
+            'Goals grouped into 10-minute bands. Only live-tracked matches record event timing.',
         },
         notices: {
           seasonCreated: 'Season created',
@@ -1756,6 +1782,7 @@ export const messages = {
           insightsTabTrends: 'Tendencias',
           insightsTabRankings: 'Rankings',
           insightsTabMatrix: 'Matriz',
+          insightsTabProfiles: 'Perfiles',
           insightsScopeLabel: 'Alcance del análisis',
           insightsScopeSelectedSeason: 'Temporada seleccionada',
           insightsScopeAllSeasons: 'Todas las temporadas',
@@ -1803,6 +1830,31 @@ export const messages = {
           leadersScorers: 'Máximos goleadores',
           leadersAssisters: 'Máximos asistentes',
           leadersSavers: 'Más paradas',
+          radarTitle: 'Radar de perfil de jugador',
+          radarDescription:
+            'Máximo goleador, asistente y portero comparados en ejes normalizados (cada eje se escala a su líder).',
+          radarAxisRating: 'Nota',
+          radarAxisWinRate: 'Ratio victoria',
+          positionContributionTitle: 'Contribución por posición',
+          positionContributionDescription:
+            'Goles y asistencias agrupados por la posición registrada de cada jugador.',
+          ratingDistributionTitle: 'Distribución de notas',
+          ratingDistributionDescription:
+            'Cómo se reparten las actuaciones valoradas en la escala 0–10. Las apariciones sin nota se excluyen.',
+          ratingDistributionCount: 'Actuaciones',
+          pairingNetworkTitle: 'Red de parejas',
+          pairingNetworkDescription:
+            'Las mejores parejas como grafo de cuerdas: el grosor es partidos juntos, el color es el ratio de victoria y el tamaño del nodo cuánto aparece el jugador.',
+          pairingLegendWinRate: 'Color = ratio de victoria',
+          pairingLegendThickness: 'Grosor = partidos juntos',
+          unknownPosition: 'Sin posición',
+          goalMomentumTitle: 'Momento de los goles',
+          goalMomentumDescription:
+            'Cuándo se marca: goles acumulados a lo largo del partido, sumados sobre todos los partidos con seguimiento en vivo del alcance.',
+          goalMomentumCumulative: 'Goles acumulados',
+          goalBucketsTitle: 'Goles por tramo',
+          goalBucketsDescription:
+            'Goles agrupados en tramos de 10 minutos. Solo los partidos con seguimiento en vivo registran el minuto del evento.',
         },
         notices: {
           seasonCreated: 'Temporada creada',

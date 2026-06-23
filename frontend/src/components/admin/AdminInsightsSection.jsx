@@ -24,12 +24,19 @@ import {
 import { alpha, useTheme } from '@mui/material/styles'
 import { useState } from 'react'
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Legend,
   Line,
   LineChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
@@ -401,6 +408,161 @@ function LeadersCard({ title, metricLabel, items, metricKey, metricAccent, empty
   )
 }
 
+const pairingNodeLabel = (label) => {
+  const value = String(label || '').trim()
+  if (!value) {
+    return '?'
+  }
+  return value.length > 10 ? `${value.slice(0, 9)}…` : value
+}
+
+// Win rate → hue (red → green), same language as the correlation matrix.
+const winRateColor = (winRate) => `hsl(${Math.round(8 + (winRate || 0) * 120)} 68% 52%)`
+
+// Lays out the top pairs as a chord graph: nodes on a circle, each pair drawn as
+// a curved edge bowing toward the centre (no straight-line hairball). Edge width
+// encodes matches together, edge colour encodes win rate, node size encodes how
+// often the player shows up across the top pairs.
+function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
+  const theme = useTheme()
+
+  if (!pairs.length) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {emptyText}
+      </Typography>
+    )
+  }
+
+  const order = []
+  const labelByGuid = {}
+  const degreeByGuid = {}
+  pairs.forEach((pair) => {
+    const [leftLabel = '', rightLabel = ''] = String(pair.label || '').split(' + ')
+    if (!(pair.leftGuid in labelByGuid)) {
+      labelByGuid[pair.leftGuid] = leftLabel || pair.leftGuid
+      order.push(pair.leftGuid)
+    }
+    if (!(pair.rightGuid in labelByGuid)) {
+      labelByGuid[pair.rightGuid] = rightLabel || pair.rightGuid
+      order.push(pair.rightGuid)
+    }
+    degreeByGuid[pair.leftGuid] = (degreeByGuid[pair.leftGuid] || 0) + (pair.matches || 0)
+    degreeByGuid[pair.rightGuid] = (degreeByGuid[pair.rightGuid] || 0) + (pair.matches || 0)
+  })
+
+  const size = 340
+  const center = size / 2
+  const radius = center - 60
+  const position = {}
+  order.forEach((guid, index) => {
+    const angle = (index / order.length) * Math.PI * 2 - Math.PI / 2
+    position[guid] = {
+      x: center + radius * Math.cos(angle),
+      y: center + radius * Math.sin(angle),
+      angle,
+    }
+  })
+
+  const maxMatches = Math.max(1, ...pairs.map((pair) => pair.matches || 0))
+  const maxDegree = Math.max(1, ...Object.values(degreeByGuid))
+  const nodeColor = INSIGHT_ACCENTS.players.main
+  const isDark = theme.palette.mode === 'dark'
+
+  return (
+    <Stack spacing={1}>
+      <Box sx={{ ...buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.matches, 'auto') }}>
+        <svg viewBox={`0 0 ${size} ${size}`} width="100%" role="img" aria-label="Pairing network">
+          {pairs.map((pair) => {
+            const a = position[pair.leftGuid]
+            const b = position[pair.rightGuid]
+            if (!a || !b) {
+              return null
+            }
+            // Control point pulled toward the centre → gentle concave chord.
+            const cx = (a.x + b.x) / 2 + (center - (a.x + b.x) / 2) * 0.45
+            const cy = (a.y + b.y) / 2 + (center - (a.y + b.y) / 2) * 0.45
+            return (
+              <path
+                key={`${pair.leftGuid}-${pair.rightGuid}`}
+                d={`M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}`}
+                fill="none"
+                stroke={winRateColor(pair.win_rate)}
+                strokeOpacity={0.85}
+                strokeWidth={1.5 + ((pair.matches || 0) / maxMatches) * 6}
+                strokeLinecap="round"
+              >
+                <title>
+                  {`${pair.label} · ${t('dashboard.admin.table.played')}: ${pair.matches} · ${formatPercent(pair.win_rate)}`}
+                </title>
+              </path>
+            )
+          })}
+          {order.map((guid) => {
+            const point = position[guid]
+            const nodeRadius = 9 + ((degreeByGuid[guid] || 0) / maxDegree) * 8
+            const labelOutside = point.y < center
+            return (
+              <g key={guid}>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={nodeRadius}
+                  fill={nodeColor}
+                  stroke={alpha(theme.palette.background.paper, isDark ? 0.9 : 1)}
+                  strokeWidth={2}
+                >
+                  <title>
+                    {`${labelByGuid[guid]} · ${t('dashboard.admin.table.played')}: ${degreeByGuid[guid] || 0}`}
+                  </title>
+                </circle>
+                <text
+                  x={point.x}
+                  y={labelOutside ? point.y - nodeRadius - 5 : point.y + nodeRadius + 11}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fontWeight="600"
+                  fill={theme.palette.text.secondary}
+                >
+                  {pairingNodeLabel(labelByGuid[guid])}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+      </Box>
+      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box
+            sx={{
+              width: 28,
+              height: 9,
+              borderRadius: 999,
+              background: `linear-gradient(90deg, ${winRateColor(0)}, ${winRateColor(0.5)}, ${winRateColor(1)})`,
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {t('dashboard.admin.standings.pairingLegendWinRate')}
+          </Typography>
+        </Stack>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box
+            sx={{
+              width: 28,
+              height: 0,
+              borderTop: `6px solid ${alpha(theme.palette.text.primary, 0.5)}`,
+              borderRadius: 999,
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {t('dashboard.admin.standings.pairingLegendThickness')}
+          </Typography>
+        </Stack>
+      </Stack>
+    </Stack>
+  )
+}
+
 export default function AdminInsightsSection({ state, actions, helpers }) {
   const theme = useTheme()
   const geometry = getDashboardGeometry(theme)
@@ -458,6 +620,58 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
     ...item,
     x_label: `S${index + 1}`,
     season_label: shortSeasonLabel(item.season_guid),
+  }))
+
+  // Radar: compare the top scorer / assister / saver across normalized axes. Each
+  // axis is scaled to its own leader so different units (goals vs win rate) compare.
+  const radarLeaders = (() => {
+    const leaders = insightsReport?.leaders || {}
+    const byGuid = new Map()
+    ;[leaders.scorers?.[0], leaders.assisters?.[0], leaders.savers?.[0]]
+      .filter(Boolean)
+      .forEach((player) => {
+        if (!byGuid.has(player.guid)) {
+          byGuid.set(player.guid, player)
+        }
+      })
+    return Array.from(byGuid.values())
+  })()
+
+  const radarAxes = [
+    { key: 'goals', label: t('dashboard.common.matchDetail.goals') },
+    { key: 'assists', label: t('dashboard.common.matchDetail.assists') },
+    { key: 'saves', label: t('dashboard.common.matchDetail.saves') },
+    { key: 'rating', label: t('dashboard.admin.standings.radarAxisRating'), scaleMax: 10 },
+    { key: 'win_rate', label: t('dashboard.admin.standings.radarAxisWinRate'), scaleMax: 1 },
+  ]
+
+  const radarData = radarAxes.map((axis) => {
+    const axisMax = axis.scaleMax ?? Math.max(1, ...radarLeaders.map((p) => p[axis.key] || 0))
+    const point = { axis: axis.label }
+    radarLeaders.forEach((player, index) => {
+      point[`player_${index}`] = Math.round(((player[axis.key] || 0) / axisMax) * 100)
+    })
+    return point
+  })
+
+  const radarColors = [INSIGHT_ACCENTS.goals, INSIGHT_ACCENTS.assists, INSIGHT_ACCENTS.saves]
+
+  const positionData = (insightsReport?.position_breakdown || []).map((row) => ({
+    position: row.position || t('dashboard.admin.standings.unknownPosition'),
+    goals: row.goals,
+    assists: row.assists,
+  }))
+
+  const ratingData = (insightsReport?.rating_distribution || []).map((row) => ({
+    label: `${row.bucket}–${row.bucket + 1}`,
+    count: row.count,
+  }))
+
+  const pairingPairs = (insightsReport?.top_pairs || []).slice(0, 8)
+
+  const goalTimelineData = (insightsReport?.goal_timeline || []).map((row) => ({
+    ...row,
+    label: `${row.minute_from}–${row.minute_to}'`,
   }))
 
   return (
@@ -619,6 +833,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             <Tab value="trends" label={t('dashboard.admin.standings.insightsTabTrends')} />
             <Tab value="rankings" label={t('dashboard.admin.standings.insightsTabRankings')} />
             <Tab value="matrix" label={t('dashboard.admin.standings.insightsTabMatrix')} />
+            <Tab value="profiles" label={t('dashboard.admin.standings.insightsTabProfiles')} />
           </Tabs>
 
           {activeInsightTab === 'trends' && (
@@ -1043,6 +1258,348 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                 </Stack>
               </CardContent>
             </Card>
+          )}
+
+          {activeInsightTab === 'profiles' && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} lg={8}>
+                <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.goals)}>
+                  <CardContent sx={buildInsightContentSx}>
+                    <Stack spacing={1.25}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('dashboard.admin.standings.goalMomentumTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.standings.goalMomentumDescription')}
+                      </Typography>
+                      {!goalTimelineData.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.insightsNoData')}
+                        </Typography>
+                      )}
+                      {goalTimelineData.length > 0 && (
+                        <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.goals, 280)}>
+                          <ResponsiveContainer>
+                            <AreaChart data={goalTimelineData}>
+                              <defs>
+                                <linearGradient id="goalMomentumFill" x1="0" y1="0" x2="0" y2="1">
+                                  <stop
+                                    offset="0%"
+                                    stopColor={INSIGHT_ACCENTS.goals.main}
+                                    stopOpacity={0.35}
+                                  />
+                                  <stop
+                                    offset="100%"
+                                    stopColor={INSIGHT_ACCENTS.goals.main}
+                                    stopOpacity={0.02}
+                                  />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid
+                                stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                                strokeDasharray="3 3"
+                              />
+                              <XAxis
+                                dataKey="label"
+                                tickLine={false}
+                                axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <RechartsTooltip {...chartTooltipProps} />
+                              <Area
+                                type="monotone"
+                                dataKey="cumulative_goals"
+                                name={t('dashboard.admin.standings.goalMomentumCumulative')}
+                                stroke={INSIGHT_ACCENTS.goals.main}
+                                strokeWidth={2}
+                                fill="url(#goalMomentumFill)"
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} lg={4}>
+                <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.saves)}>
+                  <CardContent sx={buildInsightContentSx}>
+                    <Stack spacing={1.25}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('dashboard.admin.standings.goalBucketsTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.standings.goalBucketsDescription')}
+                      </Typography>
+                      {!goalTimelineData.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.insightsNoData')}
+                        </Typography>
+                      )}
+                      {goalTimelineData.length > 0 && (
+                        <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.saves, 280)}>
+                          <ResponsiveContainer>
+                            <BarChart data={goalTimelineData}>
+                              <CartesianGrid
+                                stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                                strokeDasharray="3 3"
+                              />
+                              <XAxis
+                                dataKey="label"
+                                tickLine={false}
+                                axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <RechartsTooltip {...chartTooltipProps} />
+                              <Bar
+                                dataKey="goals"
+                                name={t('dashboard.common.matchDetail.goals')}
+                                fill={INSIGHT_ACCENTS.saves.main}
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} lg={6}>
+                <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.matches)}>
+                  <CardContent sx={buildInsightContentSx}>
+                    <Stack spacing={1.25}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('dashboard.admin.standings.pairingNetworkTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.standings.pairingNetworkDescription')}
+                      </Typography>
+                      <PairingNetwork
+                        pairs={pairingPairs}
+                        emptyText={t('dashboard.admin.standings.insightsNoData')}
+                        t={t}
+                        formatPercent={formatPercent}
+                      />
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} lg={6}>
+                <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.seasons)}>
+                  <CardContent sx={buildInsightContentSx}>
+                    <Stack spacing={1.25}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('dashboard.admin.standings.radarTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.standings.radarDescription')}
+                      </Typography>
+                      {!radarLeaders.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.insightsNoData')}
+                        </Typography>
+                      )}
+                      {radarLeaders.length > 0 && (
+                        <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.seasons, 300)}>
+                          <ResponsiveContainer>
+                            <RadarChart data={radarData} outerRadius="72%">
+                              <PolarGrid
+                                stroke={alpha(theme.palette.text.primary, isDark ? 0.16 : 0.12)}
+                              />
+                              <PolarAngleAxis
+                                dataKey="axis"
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                              <RechartsTooltip
+                                {...chartTooltipProps}
+                                formatter={(value, name) => [`${value}%`, name]}
+                              />
+                              <Legend />
+                              {radarLeaders.map((player, index) => {
+                                const accent = radarColors[index % radarColors.length]
+                                return (
+                                  <Radar
+                                    key={player.guid}
+                                    name={player.label}
+                                    dataKey={`player_${index}`}
+                                    stroke={accent.main}
+                                    fill={accent.main}
+                                    fillOpacity={0.18}
+                                  />
+                                )
+                              })}
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} lg={6}>
+                <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.goals)}>
+                  <CardContent sx={buildInsightContentSx}>
+                    <Stack spacing={1.25}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('dashboard.admin.standings.positionContributionTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.standings.positionContributionDescription')}
+                      </Typography>
+                      {!positionData.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.insightsNoData')}
+                        </Typography>
+                      )}
+                      {positionData.length > 0 && (
+                        <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.goals, 300)}>
+                          <ResponsiveContainer>
+                            <BarChart data={positionData}>
+                              <CartesianGrid
+                                stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                                strokeDasharray="3 3"
+                              />
+                              <XAxis
+                                dataKey="position"
+                                tickLine={false}
+                                axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <RechartsTooltip {...chartTooltipProps} />
+                              <Legend />
+                              <Bar
+                                dataKey="goals"
+                                name={t('dashboard.common.matchDetail.goals')}
+                                fill={INSIGHT_ACCENTS.goals.main}
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar
+                                dataKey="assists"
+                                name={t('dashboard.common.matchDetail.assists')}
+                                fill={INSIGHT_ACCENTS.assists.main}
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} lg={6}>
+                <Card variant="outlined" sx={buildInsightSurfaceSx(theme, INSIGHT_ACCENTS.players)}>
+                  <CardContent sx={buildInsightContentSx}>
+                    <Stack spacing={1.25}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('dashboard.admin.standings.ratingDistributionTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('dashboard.admin.standings.ratingDistributionDescription')}
+                      </Typography>
+                      {!ratingData.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          {t('dashboard.admin.standings.insightsNoData')}
+                        </Typography>
+                      )}
+                      {ratingData.length > 0 && (
+                        <Box sx={buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.players, 300)}>
+                          <ResponsiveContainer>
+                            <BarChart data={ratingData}>
+                              <CartesianGrid
+                                stroke={alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}
+                                strokeDasharray="3 3"
+                              />
+                              <XAxis
+                                dataKey="label"
+                                tickLine={false}
+                                axisLine={{ stroke: alpha(theme.palette.text.primary, 0.12) }}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{
+                                  fill: theme.palette.text.secondary,
+                                  fontSize: 11,
+                                  fontFamily: theme.typography.fontFamily,
+                                }}
+                              />
+                              <RechartsTooltip {...chartTooltipProps} />
+                              <Bar
+                                dataKey="count"
+                                name={t('dashboard.admin.standings.ratingDistributionCount')}
+                                fill={INSIGHT_ACCENTS.players.main}
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
           )}
 
           {activeInsightTab === 'rankings' && (
