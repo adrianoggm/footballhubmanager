@@ -136,3 +136,5 @@ class MatchInsightsRequest(BaseModel):
     matrix_size: int = Field(default=8, ge=2, le=20)
     top_pairs_size: int = Field(default=10, ge=1, le=50)
     leaders_size: int = Field(default=5, ge=1, le=20)
+    date_from: date | None = None
+    date_to: date | None = None

@@ -25,13 +25,22 @@ class _FakeRepo:
     last_payload: dict | None = None
     goal_event_seconds: list[int] | None = None
 
-    def list_closed_match_insight_rows(self, *, pena_guid: str, season_guids: list[str]):
-        self.last_payload = {"pena_guid": pena_guid, "season_guids": season_guids}
+    def list_closed_match_insight_rows(
+        self, *, pena_guid: str, season_guids: list[str], date_from=None, date_to=None
+    ):
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guids": season_guids,
+            "date_from": date_from,
+            "date_to": date_to,
+        }
         if self.error:
             raise self.error
         return list(self.rows or [])
 
-    def list_goal_event_seconds(self, *, pena_guid: str, season_guids: list[str]):
+    def list_goal_event_seconds(
+        self, *, pena_guid: str, season_guids: list[str], date_from=None, date_to=None
+    ):
         if self.error:
             raise self.error
         return list(self.goal_event_seconds or [])
@@ -286,7 +295,25 @@ def test_computes_report_from_closed_matches():
     assert first_pair["left_win_rate"] == 1.0  # player-a won its only match
     assert first_pair["right_win_rate"] == 1.0
     assert first_pair["left_label"] and first_pair["right_label"]
-    assert repo.last_payload == {"pena_guid": "pena-guid", "season_guids": ["season-guid"]}
+    assert repo.last_payload["pena_guid"] == "pena-guid"
+    assert repo.last_payload["season_guids"] == ["season-guid"]
+
+
+def test_passes_date_range_to_repository():
+    repo = _FakeRepo(rows=[_row("home", "a", "Ana", goals=1), _row("away", "c", "Cora", goals=1)])
+    _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=2,
+        top_pairs_size=1,
+        leaders_size=1,
+        date_from=date(2024, 1, 1),
+        date_to=date(2024, 6, 30),
+    )
+    assert repo.last_payload["date_from"] == date(2024, 1, 1)
+    assert repo.last_payload["date_to"] == date(2024, 6, 30)
 
 
 def test_computes_running_timeline_metrics_across_matches():

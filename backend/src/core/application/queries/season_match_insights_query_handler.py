@@ -42,10 +42,14 @@ class GetSeasonMatchInsightsHandler:
         details = self._collect_match_insight_details(
             pena_guid=query.pena_guid,
             season_guids=cleaned_season_guids,
+            date_from=query.date_from,
+            date_to=query.date_to,
         )
         goal_event_seconds = self._collect_goal_event_seconds(
             pena_guid=query.pena_guid,
             season_guids=cleaned_season_guids,
+            date_from=query.date_from,
+            date_to=query.date_to,
         )
         report = MatchInsightsReportBuilder.build(
             details,
@@ -58,11 +62,15 @@ class GetSeasonMatchInsightsHandler:
         report["season_guids"] = cleaned_season_guids
         return report
 
-    def _collect_goal_event_seconds(self, *, pena_guid: str, season_guids: list[str]) -> list[int]:
+    def _collect_goal_event_seconds(
+        self, *, pena_guid: str, season_guids: list[str], date_from=None, date_to=None
+    ) -> list[int]:
         try:
             return self._repository.list_goal_event_seconds(
                 pena_guid=pena_guid,
                 season_guids=season_guids,
+                date_from=date_from,
+                date_to=date_to,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc
@@ -70,12 +78,14 @@ class GetSeasonMatchInsightsHandler:
             raise PenaSeasonNotFoundError() from exc
 
     def _collect_match_insight_details(
-        self, *, pena_guid: str, season_guids: list[str]
+        self, *, pena_guid: str, season_guids: list[str], date_from=None, date_to=None
     ) -> list[MatchDetail]:
         try:
             rows = self._repository.list_closed_match_insight_rows(
                 pena_guid=pena_guid,
                 season_guids=season_guids,
+                date_from=date_from,
+                date_to=date_to,
             )
         except RepositoryPenaNotFoundError as exc:
             raise PenaSeasonPenaNotFoundError() from exc

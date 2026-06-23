@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 
 @dataclass(frozen=True)
@@ -11,3 +12,5 @@ class GetSeasonMatchInsightsQuery:
     matrix_size: int = 8
     top_pairs_size: int = 10
     leaders_size: int = 5
+    date_from: date | None = None
+    date_to: date | None = None

@@ -920,6 +920,8 @@ def get_match_insights(
             matrix_size=payload.matrix_size,
             top_pairs_size=payload.top_pairs_size,
             leaders_size=payload.leaders_size,
+            date_from=payload.date_from,
+            date_to=payload.date_to,
         )
     )
 

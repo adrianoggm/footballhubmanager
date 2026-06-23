@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Protocol
 
 from core.application.models import MatchInsightRow
@@ -9,6 +10,8 @@ class SeasonMatchInsightsPort(Protocol):
         *,
         pena_guid: str,
         season_guids: list[str],
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[MatchInsightRow]: ...
 
     def list_goal_event_seconds(
@@ -16,4 +19,6 @@ class SeasonMatchInsightsPort(Protocol):
         *,
         pena_guid: str,
         season_guids: list[str],
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[int]: ...
