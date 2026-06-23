@@ -282,6 +282,10 @@ def test_computes_report_from_closed_matches():
         "win_rate": 1.0,
     }
     assert len(report["leaders"]["scorers"]) == 2
+    first_pair = report["top_pairs"][0]
+    assert first_pair["left_win_rate"] == 1.0  # player-a won its only match
+    assert first_pair["right_win_rate"] == 1.0
+    assert first_pair["left_label"] and first_pair["right_label"]
     assert repo.last_payload == {"pena_guid": "pena-guid", "season_guids": ["season-guid"]}
 
 

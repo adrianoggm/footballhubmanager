@@ -39,7 +39,8 @@ class MatchInsightsReportBuilder:
         player_labels = {
             guid: str(player.get("label") or guid) for guid, player in state.player_stats.items()
         }
-        pair_rows = cls._build_pair_rows(state.pair_stats, player_labels)
+        win_rate_by_guid = {player["guid"]: player["win_rate"] for player in players}
+        pair_rows = cls._build_pair_rows(state.pair_stats, player_labels, win_rate_by_guid)
         top_teammates_by_player = cls._build_top_teammates(
             players=players,
             teammate_graph=state.teammate_graph,
@@ -240,6 +241,7 @@ class MatchInsightsReportBuilder:
         cls,
         pair_stats: dict[str, dict],
         player_labels: dict[str, str],
+        win_rate_by_guid: dict[str, float],
     ) -> list[dict]:
         pair_rows = []
         for pair in pair_stats.values():
@@ -249,6 +251,10 @@ class MatchInsightsReportBuilder:
                 {
                     **pair,
                     "label": f"{left_label} + {right_label}",
+                    "left_win_rate": win_rate_by_guid.get(pair["leftGuid"], 0.0),
+                    "right_win_rate": win_rate_by_guid.get(pair["rightGuid"], 0.0),
+                    "left_label": left_label,
+                    "right_label": right_label,
                     "win_rate": cls._rate(pair["wins"], pair["matches"]),
                 }
             )

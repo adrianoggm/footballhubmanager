@@ -60,6 +60,10 @@ class MatchInsightsPairResponse(BaseModel):
     losses: int
     label: str
     win_rate: float
+    left_win_rate: float = 0.0
+    right_win_rate: float = 0.0
+    left_label: str = ""
+    right_label: str = ""
 
 
 class MatchInsightsTeammateResponse(BaseModel):
