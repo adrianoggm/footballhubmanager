@@ -10,3 +10,10 @@ class SeasonMatchInsightsPort(Protocol):
         pena_guid: str,
         season_guids: list[str],
     ) -> list[MatchInsightRow]: ...
+
+    def list_goal_event_seconds(
+        self,
+        *,
+        pena_guid: str,
+        season_guids: list[str],
+    ) -> list[int]: ...

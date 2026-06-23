@@ -43,15 +43,31 @@ class GetSeasonMatchInsightsHandler:
             pena_guid=query.pena_guid,
             season_guids=cleaned_season_guids,
         )
+        goal_event_seconds = self._collect_goal_event_seconds(
+            pena_guid=query.pena_guid,
+            season_guids=cleaned_season_guids,
+        )
         report = MatchInsightsReportBuilder.build(
             details,
             matrix_size=query.matrix_size,
             top_pairs_size=query.top_pairs_size,
             leaders_size=query.leaders_size,
+            goal_event_seconds=goal_event_seconds,
         )
         report["scope"] = query.scope
         report["season_guids"] = cleaned_season_guids
         return report
+
+    def _collect_goal_event_seconds(self, *, pena_guid: str, season_guids: list[str]) -> list[int]:
+        try:
+            return self._repository.list_goal_event_seconds(
+                pena_guid=pena_guid,
+                season_guids=season_guids,
+            )
+        except RepositoryPenaNotFoundError as exc:
+            raise PenaSeasonPenaNotFoundError() from exc
+        except RepositorySeasonNotFoundError as exc:
+            raise PenaSeasonNotFoundError() from exc
 
     def _collect_match_insight_details(
         self, *, pena_guid: str, season_guids: list[str]

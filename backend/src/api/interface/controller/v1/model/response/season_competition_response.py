@@ -133,6 +133,27 @@ class MatchInsightsLeaderResponse(BaseModel):
     assists: int
     saves: int
     win_rate: float
+    rating: float = 0.0
+
+
+class MatchInsightsPositionBreakdownResponse(BaseModel):
+    position: str
+    goals: int
+    assists: int
+    appearances: int
+
+
+class MatchInsightsRatingBucketResponse(BaseModel):
+    bucket: int
+    count: int
+
+
+class MatchInsightsGoalTimelineResponse(BaseModel):
+    bucket: int
+    minute_from: int
+    minute_to: int
+    goals: int
+    cumulative_goals: int
 
 
 class MatchInsightsLeadersResponse(BaseModel):
@@ -157,6 +178,9 @@ class MatchInsightsResponse(BaseModel):
     matrix_rows: list[MatchInsightsMatrixRowResponse]
     timeline_by_match: list[MatchInsightsTimelineByMatchResponse]
     timeline_by_season: list[MatchInsightsTimelineBySeasonResponse]
+    position_breakdown: list[MatchInsightsPositionBreakdownResponse]
+    rating_distribution: list[MatchInsightsRatingBucketResponse]
+    goal_timeline: list[MatchInsightsGoalTimelineResponse]
     leaders: MatchInsightsLeadersResponse
     scope: Literal["selected_season", "all_seasons"] | None = None
     season_guids: list[str]

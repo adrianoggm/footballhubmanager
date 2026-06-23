@@ -6,6 +6,7 @@ from core.application.ports.season_competition_port import (
 from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
 from persistence.infrastructure.entity import (
     FootballMatch,
+    FootballMatchEvent,
     Pena,
     PenaPlayer,
     Player,
@@ -103,6 +104,32 @@ class SqlAlchemySeasonMatchInsightsRepository(SeasonMatchInsightsPort):
         ).all()
 
         return [self._to_match_insight_row(row) for row in rows]
+
+    def list_goal_event_seconds(
+        self,
+        *,
+        pena_guid: str,
+        season_guids: list[str],
+    ) -> list[int]:
+        pena = self._get_pena(pena_guid)
+        season_ids_by_guid = self._get_requested_season_ids(
+            pena_id=pena.id,
+            season_guids=season_guids,
+        )
+        if not season_ids_by_guid:
+            return []
+
+        rows = self.session.execute(
+            select(FootballMatchEvent.elapsed_seconds)
+            .select_from(FootballMatchEvent)
+            .join(FootballMatch, FootballMatch.id == FootballMatchEvent.id_match)
+            .where(
+                FootballMatch.id_season.in_(season_ids_by_guid.values()),
+                FootballMatch.status == "closed",
+                FootballMatchEvent.event_type == "goal",
+            )
+        ).all()
+        return [int(row.elapsed_seconds) for row in rows if row.elapsed_seconds is not None]
 
     def _get_pena(self, pena_guid: str) -> Pena:
         pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
