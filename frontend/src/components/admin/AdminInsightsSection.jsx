@@ -419,12 +419,41 @@ const pairingNodeLabel = (label) => {
 // Win rate → hue (red → green), same language as the correlation matrix.
 const winRateColor = (winRate) => `hsl(${Math.round(8 + (winRate || 0) * 120)} 68% 52%)`
 
-// Lays out the top pairs as a chord graph: nodes on a circle, each pair drawn as
-// a curved edge bowing toward the centre (no straight-line hairball). Edge width
-// encodes matches together, edge colour encodes win rate, node size encodes how
-// often the player shows up across the top pairs.
+const pairKey = (pair) => `${pair.leftGuid}-${pair.rightGuid}`
+
+function PairingWinRateRow({ label, winRate, formatPercent }) {
+  return (
+    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+        <Box
+          sx={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            flexShrink: 0,
+            backgroundColor: winRateColor(winRate),
+          }}
+        />
+        <Typography variant="body2" noWrap title={label}>
+          {label}
+        </Typography>
+      </Stack>
+      <Typography variant="body2" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        {formatPercent(winRate)}
+      </Typography>
+    </Stack>
+  )
+}
+
+// Interactive chord graph of the top pairs. Nodes sit on a circle; each pair is a
+// curved edge (width = matches together, colour = pair win rate). Selecting an
+// edge or a node highlights it and drives the detail panel: an edge reveals the
+// pair win rate plus each player's individual win rate, a node reveals the
+// player's own win rate. Both encodings come straight from the report — no extra
+// fetches. The SVG scales fluidly (viewBox + width:100%), so it stays responsive.
 function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
   const theme = useTheme()
+  const [selected, setSelected] = useState(null)
 
   if (!pairs.length) {
     return (
@@ -435,20 +464,19 @@ function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
   }
 
   const order = []
-  const labelByGuid = {}
-  const degreeByGuid = {}
+  const nodeByGuid = {}
+  const registerNode = (guid, label, winRate) => {
+    if (!(guid in nodeByGuid)) {
+      nodeByGuid[guid] = { guid, label: label || guid, winRate: winRate || 0, degree: 0 }
+      order.push(guid)
+    }
+  }
   pairs.forEach((pair) => {
-    const [leftLabel = '', rightLabel = ''] = String(pair.label || '').split(' + ')
-    if (!(pair.leftGuid in labelByGuid)) {
-      labelByGuid[pair.leftGuid] = leftLabel || pair.leftGuid
-      order.push(pair.leftGuid)
-    }
-    if (!(pair.rightGuid in labelByGuid)) {
-      labelByGuid[pair.rightGuid] = rightLabel || pair.rightGuid
-      order.push(pair.rightGuid)
-    }
-    degreeByGuid[pair.leftGuid] = (degreeByGuid[pair.leftGuid] || 0) + (pair.matches || 0)
-    degreeByGuid[pair.rightGuid] = (degreeByGuid[pair.rightGuid] || 0) + (pair.matches || 0)
+    const [splitLeft = '', splitRight = ''] = String(pair.label || '').split(' + ')
+    registerNode(pair.leftGuid, pair.left_label || splitLeft, pair.left_win_rate)
+    registerNode(pair.rightGuid, pair.right_label || splitRight, pair.right_win_rate)
+    nodeByGuid[pair.leftGuid].degree += pair.matches || 0
+    nodeByGuid[pair.rightGuid].degree += pair.matches || 0
   })
 
   const size = 340
@@ -457,63 +485,119 @@ function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
   const position = {}
   order.forEach((guid, index) => {
     const angle = (index / order.length) * Math.PI * 2 - Math.PI / 2
-    position[guid] = {
-      x: center + radius * Math.cos(angle),
-      y: center + radius * Math.sin(angle),
-      angle,
-    }
+    position[guid] = { x: center + radius * Math.cos(angle), y: center + radius * Math.sin(angle) }
   })
 
   const maxMatches = Math.max(1, ...pairs.map((pair) => pair.matches || 0))
-  const maxDegree = Math.max(1, ...Object.values(degreeByGuid))
+  const maxDegree = Math.max(1, ...order.map((guid) => nodeByGuid[guid].degree))
   const nodeColor = INSIGHT_ACCENTS.players.main
   const isDark = theme.palette.mode === 'dark'
+
+  const isEdgeHot = (pair) =>
+    selected?.kind === 'edge'
+      ? selected.key === pairKey(pair)
+      : selected?.kind === 'node'
+        ? pair.leftGuid === selected.guid || pair.rightGuid === selected.guid
+        : null
+  const isNodeHot = (guid) =>
+    selected?.kind === 'node'
+      ? selected.guid === guid
+      : selected?.kind === 'edge'
+        ? selected.pair.leftGuid === guid || selected.pair.rightGuid === guid
+        : null
+
+  const selectEdge = (pair) =>
+    setSelected((prev) =>
+      prev?.kind === 'edge' && prev.key === pairKey(pair)
+        ? null
+        : { kind: 'edge', key: pairKey(pair), pair }
+    )
+  const selectNode = (guid) =>
+    setSelected((prev) =>
+      prev?.kind === 'node' && prev.guid === guid ? null : { kind: 'node', guid }
+    )
 
   return (
     <Stack spacing={1}>
       <Box sx={{ ...buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.matches, 'auto') }}>
-        <svg viewBox={`0 0 ${size} ${size}`} width="100%" role="img" aria-label="Pairing network">
+        <svg
+          viewBox={`0 0 ${size} ${size}`}
+          width="100%"
+          role="img"
+          aria-label="Pairing network"
+          onClick={() => setSelected(null)}
+        >
           {pairs.map((pair) => {
             const a = position[pair.leftGuid]
             const b = position[pair.rightGuid]
             if (!a || !b) {
               return null
             }
-            // Control point pulled toward the centre → gentle concave chord.
             const cx = (a.x + b.x) / 2 + (center - (a.x + b.x) / 2) * 0.45
             const cy = (a.y + b.y) / 2 + (center - (a.y + b.y) / 2) * 0.45
+            const hot = isEdgeHot(pair)
+            const path = `M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}`
             return (
-              <path
-                key={`${pair.leftGuid}-${pair.rightGuid}`}
-                d={`M${a.x},${a.y} Q${cx},${cy} ${b.x},${b.y}`}
-                fill="none"
-                stroke={winRateColor(pair.win_rate)}
-                strokeOpacity={0.85}
-                strokeWidth={1.5 + ((pair.matches || 0) / maxMatches) * 6}
-                strokeLinecap="round"
+              <g
+                key={pairKey(pair)}
+                style={{ cursor: 'pointer' }}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  selectEdge(pair)
+                }}
               >
-                <title>
-                  {`${pair.label} · ${t('dashboard.admin.table.played')}: ${pair.matches} · ${formatPercent(pair.win_rate)}`}
-                </title>
-              </path>
+                {/* wide transparent hit area — easier to click / tap */}
+                <path d={path} fill="none" stroke="transparent" strokeWidth={16}>
+                  <title>
+                    {`${pair.label} · ${t('dashboard.admin.table.played')}: ${pair.matches} · ${formatPercent(pair.win_rate)}`}
+                  </title>
+                </path>
+                <path
+                  d={path}
+                  fill="none"
+                  stroke={winRateColor(pair.win_rate)}
+                  strokeOpacity={hot === false ? 0.12 : hot ? 1 : 0.85}
+                  strokeWidth={(1.5 + ((pair.matches || 0) / maxMatches) * 6) * (hot ? 1.5 : 1)}
+                  strokeLinecap="round"
+                  style={{
+                    pointerEvents: 'none',
+                    transition: 'stroke-opacity .15s, stroke-width .15s',
+                  }}
+                />
+              </g>
             )
           })}
           {order.map((guid) => {
+            const node = nodeByGuid[guid]
             const point = position[guid]
-            const nodeRadius = 9 + ((degreeByGuid[guid] || 0) / maxDegree) * 8
+            const nodeRadius = 9 + (node.degree / maxDegree) * 8
             const labelOutside = point.y < center
+            const hot = isNodeHot(guid)
             return (
-              <g key={guid}>
+              <g
+                key={guid}
+                style={{ cursor: 'pointer' }}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  selectNode(guid)
+                }}
+              >
                 <circle
                   cx={point.x}
                   cy={point.y}
-                  r={nodeRadius}
+                  r={hot ? nodeRadius + 2 : nodeRadius}
                   fill={nodeColor}
-                  stroke={alpha(theme.palette.background.paper, isDark ? 0.9 : 1)}
-                  strokeWidth={2}
+                  fillOpacity={hot === false ? 0.3 : 1}
+                  stroke={
+                    hot
+                      ? winRateColor(node.winRate)
+                      : alpha(theme.palette.background.paper, isDark ? 0.9 : 1)
+                  }
+                  strokeWidth={hot ? 3 : 2}
+                  style={{ transition: 'r .15s, fill-opacity .15s' }}
                 >
                   <title>
-                    {`${labelByGuid[guid]} · ${t('dashboard.admin.table.played')}: ${degreeByGuid[guid] || 0}`}
+                    {`${node.label} · ${formatPercent(node.winRate)} · ${t('dashboard.admin.table.played')}: ${node.degree}`}
                   </title>
                 </circle>
                 <text
@@ -522,15 +606,71 @@ function PairingNetwork({ pairs, emptyText, t, formatPercent }) {
                   textAnchor="middle"
                   fontSize="10"
                   fontWeight="600"
-                  fill={theme.palette.text.secondary}
+                  fill={hot === false ? theme.palette.text.disabled : theme.palette.text.secondary}
                 >
-                  {pairingNodeLabel(labelByGuid[guid])}
+                  {pairingNodeLabel(node.label)}
                 </text>
               </g>
             )
           })}
         </svg>
       </Box>
+
+      <Box sx={{ ...buildInsightInsetSx(theme, INSIGHT_ACCENTS.matches), p: 1.1, minHeight: 92 }}>
+        {!selected && (
+          <Typography variant="body2" color="text.secondary">
+            {t('dashboard.admin.standings.pairingSelectHint')}
+          </Typography>
+        )}
+        {selected?.kind === 'edge' && (
+          <Stack spacing={0.6}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700 }}
+                noWrap
+                title={selected.pair.label}
+              >
+                {selected.pair.label}
+              </Typography>
+              <Chip
+                size="small"
+                color={getRateColor(selected.pair.win_rate)}
+                label={`${t('dashboard.admin.standings.pairingPairWinRate')}: ${formatPercent(selected.pair.win_rate)}`}
+              />
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              {`${t('dashboard.admin.table.played')}: ${selected.pair.matches} · ${selected.pair.wins}-${selected.pair.draws}-${selected.pair.losses}`}
+            </Typography>
+            <PairingWinRateRow
+              label={selected.pair.left_label || nodeByGuid[selected.pair.leftGuid]?.label}
+              winRate={selected.pair.left_win_rate}
+              formatPercent={formatPercent}
+            />
+            <PairingWinRateRow
+              label={selected.pair.right_label || nodeByGuid[selected.pair.rightGuid]?.label}
+              winRate={selected.pair.right_win_rate}
+              formatPercent={formatPercent}
+            />
+          </Stack>
+        )}
+        {selected?.kind === 'node' && nodeByGuid[selected.guid] && (
+          <Stack spacing={0.6}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>
+              {nodeByGuid[selected.guid].label}
+            </Typography>
+            <PairingWinRateRow
+              label={t('dashboard.admin.standings.winRateColumn')}
+              winRate={nodeByGuid[selected.guid].winRate}
+              formatPercent={formatPercent}
+            />
+            <Typography variant="caption" color="text.secondary">
+              {`${t('dashboard.admin.table.played')}: ${nodeByGuid[selected.guid].degree}`}
+            </Typography>
+          </Stack>
+        )}
+      </Box>
+
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         <Stack direction="row" spacing={0.75} alignItems="center">
           <Box

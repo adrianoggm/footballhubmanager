@@ -807,6 +807,8 @@ export const messages = {
             'Top winning pairs as a chord graph — link thickness is matches together, colour is win rate, node size is how often the player appears.',
           pairingLegendWinRate: 'Colour = win rate',
           pairingLegendThickness: 'Thickness = matches together',
+          pairingSelectHint: 'Tap a node or a link to see win rates.',
+          pairingPairWinRate: 'Pair win rate',
           unknownPosition: 'No position',
           goalMomentumTitle: 'Goal Momentum',
           goalMomentumDescription:
@@ -1847,6 +1849,8 @@ export const messages = {
             'Las mejores parejas como grafo de cuerdas: el grosor es partidos juntos, el color es el ratio de victoria y el tamaño del nodo cuánto aparece el jugador.',
           pairingLegendWinRate: 'Color = ratio de victoria',
           pairingLegendThickness: 'Grosor = partidos juntos',
+          pairingSelectHint: 'Toca un nodo o una arista para ver los ratios de victoria.',
+          pairingPairWinRate: 'Ratio de la pareja',
           unknownPosition: 'Sin posición',
           goalMomentumTitle: 'Momento de los goles',
           goalMomentumDescription:
