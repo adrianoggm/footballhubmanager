@@ -723,6 +723,17 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   // into tabs so only one group mounts at a time. This also defers the recharts
   // render work until the Trends tab is opened.
   const [activeInsightTab, setActiveInsightTab] = useState('trends')
+  // Section-level date range (re-fetched from the backend on apply) + graph-local
+  // min-matches filter (applied client-side, no re-fetch).
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const applyInsights = () => onRefreshInsights({ dateFrom, dateTo })
+  const clearDates = () => {
+    setDateFrom('')
+    setDateTo('')
+    onRefreshInsights({ dateFrom: '', dateTo: '' })
+  }
 
   const maxSharedMatches =
     insightsReport?.matrix_rows?.reduce((maxValue, row) => {
@@ -828,14 +839,14 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
             {t('dashboard.admin.standings.insightsDescription')}
           </Typography>
         </Box>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap" useFlexGap>
           <TextField
             select
             size="small"
             label={t('dashboard.admin.standings.insightsScopeLabel')}
             value={insightsScope}
             onChange={(event) => onInsightsScopeChange(event.target.value)}
-            sx={{ minWidth: 220 }}
+            sx={{ minWidth: 200 }}
           >
             <MenuItem value="selected_season">
               {t('dashboard.admin.standings.insightsScopeSelectedSeason')}
@@ -844,9 +855,34 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               {t('dashboard.admin.standings.insightsScopeAllSeasons')}
             </MenuItem>
           </TextField>
+          <TextField
+            type="date"
+            size="small"
+            label={t('dashboard.admin.standings.insightsDateFrom')}
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ max: dateTo || undefined }}
+            sx={{ minWidth: 150 }}
+          />
+          <TextField
+            type="date"
+            size="small"
+            label={t('dashboard.admin.standings.insightsDateTo')}
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: dateFrom || undefined }}
+            sx={{ minWidth: 150 }}
+          />
+          {(dateFrom || dateTo) && (
+            <Button onClick={clearDates} disabled={insightsLoading}>
+              {t('dashboard.admin.standings.insightsClearDates')}
+            </Button>
+          )}
           <Button
             variant="contained"
-            onClick={onRefreshInsights}
+            onClick={applyInsights}
             disabled={insightsLoading || !selectedSeasonGuid}
           >
             {t('dashboard.admin.standings.refreshInsights')}

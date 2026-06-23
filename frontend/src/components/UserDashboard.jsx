@@ -179,10 +179,12 @@ export default function UserDashboard({
     refresh: refreshInsightsReport,
     reset: resetInsightsReport,
   } = useInsightsReport({
-    fetchInsights: ({ scope, seasonGuids }) =>
+    fetchInsights: ({ scope, seasonGuids, dateFrom, dateTo }) =>
       userService.getMatchInsights(selectedPenaGuid, {
         scope,
         season_guids: seasonGuids,
+        ...(dateFrom ? { date_from: dateFrom } : {}),
+        ...(dateTo ? { date_to: dateTo } : {}),
       }),
     onUnauthorized: onLogout,
     onError: setError,
@@ -622,7 +624,7 @@ export default function UserDashboard({
     }, t('dashboard.user.noticeLeftPena'))
   }
 
-  const handleRefreshInsights = async () => {
+  const handleRefreshInsights = async (options = {}) => {
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
@@ -632,6 +634,8 @@ export default function UserDashboard({
       scope: insightsScope,
       selectedSeasonGuid,
       seasonList,
+      dateFrom: options.dateFrom || '',
+      dateTo: options.dateTo || '',
     })
   }
 
