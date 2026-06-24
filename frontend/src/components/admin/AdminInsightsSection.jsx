@@ -464,59 +464,88 @@ function PairingTooltip({ lines }) {
   )
 }
 
-// Ranked list view of the pairs — cleaner / more "app-like" than the graph, and
-// shows the pair win rate plus each player's individual win rate inline.
-function PairingList({ pairs, t, formatPercent }) {
+// A pair is just a 2-member combo and a trio an N-member combo, so both list
+// views share one normalized shape and one renderer.
+const pairToCombo = (pair) => ({
+  key: pairKey(pair),
+  label: pair.label,
+  win_rate: pair.win_rate,
+  matches: pair.matches,
+  wins: pair.wins,
+  draws: pair.draws,
+  losses: pair.losses,
+  members: [
+    { key: pair.leftGuid, label: pair.left_label, win_rate: pair.left_win_rate },
+    { key: pair.rightGuid, label: pair.right_label, win_rate: pair.right_win_rate },
+  ],
+})
+
+const trioToCombo = (trio) => ({
+  key: trio.guids.join('-'),
+  label: trio.label,
+  win_rate: trio.win_rate,
+  matches: trio.matches,
+  wins: trio.wins,
+  draws: trio.draws,
+  losses: trio.losses,
+  members: trio.members.map((member) => ({
+    key: member.guid,
+    label: member.label,
+    win_rate: member.win_rate,
+  })),
+})
+
+// Ranked list for pairs or trios. Each row: combo win rate (bar + %), matches,
+// and every member's individual win rate aligned in a per-member grid.
+function ComboList({ combos, accent, t, formatPercent }) {
   const theme = useTheme()
   return (
     <Stack spacing={1}>
-      {pairs.map((pair) => (
-        <Stack
-          key={pairKey(pair)}
-          spacing={0.6}
-          sx={{ p: 1.1, ...buildInsightInsetSx(theme, INSIGHT_ACCENTS.matches) }}
-        >
-          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap title={pair.label}>
-              {pair.label}
+      {combos.map((combo) => (
+        <Stack key={combo.key} spacing={0.7} sx={{ p: 1.1, ...buildInsightInsetSx(theme, accent) }}>
+          <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={1}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap title={combo.label}>
+              {combo.label}
             </Typography>
-            <Chip
-              size="small"
-              color={getRateColor(pair.win_rate)}
-              label={formatPercent(pair.win_rate)}
-            />
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}
+            >
+              {formatPercent(combo.win_rate)}
+            </Typography>
           </Stack>
           <LinearProgress
             variant="determinate"
-            value={Math.max(0, Math.min(100, Math.round((pair.win_rate || 0) * 100)))}
+            value={Math.max(0, Math.min(100, Math.round((combo.win_rate || 0) * 100)))}
             sx={{
               height: 6,
               borderRadius: 999,
               backgroundColor: alpha(theme.palette.text.primary, 0.08),
-              '& .MuiLinearProgress-bar': { backgroundColor: winRateColor(pair.win_rate) },
+              '& .MuiLinearProgress-bar': { backgroundColor: winRateColor(combo.win_rate) },
             }}
           />
-          <Stack direction="row" spacing={1} justifyContent="space-between">
-            <Typography variant="caption" color="text.secondary">
-              {`${t('dashboard.admin.table.played')}: ${pair.matches} · ${pair.wins}-${pair.draws}-${pair.losses}`}
-            </Typography>
-          </Stack>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.4, sm: 2 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="caption" color="text.secondary">
+            {`${t('dashboard.admin.table.played')}: ${combo.matches} · ${combo.wins}-${combo.draws}-${combo.losses}`}
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: { xs: 0.4, sm: 1.5 },
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: `repeat(${combo.members.length}, minmax(0, 1fr))`,
+              },
+            }}
+          >
+            {combo.members.map((member) => (
               <PairingWinRateRow
-                label={pair.left_label}
-                winRate={pair.left_win_rate}
+                key={member.key}
+                label={member.label}
+                winRate={member.win_rate}
                 formatPercent={formatPercent}
               />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <PairingWinRateRow
-                label={pair.right_label}
-                winRate={pair.right_win_rate}
-                formatPercent={formatPercent}
-              />
-            </Box>
-          </Stack>
+            ))}
+          </Box>
         </Stack>
       ))}
     </Stack>
@@ -851,7 +880,7 @@ function PairingGraph({ pairs, t, formatPercent }) {
 
 // Wraps the pairing views: a toolbar to switch graph/list and a min-matches
 // filter (client-side), then renders the chosen view over the filtered pairs.
-function PairingExplorer({ pairs, emptyText, t, formatPercent }) {
+function PairingExplorer({ pairs, trios = [], emptyText, t, formatPercent }) {
   const theme = useTheme()
   const [view, setView] = useState('graph')
   const [minMatches, setMinMatches] = useState(1)
@@ -864,8 +893,24 @@ function PairingExplorer({ pairs, emptyText, t, formatPercent }) {
     )
   }
 
-  const maxMatches = Math.max(...pairs.map((pair) => pair.matches || 0), 1)
-  const filtered = pairs.filter((pair) => (pair.matches || 0) >= minMatches)
+  // The slider range follows the active view (trios share fewer matches than pairs).
+  const isTrios = view === 'trios'
+  const source = isTrios ? trios : pairs
+  const maxMatches = Math.max(1, ...source.map((item) => item.matches || 0))
+  const filtered = source.filter((item) => (item.matches || 0) >= minMatches)
+  const empty = !filtered.length
+
+  const changeView = (next) => {
+    if (!next) {
+      return
+    }
+    const nextMax = Math.max(
+      1,
+      ...(next === 'trios' ? trios : pairs).map((item) => item.matches || 0)
+    )
+    setMinMatches((current) => Math.min(current, nextMax))
+    setView(next)
+  }
 
   return (
     <Stack spacing={1.25}>
@@ -879,12 +924,17 @@ function PairingExplorer({ pairs, emptyText, t, formatPercent }) {
           size="small"
           exclusive
           value={view}
-          onChange={(_, next) => next && setView(next)}
+          onChange={(_, next) => changeView(next)}
         >
           <ToggleButton value="graph">
             {t('dashboard.admin.standings.pairingViewGraph')}
           </ToggleButton>
           <ToggleButton value="list">{t('dashboard.admin.standings.pairingViewList')}</ToggleButton>
+          {trios.length > 0 && (
+            <ToggleButton value="trios">
+              {t('dashboard.admin.standings.pairingViewTrios')}
+            </ToggleButton>
+          )}
         </ToggleButtonGroup>
         {maxMatches > 1 && (
           <Stack
@@ -908,16 +958,29 @@ function PairingExplorer({ pairs, emptyText, t, formatPercent }) {
         )}
       </Stack>
 
-      {!filtered.length && (
+      {empty && (
         <Typography variant="body2" color="text.secondary">
           {t('dashboard.admin.standings.pairingNoneForFilter')}
         </Typography>
       )}
-      {filtered.length > 0 && view === 'graph' && (
+      {!empty && view === 'graph' && (
         <PairingGraph pairs={filtered} t={t} formatPercent={formatPercent} />
       )}
-      {filtered.length > 0 && view === 'list' && (
-        <PairingList pairs={filtered} t={t} formatPercent={formatPercent} />
+      {!empty && view === 'list' && (
+        <ComboList
+          combos={filtered.map(pairToCombo)}
+          accent={INSIGHT_ACCENTS.matches}
+          t={t}
+          formatPercent={formatPercent}
+        />
+      )}
+      {!empty && view === 'trios' && (
+        <ComboList
+          combos={filtered.map(trioToCombo)}
+          accent={INSIGHT_ACCENTS.players}
+          t={t}
+          formatPercent={formatPercent}
+        />
       )}
     </Stack>
   )
@@ -1039,6 +1102,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   }))
 
   const pairingPairs = (insightsReport?.top_pairs || []).slice(0, 8)
+  const pairingTrios = (insightsReport?.top_trios || []).slice(0, 10)
 
   const goalTimelineData = (insightsReport?.goal_timeline || []).map((row) => ({
     ...row,
@@ -1804,6 +1868,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                       </Typography>
                       <PairingExplorer
                         pairs={pairingPairs}
+                        trios={pairingTrios}
                         emptyText={t('dashboard.admin.standings.insightsNoData')}
                         t={t}
                         formatPercent={formatPercent}
