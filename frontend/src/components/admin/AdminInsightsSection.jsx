@@ -25,7 +25,7 @@ import {
   Typography,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -527,37 +527,57 @@ function PairingList({ pairs, t, formatPercent }) {
 // curved edge (width = matches together, colour = pair win rate). Hovering shows a
 // styled tooltip (matches + win rates); selecting an edge/node highlights it and
 // drives the detail panel. The SVG scales fluidly (viewBox + width:100%).
+const GRAPH_SIZE = 380
+const GRAPH_CENTER = GRAPH_SIZE / 2
+const GRAPH_RADIUS = GRAPH_CENTER - 86
+
 function PairingGraph({ pairs, t, formatPercent }) {
   const theme = useTheme()
   const [selected, setSelected] = useState(null)
 
-  const order = []
-  const nodeByGuid = {}
-  const registerNode = (guid, label, winRate) => {
-    if (!(guid in nodeByGuid)) {
-      nodeByGuid[guid] = { guid, label: label || guid, winRate: winRate || 0, degree: 0 }
-      order.push(guid)
+  // Reset the selection whenever the set of pairs changes (e.g. the min-matches
+  // filter drops the selected edge) so the detail panel never shows a stale pair.
+  const pairsSignature = pairs.map(pairKey).join('|')
+  useEffect(() => setSelected(null), [pairsSignature])
+
+  const { order, nodeByGuid, position, maxMatches, maxDegree } = useMemo(() => {
+    const nodes = {}
+    const registerNode = (guid, label, winRate) => {
+      if (!(guid in nodes)) {
+        nodes[guid] = { guid, label: label || guid, winRate: winRate || 0, degree: 0 }
+      }
     }
-  }
-  pairs.forEach((pair) => {
-    const [splitLeft = '', splitRight = ''] = String(pair.label || '').split(' + ')
-    registerNode(pair.leftGuid, pair.left_label || splitLeft, pair.left_win_rate)
-    registerNode(pair.rightGuid, pair.right_label || splitRight, pair.right_win_rate)
-    nodeByGuid[pair.leftGuid].degree += pair.matches || 0
-    nodeByGuid[pair.rightGuid].degree += pair.matches || 0
-  })
+    pairs.forEach((pair) => {
+      const [splitLeft = '', splitRight = ''] = String(pair.label || '').split(' + ')
+      registerNode(pair.leftGuid, pair.left_label || splitLeft, pair.left_win_rate)
+      registerNode(pair.rightGuid, pair.right_label || splitRight, pair.right_win_rate)
+      nodes[pair.leftGuid].degree += pair.matches || 0
+      nodes[pair.rightGuid].degree += pair.matches || 0
+    })
 
-  const size = 340
-  const center = size / 2
-  const radius = center - 60
-  const position = {}
-  order.forEach((guid, index) => {
-    const angle = (index / order.length) * Math.PI * 2 - Math.PI / 2
-    position[guid] = { x: center + radius * Math.cos(angle), y: center + radius * Math.sin(angle) }
-  })
+    // Place the busiest players first so hubs spread around the ring instead of
+    // clustering in insertion order → fewer long crossing chords.
+    const ordered = Object.keys(nodes).sort((a, b) => nodes[b].degree - nodes[a].degree)
+    const pos = {}
+    ordered.forEach((guid, index) => {
+      const angle = (index / ordered.length) * Math.PI * 2 - Math.PI / 2
+      pos[guid] = {
+        x: GRAPH_CENTER + GRAPH_RADIUS * Math.cos(angle),
+        y: GRAPH_CENTER + GRAPH_RADIUS * Math.sin(angle),
+        angle,
+      }
+    })
+    return {
+      order: ordered,
+      nodeByGuid: nodes,
+      position: pos,
+      maxMatches: Math.max(1, ...pairs.map((pair) => pair.matches || 0)),
+      maxDegree: Math.max(1, ...ordered.map((guid) => nodes[guid].degree)),
+    }
+  }, [pairs])
 
-  const maxMatches = Math.max(1, ...pairs.map((pair) => pair.matches || 0))
-  const maxDegree = Math.max(1, ...order.map((guid) => nodeByGuid[guid].degree))
+  const size = GRAPH_SIZE
+  const center = GRAPH_CENTER
   const nodeColor = INSIGHT_ACCENTS.players.main
   const isDark = theme.palette.mode === 'dark'
 
@@ -587,11 +607,19 @@ function PairingGraph({ pairs, t, formatPercent }) {
 
   return (
     <Stack spacing={1}>
-      <Box sx={{ ...buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.matches, 'auto') }}>
+      <Box
+        sx={{
+          ...buildInsightChartFrameSx(theme, INSIGHT_ACCENTS.matches, 'auto'),
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
         <svg
           viewBox={`0 0 ${size} ${size}`}
-          width="100%"
-          role="img"
+          // ponytail: cap the square so it matches the radar's fixed-height card
+          // side-by-side instead of growing to full column width.
+          style={{ width: '100%', maxWidth: 320, height: 'auto', display: 'block' }}
+          role="group"
           aria-label="Pairing network"
           onClick={() => setSelected(null)}
         >
@@ -622,10 +650,19 @@ function PairingGraph({ pairs, t, formatPercent }) {
                 }
               >
                 <g
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${pair.label}, ${formatPercent(pair.win_rate)}`}
                   style={{ cursor: 'pointer' }}
                   onClick={(event) => {
                     event.stopPropagation()
                     selectEdge(pair)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      selectEdge(pair)
+                    }
                   }}
                 >
                   {/* wide transparent hit area — easier to click / tap / hover */}
@@ -650,8 +687,16 @@ function PairingGraph({ pairs, t, formatPercent }) {
             const node = nodeByGuid[guid]
             const point = position[guid]
             const nodeRadius = 9 + (node.degree / maxDegree) * 8
-            const labelOutside = point.y < center
             const hot = isNodeHot(guid)
+            // Fan labels radially outward from each node so they don't collide.
+            const labelX = center + (GRAPH_RADIUS + nodeRadius + 11) * Math.cos(point.angle)
+            const labelY = center + (GRAPH_RADIUS + nodeRadius + 14) * Math.sin(point.angle)
+            const labelAnchor =
+              Math.abs(Math.cos(point.angle)) < 0.35
+                ? 'middle'
+                : Math.cos(point.angle) > 0
+                  ? 'start'
+                  : 'end'
             return (
               <Tooltip
                 key={guid}
@@ -667,10 +712,19 @@ function PairingGraph({ pairs, t, formatPercent }) {
                 }
               >
                 <g
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${node.label}, ${formatPercent(node.winRate)}`}
                   style={{ cursor: 'pointer' }}
                   onClick={(event) => {
                     event.stopPropagation()
                     selectNode(guid)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      selectNode(guid)
+                    }
                   }}
                 >
                   <circle
@@ -688,9 +742,10 @@ function PairingGraph({ pairs, t, formatPercent }) {
                     style={{ transition: 'r .15s, fill-opacity .15s' }}
                   />
                   <text
-                    x={point.x}
-                    y={labelOutside ? point.y - nodeRadius - 5 : point.y + nodeRadius + 11}
-                    textAnchor="middle"
+                    x={labelX}
+                    y={labelY}
+                    textAnchor={labelAnchor}
+                    dominantBaseline="middle"
                     fontSize="10"
                     fontWeight="600"
                     fill={
