@@ -11,6 +11,7 @@ class GetSeasonMatchInsightsQuery:
     scope: str | None = None
     matrix_size: int = 8
     top_pairs_size: int = 10
+    top_trios_size: int = 10
     leaders_size: int = 5
     date_from: date | None = None
     date_to: date | None = None

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from itertools import combinations
 
 from core.application.models import MatchDetail, MatchPlayerStats
 
@@ -7,6 +8,7 @@ from core.application.models import MatchDetail, MatchPlayerStats
 class MatchInsightsAccumulator:
     player_stats: dict[str, dict] = field(default_factory=dict)
     pair_stats: dict[str, dict] = field(default_factory=dict)
+    trio_stats: dict[str, dict] = field(default_factory=dict)
     teammate_graph: dict[str, dict[str, dict]] = field(default_factory=dict)
     seasons_in_report: set[str] = field(default_factory=set)
     season_aggregate_by_guid: dict[str, dict] = field(default_factory=dict)
@@ -30,6 +32,7 @@ class MatchInsightsReportBuilder:
         top_pairs_size: int,
         leaders_size: int,
         goal_event_seconds: list[int] | None = None,
+        top_trios_size: int = 10,
     ) -> dict:
         state = MatchInsightsAccumulator()
         for detail in match_details:
@@ -41,6 +44,7 @@ class MatchInsightsReportBuilder:
         }
         win_rate_by_guid = {player["guid"]: player["win_rate"] for player in players}
         pair_rows = cls._build_pair_rows(state.pair_stats, player_labels, win_rate_by_guid)
+        trio_rows = cls._build_trio_rows(state.trio_stats, player_labels, win_rate_by_guid)
         top_teammates_by_player = cls._build_top_teammates(
             players=players,
             teammate_graph=state.teammate_graph,
@@ -62,6 +66,7 @@ class MatchInsightsReportBuilder:
                 state.matches_analyzed * 2,
             ),
             "top_pairs": pair_rows[:top_pairs_size],
+            "top_trios": trio_rows[:top_trios_size],
             "top_teammates_by_player": top_teammates_by_player,
             "matrix_players": matrix_players,
             "matrix_rows": cls._build_matrix_rows(matrix_players, state.pair_stats),
@@ -189,11 +194,25 @@ class MatchInsightsReportBuilder:
             saves += player_saves
 
         cls._accumulate_team_pairs(state, players, outcome)
+        cls._accumulate_team_trios(state, players, outcome)
         return {
             "assists": assists,
             "saves": saves,
             "lineup_entries": len(players),
         }
+
+    @classmethod
+    def _accumulate_team_trios(
+        cls,
+        state: MatchInsightsAccumulator,
+        players: list[MatchPlayerStats],
+        outcome: str,
+    ) -> None:
+        guids = [guid for guid in (str(p.player_guid or "").strip() for p in players) if guid]
+        for combo in combinations(guids, 3):
+            trio = cls._ensure_trio(state, combo)
+            trio["matches"] += 1
+            cls._with_outcome(trio, outcome)
 
     @classmethod
     def _accumulate_team_pairs(
@@ -260,6 +279,39 @@ class MatchInsightsReportBuilder:
             )
         pair_rows.sort(key=lambda item: (-item["matches"], -item["wins"]))
         return pair_rows
+
+    @classmethod
+    def _build_trio_rows(
+        cls,
+        trio_stats: dict[str, dict],
+        player_labels: dict[str, str],
+        win_rate_by_guid: dict[str, float],
+    ) -> list[dict]:
+        trio_rows = []
+        for trio in trio_stats.values():
+            guids = trio["guids"]
+            members = [
+                {
+                    "guid": guid,
+                    "label": player_labels.get(guid, guid),
+                    "win_rate": win_rate_by_guid.get(guid, 0.0),
+                }
+                for guid in guids
+            ]
+            trio_rows.append(
+                {
+                    "guids": guids,
+                    "label": " + ".join(member["label"] for member in members),
+                    "matches": trio["matches"],
+                    "wins": trio["wins"],
+                    "draws": trio["draws"],
+                    "losses": trio["losses"],
+                    "win_rate": cls._rate(trio["wins"], trio["matches"]),
+                    "members": members,
+                }
+            )
+        trio_rows.sort(key=lambda item: (-item["matches"], -item["wins"]))
+        return trio_rows
 
     @classmethod
     def _build_top_teammates(
@@ -537,6 +589,20 @@ class MatchInsightsReportBuilder:
                 "losses": 0,
             }
         return state.pair_stats[key]
+
+    @staticmethod
+    def _ensure_trio(state: MatchInsightsAccumulator, guids: tuple[str, ...]) -> dict:
+        ordered = tuple(sorted(guids))
+        key = "::".join(ordered)
+        if key not in state.trio_stats:
+            state.trio_stats[key] = {
+                "guids": list(ordered),
+                "matches": 0,
+                "wins": 0,
+                "draws": 0,
+                "losses": 0,
+            }
+        return state.trio_stats[key]
 
     @staticmethod
     def _ensure_edge(

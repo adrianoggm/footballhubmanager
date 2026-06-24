@@ -66,6 +66,23 @@ class MatchInsightsPairResponse(BaseModel):
     right_label: str = ""
 
 
+class MatchInsightsTrioMemberResponse(BaseModel):
+    guid: str
+    label: str
+    win_rate: float = 0.0
+
+
+class MatchInsightsTrioResponse(BaseModel):
+    guids: list[str]
+    label: str
+    matches: int
+    wins: int
+    draws: int
+    losses: int
+    win_rate: float
+    members: list[MatchInsightsTrioMemberResponse]
+
+
 class MatchInsightsTeammateResponse(BaseModel):
     player_guid: str
     player_label: str
@@ -177,6 +194,7 @@ class MatchInsightsResponse(BaseModel):
     saves_per_match: float
     average_players_per_team: float
     top_pairs: list[MatchInsightsPairResponse]
+    top_trios: list[MatchInsightsTrioResponse] = []
     top_teammates_by_player: list[MatchInsightsTeammateResponse]
     matrix_players: list[MatchInsightsMatrixPlayerResponse]
     matrix_rows: list[MatchInsightsMatrixRowResponse]

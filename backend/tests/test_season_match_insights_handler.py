@@ -295,8 +295,41 @@ def test_computes_report_from_closed_matches():
     assert first_pair["left_win_rate"] == 1.0  # player-a won its only match
     assert first_pair["right_win_rate"] == 1.0
     assert first_pair["left_label"] and first_pair["right_label"]
+    # home team had players a + b → exactly one trio is impossible (needs 3), so with
+    # 2 per team there are no trios; assert the field exists and is empty here.
+    assert report["top_trios"] == []
     assert repo.last_payload["pena_guid"] == "pena-guid"
     assert repo.last_payload["season_guids"] == ["season-guid"]
+
+
+def test_builds_top_trios_from_three_player_lineups():
+    # Home team has 3 players (a, b, c) → exactly one trio; home wins (2-1).
+    repo = _FakeRepo(
+        rows=[
+            _row("home", "a", "Ana", goals=2),
+            _row("home", "b", "Beto", goals=0),
+            _row("home", "c", "Cora", goals=0),
+            _row("away", "d", "Dani", goals=1),
+            _row("away", "e", "Edu", goals=0),
+            _row("away", "f", "Fer", goals=0),
+        ]
+    )
+    report = _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=6,
+        top_pairs_size=10,
+        leaders_size=3,
+    )
+    trios = report["top_trios"]
+    home_trio = next(t for t in trios if set(t["guids"]) == {"a", "b", "c"})
+    assert home_trio["matches"] == 1
+    assert home_trio["wins"] == 1
+    assert home_trio["win_rate"] == 1.0
+    assert len(home_trio["members"]) == 3
+    assert home_trio["label"].count("+") == 2
 
 
 def test_passes_date_range_to_repository():

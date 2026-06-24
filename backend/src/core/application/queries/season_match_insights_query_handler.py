@@ -57,6 +57,7 @@ class GetSeasonMatchInsightsHandler:
             top_pairs_size=query.top_pairs_size,
             leaders_size=query.leaders_size,
             goal_event_seconds=goal_event_seconds,
+            top_trios_size=query.top_trios_size,
         )
         report["scope"] = query.scope
         report["season_guids"] = cleaned_season_guids
