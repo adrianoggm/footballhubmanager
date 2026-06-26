@@ -55,3 +55,5 @@ def test_metrics_endpoint_exposes_http_request_metrics():
     assert status == 200
     # Default instrumentation: request counter + latency histogram.
     assert b"http_request" in body
+    # Business metric is registered (declared even when the DB is unreachable).
+    assert b"footballhub_active_sessions" in body

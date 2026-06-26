@@ -16,12 +16,13 @@ if not logging.getLogger().handlers:
 from api.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware, RateLimitRule
 from api.module import api_router
 from app.config import config as app_config
-from app.module import engine
+from app.module import SessionLocal, engine
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from metrics_collectors import ActiveSessionsCollector
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from uvicorn import run
@@ -223,6 +224,9 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts()
 # before CORS so CORS stays the outermost layer (see the ordering note above).
 # The /metrics route is added by expose() after the routers, below.
 _instrumentator = Instrumentator().instrument(app)
+# Business metric: logged-in users. Registers on the default registry, so it shows
+# up alongside the HTTP metrics at /metrics.
+_instrumentator.registry.register(ActiveSessionsCollector(SessionLocal))
 cors_origins = _resolve_cors_origins()
 app.add_middleware(
     CORSMiddleware,
