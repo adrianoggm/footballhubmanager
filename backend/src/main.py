@@ -7,12 +7,6 @@ from contextlib import asynccontextmanager
 # Add src to path
 sys.path.append(os.path.dirname(__file__))
 
-if not logging.getLogger().handlers:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
-
 from api.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware, RateLimitRule
 from api.module import api_router
 from app.config import config as app_config
@@ -23,12 +17,19 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from metrics_collectors import ActiveSessionsCollector
+from observability_logging import RequestIdMiddleware, configure_logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from uvicorn import run
 
 # Logger
 logger = logging.getLogger(__name__)
+
+# JSON logs in the cluster (Loki/LogQL), human-readable text in local dev.
+configure_logging(
+    json_logs=os.getenv("APP_ENV", "production").strip().lower()
+    not in {"dev", "development", "local", "test"}
+)
 
 
 def _app_env() -> str:
@@ -235,6 +236,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Outermost layer: stamp every request with a correlation id and bind it to the log
+# context, so all log lines for one request share an X-Request-ID you can grep on.
+app.add_middleware(RequestIdMiddleware)
 
 
 # Global exception handler
