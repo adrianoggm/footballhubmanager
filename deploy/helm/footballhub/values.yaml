@@ -90,6 +90,27 @@ externalDatabase:
   host: ""
   # Password comes from database.existingSecret (recommended) or mysql.password.
 
+# Prometheus scraping. Emits a ServiceMonitor for the backend (requires the
+# Prometheus Operator CRDs from kube-prometheus-stack — see deploy/helm/README.md).
+# Off by default so the chart installs fine on clusters without the operator.
+metrics:
+  enabled: false
+  # The app serves under root_path=/api, so /metrics lands at /api/metrics on the pod.
+  path: /api/metrics
+  interval: 30s
+  # kube-prometheus-stack only selects ServiceMonitors / PrometheusRules carrying its
+  # release label. Set this to match the release name you installed the stack under.
+  serviceMonitorLabels:
+    release: kube-prometheus-stack
+  # PrometheusRule with backend alerts (down, 5xx, p99 latency, crashloop). Requires
+  # the operator CRDs. Notification routing lives in the kube-prometheus-stack release.
+  alerts:
+    enabled: false
+  # Grafana dashboard shipped as a sidecar-loaded ConfigMap (survives restarts).
+  dashboard:
+    enabled: false
+    sidecarLabel: grafana_dashboard
+
 ingress:
   enabled: true
   className: ""

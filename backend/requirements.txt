@@ -1,6 +1,7 @@
 ruff==0.15.16
 sqlalchemy
 fastapi
+prometheus-fastapi-instrumentator
 uvicorn
 pydantic-settings
 pymysql

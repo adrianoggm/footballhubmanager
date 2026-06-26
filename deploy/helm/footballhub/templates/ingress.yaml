@@ -12,6 +12,10 @@
 {{- $hstsHeader := printf "Strict-Transport-Security: max-age=%d%s" (int64 .Values.ingress.hsts.maxAge) (ternary "; includeSubDomains" "" .Values.ingress.hsts.includeSubDomains) }}
 {{- $ann = set $ann "nginx.ingress.kubernetes.io/configuration-snippet" (printf "more_set_headers \"%s\";\n" $hstsHeader) }}
 {{- end }}
+{{- /* /api routes to the backend, which serves /api/metrics — block it from the
+       public internet. The in-cluster Prometheus scrape hits the pod directly and
+       bypasses the ingress, so this only closes external access. */}}
+{{- $ann = set $ann "nginx.ingress.kubernetes.io/server-snippet" "location = /api/metrics { return 403; }\n" }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
