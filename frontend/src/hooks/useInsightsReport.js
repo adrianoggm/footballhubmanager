@@ -21,7 +21,13 @@ export function useInsightsReport({ fetchInsights, onUnauthorized, onError } = {
   }, [])
 
   const refresh = useCallback(
-    async ({ scope = 'selected_season', selectedSeasonGuid = '', seasonList = [] } = {}) => {
+    async ({
+      scope = 'selected_season',
+      selectedSeasonGuid = '',
+      seasonList = [],
+      dateFrom = '',
+      dateTo = '',
+    } = {}) => {
       if (!selectedSeasonGuid || typeof fetchInsights !== 'function') {
         return
       }
@@ -42,6 +48,8 @@ export function useInsightsReport({ fetchInsights, onUnauthorized, onError } = {
         return fetchInsights({
           scope: nextScope,
           seasonGuids,
+          dateFrom,
+          dateTo,
         })
       }
 

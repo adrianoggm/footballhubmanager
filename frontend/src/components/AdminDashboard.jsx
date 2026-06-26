@@ -591,10 +591,12 @@ export default function AdminDashboard({
     refresh: refreshInsightsReport,
     reset: resetInsightsReport,
   } = useInsightsReport({
-    fetchInsights: ({ scope, seasonGuids }) =>
+    fetchInsights: ({ scope, seasonGuids, dateFrom, dateTo }) =>
       adminService.getMatchInsights(selectedPenaGuid, {
         scope,
         season_guids: seasonGuids,
+        ...(dateFrom ? { date_from: dateFrom } : {}),
+        ...(dateTo ? { date_to: dateTo } : {}),
       }),
     onUnauthorized: onLogout,
     onError: setError,
@@ -1765,7 +1767,7 @@ export default function AdminDashboard({
     closeOverviewMatchDetailDialog()
   }
 
-  const handleRefreshInsights = async () => {
+  const handleRefreshInsights = async (options = {}) => {
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
@@ -1775,6 +1777,8 @@ export default function AdminDashboard({
       scope: insightsScope,
       selectedSeasonGuid,
       seasonList,
+      dateFrom: options.dateFrom || '',
+      dateTo: options.dateTo || '',
     })
   }
 

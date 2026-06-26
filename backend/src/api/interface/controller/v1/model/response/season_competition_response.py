@@ -60,6 +60,27 @@ class MatchInsightsPairResponse(BaseModel):
     losses: int
     label: str
     win_rate: float
+    left_win_rate: float = 0.0
+    right_win_rate: float = 0.0
+    left_label: str = ""
+    right_label: str = ""
+
+
+class MatchInsightsTrioMemberResponse(BaseModel):
+    guid: str
+    label: str
+    win_rate: float = 0.0
+
+
+class MatchInsightsTrioResponse(BaseModel):
+    guids: list[str]
+    label: str
+    matches: int
+    wins: int
+    draws: int
+    losses: int
+    win_rate: float
+    members: list[MatchInsightsTrioMemberResponse]
 
 
 class MatchInsightsTeammateResponse(BaseModel):
@@ -133,6 +154,27 @@ class MatchInsightsLeaderResponse(BaseModel):
     assists: int
     saves: int
     win_rate: float
+    rating: float = 0.0
+
+
+class MatchInsightsPositionBreakdownResponse(BaseModel):
+    position: str
+    goals: int
+    assists: int
+    appearances: int
+
+
+class MatchInsightsRatingBucketResponse(BaseModel):
+    bucket: int
+    count: int
+
+
+class MatchInsightsGoalTimelineResponse(BaseModel):
+    bucket: int
+    minute_from: int
+    minute_to: int
+    goals: int
+    cumulative_goals: int
 
 
 class MatchInsightsLeadersResponse(BaseModel):
@@ -152,11 +194,15 @@ class MatchInsightsResponse(BaseModel):
     saves_per_match: float
     average_players_per_team: float
     top_pairs: list[MatchInsightsPairResponse]
+    top_trios: list[MatchInsightsTrioResponse] = []
     top_teammates_by_player: list[MatchInsightsTeammateResponse]
     matrix_players: list[MatchInsightsMatrixPlayerResponse]
     matrix_rows: list[MatchInsightsMatrixRowResponse]
     timeline_by_match: list[MatchInsightsTimelineByMatchResponse]
     timeline_by_season: list[MatchInsightsTimelineBySeasonResponse]
+    position_breakdown: list[MatchInsightsPositionBreakdownResponse]
+    rating_distribution: list[MatchInsightsRatingBucketResponse]
+    goal_timeline: list[MatchInsightsGoalTimelineResponse]
     leaders: MatchInsightsLeadersResponse
     scope: Literal["selected_season", "all_seasons"] | None = None
     season_guids: list[str]
