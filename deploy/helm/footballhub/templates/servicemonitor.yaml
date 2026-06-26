@@ -1,0 +1,25 @@
+{{- if .Values.metrics.enabled }}
+# Tells the Prometheus Operator (from kube-prometheus-stack) to scrape the backend
+# Service. Requires the operator's CRDs to exist in the cluster, which is why this is
+# gated behind metrics.enabled (default false) — installs without the operator skip it.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "footballhub.fullname" . }}-backend
+  labels:
+    {{- include "footballhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+    {{- with .Values.metrics.serviceMonitorLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "footballhub.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http # the named port on the backend Service
+      path: {{ .Values.metrics.path | quote }}
+      interval: {{ .Values.metrics.interval }}
+{{- end }}
