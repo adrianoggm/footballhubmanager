@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from uvicorn import run
 
@@ -218,6 +219,10 @@ app = FastAPI(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(RateLimitMiddleware, config=_resolve_rate_limit_config())
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
+# Prometheus metrics. instrument() adds the metrics middleware; it must go on
+# before CORS so CORS stays the outermost layer (see the ordering note above).
+# The /metrics route is added by expose() after the routers, below.
+_instrumentator = Instrumentator().instrument(app)
 cors_origins = _resolve_cors_origins()
 app.add_middleware(
     CORSMiddleware,
@@ -254,6 +259,9 @@ async def health_check():
 
 # Include routers
 app.include_router(api_router)
+
+# Expose GET /metrics (Prometheus scrape target). Kept out of the OpenAPI schema.
+_instrumentator.expose(app, include_in_schema=False)
 
 if __name__ == "__main__":
     logger.info(
