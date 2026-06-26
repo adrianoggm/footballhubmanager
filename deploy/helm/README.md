@@ -88,10 +88,21 @@ helm upgrade --install loki grafana/loki-stack \
 ```bash
 helm upgrade --install fhm deploy/helm/footballhub \
   --set image.tag=1.2.0 \
-  --set metrics.enabled=true
+  --set metrics.enabled=true \
+  --set metrics.alerts.enabled=true \
+  --set metrics.dashboard.enabled=true
 # If you installed the stack under a different release name, also pass:
 #   --set metrics.serviceMonitorLabels.release=<that-name>
 ```
+
+`metrics.alerts.enabled` ships a `PrometheusRule` (backend down, 5xx rate, p99
+latency, crashloop). Wiring those alerts to Slack/email is Alertmanager config on the
+kube-prometheus-stack release, not this chart. `metrics.dashboard.enabled` ships the
+backend Grafana dashboard as a sidecar-loaded ConfigMap, so it survives restarts.
+
+> The backend's `/api/metrics` is reachable in-cluster but **blocked at the ingress**
+> (returns 403 externally) — the scrape hits the pod directly, so this only closes
+> public access.
 
 ### 4. Open Grafana
 
@@ -119,3 +130,23 @@ cd backend && .venv/Scripts/python.exe -m pytest tests/integration/test_observab
 It asserts Prometheus reports the backend target `up == 1` and that Loki has recent
 backend log lines. It **skips** (not fails) when those endpoints are unreachable, so
 it is safe to leave in the suite.
+
+### MySQL metrics (optional)
+
+The HTTP metrics above cover app-side connections. For DB-side signals (connections,
+slow queries, throughput) add the standard exporter as another release — it scrapes
+MySQL and the operator picks it up:
+
+```bash
+helm upgrade --install mysql-exporter \
+  prometheus-community/prometheus-mysql-exporter \
+  --namespace monitoring \
+  --set mysql.host=fhm-footballhub-mysql \
+  --set mysql.user=footballuser \
+  --set mysql.pass=<password> \
+  --set serviceMonitor.enabled=true \
+  --set serviceMonitor.additionalLabels.release=kube-prometheus-stack
+```
+
+Import dashboard ID `14057` (MySQL exporter) in Grafana. Skip this entirely if
+app-side connection metrics are enough.
