@@ -24,6 +24,20 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 
+def register_once(registry, collector) -> None:
+    """Register a collector, tolerating a repeat registration.
+
+    ``python src/main.py`` runs the module as ``__main__`` and then uvicorn
+    re-imports it as ``main`` to serve ``main:app`` — so module-level registration
+    runs twice against the shared default registry. The second one would raise
+    "Duplicated timeseries"; swallow it (the metric is already there).
+    """
+    try:
+        registry.register(collector)
+    except ValueError:
+        logger.debug("collector already registered, skipping duplicate")
+
+
 class ActiveSessionsCollector(Collector):
     """Exposes ``footballhub_active_sessions`` — non-expired user sessions."""
 

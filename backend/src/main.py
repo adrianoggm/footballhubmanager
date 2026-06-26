@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from metrics_collectors import ActiveSessionsCollector
+from metrics_collectors import ActiveSessionsCollector, register_once
 from observability_logging import RequestIdMiddleware, configure_logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
@@ -226,8 +226,9 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts()
 # The /metrics route is added by expose() after the routers, below.
 _instrumentator = Instrumentator().instrument(app)
 # Business metric: logged-in users. Registers on the default registry, so it shows
-# up alongside the HTTP metrics at /metrics.
-_instrumentator.registry.register(ActiveSessionsCollector(SessionLocal))
+# up alongside the HTTP metrics at /metrics. Idempotent: the module is imported twice
+# under `python src/main.py` (as __main__, then re-imported as `main` by uvicorn).
+register_once(_instrumentator.registry, ActiveSessionsCollector(SessionLocal))
 cors_origins = _resolve_cors_origins()
 app.add_middleware(
     CORSMiddleware,

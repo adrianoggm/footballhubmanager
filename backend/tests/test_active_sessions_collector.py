@@ -8,7 +8,8 @@ os.environ.setdefault("DB_NAME", "footballhub")
 os.environ.setdefault("DB_USER", "footballuser")
 os.environ.setdefault("DB_PASSWORD", "footballpass")
 
-from metrics_collectors import ActiveSessionsCollector
+from metrics_collectors import ActiveSessionsCollector, register_once
+from prometheus_client import CollectorRegistry
 
 
 class _FakeResult:
@@ -58,3 +59,14 @@ def test_db_failure_drops_sample_without_raising():
     samples = _sample_value(collector)
 
     assert samples == []  # metric still declared, just no value this scrape
+
+
+def test_register_once_tolerates_duplicate():
+    # Mirrors the __main__ + uvicorn double-import: registering twice must not raise.
+    # auto_describe=True matches the global prometheus_client.REGISTRY, where the
+    # duplicate is actually detected (it extracts names via collect() at register).
+    registry = CollectorRegistry(auto_describe=True)
+    register_once(registry, ActiveSessionsCollector(lambda: _FakeSession(0)))
+    register_once(registry, ActiveSessionsCollector(lambda: _FakeSession(0)))
+
+    assert "footballhub_active_sessions" in registry._names_to_collectors
