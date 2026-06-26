@@ -7,26 +7,29 @@ from contextlib import asynccontextmanager
 # Add src to path
 sys.path.append(os.path.dirname(__file__))
 
-if not logging.getLogger().handlers:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
-
 from api.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware, RateLimitRule
 from api.module import api_router
 from app.config import config as app_config
-from app.module import engine
+from app.module import SessionLocal, engine
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from metrics_collectors import ActiveSessionsCollector, register_once
+from observability_logging import RequestIdMiddleware, configure_logging
+from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from uvicorn import run
 
 # Logger
 logger = logging.getLogger(__name__)
+
+# JSON logs in the cluster (Loki/LogQL), human-readable text in local dev.
+configure_logging(
+    json_logs=os.getenv("APP_ENV", "production").strip().lower()
+    not in {"dev", "development", "local", "test"}
+)
 
 
 def _app_env() -> str:
@@ -218,6 +221,14 @@ app = FastAPI(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(RateLimitMiddleware, config=_resolve_rate_limit_config())
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=_resolve_allowed_hosts())
+# Prometheus metrics. instrument() adds the metrics middleware; it must go on
+# before CORS so CORS stays the outermost layer (see the ordering note above).
+# The /metrics route is added by expose() after the routers, below.
+_instrumentator = Instrumentator().instrument(app)
+# Business metric: logged-in users. Registers on the default registry, so it shows
+# up alongside the HTTP metrics at /metrics. Idempotent: the module is imported twice
+# under `python src/main.py` (as __main__, then re-imported as `main` by uvicorn).
+register_once(_instrumentator.registry, ActiveSessionsCollector(SessionLocal))
 cors_origins = _resolve_cors_origins()
 app.add_middleware(
     CORSMiddleware,
@@ -226,6 +237,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Outermost layer: stamp every request with a correlation id and bind it to the log
+# context, so all log lines for one request share an X-Request-ID you can grep on.
+app.add_middleware(RequestIdMiddleware)
 
 
 # Global exception handler
@@ -254,6 +268,9 @@ async def health_check():
 
 # Include routers
 app.include_router(api_router)
+
+# Expose GET /metrics (Prometheus scrape target). Kept out of the OpenAPI schema.
+_instrumentator.expose(app, include_in_schema=False)
 
 if __name__ == "__main__":
     logger.info(

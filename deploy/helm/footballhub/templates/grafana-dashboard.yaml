@@ -1,0 +1,15 @@
+{{- if .Values.metrics.dashboard.enabled }}
+# Auto-loaded by the kube-prometheus-stack Grafana sidecar, which imports any
+# ConfigMap carrying the label below. Survives Grafana restarts (unlike a manual
+# UI import) and keeps the dashboard versioned in git.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "footballhub.fullname" . }}-grafana-dashboard
+  labels:
+    {{- include "footballhub.labels" . | nindent 4 }}
+    {{ .Values.metrics.dashboard.sidecarLabel }}: "1"
+data:
+  footballhub-backend.json: |-
+{{ .Files.Get "dashboards/footballhub-backend.json" | indent 4 }}
+{{- end }}
