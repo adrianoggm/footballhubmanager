@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from itertools import combinations
 
 from core.application.models import MatchDetail, MatchPlayerStats
 
@@ -7,10 +8,13 @@ from core.application.models import MatchDetail, MatchPlayerStats
 class MatchInsightsAccumulator:
     player_stats: dict[str, dict] = field(default_factory=dict)
     pair_stats: dict[str, dict] = field(default_factory=dict)
+    trio_stats: dict[str, dict] = field(default_factory=dict)
     teammate_graph: dict[str, dict[str, dict]] = field(default_factory=dict)
     seasons_in_report: set[str] = field(default_factory=set)
     season_aggregate_by_guid: dict[str, dict] = field(default_factory=dict)
     match_timeline_raw: list[dict] = field(default_factory=list)
+    position_stats: dict[str, dict] = field(default_factory=dict)
+    rating_bucket_counts: dict[int, int] = field(default_factory=dict)
     matches_analyzed: int = 0
     total_goals: int = 0
     total_assists: int = 0
@@ -27,6 +31,8 @@ class MatchInsightsReportBuilder:
         matrix_size: int,
         top_pairs_size: int,
         leaders_size: int,
+        goal_event_seconds: list[int] | None = None,
+        top_trios_size: int = 10,
     ) -> dict:
         state = MatchInsightsAccumulator()
         for detail in match_details:
@@ -36,7 +42,9 @@ class MatchInsightsReportBuilder:
         player_labels = {
             guid: str(player.get("label") or guid) for guid, player in state.player_stats.items()
         }
-        pair_rows = cls._build_pair_rows(state.pair_stats, player_labels)
+        win_rate_by_guid = {player["guid"]: player["win_rate"] for player in players}
+        pair_rows = cls._build_pair_rows(state.pair_stats, player_labels, win_rate_by_guid)
+        trio_rows = cls._build_trio_rows(state.trio_stats, player_labels, win_rate_by_guid)
         top_teammates_by_player = cls._build_top_teammates(
             players=players,
             teammate_graph=state.teammate_graph,
@@ -58,6 +66,7 @@ class MatchInsightsReportBuilder:
                 state.matches_analyzed * 2,
             ),
             "top_pairs": pair_rows[:top_pairs_size],
+            "top_trios": trio_rows[:top_trios_size],
             "top_teammates_by_player": top_teammates_by_player,
             "matrix_players": matrix_players,
             "matrix_rows": cls._build_matrix_rows(matrix_players, state.pair_stats),
@@ -65,6 +74,9 @@ class MatchInsightsReportBuilder:
             "timeline_by_season": cls._build_season_timeline(
                 state.season_aggregate_by_guid,
             ),
+            "position_breakdown": cls._build_position_breakdown(state.position_stats),
+            "rating_distribution": cls._build_rating_distribution(state.rating_bucket_counts),
+            "goal_timeline": cls._build_goal_timeline(goal_event_seconds or []),
             "leaders": {
                 "scorers": cls._top_by_metric(players, "goals", leaders_size),
                 "assisters": cls._top_by_metric(players, "assists", leaders_size),
@@ -159,14 +171,22 @@ class MatchInsightsReportBuilder:
             if not summary:
                 continue
 
+            player_goals = cls._safe_int(player.goals)
             player_assists = cls._safe_int(player.assists)
             player_saves = cls._safe_int(player.saves)
+            player_rating = cls._safe_rating(player.rating)
 
             summary["appearances"] += 1
-            summary["goals"] += cls._safe_int(player.goals)
+            summary["goals"] += player_goals
             summary["assists"] += player_assists
             summary["saves"] += player_saves
+            if player_rating > 0:
+                summary["rating_sum"] += player_rating
+                summary["rating_count"] += 1
             cls._with_outcome(summary, outcome)
+
+            cls._accumulate_position(state, player.position, player_goals, player_assists)
+            cls._accumulate_rating_bucket(state, player_rating)
 
             state.total_assists += player_assists
             state.total_saves += player_saves
@@ -174,11 +194,25 @@ class MatchInsightsReportBuilder:
             saves += player_saves
 
         cls._accumulate_team_pairs(state, players, outcome)
+        cls._accumulate_team_trios(state, players, outcome)
         return {
             "assists": assists,
             "saves": saves,
             "lineup_entries": len(players),
         }
+
+    @classmethod
+    def _accumulate_team_trios(
+        cls,
+        state: MatchInsightsAccumulator,
+        players: list[MatchPlayerStats],
+        outcome: str,
+    ) -> None:
+        guids = [guid for guid in (str(p.player_guid or "").strip() for p in players) if guid]
+        for combo in combinations(guids, 3):
+            trio = cls._ensure_trio(state, combo)
+            trio["matches"] += 1
+            cls._with_outcome(trio, outcome)
 
     @classmethod
     def _accumulate_team_pairs(
@@ -214,6 +248,7 @@ class MatchInsightsReportBuilder:
             {
                 **player,
                 "win_rate": cls._rate(player["wins"], player["appearances"]),
+                "rating": cls._rate(player["rating_sum"], player["rating_count"]),
             }
             for player in player_stats.values()
         ]
@@ -225,6 +260,7 @@ class MatchInsightsReportBuilder:
         cls,
         pair_stats: dict[str, dict],
         player_labels: dict[str, str],
+        win_rate_by_guid: dict[str, float],
     ) -> list[dict]:
         pair_rows = []
         for pair in pair_stats.values():
@@ -234,11 +270,48 @@ class MatchInsightsReportBuilder:
                 {
                     **pair,
                     "label": f"{left_label} + {right_label}",
+                    "left_win_rate": win_rate_by_guid.get(pair["leftGuid"], 0.0),
+                    "right_win_rate": win_rate_by_guid.get(pair["rightGuid"], 0.0),
+                    "left_label": left_label,
+                    "right_label": right_label,
                     "win_rate": cls._rate(pair["wins"], pair["matches"]),
                 }
             )
         pair_rows.sort(key=lambda item: (-item["matches"], -item["wins"]))
         return pair_rows
+
+    @classmethod
+    def _build_trio_rows(
+        cls,
+        trio_stats: dict[str, dict],
+        player_labels: dict[str, str],
+        win_rate_by_guid: dict[str, float],
+    ) -> list[dict]:
+        trio_rows = []
+        for trio in trio_stats.values():
+            guids = trio["guids"]
+            members = [
+                {
+                    "guid": guid,
+                    "label": player_labels.get(guid, guid),
+                    "win_rate": win_rate_by_guid.get(guid, 0.0),
+                }
+                for guid in guids
+            ]
+            trio_rows.append(
+                {
+                    "guids": guids,
+                    "label": " + ".join(member["label"] for member in members),
+                    "matches": trio["matches"],
+                    "wins": trio["wins"],
+                    "draws": trio["draws"],
+                    "losses": trio["losses"],
+                    "win_rate": cls._rate(trio["wins"], trio["matches"]),
+                    "members": members,
+                }
+            )
+        trio_rows.sort(key=lambda item: (-item["matches"], -item["wins"]))
+        return trio_rows
 
     @classmethod
     def _build_top_teammates(
@@ -400,6 +473,57 @@ class MatchInsightsReportBuilder:
         ]
 
     @classmethod
+    def _build_position_breakdown(cls, position_stats: dict[str, dict]) -> list[dict]:
+        rows = [
+            {
+                "position": position,
+                "goals": data["goals"],
+                "assists": data["assists"],
+                "appearances": data["appearances"],
+            }
+            for position, data in position_stats.items()
+        ]
+        rows.sort(key=lambda item: (-item["goals"], -item["assists"], item["position"]))
+        return rows
+
+    @classmethod
+    def _build_rating_distribution(cls, bucket_counts: dict[int, int]) -> list[dict]:
+        if not bucket_counts:
+            return []
+        return [{"bucket": index, "count": bucket_counts.get(index, 0)} for index in range(10)]
+
+    @classmethod
+    def _build_goal_timeline(cls, goal_event_seconds: list[int]) -> list[dict]:
+        if not goal_event_seconds:
+            return []
+        band_minutes = 10
+        counts: dict[int, int] = {}
+        max_band = 0
+        for seconds in goal_event_seconds:
+            minute = max(0, cls._safe_int(seconds)) // 60
+            # ponytail: clamp runaway timestamps to a <=170min band so a bad clock
+            # can't explode the timeline; widen the cap if real matches run longer.
+            band = min(minute // band_minutes, 17)
+            counts[band] = counts.get(band, 0) + 1
+            max_band = max(max_band, band)
+
+        timeline = []
+        cumulative = 0
+        for band in range(max_band + 1):
+            goals = counts.get(band, 0)
+            cumulative += goals
+            timeline.append(
+                {
+                    "bucket": band,
+                    "minute_from": band * band_minutes,
+                    "minute_to": (band + 1) * band_minutes,
+                    "goals": goals,
+                    "cumulative_goals": cumulative,
+                }
+            )
+        return timeline
+
+    @classmethod
     def _top_by_metric(cls, players: list[dict], metric: str, size: int) -> list[dict]:
         ordered = sorted(
             players,
@@ -442,6 +566,8 @@ class MatchInsightsReportBuilder:
                 "goals": 0,
                 "assists": 0,
                 "saves": 0,
+                "rating_sum": 0.0,
+                "rating_count": 0,
             }
         return state.player_stats[guid]
 
@@ -463,6 +589,20 @@ class MatchInsightsReportBuilder:
                 "losses": 0,
             }
         return state.pair_stats[key]
+
+    @staticmethod
+    def _ensure_trio(state: MatchInsightsAccumulator, guids: tuple[str, ...]) -> dict:
+        ordered = tuple(sorted(guids))
+        key = "::".join(ordered)
+        if key not in state.trio_stats:
+            state.trio_stats[key] = {
+                "guids": list(ordered),
+                "matches": 0,
+                "wins": 0,
+                "draws": 0,
+                "losses": 0,
+            }
+        return state.trio_stats[key]
 
     @staticmethod
     def _ensure_edge(
@@ -500,6 +640,26 @@ class MatchInsightsReportBuilder:
         return state.season_aggregate_by_guid[season_guid]
 
     @staticmethod
+    def _accumulate_position(
+        state: MatchInsightsAccumulator,
+        position: str | None,
+        goals: int,
+        assists: int,
+    ) -> None:
+        key = str(position or "").strip()
+        bucket = state.position_stats.setdefault(key, {"goals": 0, "assists": 0, "appearances": 0})
+        bucket["goals"] += goals
+        bucket["assists"] += assists
+        bucket["appearances"] += 1
+
+    @staticmethod
+    def _accumulate_rating_bucket(state: MatchInsightsAccumulator, rating: float) -> None:
+        if rating <= 0:
+            return
+        index = min(9, int(rating))
+        state.rating_bucket_counts[index] = state.rating_bucket_counts.get(index, 0) + 1
+
+    @staticmethod
     def _with_outcome(summary: dict, outcome: str) -> None:
         if outcome == "win":
             summary["wins"] += 1
@@ -522,6 +682,13 @@ class MatchInsightsReportBuilder:
             return int(value)
         except (TypeError, ValueError):
             return 0
+
+    @staticmethod
+    def _safe_rating(value) -> float:
+        try:
+            return max(float(value), 0.0)
+        except (TypeError, ValueError):
+            return 0.0
 
     @staticmethod
     def _player_label(

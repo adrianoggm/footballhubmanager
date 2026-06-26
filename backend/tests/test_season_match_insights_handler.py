@@ -23,16 +23,150 @@ class _FakeRepo:
     rows: list[MatchInsightRow] | None = None
     error: Exception | None = None
     last_payload: dict | None = None
+    goal_event_seconds: list[int] | None = None
 
-    def list_closed_match_insight_rows(self, *, pena_guid: str, season_guids: list[str]):
-        self.last_payload = {"pena_guid": pena_guid, "season_guids": season_guids}
+    def list_closed_match_insight_rows(
+        self, *, pena_guid: str, season_guids: list[str], date_from=None, date_to=None
+    ):
+        self.last_payload = {
+            "pena_guid": pena_guid,
+            "season_guids": season_guids,
+            "date_from": date_from,
+            "date_to": date_to,
+        }
         if self.error:
             raise self.error
         return list(self.rows or [])
 
+    def list_goal_event_seconds(
+        self, *, pena_guid: str, season_guids: list[str], date_from=None, date_to=None
+    ):
+        if self.error:
+            raise self.error
+        return list(self.goal_event_seconds or [])
+
 
 def _handle(repo, **kwargs):
     return GetSeasonMatchInsightsHandler(repo).handle(GetSeasonMatchInsightsQuery(**kwargs))
+
+
+def _row(side, guid, name, **kwargs):
+    base = dict(
+        season_guid="season-guid",
+        match_guid="match-closed",
+        match_date=date(2024, 3, 1),
+        home_score=2,
+        away_score=1,
+        team_side=side,
+        player_guid=guid,
+        player_name=name,
+        player_surname1=name[0],
+        player_surname2=None,
+        player_nickname=None,
+        goals=0,
+        assists=0,
+        saves=0,
+    )
+    base.update(kwargs)
+    return MatchInsightRow(**base)
+
+
+def test_builds_position_breakdown_rating_distribution_and_leader_rating():
+    repo = _FakeRepo(
+        rows=[
+            _row("home", "a", "Ana", goals=2, assists=1, player_position="DEL", rating=8.0),
+            _row("home", "b", "Beto", saves=3, player_position="GK", rating=7.0),
+            _row("away", "c", "Cora", goals=1, player_position="DEL", rating=6.5),
+            _row("away", "d", "Dani", player_position=None, rating=0.0),
+        ]
+    )
+
+    report = _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=4,
+        top_pairs_size=3,
+        leaders_size=3,
+    )
+
+    breakdown = {row["position"]: row for row in report["position_breakdown"]}
+    assert breakdown["DEL"]["goals"] == 3
+    assert breakdown["DEL"]["assists"] == 1
+    assert breakdown["DEL"]["appearances"] == 2
+    assert breakdown["GK"]["goals"] == 0
+    assert breakdown[""]["appearances"] == 1  # null position bucketed under ""
+
+    # 10 fixed buckets; rated entries 8.0/7.0/6.5 land in buckets 8/7/6, the 0.0 is ignored.
+    distribution = {row["bucket"]: row["count"] for row in report["rating_distribution"]}
+    assert len(report["rating_distribution"]) == 10
+    assert distribution[8] == 1 and distribution[7] == 1 and distribution[6] == 1
+    assert distribution[0] == 0
+
+    top_scorer = report["leaders"]["scorers"][0]
+    assert top_scorer["guid"] == "a"
+    assert top_scorer["rating"] == 8.0
+
+
+def test_builds_goal_timeline_from_event_seconds():
+    # Goals at 3min, 8min (band 0), 12min (band 1), 45min (band 4).
+    repo = _FakeRepo(
+        rows=[
+            _row("home", "a", "Ana", goals=2),
+            _row("away", "c", "Cora", goals=2),
+        ],
+        goal_event_seconds=[180, 480, 720, 2700],
+    )
+
+    report = _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=2,
+        top_pairs_size=1,
+        leaders_size=1,
+    )
+
+    timeline = report["goal_timeline"]
+    assert [band["goals"] for band in timeline] == [2, 1, 0, 0, 1]
+    assert [band["cumulative_goals"] for band in timeline] == [2, 3, 3, 3, 4]
+    assert timeline[0]["minute_from"] == 0 and timeline[0]["minute_to"] == 10
+    assert timeline[4]["minute_from"] == 40
+
+
+def test_goal_timeline_empty_when_no_events():
+    repo = _FakeRepo(rows=[_row("home", "a", "Ana", goals=1), _row("away", "c", "Cora", goals=1)])
+    report = _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=2,
+        top_pairs_size=1,
+        leaders_size=1,
+    )
+    assert report["goal_timeline"] == []
+
+
+def test_rating_distribution_empty_when_no_ratings():
+    repo = _FakeRepo(
+        rows=[
+            _row("home", "a", "Ana", goals=1),
+            _row("away", "c", "Cora", goals=1),
+        ]
+    )
+    report = _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=2,
+        top_pairs_size=1,
+        leaders_size=1,
+    )
+    assert report["rating_distribution"] == []
 
 
 def test_validates_payload():
@@ -157,7 +291,62 @@ def test_computes_report_from_closed_matches():
         "win_rate": 1.0,
     }
     assert len(report["leaders"]["scorers"]) == 2
-    assert repo.last_payload == {"pena_guid": "pena-guid", "season_guids": ["season-guid"]}
+    first_pair = report["top_pairs"][0]
+    assert first_pair["left_win_rate"] == 1.0  # player-a won its only match
+    assert first_pair["right_win_rate"] == 1.0
+    assert first_pair["left_label"] and first_pair["right_label"]
+    # home team had players a + b → exactly one trio is impossible (needs 3), so with
+    # 2 per team there are no trios; assert the field exists and is empty here.
+    assert report["top_trios"] == []
+    assert repo.last_payload["pena_guid"] == "pena-guid"
+    assert repo.last_payload["season_guids"] == ["season-guid"]
+
+
+def test_builds_top_trios_from_three_player_lineups():
+    # Home team has 3 players (a, b, c) → exactly one trio; home wins (2-1).
+    repo = _FakeRepo(
+        rows=[
+            _row("home", "a", "Ana", goals=2),
+            _row("home", "b", "Beto", goals=0),
+            _row("home", "c", "Cora", goals=0),
+            _row("away", "d", "Dani", goals=1),
+            _row("away", "e", "Edu", goals=0),
+            _row("away", "f", "Fer", goals=0),
+        ]
+    )
+    report = _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=6,
+        top_pairs_size=10,
+        leaders_size=3,
+    )
+    trios = report["top_trios"]
+    home_trio = next(t for t in trios if set(t["guids"]) == {"a", "b", "c"})
+    assert home_trio["matches"] == 1
+    assert home_trio["wins"] == 1
+    assert home_trio["win_rate"] == 1.0
+    assert len(home_trio["members"]) == 3
+    assert home_trio["label"].count("+") == 2
+
+
+def test_passes_date_range_to_repository():
+    repo = _FakeRepo(rows=[_row("home", "a", "Ana", goals=1), _row("away", "c", "Cora", goals=1)])
+    _handle(
+        repo,
+        pena_guid="pena-guid",
+        season_guids=["season-guid"],
+        scope="selected_season",
+        matrix_size=2,
+        top_pairs_size=1,
+        leaders_size=1,
+        date_from=date(2024, 1, 1),
+        date_to=date(2024, 6, 30),
+    )
+    assert repo.last_payload["date_from"] == date(2024, 1, 1)
+    assert repo.last_payload["date_to"] == date(2024, 6, 30)
 
 
 def test_computes_running_timeline_metrics_across_matches():

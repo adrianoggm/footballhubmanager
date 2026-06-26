@@ -6,6 +6,7 @@ from core.application.ports.season_competition_port import (
 from core.application.ports.season_match_insights_port import SeasonMatchInsightsPort
 from persistence.infrastructure.entity import (
     FootballMatch,
+    FootballMatchEvent,
     Pena,
     PenaPlayer,
     Player,
@@ -26,6 +27,8 @@ class SqlAlchemySeasonMatchInsightsRepository(SeasonMatchInsightsPort):
         *,
         pena_guid: str,
         season_guids: list[str],
+        date_from=None,
+        date_to=None,
     ) -> list[MatchInsightRow]:
         pena = self._get_pena(pena_guid)
         season_ids_by_guid = self._get_requested_season_ids(
@@ -87,7 +90,10 @@ class SqlAlchemySeasonMatchInsightsRepository(SeasonMatchInsightsPort):
                     SeasonPlayer.id_season == Season.id,
                 ),
             )
-            .where(FootballMatch.id_season.in_(season_ids_by_guid.values()))
+            .where(
+                FootballMatch.id_season.in_(season_ids_by_guid.values()),
+                *self._date_conditions(date_from, date_to),
+            )
             .where(
                 home_team_stats.c.min_rating.is_not(None),
                 away_team_stats.c.min_rating.is_not(None),
@@ -103,6 +109,44 @@ class SqlAlchemySeasonMatchInsightsRepository(SeasonMatchInsightsPort):
         ).all()
 
         return [self._to_match_insight_row(row) for row in rows]
+
+    def list_goal_event_seconds(
+        self,
+        *,
+        pena_guid: str,
+        season_guids: list[str],
+        date_from=None,
+        date_to=None,
+    ) -> list[int]:
+        pena = self._get_pena(pena_guid)
+        season_ids_by_guid = self._get_requested_season_ids(
+            pena_id=pena.id,
+            season_guids=season_guids,
+        )
+        if not season_ids_by_guid:
+            return []
+
+        rows = self.session.execute(
+            select(FootballMatchEvent.elapsed_seconds)
+            .select_from(FootballMatchEvent)
+            .join(FootballMatch, FootballMatch.id == FootballMatchEvent.id_match)
+            .where(
+                FootballMatch.id_season.in_(season_ids_by_guid.values()),
+                FootballMatch.status == "closed",
+                FootballMatchEvent.event_type == "goal",
+                *self._date_conditions(date_from, date_to),
+            )
+        ).all()
+        return [int(row.elapsed_seconds) for row in rows if row.elapsed_seconds is not None]
+
+    @staticmethod
+    def _date_conditions(date_from, date_to):
+        conditions = []
+        if date_from is not None:
+            conditions.append(FootballMatch.match_date >= date_from)
+        if date_to is not None:
+            conditions.append(FootballMatch.match_date <= date_to)
+        return conditions
 
     def _get_pena(self, pena_guid: str) -> Pena:
         pena = self.session.execute(select(Pena).where(Pena.guid == pena_guid)).scalar_one_or_none()
