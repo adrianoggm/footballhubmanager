@@ -20,7 +20,10 @@ class _Connection:
 
 def test_resolve_allowed_hosts_uses_explicit_env(monkeypatch):
     monkeypatch.setenv("ALLOWED_HOSTS", "api.example.com, app.example.com ,  ")
-    assert _resolve_allowed_hosts() == ["api.example.com", "app.example.com"]
+    hosts = _resolve_allowed_hosts()
+    assert hosts[:2] == ["api.example.com", "app.example.com"]
+    # Loopback is always appended so health probes pass.
+    assert "localhost" in hosts and "127.0.0.1" in hosts
 
 
 def test_resolve_allowed_hosts_uses_dev_defaults(monkeypatch):
@@ -35,7 +38,8 @@ def test_resolve_allowed_hosts_uses_dev_defaults(monkeypatch):
 def test_resolve_allowed_hosts_uses_safe_prod_default(monkeypatch):
     monkeypatch.delenv("ALLOWED_HOSTS", raising=False)
     monkeypatch.setenv("APP_ENV", "production")
-    assert _resolve_allowed_hosts() == ["localhost"]
+    # Prod denies by default except loopback (for health probes); no public host.
+    assert _resolve_allowed_hosts() == ["localhost", "127.0.0.1"]
 
 
 def test_db_startup_retries_parses_and_clamps(monkeypatch):

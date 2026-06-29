@@ -35,12 +35,20 @@ spec:
             httpGet:
               path: /api/
               port: http
+              # TrustedHostMiddleware checks Host; probes hit the pod IP, so send a
+              # Host the app always allows (loopback) regardless of ALLOWED_HOSTS.
+              httpHeaders:
+                - name: Host
+                  value: localhost
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/
               port: http
+              httpHeaders:
+                - name: Host
+                  value: localhost
             initialDelaySeconds: 15
             periodSeconds: 20
           resources:

@@ -56,13 +56,19 @@ def _resolve_allowed_hosts() -> list[str]:
     raw_hosts = os.getenv("ALLOWED_HOSTS")
     if raw_hosts:
         hosts = [host.strip() for host in raw_hosts.split(",") if host.strip()]
-        if hosts:
-            return hosts
+    elif _app_env() in {"dev", "development", "local", "test"}:
+        hosts = ["localhost", "127.0.0.1", "::1", "testserver"]
+    else:
+        hosts = []
 
-    app_env = _app_env()
-    if app_env in {"dev", "development", "local", "test"}:
-        return ["localhost", "127.0.0.1", "::1", "testserver"]
-    return ["localhost"]
+    # Always allow loopback so in-cluster health probes (which send Host: localhost,
+    # not the configured public host) pass regardless of ALLOWED_HOSTS. Skip when "*"
+    # already allows everything.
+    if "*" not in hosts:
+        for loopback in ("localhost", "127.0.0.1"):
+            if loopback not in hosts:
+                hosts.append(loopback)
+    return hosts
 
 
 def _resolve_cors_origins() -> list[str]:
