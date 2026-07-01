@@ -138,6 +138,7 @@ Use these local skills when the task matches:
 Repository-managed hooks live in `.githooks/`.
 
 - Install them once per clone with `just install-hooks`
+- Enable the shared commit template once per clone with `git config commit.template .gitmessage` (Conventional Commits: `type(scope): subject`)
 - `pre-commit` runs targeted lint/format checks for staged backend/frontend changes
 - `pre-push` runs full impacted quality gates before pushing
 
