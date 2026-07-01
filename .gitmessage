@@ -1,0 +1,9 @@
+# <type>(<scope>): <subject>   (≤72 chars, imperative: "add" not "added")
+#
+# <body: what & why, wrap at 72>
+#
+# Refs: #<issue>
+#
+# ── type ──  feat | fix | docs | test | refactor | chore | perf | ci | build
+# ── scope ── backend | frontend | helm | deploy | db | auth | observability | audit
+# Example:  feat(backend): expose prometheus metrics endpoint
