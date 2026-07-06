@@ -67,7 +67,7 @@ function ClassificationTable({ standings, t }) {
               <TableCell align="right">{p.wins}</TableCell>
               <TableCell align="right">{p.draws}</TableCell>
               <TableCell align="right">{p.losses}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800, color: 'secondary.main' }}>
+              <TableCell align="right" sx={{ fontWeight: 800, color: '#DF9F80' }}>
                 {p.points}
               </TableCell>
             </TableRow>
@@ -80,7 +80,7 @@ function ClassificationTable({ standings, t }) {
 
 export default function StatCarousel({ standings = [], allMatches = [], t }) {
   const theme = useTheme()
-  const accent = theme.palette.secondary.main
+  const accent = '#DF9F80'
   const [index, setIndex] = useState(0)
 
   const goalsByMatchday = useMemo(
@@ -102,7 +102,7 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
   const go = (delta) => setIndex((i) => (i + delta + VIEWS.length) % VIEWS.length)
 
   return (
-    <Card>
+    <Card sx={{ height: '100%' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
           <Stack direction="row" alignItems="center" spacing={1}>
