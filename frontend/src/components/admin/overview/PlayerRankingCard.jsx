@@ -8,7 +8,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
   const theme = useTheme()
   const top5 = [...standings].sort((a, b) => b.points - a.points).slice(0, 5)
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: '100%', backgroundColor: '#41312A' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">{t('dashboard.admin.overview.rankingTitle')}</Typography>
@@ -41,7 +41,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
                 <Typography variant="body2">
                   {i + 1}. {playerName(p)}
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: 'secondary.main' }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#DF9F80' }}>
                   {t('dashboard.admin.overview.rankingLineItem', {
                     played: played(p),
                     wins: p.wins,
