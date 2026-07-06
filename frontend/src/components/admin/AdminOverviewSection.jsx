@@ -93,12 +93,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
             </CardContent>
           </Card>
         ) : (
-          <StatCarousel
-            standings={standings}
-            matches={overviewSeasonMatches}
-            allMatches={allSeasonMatches}
-            t={t}
-          />
+          <StatCarousel standings={standings} allMatches={allSeasonMatches} t={t} />
         )}
       </Grid>
 
