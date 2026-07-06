@@ -204,7 +204,7 @@ function DashboardStatGlyph({ tone }) {
   )
 }
 
-function DashboardStatCard({ item }) {
+export function DashboardStatCard({ item }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const geometry = getDashboardGeometry(theme)

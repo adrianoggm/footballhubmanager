@@ -16,6 +16,7 @@ import {
   Typography,
 } from '@mui/material'
 import { EmptyState } from '../common'
+import OverviewDatacards from './overview/OverviewDatacards.jsx'
 
 /**
  * Admin overview: invite-code generation, standings snapshot, and season-matches
@@ -35,12 +36,17 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     overviewSeasonMatches,
     overviewMatchesSummary,
     overviewMatchLoading,
+    overviewDatacards,
   } = state
   const { onGenerateJoinCode, onRefreshStandings, onCreateMatch, onOpenMatchDetail } = actions
   const { t, formatDate, formatEpochSeconds } = helpers
 
   return (
     <Grid container spacing={2.5} sx={{ width: '100%' }}>
+      <Grid item xs={12}>
+        <OverviewDatacards cards={overviewDatacards} />
+      </Grid>
+
       <Grid item xs={12}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
