@@ -35,7 +35,7 @@ export default function RecentMatchesCard({ matches = [], t, formatDate, onOpenM
                   {formatDate(m.match_date)} · {m.home_team_name}{' '}
                   {t('dashboard.admin.overview.versus')} {m.away_team_name}
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#DF9F80' }}>
                   {m.home_score} - {m.away_score}
                 </Typography>
               </Box>

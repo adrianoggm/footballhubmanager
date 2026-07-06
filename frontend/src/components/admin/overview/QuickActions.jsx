@@ -29,7 +29,7 @@ function ActionTile({ icon, title, desc, onClick }) {
         p: 1.75,
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.07 : 0.09)}`,
-        backgroundColor: alpha(theme.palette.background.paper, isDark ? 0.55 : 0.7),
+        backgroundColor: '#1E1E1E',
         transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
         '&:hover': {
           transform: 'translateY(-2px)',
@@ -47,7 +47,7 @@ function ActionTile({ icon, title, desc, onClick }) {
             display: 'grid',
             placeItems: 'center',
             color: accent,
-            bgcolor: alpha(accent, isDark ? 0.16 : 0.12),
+            bgcolor: 'transparent',
           }}
         >
           <Box

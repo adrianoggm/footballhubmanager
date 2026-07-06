@@ -30,7 +30,7 @@ function OverviewStatCard({ item }) {
         alignItems: 'center',
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.05 : 0.07)}`,
-        backgroundColor: '#332923',
+        backgroundColor: '#45342C',
         px: '24px',
         py: '16px',
       }}
