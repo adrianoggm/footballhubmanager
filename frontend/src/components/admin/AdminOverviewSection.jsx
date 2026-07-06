@@ -18,6 +18,7 @@ import {
 import { EmptyState } from '../common'
 import OverviewDatacards from './overview/OverviewDatacards.jsx'
 import QuickActions from './overview/QuickActions.jsx'
+import StatCarousel from './overview/StatCarousel.jsx'
 
 /**
  * Admin overview: invite-code generation, standings snapshot, and season-matches
@@ -39,7 +40,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     overviewMatchLoading,
     overviewDatacards,
   } = state
-  const { onGenerateJoinCode, onRefreshStandings, onCreateMatch, onOpenMatchDetail } = actions
+  const { onGenerateJoinCode, onCreateMatch, onOpenMatchDetail } = actions
   const { t, formatDate, formatEpochSeconds } = helpers
 
   return (
@@ -94,75 +95,15 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
       </Grid>
 
       <Grid item xs={12}>
-        <Card>
-          <CardContent>
-            <Stack spacing={2}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                alignItems={{ sm: 'center' }}
-                justifyContent="space-between"
-                spacing={1}
-              >
-                <Typography variant="h6">
-                  {t('dashboard.admin.overview.standingsSnapshotTitle')}
-                </Typography>
-                <Button
-                  variant="text"
-                  onClick={onRefreshStandings}
-                  disabled={loading || !selectedSeasonGuid}
-                >
-                  {t('dashboard.admin.overview.refreshStandings')}
-                </Button>
-              </Stack>
-              {!selectedSeasonGuid && (
-                <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
-              )}
-              {selectedSeasonGuid && (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
-                        <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {standings.slice(0, 5).map((player) => (
-                        <TableRow key={player.player_guid}>
-                          <TableCell>
-                            {player.nickname || `${player.name} ${player.surname1}`}
-                          </TableCell>
-                          <TableCell align="right">
-                            {player.played ?? player.wins + player.draws + player.losses}
-                          </TableCell>
-                          <TableCell align="right">{player.wins}</TableCell>
-                          <TableCell align="right">{player.draws}</TableCell>
-                          <TableCell align="right">{player.losses}</TableCell>
-                          <TableCell align="right">{player.goals ?? 0}</TableCell>
-                          <TableCell align="right">{player.assists ?? 0}</TableCell>
-                          <TableCell align="right">{player.points}</TableCell>
-                        </TableRow>
-                      ))}
-                      {!standings.length && (
-                        <TableRow>
-                          <TableCell colSpan={8}>
-                            {t('dashboard.admin.overview.noStandingsForSeason')}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
+        {!selectedSeasonGuid ? (
+          <Card>
+            <CardContent>
+              <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
+            </CardContent>
+          </Card>
+        ) : (
+          <StatCarousel standings={standings} matches={overviewSeasonMatches} t={t} />
+        )}
       </Grid>
 
       <Grid item xs={12}>
