@@ -369,10 +369,10 @@ export const THEME_PRESETS = {
         contrastText: '#F5F5F5',
       },
       secondary: {
-        main: '#da4416',
+        main: '#e8551f',
         light: '#F7A77F',
-        dark: '#914119',
-        contrastText: '#101820',
+        dark: '#a5380f',
+        contrastText: '#1c120d',
       },
       alternate: {
         main: '#0A3039',
@@ -390,12 +390,12 @@ export const THEME_PRESETS = {
       warning: { main: '#FFC107' },
       error: { main: '#C10000' },
       background: {
-        default: '#0F0F0F',
-        paper: '#151515',
+        default: '#160e09',
+        paper: '#241812',
       },
       text: {
-        primary: '#F5F5F5',
-        secondary: '#BABABA',
+        primary: '#f6efea',
+        secondary: '#c9b7ac',
       },
     }),
     shape: {
@@ -403,7 +403,7 @@ export const THEME_PRESETS = {
     },
     typography: lexendTypography,
     pageBackground:
-      'radial-gradient(960px 560px at 92% 6%, rgba(218, 68, 22, 0.18) 0%, rgba(218, 68, 22, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(0, 172, 193, 0.14) 0%, rgba(0, 172, 193, 0) 52%), linear-gradient(180deg, #111111 0%, #0b0b0b 100%)',
+      'radial-gradient(960px 560px at 92% 6%, rgba(232, 85, 31, 0.22) 0%, rgba(232, 85, 31, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(150, 70, 35, 0.18) 0%, rgba(150, 70, 35, 0) 52%), linear-gradient(180deg, #1a120c 0%, #100a07 100%)',
     custom: {
       radius: {
         none: 0,
