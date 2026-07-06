@@ -1903,6 +1903,7 @@ export default function AdminDashboard({
       value: selectedSeasonGuid && !seasonRosterLoading ? String(seasonRoster.length) : '-',
       helper: t('dashboard.admin.overview.registeredPlayersHelper'),
       tone: 'info',
+      icon: 'players',
     },
     {
       label: t('dashboard.admin.overview.seasonMatchesCardLabel'),
@@ -1915,12 +1916,14 @@ export default function AdminDashboard({
           })
         : t('dashboard.admin.status.noSeasonSelected'),
       tone: overviewMatchesSummary.open > 0 ? 'warning' : 'success',
+      icon: 'matches',
     },
     {
       label: t('dashboard.admin.overview.goalsScoredCard'),
       value: selectedSeasonGuid ? String(goalsScored) : '-',
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.overview.noSeasonShort'),
       tone: 'secondary',
+      icon: 'goals',
     },
     {
       label: t('dashboard.admin.overview.topScorerCard'),
@@ -1929,6 +1932,7 @@ export default function AdminDashboard({
         ? t('dashboard.admin.overview.topScorerHelper', { goals: topScorer.goals ?? 0 })
         : t('dashboard.admin.overview.noSeasonShort'),
       tone: 'success',
+      icon: 'scorer',
     },
   ]
 
