@@ -320,33 +320,6 @@ const formatEpochSeconds = (value) => {
   return new Date(value * 1000).toLocaleString()
 }
 
-// Human countdown for a season relative to today ("starts in N days" /
-// "N days left" / "ended N days ago"). Empty string when dates are missing.
-const seasonCountdown = (season, t) => {
-  if (!season?.start_date || !season?.end_date) {
-    return ''
-  }
-  const dayMs = 86_400_000
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const start = new Date(`${season.start_date}T00:00:00`)
-  const end = new Date(`${season.end_date}T00:00:00`)
-  if (today < start) {
-    return t('dashboard.admin.status.startsInDays', {
-      days: Math.round((start - today) / dayMs),
-    })
-  }
-  if (today > end) {
-    return t('dashboard.admin.status.endedDaysAgo', {
-      days: Math.round((today - end) / dayMs),
-    })
-  }
-  const daysLeft = Math.round((end - today) / dayMs)
-  return daysLeft === 0
-    ? t('dashboard.admin.status.endsToday')
-    : t('dashboard.admin.status.daysLeft', { days: daysLeft })
-}
-
 const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
 
 const formatSignedDecimal = (value, digits = 2) => {
