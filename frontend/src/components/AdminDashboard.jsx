@@ -2115,6 +2115,11 @@ export default function AdminDashboard({
               onRefreshStandings: handleRefreshStandings,
               onCreateMatch: () => handleSectionChange('matches'),
               onOpenMatchDetail: handleOpenOverviewMatchDetail,
+              onAddPlayer: () => handleSectionChange('players'),
+              onAddGuest: () => handleCreateGuestPlayer(true),
+              onAddFunds: () => handleSectionChange('accountability'),
+              onAddExpenses: () => handleSectionChange('accountability'),
+              onStandings: () => handleSectionChange('standings'),
             }}
             helpers={{
               t,

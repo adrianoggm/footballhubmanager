@@ -17,6 +17,7 @@ import {
 } from '@mui/material'
 import { EmptyState } from '../common'
 import OverviewDatacards from './overview/OverviewDatacards.jsx'
+import QuickActions from './overview/QuickActions.jsx'
 
 /**
  * Admin overview: invite-code generation, standings snapshot, and season-matches
@@ -45,6 +46,19 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     <Grid container spacing={2.5} sx={{ width: '100%' }}>
       <Grid item xs={12}>
         <OverviewDatacards cards={overviewDatacards} />
+      </Grid>
+
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Typography variant="h6">
+                {t('dashboard.admin.overview.quickActionsTitle')}
+              </Typography>
+              <QuickActions actions={actions} t={t} />
+            </Stack>
+          </CardContent>
+        </Card>
       </Grid>
 
       <Grid item xs={12}>
