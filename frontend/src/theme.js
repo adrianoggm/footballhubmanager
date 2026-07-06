@@ -724,10 +724,7 @@ const buildComponentOverrides = (palette, custom, preset) => {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          border: `${isAccentedProfile ? 2 : 1}px solid ${alpha(
-            isAccentedProfile ? palette.secondary.main : palette.text.primary,
-            isAccentedProfile ? 0.92 : isDark ? 0.14 : 0.08
-          )}`,
+          border: `1px solid ${alpha(palette.text.primary, isDark ? 0.1 : 0.08)}`,
           borderRadius: preset.shape.borderRadius,
           backgroundColor: alpha(palette.background.paper, isDark ? 0.94 : 0.9),
           boxShadow: isDark ? custom.shadows.md : '0 12px 26px rgba(15, 23, 42, 0.07)',
