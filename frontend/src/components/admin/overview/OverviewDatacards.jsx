@@ -13,15 +13,9 @@ const GLYPHS = {
     'M7 4h10v2h3v3a4 4 0 0 1-4 4h-.4A5 5 0 0 1 13 15.9V18h3v2H8v-2h3v-2.1A5 5 0 0 1 7.4 13H7a4 4 0 0 1-4-4V6h4V4Zm0 4H5v1a2 2 0 0 0 2 2V8Zm10 0v3a2 2 0 0 0 2-2V8h-2Z',
 }
 
-const toneKey = (tone) =>
-  ['primary', 'secondary', 'success', 'warning', 'info', 'error'].includes(tone)
-    ? tone
-    : 'secondary'
-
 function OverviewStatCard({ item }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
-  const accent = theme.palette[toneKey(item.tone)].main
   const radius = theme.custom?.dashboard?.radius?.surface || '14px'
   const value = String(item.value ?? '').trim() || '-'
   const long = value.length > 12
@@ -32,38 +26,37 @@ function OverviewStatCard({ item }) {
       sx={{
         position: 'relative',
         overflow: 'hidden',
-        minHeight: 108,
+        minHeight: 96,
         height: '100%',
+        display: 'flex',
+        alignItems: 'center',
         borderRadius: radius,
-        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.06 : 0.07)}`,
-        background: `linear-gradient(160deg, ${alpha(theme.palette.background.paper, 0.96)} 0%, ${alpha(
-          theme.palette.background.default,
-          isDark ? 0.85 : 0.82
-        )} 100%)`,
-        px: 1.75,
+        border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.05 : 0.07)}`,
+        backgroundColor: theme.palette.background.paper,
+        px: 2,
         py: 1.5,
       }}
     >
-      {/* watermark icon, bottom-right */}
+      {/* subtle corner icon, bottom-right */}
       <SvgIcon
         viewBox="0 0 24 24"
         sx={{
           position: 'absolute',
-          right: 10,
-          bottom: 8,
-          fontSize: 46,
-          color: alpha(accent, isDark ? 0.42 : 0.35),
+          right: 14,
+          bottom: 12,
+          fontSize: 30,
+          color: alpha(theme.palette.text.primary, isDark ? 0.16 : 0.2),
           pointerEvents: 'none',
         }}
       >
         <path d={GLYPHS[item.icon] || GLYPHS.players} fill="currentColor" fillRule="evenodd" />
       </SvgIcon>
 
-      <Stack spacing={0.5} sx={{ position: 'relative', zIndex: 1, pr: 5 }}>
+      <Stack spacing={0.35} sx={{ position: 'relative', zIndex: 1, pr: 4, width: '100%' }}>
         <Typography
           variant="overline"
           color="text.secondary"
-          sx={{ letterSpacing: 0.6, lineHeight: 1.1 }}
+          sx={{ letterSpacing: 0.7, lineHeight: 1.1, fontSize: '0.66rem' }}
         >
           {item.label}
         </Typography>
@@ -71,23 +64,14 @@ function OverviewStatCard({ item }) {
           sx={{
             fontWeight: 800,
             color: 'text.primary',
-            lineHeight: 1.05,
-            fontSize: long ? '1.15rem' : '1.7rem',
-            letterSpacing: -0.4,
+            lineHeight: 1.02,
+            fontSize: long ? '1.2rem' : '1.9rem',
+            letterSpacing: -0.5,
             overflowWrap: 'anywhere',
           }}
         >
           {value}
         </Typography>
-        {item.helper ? (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ fontSize: '0.74rem', lineHeight: 1.25 }}
-          >
-            {item.helper}
-          </Typography>
-        ) : null}
       </Stack>
     </Paper>
   )
