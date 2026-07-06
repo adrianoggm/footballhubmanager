@@ -86,8 +86,8 @@ function ActionTile({ glyph, title, desc, onClick, tone = 'primary' }) {
 export default function QuickActions({ actions, t }) {
   const tiles = [
     { key: 'invite', tone: 'secondary', glyph: GLYPHS.invite, onClick: actions.onGenerateJoinCode },
-    { key: 'addPlayer', tone: 'primary', glyph: GLYPHS.addPlayer, onClick: actions.onAddPlayer },
-    { key: 'addGuest', tone: 'info', glyph: GLYPHS.addGuest, onClick: actions.onAddGuest },
+    { key: 'addPlayer', tone: 'info', glyph: GLYPHS.addPlayer, onClick: actions.onAddPlayer },
+    { key: 'addGuest', tone: 'secondary', glyph: GLYPHS.addGuest, onClick: actions.onAddGuest },
     { key: 'addFunds', tone: 'success', glyph: GLYPHS.addFunds, onClick: actions.onAddFunds },
     {
       key: 'addExpenses',
@@ -95,7 +95,7 @@ export default function QuickActions({ actions, t }) {
       glyph: GLYPHS.addExpenses,
       onClick: actions.onAddExpenses,
     },
-    { key: 'standings', tone: 'secondary', glyph: GLYPHS.standings, onClick: actions.onStandings },
+    { key: 'standings', tone: 'info', glyph: GLYPHS.standings, onClick: actions.onStandings },
   ]
   const labels = {
     invite: ['qaInviteTitle', 'qaInviteDesc'],
