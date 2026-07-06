@@ -1,23 +1,10 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Grid,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material'
+import { Alert, Button, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
 import { EmptyState } from '../common'
+import NextMatchCard from './overview/NextMatchCard.jsx'
 import OverviewDatacards from './overview/OverviewDatacards.jsx'
+import PlayerRankingCard from './overview/PlayerRankingCard.jsx'
 import QuickActions from './overview/QuickActions.jsx'
+import RecentMatchesCard from './overview/RecentMatchesCard.jsx'
 import StatCarousel from './overview/StatCarousel.jsx'
 
 /**
@@ -36,12 +23,15 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     tokenPayload,
     standings,
     overviewSeasonMatches,
-    overviewMatchesSummary,
-    overviewMatchLoading,
     overviewDatacards,
   } = state
-  const { onGenerateJoinCode, onCreateMatch, onOpenMatchDetail } = actions
+  const { onGenerateJoinCode, onOpenMatchDetail, onStandings } = actions
   const { t, formatDate, formatEpochSeconds } = helpers
+
+  const nextMatch =
+    [...overviewSeasonMatches]
+      .filter((m) => String(m.status || '').toLowerCase() !== 'closed')
+      .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))[0] || null
 
   return (
     <Grid container spacing={2.5} sx={{ width: '100%' }}>
@@ -106,120 +96,21 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
         )}
       </Grid>
 
-      <Grid item xs={12}>
-        <Card>
-          <CardContent>
-            <Stack spacing={2}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                alignItems={{ sm: 'center' }}
-                justifyContent="space-between"
-                spacing={1}
-              >
-                <Box>
-                  <Typography variant="h6">
-                    {t('dashboard.admin.overview.seasonMatchesSnapshotTitle')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.overview.seasonMatchesSnapshotDescription')}
-                  </Typography>
-                </Box>
-                <Button variant="text" onClick={onCreateMatch}>
-                  {t('dashboard.admin.overview.createMatch')}
-                </Button>
-              </Stack>
+      <Grid item xs={12} md={4}>
+        <NextMatchCard match={nextMatch} t={t} formatDate={formatDate} />
+      </Grid>
 
-              {!selectedSeasonGuid && (
-                <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
-              )}
+      <Grid item xs={12} md={4}>
+        <PlayerRankingCard standings={standings} t={t} onStandings={onStandings} />
+      </Grid>
 
-              {selectedSeasonGuid && (
-                <>
-                  <Stack direction="row" flexWrap="wrap" gap={1}>
-                    <Chip
-                      size="small"
-                      color="primary"
-                      label={t('dashboard.admin.overview.totalMatchesChip', {
-                        total: overviewMatchesSummary.total,
-                      })}
-                    />
-                    <Chip
-                      size="small"
-                      color="warning"
-                      label={t('dashboard.admin.overview.openMatchesChip', {
-                        open: overviewMatchesSummary.open,
-                      })}
-                    />
-                    <Chip
-                      size="small"
-                      color="success"
-                      label={t('dashboard.admin.overview.closedMatchesChip', {
-                        closed: overviewMatchesSummary.closed,
-                      })}
-                    />
-                  </Stack>
-
-                  {!overviewSeasonMatches.length && (
-                    <EmptyState title={t('dashboard.admin.overview.noMatchesForSeason')} dense />
-                  )}
-
-                  {overviewSeasonMatches.length > 0 && (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.matches.date')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.home')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.away')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.status')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.result')}</TableCell>
-                            <TableCell>{t('dashboard.admin.matches.actions')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {overviewSeasonMatches.map((match) => {
-                            const isClosed = String(match.status || '').toLowerCase() === 'closed'
-                            return (
-                              <TableRow key={match.guid}>
-                                <TableCell>{formatDate(match.match_date)}</TableCell>
-                                <TableCell>{match.home_team_name}</TableCell>
-                                <TableCell>{match.away_team_name}</TableCell>
-                                <TableCell>
-                                  <Chip
-                                    size="small"
-                                    color={isClosed ? 'success' : 'warning'}
-                                    label={
-                                      isClosed
-                                        ? t('dashboard.admin.matches.statusClosed')
-                                        : t('dashboard.admin.matches.statusOpen')
-                                    }
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  {match.home_score} - {match.away_score}
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    onClick={() => onOpenMatchDetail(match.guid)}
-                                    disabled={overviewMatchLoading}
-                                  >
-                                    {t('dashboard.common.matchDetail.viewAction')}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
+      <Grid item xs={12} md={4}>
+        <RecentMatchesCard
+          matches={overviewSeasonMatches}
+          t={t}
+          formatDate={formatDate}
+          onOpenMatchDetail={onOpenMatchDetail}
+        />
       </Grid>
     </Grid>
   )
