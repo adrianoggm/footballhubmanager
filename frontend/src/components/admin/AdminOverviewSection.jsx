@@ -1,5 +1,7 @@
-import { Alert, Button, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
+import { useEffect, useRef, useState } from 'react'
+import { Card, CardContent, Grid, Stack, Typography } from '@mui/material'
 import { EmptyState } from '../common'
+import InviteCodeDialog from './overview/InviteCodeDialog.jsx'
 import NextMatchCard from './overview/NextMatchCard.jsx'
 import OverviewDatacards from './overview/OverviewDatacards.jsx'
 import PlayerRankingCard from './overview/PlayerRankingCard.jsx'
@@ -18,7 +20,6 @@ import StatCarousel from './overview/StatCarousel.jsx'
  */
 export default function AdminOverviewSection({ state, actions, helpers }) {
   const {
-    loading,
     selectedSeasonGuid,
     tokenPayload,
     standings,
@@ -26,8 +27,19 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     allSeasonMatches,
     overviewDatacards,
   } = state
-  const { onGenerateJoinCode, onOpenMatchDetail, onStandings } = actions
+  const { onOpenMatchDetail, onStandings } = actions
   const { t, formatDate, formatEpochSeconds } = helpers
+
+  // Invite is a Quick Action now: generating a code sets `tokenPayload` upstream,
+  // which pops the invite modal. Guard against re-opening for the same token on
+  // remount/navigation by tracking the previous token value.
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const prevToken = useRef(tokenPayload?.token)
+  useEffect(() => {
+    const token = tokenPayload?.token
+    if (token && token !== prevToken.current) setInviteOpen(true)
+    prevToken.current = token
+  }, [tokenPayload])
 
   const nextMatch =
     [...overviewSeasonMatches]
@@ -40,37 +52,13 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
         <OverviewDatacards cards={overviewDatacards} />
       </Grid>
 
-      <Grid item xs={12}>
-        <Card sx={{ height: '100%' }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">{t('dashboard.admin.overview.inviteTitle')}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.overview.inviteDescription')}
-              </Typography>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={onGenerateJoinCode}
-                disabled={loading}
-              >
-                {t('dashboard.admin.overview.generateJoinCode')}
-              </Button>
-              {tokenPayload && (
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    <strong>{t('dashboard.admin.overview.codeLabel')}:</strong> {tokenPayload.token}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
-                    {formatEpochSeconds(tokenPayload.expires_at)}
-                  </Typography>
-                </Alert>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      </Grid>
+      <InviteCodeDialog
+        open={inviteOpen}
+        payload={tokenPayload}
+        onClose={() => setInviteOpen(false)}
+        t={t}
+        formatEpochSeconds={formatEpochSeconds}
+      />
 
       <Grid item xs={12}>
         <Card>
