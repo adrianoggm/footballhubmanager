@@ -40,19 +40,6 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
       </Grid>
 
       <Grid item xs={12}>
-        <Card>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography variant="h6">
-                {t('dashboard.admin.overview.quickActionsTitle')}
-              </Typography>
-              <QuickActions actions={actions} t={t} />
-            </Stack>
-          </CardContent>
-        </Card>
-      </Grid>
-
-      <Grid item xs={12}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Stack spacing={2}>
@@ -79,6 +66,19 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
                   </Typography>
                 </Alert>
               )}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Typography variant="h6">
+                {t('dashboard.admin.overview.quickActionsTitle')}
+              </Typography>
+              <QuickActions actions={actions} t={t} />
             </Stack>
           </CardContent>
         </Card>
