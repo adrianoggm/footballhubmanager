@@ -14,7 +14,7 @@ export default function NextMatchCard({ match, t, formatDate }) {
               {match.home_team_name}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              vs
+              {t('dashboard.admin.overview.versus')}
             </Typography>
             <Typography variant="h5" sx={{ fontWeight: 800 }}>
               {match.away_team_name}

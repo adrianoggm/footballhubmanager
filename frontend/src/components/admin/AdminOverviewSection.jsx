@@ -23,6 +23,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     tokenPayload,
     standings,
     overviewSeasonMatches,
+    allSeasonMatches,
     overviewDatacards,
   } = state
   const { onGenerateJoinCode, onOpenMatchDetail, onStandings } = actions
@@ -92,7 +93,12 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
             </CardContent>
           </Card>
         ) : (
-          <StatCarousel standings={standings} matches={overviewSeasonMatches} t={t} />
+          <StatCarousel
+            standings={standings}
+            matches={overviewSeasonMatches}
+            allMatches={allSeasonMatches}
+            t={t}
+          />
         )}
       </Grid>
 

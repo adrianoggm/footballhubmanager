@@ -2,7 +2,8 @@ import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material
 import { EmptyState } from '../../common'
 
 export default function RecentMatchesCard({ matches = [], t, formatDate, onOpenMatchDetail }) {
-  const recent = [...matches]
+  const recent = matches
+    .filter((m) => String(m.status || '').toLowerCase() === 'closed')
     .sort((a, b) => new Date(b.match_date) - new Date(a.match_date))
     .slice(0, 3)
   return (
@@ -31,7 +32,8 @@ export default function RecentMatchesCard({ matches = [], t, formatDate, onOpenM
                 }}
               >
                 <Typography variant="body2" sx={{ minWidth: 0 }}>
-                  {formatDate(m.match_date)} · {m.home_team_name} vs {m.away_team_name}
+                  {formatDate(m.match_date)} · {m.home_team_name}{' '}
+                  {t('dashboard.admin.overview.versus')} {m.away_team_name}
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
                   {m.home_score} - {m.away_score}
@@ -40,7 +42,7 @@ export default function RecentMatchesCard({ matches = [], t, formatDate, onOpenM
             ))}
           </Stack>
         ) : (
-          <EmptyState title={t('dashboard.admin.overview.noUpcomingMatch')} dense />
+          <EmptyState title={t('dashboard.admin.overview.noRecentMatches')} dense />
         )}
       </CardContent>
     </Card>
