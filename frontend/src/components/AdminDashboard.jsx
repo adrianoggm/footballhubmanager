@@ -2079,14 +2079,13 @@ export default function AdminDashboard({
               tokenPayload,
               standings,
               overviewSeasonMatches,
+              allSeasonMatches: visibleSeasonMatches,
               overviewMatchesSummary,
               overviewMatchLoading,
               overviewDatacards,
             }}
             actions={{
               onGenerateJoinCode: handleGenerateJoinCode,
-              onRefreshStandings: handleRefreshStandings,
-              onCreateMatch: () => handleSectionChange('matches'),
               onOpenMatchDetail: handleOpenOverviewMatchDetail,
               onAddPlayer: () => handleSectionChange('players'),
               onAddGuest: () => handleCreateGuestPlayer(true),

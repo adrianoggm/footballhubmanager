@@ -17,7 +17,7 @@ import {
 const playerName = (p) => p.nickname || `${p.name} ${p.surname1}`
 const played = (p) => p.played ?? p.wins + p.draws + p.losses
 
-export default function StatCarousel({ standings = [], matches = [], t }) {
+export default function StatCarousel({ standings = [], matches = [], allMatches = [], t }) {
   const theme = useTheme()
   const accent = theme.palette.secondary.main
   const [index, setIndex] = useState(0)
@@ -32,13 +32,13 @@ export default function StatCarousel({ standings = [], matches = [], t }) {
   )
   const goalsByMatchday = useMemo(
     () =>
-      [...matches]
+      [...allMatches]
         .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
         .map((m, i) => ({
           md: t('dashboard.admin.overview.matchdayShort', { n: i + 1 }),
           goals: (m.home_score ?? 0) + (m.away_score ?? 0),
         })),
-    [matches, t]
+    [allMatches, t]
   )
   const playersVsWins = useMemo(
     () => standings.map((p) => ({ x: played(p), y: p.wins, z: p.points })),
