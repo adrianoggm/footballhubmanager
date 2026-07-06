@@ -41,6 +41,21 @@ const createSpaceTypography = (
   },
 })
 
+// Design-system typography: Hanken Grotesk headings + Inter body.
+const createSystemTypography = () => {
+  const base = createSpaceTypography('"Inter", system-ui, sans-serif')
+  const heading = { fontFamily: '"Hanken Grotesk", system-ui, sans-serif' }
+  return {
+    ...base,
+    h1: { ...base.h1, ...heading },
+    h2: { ...base.h2, ...heading },
+    h3: { ...base.h3, ...heading },
+    h4: { ...base.h4, ...heading },
+    h5: { ...base.h5, ...heading },
+    h6: { ...base.h6, ...heading },
+  }
+}
+
 const lexendTypography = {
   htmlFontSize: 16,
   fontSize: 14,
@@ -369,10 +384,10 @@ export const THEME_PRESETS = {
         contrastText: '#F5F5F5',
       },
       secondary: {
-        main: '#cf7a4a',
-        light: '#e6ad88',
-        dark: '#9a5730',
-        contrastText: '#20140d',
+        main: '#FF6B00',
+        light: '#ff9440',
+        dark: '#c25200',
+        contrastText: '#1a1008',
       },
       alternate: {
         main: '#0A3039',
@@ -385,7 +400,7 @@ export const THEME_PRESETS = {
         pink: '#ED2AB2',
         navyBlue: '#0020C1',
       },
-      info: { main: '#c79a6a' },
+      info: { main: '#049EFF' },
       success: { main: '#9aa66a' },
       warning: { main: '#d0a24a' },
       error: { main: '#c15a3a' },
@@ -395,15 +410,14 @@ export const THEME_PRESETS = {
       },
       text: {
         primary: '#f1e9e2',
-        secondary: '#ab9c90',
+        secondary: '#88736A',
       },
     }),
     shape: {
       borderRadius: 10,
     },
-    typography: lexendTypography,
-    pageBackground:
-      'radial-gradient(1100px 640px at 88% 0%, rgba(207, 122, 74, 0.1) 0%, rgba(207, 122, 74, 0) 55%), linear-gradient(180deg, #241a14 0%, #17110c 100%)',
+    typography: createSystemTypography(),
+    pageBackground: '#090909',
     custom: {
       radius: {
         none: 0,
