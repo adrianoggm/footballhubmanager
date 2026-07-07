@@ -207,6 +207,8 @@ def to_player_info(item: SeasonPlayerResult) -> SeasonPlayerInfo:
         draws=item.draws,
         quality_level=item.quality_level,
         points=item.points,
+        saves=item.saves,
+        average_rating=item.average_rating,
     )
 
 

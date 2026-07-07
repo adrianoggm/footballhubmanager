@@ -41,6 +41,21 @@ const createSpaceTypography = (
   },
 })
 
+// Design-system typography: Hanken Grotesk headings + Inter body.
+const createSystemTypography = () => {
+  const base = createSpaceTypography('"Inter", system-ui, sans-serif')
+  const heading = { fontFamily: '"Hanken Grotesk", system-ui, sans-serif' }
+  return {
+    ...base,
+    h1: { ...base.h1, ...heading },
+    h2: { ...base.h2, ...heading },
+    h3: { ...base.h3, ...heading },
+    h4: { ...base.h4, ...heading },
+    h5: { ...base.h5, ...heading },
+    h6: { ...base.h6, ...heading },
+  }
+}
+
 const lexendTypography = {
   htmlFontSize: 16,
   fontSize: 14,
@@ -369,10 +384,10 @@ export const THEME_PRESETS = {
         contrastText: '#F5F5F5',
       },
       secondary: {
-        main: '#da4416',
-        light: '#F7A77F',
-        dark: '#914119',
-        contrastText: '#101820',
+        main: '#FF6B00',
+        light: '#ff9440',
+        dark: '#c25200',
+        contrastText: '#1a1008',
       },
       alternate: {
         main: '#0A3039',
@@ -385,25 +400,24 @@ export const THEME_PRESETS = {
         pink: '#ED2AB2',
         navyBlue: '#0020C1',
       },
-      info: { main: '#00ACC1' },
-      success: { main: '#00C10D' },
-      warning: { main: '#FFC107' },
-      error: { main: '#C10000' },
+      info: { main: '#049EFF' },
+      success: { main: '#9aa66a' },
+      warning: { main: '#d0a24a' },
+      error: { main: '#c15a3a' },
       background: {
-        default: '#0F0F0F',
-        paper: '#151515',
+        default: '#1e1712',
+        paper: '#362a24',
       },
       text: {
-        primary: '#F5F5F5',
-        secondary: '#BABABA',
+        primary: '#f1e9e2',
+        secondary: '#88736A',
       },
     }),
     shape: {
       borderRadius: 10,
     },
-    typography: lexendTypography,
-    pageBackground:
-      'radial-gradient(960px 560px at 92% 6%, rgba(218, 68, 22, 0.18) 0%, rgba(218, 68, 22, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(0, 172, 193, 0.14) 0%, rgba(0, 172, 193, 0) 52%), linear-gradient(180deg, #111111 0%, #0b0b0b 100%)',
+    typography: createSystemTypography(),
+    pageBackground: '#090909',
     custom: {
       radius: {
         none: 0,
@@ -710,10 +724,7 @@ const buildComponentOverrides = (palette, custom, preset) => {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          border: `${isAccentedProfile ? 2 : 1}px solid ${alpha(
-            isAccentedProfile ? palette.secondary.main : palette.text.primary,
-            isAccentedProfile ? 0.92 : isDark ? 0.14 : 0.08
-          )}`,
+          border: `1px solid ${alpha(palette.text.primary, isDark ? 0.1 : 0.08)}`,
           borderRadius: preset.shape.borderRadius,
           backgroundColor: alpha(palette.background.paper, isDark ? 0.94 : 0.9),
           boxShadow: isDark ? custom.shadows.md : '0 12px 26px rgba(15, 23, 42, 0.07)',
