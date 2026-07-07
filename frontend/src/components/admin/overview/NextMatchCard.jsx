@@ -26,7 +26,7 @@ function RosterRow({ label, labelColor, name, extra, chipBg }) {
     bgcolor: chipBg,
     color: 'text.primary',
     fontWeight: 600,
-    borderRadius: '5px',
+    borderRadius: '4px',
   }
   return (
     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
