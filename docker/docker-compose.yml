@@ -9,7 +9,7 @@ services:
     env_file:
       - ../backend/config/.env
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - ../versioning/sql/actual.sql:/docker-entrypoint-initdb.d/01-init.sql
     networks:
