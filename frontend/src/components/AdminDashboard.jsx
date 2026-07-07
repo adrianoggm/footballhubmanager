@@ -2096,6 +2096,7 @@ export default function AdminDashboard({
               onAddFunds: () => handleSectionChange('accountability'),
               onAddExpenses: () => handleSectionChange('accountability'),
               onStandings: () => handleSectionChange('standings'),
+              onViewMatches: () => handleSectionChange('matches'),
             }}
             helpers={{
               t,
