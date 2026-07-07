@@ -29,6 +29,14 @@ import {
 import { EmptyState } from '../../common'
 
 const ACCENT = '#DF9F80'
+// Dark tooltip so labels/values stay readable over the light default surface.
+const TOOLTIP_CONTENT = {
+  backgroundColor: '#261812',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  borderRadius: 6,
+}
+const TOOLTIP_LABEL = { color: '#C1ACA3', fontWeight: 700 }
+const TOOLTIP_ITEM = { color: ACCENT }
 const playerName = (p) => p.nickname || `${p.name} ${p.surname1}`
 const played = (p) => p.played ?? p.wins + p.draws + p.losses
 
@@ -47,7 +55,16 @@ function ClassificationTable({ standings, t }) {
   )
   if (!rows.length) return <EmptyState title={t('dashboard.admin.overview.noSeasonShort')} dense />
   return (
-    <Box sx={{ height: 240, overflowY: 'auto' }}>
+    <Box
+      sx={{
+        height: 240,
+        overflowY: 'auto',
+        borderRadius: '6px',
+        // columns share the (sticky) header background instead of the card surface
+        bgcolor: 'background.default',
+        '& .MuiTableCell-root': { backgroundColor: 'background.default' },
+      }}
+    >
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -288,7 +305,12 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="md" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <RechartsTooltip />
+                    <RechartsTooltip
+                      cursor={{ stroke: 'rgba(255,255,255,0.15)' }}
+                      contentStyle={TOOLTIP_CONTENT}
+                      labelStyle={TOOLTIP_LABEL}
+                      itemStyle={TOOLTIP_ITEM}
+                    />
                     <Area
                       type="monotone"
                       dataKey="goals"
@@ -307,7 +329,13 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
                       tick={{ fontSize: 11 }}
                     />
                     <YAxis type="category" dataKey="name" width={92} tick={{ fontSize: 11 }} />
-                    <RechartsTooltip formatter={(v) => `${v}%`} />
+                    <RechartsTooltip
+                      cursor={{ fill: 'rgba(255,255,255,0.06)' }}
+                      formatter={(v) => `${v}%`}
+                      contentStyle={TOOLTIP_CONTENT}
+                      labelStyle={TOOLTIP_LABEL}
+                      itemStyle={TOOLTIP_ITEM}
+                    />
                     <Bar dataKey="rate" fill={ACCENT} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 )}
