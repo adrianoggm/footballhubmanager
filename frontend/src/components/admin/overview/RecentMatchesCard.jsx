@@ -10,7 +10,9 @@ export default function RecentMatchesCard({ matches = [], t, formatDate, onOpenM
     <Card sx={{ height: '100%' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">{t('dashboard.admin.overview.recentMatchesTitle')}</Typography>
+          <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
+            {t('dashboard.admin.overview.recentMatchesTitle')}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
             {t('dashboard.admin.overview.recentMatchesLast', { n: 3 })}
           </Typography>

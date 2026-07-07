@@ -11,7 +11,9 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
     <Card sx={{ height: '100%', backgroundColor: '#41312A' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">{t('dashboard.admin.overview.rankingTitle')}</Typography>
+          <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
+            {t('dashboard.admin.overview.rankingTitle')}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
             {t('dashboard.admin.overview.rankingTop', { n: 5 })}
           </Typography>
