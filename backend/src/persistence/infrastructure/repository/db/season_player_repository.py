@@ -375,6 +375,13 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
                 TeamPlayer.id_player.label("id_player"),
                 func.coalesce(func.sum(TeamPlayer.goals), 0).label("goals"),
                 func.coalesce(func.sum(TeamPlayer.assists), 0).label("assists"),
+                func.coalesce(func.sum(TeamPlayer.saves), 0).label("saves"),
+                func.coalesce(
+                    func.avg(
+                        case((FootballMatch.status == "closed", TeamPlayer.rating), else_=None)
+                    ),
+                    0,
+                ).label("average_rating"),
             )
             .select_from(TeamPlayer)
             .join(Team, Team.id == TeamPlayer.id_team)
@@ -385,6 +392,10 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
         )
         goals_expr = func.coalesce(season_player_stats.c.goals, 0).label("goals")
         assists_expr = func.coalesce(season_player_stats.c.assists, 0).label("assists")
+        saves_expr = func.coalesce(season_player_stats.c.saves, 0).label("saves")
+        average_rating_expr = func.coalesce(season_player_stats.c.average_rating, 0).label(
+            "average_rating"
+        )
 
         stmt = (
             select(
@@ -400,6 +411,8 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
                 played_expr,
                 goals_expr,
                 assists_expr,
+                saves_expr,
+                average_rating_expr,
                 SeasonPlayer.wins.label("wins"),
                 SeasonPlayer.losses.label("losses"),
                 SeasonPlayer.draws.label("draws"),
@@ -829,4 +842,6 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
             draws=int(values["draws"]),
             quality_level=float(values["quality_level"]),
             points=int(values["points"]),
+            saves=int(values["saves"]),
+            average_rating=round(float(values["average_rating"]), 2),
         )
