@@ -34,7 +34,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
                 gap: 1.5,
                 px: 1.5,
                 py: 1.1,
-                borderRadius: '10px',
+                borderRadius: '6px',
                 bgcolor: '#261812',
               }}
             >
@@ -73,6 +73,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
               mt: 0.5,
               color: '#DF9F80',
               fontWeight: 700,
+              borderRadius: '6px',
               bgcolor: '#261812',
               '&:hover': { filter: 'brightness(1.18)' },
             }}
