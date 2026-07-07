@@ -1,5 +1,4 @@
 import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material'
-import { alpha, useTheme } from '@mui/material/styles'
 import { EmptyState } from '../../common'
 
 // day + short month from a YYYY-MM-DD string (built as a local date to avoid TZ drift).
@@ -16,20 +15,27 @@ function dateParts(value) {
 }
 
 export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, onViewAll }) {
-  const theme = useTheme()
   const recent = matches
     .filter((m) => String(m.status || '').toLowerCase() === 'closed')
     .sort((a, b) => new Date(b.match_date) - new Date(a.match_date))
     .slice(0, 3)
 
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: '100%', backgroundColor: '#41312A' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
             {t('dashboard.admin.overview.recentMatchesTitle')}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              fontFamily: '"IBM Plex Mono", monospace',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: '#DF9F80',
+            }}
+          >
             {t('dashboard.admin.overview.recentMatchesLast', { n: 3 })}
           </Typography>
         </Stack>
@@ -50,20 +56,21 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                     px: 1.5,
                     py: 1.1,
                     borderRadius: '10px',
-                    bgcolor: alpha(theme.palette.text.primary, 0.04),
-                    transition: 'background 140ms ease',
-                    '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.08) },
+                    bgcolor: '#261812',
+                    transition: 'filter 140ms ease',
+                    '&:hover': { filter: 'brightness(1.18)' },
                   }}
                 >
                   <Stack sx={{ minWidth: 30, textAlign: 'center', lineHeight: 1 }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: 'text.primary' }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#A8938A' }}>
                       {day}
                     </Typography>
                     <Typography
                       sx={{
                         fontSize: '0.6rem',
+                        fontWeight: 700,
                         letterSpacing: '0.06em',
-                        color: '#88736A',
+                        color: '#A8938A',
                         fontFamily: '"JetBrains Mono", monospace',
                       }}
                     >
@@ -72,7 +79,13 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                   </Stack>
                   <Typography
                     variant="body2"
-                    sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflowWrap: 'anywhere' }}
+                    sx={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontWeight: 600,
+                      color: '#C1ACA3',
+                      overflowWrap: 'anywhere',
+                    }}
                   >
                     {m.home_team_name} {t('dashboard.admin.overview.versus')} {m.away_team_name}
                   </Typography>
@@ -90,8 +103,8 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                   mt: 0.5,
                   color: '#DF9F80',
                   fontWeight: 700,
-                  bgcolor: alpha(theme.palette.text.primary, 0.04),
-                  '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.08) },
+                  bgcolor: '#261812',
+                  '&:hover': { filter: 'brightness(1.18)' },
                 }}
               >
                 {t('dashboard.admin.overview.viewFullHistory')}
