@@ -27,7 +27,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
     allSeasonMatches,
     overviewDatacards,
   } = state
-  const { onOpenMatchDetail, onStandings } = actions
+  const { onOpenMatchDetail, onStandings, onViewMatches } = actions
   const { t, formatDate, formatEpochSeconds } = helpers
 
   // Invite is a Quick Action now: generating a code sets `tokenPayload` upstream,
@@ -93,8 +93,8 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
         <RecentMatchesCard
           matches={overviewSeasonMatches}
           t={t}
-          formatDate={formatDate}
           onOpenMatchDetail={onOpenMatchDetail}
+          onViewAll={onViewMatches}
         />
       </Grid>
     </Grid>
