@@ -320,33 +320,6 @@ const formatEpochSeconds = (value) => {
   return new Date(value * 1000).toLocaleString()
 }
 
-// Human countdown for a season relative to today ("starts in N days" /
-// "N days left" / "ended N days ago"). Empty string when dates are missing.
-const seasonCountdown = (season, t) => {
-  if (!season?.start_date || !season?.end_date) {
-    return ''
-  }
-  const dayMs = 86_400_000
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const start = new Date(`${season.start_date}T00:00:00`)
-  const end = new Date(`${season.end_date}T00:00:00`)
-  if (today < start) {
-    return t('dashboard.admin.status.startsInDays', {
-      days: Math.round((start - today) / dayMs),
-    })
-  }
-  if (today > end) {
-    return t('dashboard.admin.status.endedDaysAgo', {
-      days: Math.round((today - end) / dayMs),
-    })
-  }
-  const daysLeft = Math.round((end - today) / dayMs)
-  return daysLeft === 0
-    ? t('dashboard.admin.status.endsToday')
-    : t('dashboard.admin.status.daysLeft', { days: daysLeft })
-}
-
 const formatDecimal = (value, digits = 2) => Number(value || 0).toFixed(digits)
 
 const formatSignedDecimal = (value, digits = 2) => {
@@ -1912,40 +1885,28 @@ export default function AdminDashboard({
     ADMIN_HERO_SUBTITLE_KEY_BY_SECTION[activeSection] || 'dashboard.admin.heroSubtitle'
   )
 
-  // Summary cards favor actionable season-ops info over restating context that is
-  // already visible in the header (pena name, selectors).
-  const selectedIsActive = Boolean(
-    selectedSeason && activeSeason && selectedSeason.guid === activeSeason.guid
+  // Overview datacards favor actionable season-ops info over restating context that is
+  // already visible in the header (pena name, selectors). Rendered only on the Overview
+  // section now (issue #144).
+  const goalsScored = standings.reduce((sum, p) => sum + (p.goals ?? 0), 0)
+  const topScorer = standings.reduce(
+    (best, p) => ((p.goals ?? 0) > (best?.goals ?? -1) ? p : best),
+    null
   )
-  const adminSummaryCards = [
+  const topScorerName = topScorer
+    ? topScorer.nickname || `${topScorer.name} ${topScorer.surname1}`
+    : '-'
+
+  const overviewDatacards = [
     {
-      label: t('dashboard.admin.overview.activeSeason'),
-      value: activeSeason ? activeSeasonLabel : t('dashboard.admin.status.missing'),
-      helper: activeSeason
-        ? seasonCountdown(activeSeason, t)
-        : t('dashboard.admin.status.noActiveSeason'),
-      tone: activeSeason ? 'success' : 'warning',
-    },
-    {
-      label: t('dashboard.admin.overview.selectedSeasonCard'),
-      value: selectedSeason ? selectedSeasonLabel : '-',
-      helper: selectedSeason
-        ? selectedIsActive
-          ? t('dashboard.admin.status.sameAsActive')
-          : t('dashboard.admin.status.differentFromActive')
-        : t('dashboard.admin.status.noSeasonSelected'),
-      tone: !selectedSeason || !selectedIsActive ? 'warning' : 'primary',
-    },
-    {
-      label: t('dashboard.admin.overview.seasonPlayers'),
+      label: t('dashboard.admin.overview.registeredPlayersCard'),
       value: selectedSeasonGuid && !seasonRosterLoading ? String(seasonRoster.length) : '-',
-      helper: selectedSeason
-        ? t('dashboard.admin.status.registeredInSelected')
-        : t('dashboard.admin.status.noSeasonSelected'),
+      helper: t('dashboard.admin.overview.registeredPlayersHelper'),
       tone: 'info',
+      icon: 'players',
     },
     {
-      label: t('dashboard.admin.overview.seasonMatchesCard'),
+      label: t('dashboard.admin.overview.seasonMatchesCardLabel'),
       value:
         selectedSeasonGuid && !seasonMatchesLoading ? String(overviewMatchesSummary.total) : '-',
       helper: selectedSeason
@@ -1955,6 +1916,23 @@ export default function AdminDashboard({
           })
         : t('dashboard.admin.status.noSeasonSelected'),
       tone: overviewMatchesSummary.open > 0 ? 'warning' : 'success',
+      icon: 'matches',
+    },
+    {
+      label: t('dashboard.admin.overview.goalsScoredCard'),
+      value: selectedSeasonGuid ? String(goalsScored) : '-',
+      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.admin.overview.noSeasonShort'),
+      tone: 'secondary',
+      icon: 'goals',
+    },
+    {
+      label: t('dashboard.admin.overview.topScorerCard'),
+      value: selectedSeasonGuid && topScorer ? topScorerName : '-',
+      helper: topScorer
+        ? t('dashboard.admin.overview.topScorerHelper', { goals: topScorer.goals ?? 0 })
+        : t('dashboard.admin.overview.noSeasonShort'),
+      tone: 'success',
+      icon: 'scorer',
     },
   ]
 
@@ -2077,7 +2055,6 @@ export default function AdminDashboard({
             <PenaSeasonSelector />
           </Stack>
         }
-        summaryCards={adminSummaryCards}
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
@@ -2106,14 +2083,20 @@ export default function AdminDashboard({
               tokenPayload,
               standings,
               overviewSeasonMatches,
+              allSeasonMatches: visibleSeasonMatches,
               overviewMatchesSummary,
               overviewMatchLoading,
+              overviewDatacards,
             }}
             actions={{
               onGenerateJoinCode: handleGenerateJoinCode,
-              onRefreshStandings: handleRefreshStandings,
-              onCreateMatch: () => handleSectionChange('matches'),
               onOpenMatchDetail: handleOpenOverviewMatchDetail,
+              onAddPlayer: () => handleSectionChange('players'),
+              onAddGuest: () => handleCreateGuestPlayer(true),
+              onAddFunds: () => handleSectionChange('accountability'),
+              onAddExpenses: () => handleSectionChange('accountability'),
+              onStandings: () => handleSectionChange('standings'),
+              onViewMatches: () => handleSectionChange('matches'),
             }}
             helpers={{
               t,
