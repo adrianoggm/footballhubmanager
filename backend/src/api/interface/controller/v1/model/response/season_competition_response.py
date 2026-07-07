@@ -23,6 +23,8 @@ class SeasonPlayerResponse(BaseModel):
     draws: int
     quality_level: float
     points: int
+    saves: int = 0
+    average_rating: float = 0.0
 
 
 class SeasonPlayersPageResponse(BaseModel):
