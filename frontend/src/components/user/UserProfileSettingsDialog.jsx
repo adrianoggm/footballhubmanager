@@ -31,6 +31,9 @@ export default function UserProfileSettingsDialog({
   profileDisplayName,
   nationalities,
   t,
+  penas = [],
+  selectedPenaGuid = '',
+  onSelectPena = () => {},
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -40,6 +43,23 @@ export default function UserProfileSettingsDialog({
           <Typography variant="body2" color="text.secondary">
             {t('dashboard.user.profileSettingsHint')}
           </Typography>
+          {penas.length > 0 && (
+            <TextField
+              select
+              size="small"
+              label={t('dashboard.admin.currentPena') || "Peña Activa"}
+              value={selectedPenaGuid}
+              onChange={(event) => onSelectPena(event.target.value)}
+              disabled={loading}
+              fullWidth
+            >
+              {penas.map((pena) => (
+                <MenuItem key={pena.guid} value={pena.guid}>
+                  {pena.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <ProfileImageField
             value={profileForm.image_url}
             alt={profileDisplayName || t('dashboard.user.profileSettingsTitle')}

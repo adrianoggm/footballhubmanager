@@ -23,6 +23,8 @@ import {
   TableContainer,
   TextField,
   Typography,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
@@ -1992,48 +1994,64 @@ export default function AdminDashboard({
         title={activeSection !== 'overview' ? activeAdminSectionLabel : ''}
         subtitle={activeSection !== 'overview' ? activeAdminHeroSubtitle : ''}
         headerAside={
-          <Stack spacing={1.1}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1}
-              alignItems={{ sm: 'center' }}
-              justifyContent="space-between"
-            >
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            alignItems={{ xs: 'stretch', md: 'center' }}
+            justifyContent="space-between"
+            sx={{ width: '100%' }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
               <DashboardIdentitySlot
                 name={selectedPena?.name || t('dashboard.admin.panelTitle')}
                 imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
                 imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
               />
-
-              <Stack
-                direction="row"
-                spacing={0.6}
-                flexWrap="wrap"
-                useFlexGap
-                alignItems="center"
-                justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
-              >
-                <Button
-                  variant="outlined"
-                  onClick={openPenaSettings}
-                  disabled={loading || !selectedPenaGuid}
-                >
-                  {t('dashboard.admin.openPenaSettings')}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => runAction(loadDashboard, '')}
-                  disabled={loading}
-                >
-                  {t('dashboard.common.refreshData')}
-                </Button>
-                <Button variant="text" onClick={onLogout} disabled={loading}>
-                  {t('dashboard.common.logout')}
-                </Button>
-              </Stack>
+              <PenaSeasonSelector />
             </Stack>
 
-            <PenaSeasonSelector />
+            <Stack
+              direction="row"
+              spacing={0.6}
+              flexWrap="wrap"
+              useFlexGap
+              alignItems="center"
+              justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+            >
+              <Tooltip title={t('dashboard.common.refreshData')}>
+                <span>
+                  <IconButton
+                    onClick={() => runAction(loadDashboard, '')}
+                    disabled={loading}
+                    color="primary"
+                  >
+                    <Box component="span" className="material-symbols-rounded">refresh</Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('dashboard.admin.openPenaSettings')}>
+                <span>
+                  <IconButton
+                    onClick={openPenaSettings}
+                    disabled={loading || !selectedPenaGuid}
+                    color="primary"
+                  >
+                    <Box component="span" className="material-symbols-rounded">settings</Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('dashboard.common.logout')}>
+                <span>
+                  <IconButton
+                    onClick={onLogout}
+                    disabled={loading}
+                    color="error"
+                  >
+                    <Box component="span" className="material-symbols-rounded">logout</Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
           </Stack>
         }
       >
@@ -2220,6 +2238,21 @@ export default function AdminDashboard({
               <Typography variant="body2" color="text.secondary">
                 {t('dashboard.admin.penaSettingsHint')}
               </Typography>
+              <TextField
+                select
+                size="small"
+                label={t('dashboard.admin.currentPena') || "Peña Activa"}
+                value={selectedPenaGuid}
+                onChange={(event) => setSelectedPenaGuid(event.target.value)}
+                disabled={loading}
+                fullWidth
+              >
+                {penas.map((pena) => (
+                  <MenuItem key={pena.guid} value={pena.guid}>
+                    {pena.name}
+                  </MenuItem>
+                ))}
+              </TextField>
               <ProfileImageField
                 value={penaProfileDraft.image_url}
                 alt={selectedPena?.name || t('dashboard.admin.panelTitle')}
