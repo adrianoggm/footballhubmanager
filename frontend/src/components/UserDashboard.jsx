@@ -8,6 +8,8 @@ import {
   LinearProgress,
   Stack,
   Typography,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
@@ -763,13 +765,14 @@ export default function UserDashboard({
         title={activeNavSectionId !== 'overview' ? activeUserSectionLabel : ''}
         subtitle={activeNavSectionId !== 'overview' ? activeUserHeroSubtitle : ''}
         headerAside={
-          <Stack spacing={1.1}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1}
-              alignItems={{ sm: 'center' }}
-              justifyContent="space-between"
-            >
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            alignItems={{ xs: 'stretch', md: 'center' }}
+            justifyContent="space-between"
+            sx={{ width: '100%' }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
               <DashboardIdentitySlot
                 name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
                 subtitle={profileDisplayName || ''}
@@ -781,32 +784,39 @@ export default function UserDashboard({
                   selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')
                 }
               />
-
-              <Stack
-                direction="row"
-                spacing={0.6}
-                flexWrap="wrap"
-                useFlexGap
-                alignItems="center"
-                justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}
-              >
-                <Button variant="outlined" onClick={openProfileSettings} disabled={loading}>
-                  {t('dashboard.user.openSettings')}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => runAction(loadDashboard)}
-                  disabled={loading}
-                >
-                  {t('dashboard.common.refresh')}
-                </Button>
-                <Button variant="text" onClick={onLogout} disabled={loading}>
-                  {t('dashboard.common.logout')}
-                </Button>
-              </Stack>
+              <PenaSeasonSelector />
             </Stack>
 
-            <PenaSeasonSelector />
+            <Stack
+              direction="row"
+              spacing={0.6}
+              flexWrap="wrap"
+              useFlexGap
+              alignItems="center"
+              justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+            >
+              <Tooltip title={t('dashboard.user.openSettings')}>
+                <span>
+                  <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
+                    <Box component="span" className="material-symbols-rounded">settings</Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('dashboard.common.refresh')}>
+                <span>
+                  <IconButton onClick={() => runAction(loadDashboard)} disabled={loading} color="primary">
+                    <Box component="span" className="material-symbols-rounded">refresh</Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('dashboard.common.logout')}>
+                <span>
+                  <IconButton onClick={onLogout} disabled={loading} color="error">
+                    <Box component="span" className="material-symbols-rounded">logout</Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
           </Stack>
         }
         summaryCards={userSummaryCards}
@@ -930,6 +940,9 @@ export default function UserDashboard({
           profileDisplayName={profileDisplayName}
           nationalities={nationalities}
           t={t}
+          penas={penas}
+          selectedPenaGuid={selectedPenaGuid}
+          onSelectPena={setSelectedPenaGuid}
         />
       </DashboardShell>
     </DashboardContext.Provider>
