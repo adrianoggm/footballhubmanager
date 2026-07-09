@@ -760,32 +760,8 @@ export default function UserDashboard({
         navItems={userNavItems}
         activeNavId={activeNavSectionId}
         onNavChange={handleNavigateToSection}
-        title={activeUserSectionLabel}
-        subtitle={activeUserHeroSubtitle}
-        badges={
-          <>
-            <Chip
-              size="small"
-              color="secondary"
-              label={selectedPena?.name || t('dashboard.user.noPenasLinked')}
-            />
-            <Chip size="small" color="primary" label={selectedSeason ? selectedSeasonLabel : '-'} />
-            {membership?.role ? (
-              <Chip
-                size="small"
-                label={translateRoleLabel(t, membership.role)}
-                sx={labelChipSx(membership.role_color)}
-              />
-            ) : null}
-            {currentStanding ? (
-              <Chip
-                size="small"
-                color="info"
-                label={t('dashboard.user.yourRank', { rank: currentStanding.rank })}
-              />
-            ) : null}
-          </>
-        }
+        title={activeNavSectionId !== 'overview' ? activeUserSectionLabel : ''}
+        subtitle={activeNavSectionId !== 'overview' ? activeUserHeroSubtitle : ''}
         headerAside={
           <Stack spacing={1.1}>
             <Stack
