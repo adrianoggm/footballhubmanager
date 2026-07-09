@@ -199,6 +199,19 @@ export default function NewTransactionCard({
             disabled={submitting}
             startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
             fullWidth
+            sx={(theme) => ({
+              // Peach fill with the component's dark-brown text (replaces the
+              // orange gradient).
+              backgroundImage: 'none',
+              backgroundColor: ACCENT,
+              color: theme.palette.background.paper,
+              boxShadow: 'none',
+              '&:hover': {
+                backgroundImage: 'none',
+                backgroundColor: '#f2a074',
+                boxShadow: theme.custom?.shadows?.md,
+              },
+            })}
           >
             {t('dashboard.admin.accountability.recordTransaction')}
           </Button>
