@@ -798,21 +798,31 @@ export default function UserDashboard({
               <Tooltip title={t('dashboard.user.openSettings')}>
                 <span>
                   <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
-                    <Box component="span" className="material-symbols-rounded">settings</Box>
+                    <Box component="span" className="material-symbols-rounded">
+                      settings
+                    </Box>
                   </IconButton>
                 </span>
               </Tooltip>
               <Tooltip title={t('dashboard.common.refresh')}>
                 <span>
-                  <IconButton onClick={() => runAction(loadDashboard)} disabled={loading} color="primary">
-                    <Box component="span" className="material-symbols-rounded">refresh</Box>
+                  <IconButton
+                    onClick={() => runAction(loadDashboard)}
+                    disabled={loading}
+                    color="primary"
+                  >
+                    <Box component="span" className="material-symbols-rounded">
+                      refresh
+                    </Box>
                   </IconButton>
                 </span>
               </Tooltip>
               <Tooltip title={t('dashboard.common.logout')}>
                 <span>
                   <IconButton onClick={onLogout} disabled={loading} color="error">
-                    <Box component="span" className="material-symbols-rounded">logout</Box>
+                    <Box component="span" className="material-symbols-rounded">
+                      logout
+                    </Box>
                   </IconButton>
                 </span>
               </Tooltip>

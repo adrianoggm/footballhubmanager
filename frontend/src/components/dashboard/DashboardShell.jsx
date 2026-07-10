@@ -142,8 +142,8 @@ function NavigationIcon({ kind, active = false }) {
         'membership',
         'insights',
       ].includes(kind) && (
-          <path d="M5 5h14v14H5V5Zm3 3v8h2V8H8Zm4 0v5h4V8h-4Zm0 7v1h4v-1h-4Z" fill="currentColor" />
-        )}
+        <path d="M5 5h14v14H5V5Zm3 3v8h2V8H8Zm4 0v5h4V8h-4Zm0 7v1h4v-1h-4Z" fill="currentColor" />
+      )}
     </SvgIcon>
   )
 }
@@ -499,15 +499,16 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                     borderRadius: geometry.controlRadius,
                     position: 'relative',
                     color: active ? 'secondary.main' : 'text.secondary',
-                    border: `1px solid ${active
-                      ? alpha(theme.palette.secondary.main, 0.22)
-                      : alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)
-                      }`,
+                    border: `1px solid ${
+                      active
+                        ? alpha(theme.palette.secondary.main, 0.22)
+                        : alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)
+                    }`,
                     background: active
                       ? `linear-gradient(135deg, ${alpha(
-                        theme.palette.secondary.light,
-                        isDark ? 0.16 : 0.22
-                      )} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
+                          theme.palette.secondary.light,
+                          isDark ? 0.16 : 0.22
+                        )} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`
                       : alpha(theme.palette.background.paper, isDark ? 0.72 : 0.62),
                     boxShadow: active
                       ? isDark
@@ -521,11 +522,11 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                     '&:hover': item.disabled
                       ? {}
                       : {
-                        transform: 'translateY(-1px)',
-                        boxShadow: isDark
-                          ? '0 10px 22px rgba(0, 0, 0, 0.2)'
-                          : '0 10px 22px rgba(15, 23, 42, 0.08)',
-                      },
+                          transform: 'translateY(-1px)',
+                          boxShadow: isDark
+                            ? '0 10px 22px rgba(0, 0, 0, 0.2)'
+                            : '0 10px 22px rgba(15, 23, 42, 0.08)',
+                        },
                   }}
                 >
                   <Box
@@ -599,15 +600,16 @@ function MobileNav({ navItems, activeNavId, onNavChange, navLabel = '' }) {
                 justifyContent: 'flex-start',
                 opacity: item.disabled ? 0.4 : 1,
                 cursor: item.disabled ? 'not-allowed' : 'pointer',
-                border: `1px solid ${active
-                  ? alpha(theme.palette.secondary.main, 0.22)
-                  : alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)
-                  }`,
+                border: `1px solid ${
+                  active
+                    ? alpha(theme.palette.secondary.main, 0.22)
+                    : alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)
+                }`,
                 background: active
                   ? `linear-gradient(135deg, ${alpha(theme.palette.secondary.light, 0.2)} 0%, ${alpha(
-                    theme.palette.background.paper,
-                    0.98
-                  )} 100%)`
+                      theme.palette.background.paper,
+                      0.98
+                    )} 100%)`
                   : alpha(theme.palette.background.paper, isDark ? 0.72 : 0.62),
               }}
             >
@@ -631,7 +633,7 @@ export default function DashboardShell({
   railLabel = '',
   navItems = [],
   activeNavId = '',
-  onNavChange = () => { },
+  onNavChange = () => {},
   title = '',
   subtitle = '',
   headerAside = null,
@@ -723,11 +725,7 @@ export default function DashboardShell({
               )}
             </Stack>
 
-            {headerAside ? (
-              <Box sx={{ minWidth: 0, flex: { md: 1 } }}>
-                {headerAside}
-              </Box>
-            ) : null}
+            {headerAside ? <Box sx={{ minWidth: 0, flex: { md: 1 } }}>{headerAside}</Box> : null}
           </Box>
         </Paper>
 

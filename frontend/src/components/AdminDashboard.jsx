@@ -148,9 +148,9 @@ const normalizeLabelArray = (values) => {
 const defaultColorForLabel = (label, defaults) =>
   normalizeHexColor(
     defaults[
-    String(label || '')
-      .trim()
-      .toLowerCase()
+      String(label || '')
+        .trim()
+        .toLowerCase()
     ]
   ) ||
   normalizeHexColor(DEFAULT_LABEL_COLOR) ||
@@ -252,8 +252,8 @@ const normalizeFilterValues = (value) => {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
-      .split(',')
-      .map((item) => item.trim())
+        .split(',')
+        .map((item) => item.trim())
   return Array.from(
     new Set(
       source
@@ -1122,57 +1122,57 @@ export default function AdminDashboard({
     }
 
     let activeRequest = true
-      ; (async () => {
-        try {
-          const [players, labels] = await Promise.all([
-            shouldLoadHistoricalPlayers
-              ? loadHistoricalPlayersForPena(selectedPenaGuid)
-              : Promise.resolve(null),
-            shouldLoadPenaLabels ? loadPenaLabelsForPena(selectedPenaGuid) : Promise.resolve(null),
-          ])
-          if (!activeRequest) {
-            return
-          }
-
-          if (shouldLoadHistoricalPlayers) {
-            setHistoricalPlayers(players || [])
-          }
-
-          if (shouldLoadPenaLabels && labels) {
-            setPenaLabels(labels)
-            setLabelsDraft(defaultLabelsDraft(labels))
-            setGuestForm((prev) => ({
-              ...prev,
-              role: hasLabel(labels.role_labels, prev.role)
-                ? prev.role
-                : pickPreferredLabel(labels.role_labels, 'guest'),
-              position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
-            }))
-            setMembershipDraft((prev) => ({
-              ...prev,
-              role: hasLabel(labels.role_labels, prev.role) ? prev.role : '',
-              position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
-            }))
-            setMemberFilters((prev) => ({
-              role: pruneFilterValues(prev.role, labels.role_labels),
-              position: pruneFilterValues(prev.position, labels.position_labels),
-            }))
-            setStandingsFilters((prev) => ({
-              role: pruneFilterValues(prev.role, labels.role_labels),
-              position: pruneFilterValues(prev.position, labels.position_labels),
-            }))
-          }
-        } catch (requestError) {
-          if (!activeRequest) {
-            return
-          }
-          if (requestError?.status === 401) {
-            await onLogout()
-            return
-          }
-          setError(requestError)
+    ;(async () => {
+      try {
+        const [players, labels] = await Promise.all([
+          shouldLoadHistoricalPlayers
+            ? loadHistoricalPlayersForPena(selectedPenaGuid)
+            : Promise.resolve(null),
+          shouldLoadPenaLabels ? loadPenaLabelsForPena(selectedPenaGuid) : Promise.resolve(null),
+        ])
+        if (!activeRequest) {
+          return
         }
-      })()
+
+        if (shouldLoadHistoricalPlayers) {
+          setHistoricalPlayers(players || [])
+        }
+
+        if (shouldLoadPenaLabels && labels) {
+          setPenaLabels(labels)
+          setLabelsDraft(defaultLabelsDraft(labels))
+          setGuestForm((prev) => ({
+            ...prev,
+            role: hasLabel(labels.role_labels, prev.role)
+              ? prev.role
+              : pickPreferredLabel(labels.role_labels, 'guest'),
+            position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
+          }))
+          setMembershipDraft((prev) => ({
+            ...prev,
+            role: hasLabel(labels.role_labels, prev.role) ? prev.role : '',
+            position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
+          }))
+          setMemberFilters((prev) => ({
+            role: pruneFilterValues(prev.role, labels.role_labels),
+            position: pruneFilterValues(prev.position, labels.position_labels),
+          }))
+          setStandingsFilters((prev) => ({
+            role: pruneFilterValues(prev.role, labels.role_labels),
+            position: pruneFilterValues(prev.position, labels.position_labels),
+          }))
+        }
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
+        }
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      }
+    })()
 
     return () => {
       activeRequest = false
@@ -1195,20 +1195,20 @@ export default function AdminDashboard({
     }
 
     let activeRequest = true
-      ; (async () => {
-        try {
-          await loadStandings(selectedPenaGuid, selectedSeasonGuid, standingsFilters)
-        } catch (requestError) {
-          if (!activeRequest) {
-            return
-          }
-          if (requestError?.status === 401) {
-            await onLogout()
-            return
-          }
-          setError(requestError)
+    ;(async () => {
+      try {
+        await loadStandings(selectedPenaGuid, selectedSeasonGuid, standingsFilters)
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
         }
-      })()
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      }
+    })()
 
     return () => {
       activeRequest = false
@@ -1232,28 +1232,28 @@ export default function AdminDashboard({
 
     let activeRequest = true
     setSeasonRosterLoading(true)
-      ; (async () => {
-        try {
-          const rosterItems = await loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid)
-          if (!activeRequest) {
-            return
-          }
-          setSeasonRoster(rosterItems)
-        } catch (requestError) {
-          if (!activeRequest) {
-            return
-          }
-          if (requestError?.status === 401) {
-            await onLogout()
-            return
-          }
-          setError(requestError)
-        } finally {
-          if (activeRequest) {
-            setSeasonRosterLoading(false)
-          }
+    ;(async () => {
+      try {
+        const rosterItems = await loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid)
+        if (!activeRequest) {
+          return
         }
-      })()
+        setSeasonRoster(rosterItems)
+      } catch (requestError) {
+        if (!activeRequest) {
+          return
+        }
+        if (requestError?.status === 401) {
+          await onLogout()
+          return
+        }
+        setError(requestError)
+      } finally {
+        if (activeRequest) {
+          setSeasonRosterLoading(false)
+        }
+      }
+    })()
 
     return () => {
       activeRequest = false
@@ -1913,9 +1913,9 @@ export default function AdminDashboard({
         selectedSeasonGuid && !seasonMatchesLoading ? String(overviewMatchesSummary.total) : '-',
       helper: selectedSeason
         ? t('dashboard.admin.status.matchesOpenClosed', {
-          open: overviewMatchesSummary.open,
-          closed: overviewMatchesSummary.closed,
-        })
+            open: overviewMatchesSummary.open,
+            closed: overviewMatchesSummary.closed,
+          })
         : t('dashboard.admin.status.noSeasonSelected'),
       tone: overviewMatchesSummary.open > 0 ? 'warning' : 'success',
       icon: 'matches',
@@ -2025,7 +2025,9 @@ export default function AdminDashboard({
                     disabled={loading}
                     color="primary"
                   >
-                    <Box component="span" className="material-symbols-rounded">refresh</Box>
+                    <Box component="span" className="material-symbols-rounded">
+                      refresh
+                    </Box>
                   </IconButton>
                 </span>
               </Tooltip>
@@ -2036,18 +2038,18 @@ export default function AdminDashboard({
                     disabled={loading || !selectedPenaGuid}
                     color="primary"
                   >
-                    <Box component="span" className="material-symbols-rounded">settings</Box>
+                    <Box component="span" className="material-symbols-rounded">
+                      settings
+                    </Box>
                   </IconButton>
                 </span>
               </Tooltip>
               <Tooltip title={t('dashboard.common.logout')}>
                 <span>
-                  <IconButton
-                    onClick={onLogout}
-                    disabled={loading}
-                    color="error"
-                  >
-                    <Box component="span" className="material-symbols-rounded">logout</Box>
+                  <IconButton onClick={onLogout} disabled={loading} color="error">
+                    <Box component="span" className="material-symbols-rounded">
+                      logout
+                    </Box>
                   </IconButton>
                 </span>
               </Tooltip>
@@ -2241,7 +2243,7 @@ export default function AdminDashboard({
               <TextField
                 select
                 size="small"
-                label={t('dashboard.admin.currentPena') || "Peña Activa"}
+                label={t('dashboard.admin.currentPena') || 'Peña Activa'}
                 value={selectedPenaGuid}
                 onChange={(event) => setSelectedPenaGuid(event.target.value)}
                 disabled={loading}
@@ -2298,8 +2300,8 @@ export default function AdminDashboard({
           description={
             pendingDeleteSeason
               ? t('dashboard.admin.seasons.deleteSeasonConfirm', {
-                season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
-              })
+                  season: `${formatDate(pendingDeleteSeason.start_date)} - ${formatDate(pendingDeleteSeason.end_date)}`,
+                })
               : ''
           }
           cancelLabel={t('dashboard.admin.seasons.cancelDeleteSeason')}
@@ -2327,8 +2329,8 @@ export default function AdminDashboard({
           description={
             pendingRemoveSeasonPlayer
               ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
-                player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
-              })
+                  player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
+                })
               : ''
           }
           cancelLabel={t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
@@ -2355,14 +2357,14 @@ export default function AdminDashboard({
           description={
             pendingRemoveMembershipPlayer
               ? t('dashboard.admin.members.removeConfirm', {
-                player: [
-                  pendingRemoveMembershipPlayer.name,
-                  pendingRemoveMembershipPlayer.surname1,
-                  pendingRemoveMembershipPlayer.surname2,
-                ]
-                  .filter(Boolean)
-                  .join(' '),
-              })
+                  player: [
+                    pendingRemoveMembershipPlayer.name,
+                    pendingRemoveMembershipPlayer.surname1,
+                    pendingRemoveMembershipPlayer.surname2,
+                  ]
+                    .filter(Boolean)
+                    .join(' '),
+                })
               : ''
           }
           cancelLabel={t('dashboard.admin.members.cancelRemove')}
@@ -2378,10 +2380,10 @@ export default function AdminDashboard({
           description={
             pendingDeleteMatch
               ? t('dashboard.admin.matches.deleteMatchConfirm', {
-                home: pendingDeleteMatch.home_team_name,
-                away: pendingDeleteMatch.away_team_name,
-                date: formatDate(pendingDeleteMatch.match_date),
-              })
+                  home: pendingDeleteMatch.home_team_name,
+                  away: pendingDeleteMatch.away_team_name,
+                  date: formatDate(pendingDeleteMatch.match_date),
+                })
               : ''
           }
           cancelLabel={t('dashboard.admin.matches.cancelDelete')}
