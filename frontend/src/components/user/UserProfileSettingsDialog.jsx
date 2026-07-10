@@ -47,7 +47,7 @@ export default function UserProfileSettingsDialog({
             <TextField
               select
               size="small"
-              label={t('dashboard.admin.currentPena') || "Peña Activa"}
+              label={t('dashboard.admin.currentPena') || 'Peña Activa'}
               value={selectedPenaGuid}
               onChange={(event) => onSelectPena(event.target.value)}
               disabled={loading}

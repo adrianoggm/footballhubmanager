@@ -41,7 +41,12 @@ export default function PenaSeasonSelector() {
       <Typography
         variant="caption"
         color="text.secondary"
-        sx={{ fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}
+        sx={{
+          fontWeight: 800,
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+        }}
       >
         {labels.season}:
       </Typography>
@@ -64,7 +69,7 @@ export default function PenaSeasonSelector() {
             py: 0.6,
             fontSize: '0.81rem',
             fontWeight: 700,
-          }
+          },
         }}
       >
         {seasons.map((season) => (
