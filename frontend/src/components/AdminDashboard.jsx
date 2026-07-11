@@ -2023,7 +2023,7 @@ export default function AdminDashboard({
                   <IconButton
                     onClick={() => runAction(loadDashboard, '')}
                     disabled={loading}
-                    color="primary"
+                    color="text.secondary"
                   >
                     <Box component="span" className="material-symbols-rounded">
                       refresh
@@ -2036,7 +2036,7 @@ export default function AdminDashboard({
                   <IconButton
                     onClick={openPenaSettings}
                     disabled={loading || !selectedPenaGuid}
-                    color="primary"
+                    color="text.Secondary"
                   >
                     <Box component="span" className="material-symbols-rounded">
                       settings
@@ -2237,9 +2237,6 @@ export default function AdminDashboard({
           <DialogTitle>{t('dashboard.admin.penaSettingsTitle')}</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.penaSettingsHint')}
-              </Typography>
               <TextField
                 select
                 size="small"
@@ -2269,6 +2266,7 @@ export default function AdminDashboard({
                 onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
                 onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
               />
+
               <Divider />
               <AppearanceSettings />
             </Stack>

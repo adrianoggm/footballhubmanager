@@ -196,7 +196,7 @@ export const messages = {
         identityHint: 'Reserved space for the pena or league crest.',
         appearanceTitle: 'Appearance & language',
         identityPlaceholder: 'Crest',
-        profileImageLabel: 'Profile image',
+        profileImageLabel: 'Pena shield',
         imageEmpty: 'No image selected',
         imageActions: {
           choose: 'Choose image',
@@ -298,7 +298,7 @@ export const messages = {
         penaSettingsHint: 'Keep the pena image lightweight and consistent across the dashboard.',
         penaImageHint:
           'The selected image is automatically center-cropped to a square, resized, and compressed before saving.',
-        savePenaProfile: 'Save pena image',
+        savePenaProfile: 'Save',
         seasonActiveSuffix: ' (Active)',
         tabs: {
           overview: 'Overview',
@@ -1063,6 +1063,7 @@ export const messages = {
       dark: 'Dark',
       lightPreset: 'Light preset',
       darkPreset: 'Dark preset',
+      palette: 'Palette',
       presets: {
         sand: 'Sand',
         paper: 'Paper',
@@ -1273,7 +1274,7 @@ export const messages = {
         identityHint: 'Espacio reservado para el escudo de la peña o de la liga.',
         appearanceTitle: 'Apariencia e idioma',
         identityPlaceholder: 'Escudo',
-        profileImageLabel: 'Imagen de perfil',
+        profileImageLabel: 'Escudo de la peña',
         imageEmpty: 'No hay imagen seleccionada',
         imageActions: {
           choose: 'Elegir imagen',
@@ -1375,11 +1376,11 @@ export const messages = {
           goToPlayers: 'Ir a Jugadores',
         },
         openPenaSettings: 'Configurar peña',
-        penaSettingsTitle: 'Configuración de peña',
+        penaSettingsTitle: 'Configuración de la peña',
         penaSettingsHint: 'Mantén la imagen de la peña ligera y consistente en todo el panel.',
         penaImageHint:
           'La imagen seleccionada se recorta automáticamente al centro en formato cuadrado, se redimensiona y se comprime antes de guardarse.',
-        savePenaProfile: 'Guardar imagen de peña',
+        savePenaProfile: 'Guardar',
         seasonActiveSuffix: ' (Activa)',
         tabs: {
           overview: 'Resumen',
@@ -2153,6 +2154,7 @@ export const messages = {
       dark: 'Oscuro',
       lightPreset: 'Preset claro',
       darkPreset: 'Preset oscuro',
+      palette: 'Paleta',
       presets: {
         sand: 'Arena',
         paper: 'Papel',
