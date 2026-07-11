@@ -1,15 +1,18 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, Stack, Typography, useTheme } from '@mui/material'
 
 const playerName = (p) => p.nickname || `${p.name} ${p.surname1}`
 const played = (p) => p.played ?? p.wins + p.draws + p.losses
 
 export default function PlayerRankingCard({ standings = [], t, onStandings }) {
+  const theme = useTheme()
+  const accent = theme.palette.primary.main
   const top5 = [...standings].sort((a, b) => b.points - a.points).slice(0, 5)
+
   return (
-    <Card sx={{ height: '100%', backgroundColor: '#41312A' }}>
+    <Card sx={{ height: '100%', backgroundColor: theme.palette.background.paper }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
+          <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
             {t('dashboard.admin.overview.rankingTitle')}
           </Typography>
           <Typography
@@ -18,7 +21,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
               fontFamily: '"IBM Plex Mono", monospace',
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
-              color: '#DF9F80',
+              color: accent,
             }}
           >
             {t('dashboard.admin.overview.rankingTop', { n: 5 })}
@@ -35,10 +38,12 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
                 px: 1.5,
                 py: 1.1,
                 borderRadius: '6px',
-                bgcolor: '#261812',
+                bgcolor: theme.palette.background.default,
               }}
             >
-              <Typography sx={{ minWidth: 18, fontWeight: 800, color: '#A8938A' }}>
+              <Typography
+                sx={{ minWidth: 18, fontWeight: 800, color: theme.palette.text.secondary }}
+              >
                 {i + 1}
               </Typography>
               <Typography
@@ -47,7 +52,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
                   flex: 1,
                   minWidth: 0,
                   fontWeight: 600,
-                  color: '#C1ACA3',
+                  color: theme.palette.text.secondary,
                   overflowWrap: 'anywhere',
                 }}
               >
@@ -55,7 +60,7 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
               </Typography>
               <Typography
                 variant="body2"
-                sx={{ fontWeight: 800, color: '#DF9F80', whiteSpace: 'nowrap' }}
+                sx={{ fontWeight: 800, color: accent, whiteSpace: 'nowrap' }}
               >
                 {t('dashboard.admin.overview.rankingLineItem', {
                   played: played(p),
@@ -71,10 +76,10 @@ export default function PlayerRankingCard({ standings = [], t, onStandings }) {
             onClick={onStandings}
             sx={{
               mt: 0.5,
-              color: '#DF9F80',
+              color: accent,
               fontWeight: 700,
               borderRadius: '6px',
-              bgcolor: '#261812',
+              bgcolor: theme.palette.background.default,
               '&:hover': { filter: 'brightness(1.18)' },
             }}
           >
