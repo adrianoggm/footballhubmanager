@@ -636,9 +636,9 @@ export default function DashboardShell({
   onNavChange = () => {},
   title = '',
   subtitle = '',
-  badges = null,
   headerAside = null,
   summaryCards = [],
+  actions = null,
   children,
 }) {
   const theme = useTheme()
@@ -663,7 +663,7 @@ export default function DashboardShell({
         railLabel={railLabel}
       />
 
-      <Stack flex={1} spacing={1.5} sx={{ minWidth: 0 }}>
+      <Stack flex={1} spacing={2} sx={{ minWidth: 0 }}>
         <Paper
           elevation={0}
           sx={{
@@ -688,102 +688,96 @@ export default function DashboardShell({
             },
           }}
         >
-          <Grid container alignItems="stretch">
-            <Grid item xs={12} xl={headerAside ? 7 : 12}>
-              <Box
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              p: { xs: 1, sm: 1.25, md: 1.5 },
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'stretch', md: 'center' },
+              justifyContent: 'space-between',
+              gap: 1.5,
+            }}
+          >
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Typography
+                variant="overline"
                 sx={{
-                  position: 'relative',
-                  zIndex: 1,
-                  height: '100%',
-                  p: { xs: 1.15, md: 1.3, xl: 1.25 },
-                  display: 'flex',
-                  alignItems: 'center',
-                  minHeight: { xs: 120, xl: 116 },
+                  color: 'secondary.dark',
+                  fontWeight: 800,
+                  letterSpacing: 0.75,
+                  overflowWrap: 'anywhere',
+                  lineHeight: 1,
                 }}
               >
-                <Stack spacing={0.6} sx={{ maxWidth: 680, minWidth: 0 }}>
-                  <Stack direction="row" spacing={0.55} alignItems="center" flexWrap="wrap">
-                    <Typography
-                      variant="overline"
-                      sx={{
-                        color: 'secondary.dark',
-                        fontWeight: 800,
-                        letterSpacing: 0.75,
-                        overflowWrap: 'anywhere',
-                      }}
-                    >
-                      {brand}
-                    </Typography>
-                    <Box
-                      sx={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: '50%',
-                        bgcolor: 'success.main',
-                        boxShadow: `0 0 0 3px ${alpha(theme.palette.success.main, 0.12)}`,
-                      }}
-                    />
-                  </Stack>
-
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      maxWidth: { xs: '100%', lg: '22ch' },
-                      fontSize: { xs: '1.24rem', sm: '1.36rem', lg: '1.5rem' },
-                      lineHeight: 1,
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {title}
-                  </Typography>
-
-                  {subtitle ? (
-                    <Typography
-                      variant="body1"
-                      color="text.secondary"
-                      sx={{
-                        maxWidth: { xs: '100%', lg: '68ch' },
-                        fontSize: { xs: '0.76rem', md: '0.82rem' },
-                        overflowWrap: 'anywhere',
-                      }}
-                    >
-                      {subtitle}
-                    </Typography>
-                  ) : null}
-
-                  {badges ? (
-                    <Stack direction="row" gap={0.4} flexWrap="wrap" sx={{ pt: 0.1 }}>
-                      {badges}
-                    </Stack>
-                  ) : null}
-                </Stack>
-              </Box>
-            </Grid>
-
-            {headerAside ? (
-              <Grid item xs={12} xl={5}>
+                {brand}
+              </Typography>
+              {headerAside && (
                 <Box
                   sx={{
-                    position: 'relative',
-                    zIndex: 1,
-                    height: '100%',
-                    p: { xs: 1.1, md: 1.25, xl: 1.2 },
-                    borderTop: {
-                      xs: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
-                      xl: 0,
-                    },
-                    borderLeft: {
-                      xl: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.12 : 0.08)}`,
-                    },
-                    background: { xl: alpha(theme.palette.background.paper, isDark ? 0.34 : 0.36) },
+                    width: '1px',
+                    height: 20,
+                    bgcolor: (theme) => alpha(theme.palette.text.primary, 0.15),
+                    display: { xs: 'none', sm: 'block' },
+                  }}
+                />
+              )}
+            </Stack>
+
+            {headerAside ? <Box sx={{ minWidth: 0, flex: { md: 1 } }}>{headerAside}</Box> : null}
+          </Box>
+        </Paper>
+
+        {title ? (
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            spacing={2}
+            sx={{ px: 0.5, mt: 0.5 }}
+          >
+            <Stack spacing={0.6} sx={{ minWidth: 0, flexGrow: 1 }}>
+              <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: { xs: '1.24rem', sm: '1.36rem', lg: '1.5rem' },
+                    lineHeight: 1,
+                    overflowWrap: 'anywhere',
                   }}
                 >
-                  {headerAside}
-                </Box>
-              </Grid>
+                  {title}
+                </Typography>
+              </Stack>
+              {subtitle ? (
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{
+                    maxWidth: { xs: '100%', lg: '68ch' },
+                    fontSize: { xs: '0.76rem', md: '0.82rem' },
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {subtitle}
+                </Typography>
+              ) : null}
+            </Stack>
+
+            {actions ? (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
+              >
+                {actions}
+              </Stack>
             ) : null}
-          </Grid>
-        </Paper>
+          </Stack>
+        ) : null}
 
         {navItems.length > 0 ? (
           <MobileNav
