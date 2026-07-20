@@ -13,7 +13,7 @@ const ICONS = {
 
 function ActionTile({ icon, title, desc, onClick }) {
   const theme = useTheme()
-  const accent = theme.palette.primary.main
+  const accent = '#FCB491' // design-system peach accent for quick actions
   const radius = theme.custom?.dashboard?.radius?.surface || '14px'
   const badgeRadius = theme.custom?.dashboard?.radius?.badge || '10px'
   const isDark = theme.palette.mode === 'dark'
@@ -29,7 +29,7 @@ function ActionTile({ icon, title, desc, onClick }) {
         p: 1.75,
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.07 : 0.09)}`,
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: '#1E1E1E',
         transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
         '&:hover': {
           transform: 'translateY(-2px)',
@@ -73,7 +73,10 @@ function ActionTile({ icon, title, desc, onClick }) {
           >
             {title}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: '0.8rem', lineHeight: 1.35 }}>
+          <Typography
+            color="text.secondary"
+            sx={{ fontSize: '0.8rem', lineHeight: 1.35, color: '#88736A' }}
+          >
             {desc}
           </Typography>
         </Stack>

@@ -30,7 +30,7 @@ function OverviewStatCard({ item }) {
         alignItems: 'center',
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.05 : 0.07)}`,
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: '#45342C',
         px: '24px',
         py: '16px',
       }}
@@ -61,7 +61,7 @@ function OverviewStatCard({ item }) {
             letterSpacing: '0.06em',
             fontSize: '0.9rem',
             lineHeight: 1.25,
-            color: theme.palette.text.secondary,
+            color: '#88736A',
           }}
         >
           {item.label}
@@ -70,7 +70,7 @@ function OverviewStatCard({ item }) {
           sx={{
             fontFamily: '"Hanken Grotesk", sans-serif',
             fontWeight: 800,
-            color: theme.palette.text.primary,
+            color: '#F4EEE8',
             lineHeight: 1.02,
             fontSize: numeric ? '2.35rem' : '1.3rem',
             letterSpacing: -0.5,

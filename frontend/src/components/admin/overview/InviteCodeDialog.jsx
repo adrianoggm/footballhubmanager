@@ -48,8 +48,8 @@ export default function InviteCodeDialog({ open, payload, onClose, t, formatEpoc
             sx={{
               p: 2,
               borderRadius: theme.custom?.dashboard?.radius?.surface || '14px',
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.35)}`,
-              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              border: `1px solid ${alpha('#DF9F80', 0.35)}`,
+              bgcolor: alpha('#DF9F80', 0.08),
               textAlign: 'center',
             }}
           >
@@ -62,7 +62,7 @@ export default function InviteCodeDialog({ open, payload, onClose, t, formatEpoc
                 fontWeight: 800,
                 fontSize: '1.6rem',
                 letterSpacing: 2,
-                color: theme.palette.primary.main,
+                color: '#DF9F80',
                 overflowWrap: 'anywhere',
               }}
             >
@@ -80,9 +80,9 @@ export default function InviteCodeDialog({ open, payload, onClose, t, formatEpoc
           onClick={handleCopy}
           disabled={!code}
           sx={{
-            color: theme.palette.primary.main,
+            color: '#DF9F80',
             fontWeight: 700,
-            bgcolor: theme.palette.background.default,
+            bgcolor: '#261812',
             '&:hover': { filter: 'brightness(1.18)' },
           }}
         >

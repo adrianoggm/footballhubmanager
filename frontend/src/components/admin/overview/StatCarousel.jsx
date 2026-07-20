@@ -49,8 +49,6 @@ const VIEWS = [
 ]
 
 function ClassificationTable({ standings, t }) {
-  const theme = useTheme()
-  const accent = theme.palette.primary.main
   const rows = useMemo(
     () => [...standings].sort((a, b) => b.points - a.points).slice(0, 8),
     [standings]
@@ -84,19 +82,19 @@ function ClassificationTable({ standings, t }) {
             <TableRow key={p.player_guid}>
               <TableCell sx={{ color: 'text.secondary' }}>{i + 1}</TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap' }}>{playerName(p)}</TableCell>
-              <TableCell align="right" sx={{ color: accent }}>
+              <TableCell align="right" sx={{ color: ACCENT }}>
                 {played(p)}
               </TableCell>
-              <TableCell align="right" sx={{ color: accent }}>
+              <TableCell align="right" sx={{ color: ACCENT }}>
                 {p.wins}
               </TableCell>
-              <TableCell align="right" sx={{ color: accent }}>
+              <TableCell align="right" sx={{ color: ACCENT }}>
                 {p.draws}
               </TableCell>
-              <TableCell align="right" sx={{ color: accent }}>
+              <TableCell align="right" sx={{ color: ACCENT }}>
                 {p.losses}
               </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800, color: accent }}>
+              <TableCell align="right" sx={{ fontWeight: 800, color: ACCENT }}>
                 {p.points}
               </TableCell>
             </TableRow>
@@ -109,8 +107,6 @@ function ClassificationTable({ standings, t }) {
 
 // Sortable player-stats table with Total <-> Per-match toggle.
 function PlayerStatsTable({ standings, t }) {
-  const theme = useTheme()
-  const accent = theme.palette.primary.main
   const [mode, setMode] = useState('total')
   const [sortKey, setSortKey] = useState('goals')
   const [sortDir, setSortDir] = useState('desc')
@@ -196,19 +192,19 @@ function PlayerStatsTable({ standings, t }) {
             {rows.map((r) => (
               <TableRow key={r.guid}>
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{r.name}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, color: accent }}>
+                <TableCell align="right" sx={{ fontWeight: 700, color: ACCENT }}>
                   {r.goals}
                 </TableCell>
-                <TableCell align="right" sx={{ color: accent }}>
+                <TableCell align="right" sx={{ color: ACCENT }}>
                   {r.assists}
                 </TableCell>
-                <TableCell align="right" sx={{ color: accent }}>
+                <TableCell align="right" sx={{ color: ACCENT }}>
                   {r.saves}
                 </TableCell>
-                <TableCell align="right" sx={{ color: accent }}>
+                <TableCell align="right" sx={{ color: ACCENT }}>
                   {r.rating}
                 </TableCell>
-                <TableCell align="right" sx={{ color: accent }}>
+                <TableCell align="right" sx={{ color: ACCENT }}>
                   {r.played}
                 </TableCell>
               </TableRow>
@@ -222,16 +218,7 @@ function PlayerStatsTable({ standings, t }) {
 
 export default function StatCarousel({ standings = [], allMatches = [], t }) {
   const theme = useTheme()
-  const accent = theme.palette.primary.main
   const [index, setIndex] = useState(0)
-
-  const tooltipContent = {
-    backgroundColor: theme.palette.background.default,
-    border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
-    borderRadius: 6,
-  }
-  const tooltipLabel = { color: theme.palette.text.secondary, fontWeight: 700 }
-  const tooltipItem = { color: accent }
 
   const goalsByMatchday = useMemo(
     () =>
@@ -259,11 +246,11 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
   const go = (delta) => setIndex((i) => (i + delta + VIEWS.length) % VIEWS.length)
 
   return (
-    <Card sx={{ height: '100%', backgroundColor: theme.palette.background.paper }}>
+    <Card sx={{ height: '100%', backgroundColor: '#1E1E1E' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+            <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
               {t(`dashboard.admin.overview.${view.key}`)}
             </Typography>
             <Stack direction="row" spacing={0.5}>
@@ -274,7 +261,7 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
                     width: i === index ? 16 : 6,
                     height: 6,
                     borderRadius: 3,
-                    bgcolor: i === index ? accent : alpha(theme.palette.text.primary, 0.2),
+                    bgcolor: i === index ? ACCENT : alpha(theme.palette.text.primary, 0.2),
                     transition: 'width 160ms ease, background 160ms ease',
                   }}
                 />
@@ -311,8 +298,8 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
                   <AreaChart data={goalsByMatchday}>
                     <defs>
                       <linearGradient id="goalsFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={accent} stopOpacity={0.5} />
-                        <stop offset="100%" stopColor={accent} stopOpacity={0} />
+                        <stop offset="0%" stopColor={ACCENT} stopOpacity={0.5} />
+                        <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -320,14 +307,14 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
                     <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                     <RechartsTooltip
                       cursor={{ stroke: 'rgba(255,255,255,0.15)' }}
-                      contentStyle={tooltipContent}
-                      labelStyle={tooltipLabel}
-                      itemStyle={tooltipItem}
+                      contentStyle={TOOLTIP_CONTENT}
+                      labelStyle={TOOLTIP_LABEL}
+                      itemStyle={TOOLTIP_ITEM}
                     />
                     <Area
                       type="monotone"
                       dataKey="goals"
-                      stroke={accent}
+                      stroke={ACCENT}
                       strokeWidth={2}
                       fill="url(#goalsFill)"
                     />
@@ -345,11 +332,11 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
                     <RechartsTooltip
                       cursor={{ fill: 'rgba(255,255,255,0.06)' }}
                       formatter={(v) => `${v}%`}
-                      contentStyle={tooltipContent}
-                      labelStyle={tooltipLabel}
-                      itemStyle={tooltipItem}
+                      contentStyle={TOOLTIP_CONTENT}
+                      labelStyle={TOOLTIP_LABEL}
+                      itemStyle={TOOLTIP_ITEM}
                     />
-                    <Bar dataKey="rate" fill={accent} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="rate" fill={ACCENT} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 )}
               </ResponsiveContainer>

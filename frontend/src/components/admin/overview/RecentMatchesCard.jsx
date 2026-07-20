@@ -1,4 +1,4 @@
-import { Box, Button, Card, CardContent, Stack, Typography, useTheme } from '@mui/material'
+import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material'
 import { EmptyState } from '../../common'
 
 // day + short month from a YYYY-MM-DD string (built as a local date to avoid TZ drift).
@@ -15,19 +15,16 @@ function dateParts(value) {
 }
 
 export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, onViewAll }) {
-  const theme = useTheme()
-  const accent = theme.palette.primary.main
-  const isDark = theme.palette.mode === 'dark'
   const recent = matches
     .filter((m) => String(m.status || '').toLowerCase() === 'closed')
     .sort((a, b) => new Date(b.match_date) - new Date(a.match_date))
     .slice(0, 3)
 
   return (
-    <Card sx={{ height: '100%', backgroundColor: theme.palette.background.paper }}>
+    <Card sx={{ height: '100%', backgroundColor: '#41312A' }}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+          <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
             {t('dashboard.admin.overview.recentMatchesTitle')}
           </Typography>
           <Typography
@@ -36,7 +33,7 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
               fontFamily: '"IBM Plex Mono", monospace',
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
-              color: accent,
+              color: '#DF9F80',
             }}
           >
             {t('dashboard.admin.overview.recentMatchesLast', { n: 3 })}
@@ -59,19 +56,13 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                     px: 1.5,
                     py: 1.1,
                     borderRadius: '6px',
-                    bgcolor: theme.palette.background.default,
+                    bgcolor: '#261812',
                     transition: 'filter 140ms ease',
                     '&:hover': { filter: 'brightness(1.18)' },
                   }}
                 >
                   <Stack sx={{ minWidth: 30, textAlign: 'center', lineHeight: 1 }}>
-                    <Typography
-                      sx={{
-                        fontWeight: 800,
-                        fontSize: '1rem',
-                        color: theme.palette.text.secondary,
-                      }}
-                    >
+                    <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: '#A8938A' }}>
                       {day}
                     </Typography>
                     <Typography
@@ -79,7 +70,7 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                         fontSize: '0.6rem',
                         fontWeight: 700,
                         letterSpacing: '0.06em',
-                        color: theme.palette.text.secondary,
+                        color: '#A8938A',
                         fontFamily: '"JetBrains Mono", monospace',
                       }}
                     >
@@ -92,13 +83,13 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                       flex: 1,
                       minWidth: 0,
                       fontWeight: 600,
-                      color: theme.palette.text.secondary,
+                      color: '#C1ACA3',
                       overflowWrap: 'anywhere',
                     }}
                   >
                     {m.home_team_name} {t('dashboard.admin.overview.versus')} {m.away_team_name}
                   </Typography>
-                  <Typography sx={{ fontWeight: 800, color: accent, whiteSpace: 'nowrap' }}>
+                  <Typography sx={{ fontWeight: 800, color: '#DF9F80', whiteSpace: 'nowrap' }}>
                     {m.home_score} - {m.away_score}
                   </Typography>
                 </Box>
@@ -110,10 +101,10 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
                 onClick={onViewAll}
                 sx={{
                   mt: 0.5,
-                  color: accent,
+                  color: '#DF9F80',
                   fontWeight: 700,
                   borderRadius: '6px',
-                  bgcolor: theme.palette.background.default,
+                  bgcolor: '#261812',
                   '&:hover': { filter: 'brightness(1.18)' },
                 }}
               >
