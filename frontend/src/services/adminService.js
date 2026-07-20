@@ -57,12 +57,19 @@ export class AdminService {
     return httpClient.delete(`${API_V1}/penas/${penaGuid}/accountability/members/${playerGuid}`)
   }
 
-  createPenaExpense(penaGuid, payload) {
-    return httpClient.post(`${API_V1}/penas/${penaGuid}/accountability/expenses`, payload)
+  listPenaTransactions(penaGuid, { page = 1, pageSize = 10, type = '' } = {}) {
+    const query = toQueryString({ page, page_size: pageSize, type })
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/accountability/transactions${query}`)
   }
 
-  deletePenaExpense(penaGuid, expenseGuid) {
-    return httpClient.delete(`${API_V1}/penas/${penaGuid}/accountability/expenses/${expenseGuid}`)
+  recordPenaTransaction(penaGuid, payload) {
+    return httpClient.post(`${API_V1}/penas/${penaGuid}/accountability/transactions`, payload)
+  }
+
+  deletePenaTransaction(penaGuid, transactionGuid) {
+    return httpClient.delete(
+      `${API_V1}/penas/${penaGuid}/accountability/transactions/${transactionGuid}`
+    )
   }
 
   updatePenaLabels(penaGuid, payload) {

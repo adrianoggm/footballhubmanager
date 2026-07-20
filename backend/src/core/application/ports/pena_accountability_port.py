@@ -14,31 +14,61 @@ class PenaAccountabilityMemberAccountResult:
 
 
 @dataclass(frozen=True)
-class PenaAccountabilityExpenseResult:
-    guid: str
-    title: str
-    category: str | None
-    amount_cents: int
-    occurred_on: date
-    note: str | None
-    created_at: datetime | None
-    updated_at: datetime | None
+class PenaMonthlyCashflowResult:
+    year: int
+    month: int
+    income_cents: int
+    expense_cents: int
 
 
 @dataclass(frozen=True)
 class PenaAccountabilityResult:
     currency: str
-    balance_cents: int
+    opening_balance_cents: int
     reserve_cents: int
     budget_visibility: str
     expenses_visibility: str
     member_accounts: list[PenaAccountabilityMemberAccountResult]
-    expenses: list[PenaAccountabilityExpenseResult]
+    total_income_cents: int
+    total_expense_cents: int
+    expenses_this_month_count: int
+    monthly_cashflow: list[PenaMonthlyCashflowResult]
     updated_at: datetime | None
+
+
+@dataclass(frozen=True)
+class PenaTransactionResult:
+    guid: str
+    type: str
+    amount_cents: int
+    entity: str | None
+    concept: str
+    category: str | None
+    note: str | None
+    occurred_on: date
+    player_guid: str | None
+    player_name: str | None
+    created_at: datetime | None
+    updated_at: datetime | None
+
+
+@dataclass(frozen=True)
+class PenaTransactionPageResult:
+    items: list[PenaTransactionResult]
+    total: int
 
 
 class PenaAccountabilityPort(Protocol):
     def get_for_pena(self, *, pena_guid: str) -> PenaAccountabilityResult: ...
+
+    def list_transactions_for_pena(
+        self,
+        *,
+        pena_guid: str,
+        page: int,
+        page_size: int,
+        type_filter: str | None,
+    ) -> PenaTransactionPageResult: ...
 
     def save_settings_for_admin(
         self,
@@ -71,24 +101,27 @@ class PenaAccountabilityPort(Protocol):
         player_guid: str,
     ) -> PenaAccountabilityResult: ...
 
-    def create_expense_for_admin(
+    def record_transaction_for_admin(
         self,
         *,
         pena_guid: str,
         admin_id: int,
-        title: str,
-        category: str | None,
+        type: str,
         amount_cents: int,
+        concept: str,
         occurred_on: date,
+        entity: str | None,
+        category: str | None,
         note: str | None,
+        player_guid: str | None,
     ) -> PenaAccountabilityResult: ...
 
-    def delete_expense_for_admin(
+    def delete_transaction_for_admin(
         self,
         *,
         pena_guid: str,
         admin_id: int,
-        expense_guid: str,
+        transaction_guid: str,
     ) -> PenaAccountabilityResult: ...
 
     def get_player_guid_by_account(self, *, account_id: int) -> str | None: ...
