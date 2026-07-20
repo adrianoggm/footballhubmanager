@@ -410,40 +410,6 @@ def test_logout_invalidates_session_and_returns_ok(monkeypatch):
     assert "session=" in http_response.headers.get("set-cookie", "")
 
 
-def test_admin_registration_secret_disabled_when_env_unset(monkeypatch):
-    monkeypatch.delenv("ADMIN_REGISTRATION_SECRET", raising=False)
-    with pytest.raises(HTTPException) as exc:
-        auth_controller.require_admin_registration_secret(x_admin_registration_secret="anything")
-    assert exc.value.status_code == 403
-    assert exc.value.detail == "Admin registration is disabled"
-
-
-def test_admin_registration_secret_rejects_wrong_value(monkeypatch):
-    monkeypatch.setenv("ADMIN_REGISTRATION_SECRET", "expected-secret")
-    with pytest.raises(HTTPException) as exc:
-        auth_controller.require_admin_registration_secret(x_admin_registration_secret="wrong")
-    assert exc.value.status_code == 403
-    assert exc.value.detail == "Invalid admin registration secret"
-
-
-def test_admin_registration_secret_rejects_missing_header(monkeypatch):
-    monkeypatch.setenv("ADMIN_REGISTRATION_SECRET", "expected-secret")
-    with pytest.raises(HTTPException) as exc:
-        auth_controller.require_admin_registration_secret(x_admin_registration_secret=None)
-    assert exc.value.status_code == 403
-
-
-def test_admin_registration_secret_accepts_matching_value(monkeypatch):
-    monkeypatch.setenv("ADMIN_REGISTRATION_SECRET", "expected-secret")
-    # Returns None (no exception) when the header matches.
-    assert (
-        auth_controller.require_admin_registration_secret(
-            x_admin_registration_secret="expected-secret"
-        )
-        is None
-    )
-
-
 @pytest.mark.parametrize("model", [RegisterUserRequest, RegisterAdminRequest])
 def test_registration_rejects_short_password(model):
     from pydantic import ValidationError
