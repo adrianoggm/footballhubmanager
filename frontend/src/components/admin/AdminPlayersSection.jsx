@@ -1,875 +1,288 @@
-import {
-  Autocomplete,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Grid,
-  MenuItem,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
-import {
-  translateNationalityLabel,
-  translatePositionLabel,
-  translateRoleLabel,
-} from '../../i18n/labels.js'
-import { readableTextColor } from '../../theme/contrastText.js'
-import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
-import { LoadingState } from '../common'
+import { Box, Button, Stack, Typography } from '@mui/material'
+import { useState } from 'react'
 
-const labelChipSx = (color) => {
-  const background = color || DEFAULT_LABEL_COLOR
-  return {
-    backgroundColor: background,
-    color: readableTextColor(background),
-    border: '1px solid rgba(15, 23, 42, 0.12)',
-  }
-}
+import { ConfirmDialog, StatCard } from '../common'
+import { EditMembershipDialog, EditSeasonPlayerDialog } from './PlayerEditDialogs.jsx'
+import AddSeasonPlayersDialog from './players/AddSeasonPlayersDialog.jsx'
+import ClaimLinkDialog from './players/ClaimLinkDialog.jsx'
+import LabelsDialog from './players/LabelsDialog.jsx'
+import NewPlayerDialog from './players/NewPlayerDialog.jsx'
+import PlayerList from './players/PlayerList.jsx'
+import PlayerToolbar from './players/PlayerToolbar.jsx'
+import { filterPlayers, paginate, sortPlayers } from './players/playersHelpers.js'
 
-const renderFilterValue = (selected, emptyLabel, translate) => {
-  const values = Array.isArray(selected)
-    ? selected.map((item) => String(item || '').trim()).filter(Boolean)
-    : []
-  if (!values.length) {
-    return emptyLabel
-  }
-  return (translate ? values.map(translate) : values).join(', ')
-}
+const PAGE_SIZE = 10
+const ACCENT = '#FCB491'
 
-function LabelColorList({ labels, colors, onColorChange }) {
-  if (!labels.length) {
-    return null
-  }
+const HeaderIcon = ({ name }) => (
+  <Box component="span" className="material-symbols-rounded">
+    {name}
+  </Box>
+)
 
-  return (
-    <Stack spacing={1} sx={{ mt: 1 }}>
-      {labels.map((label) => (
-        <Stack
-          key={label}
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Chip size="small" label={label} sx={labelChipSx(colors[label])} />
-          <TextField
-            type="color"
-            size="small"
-            value={colors[label]}
-            onChange={onColorChange(label)}
-            sx={{ width: 72 }}
-            inputProps={{
-              'aria-label': `${label} color`,
-            }}
-          />
-        </Stack>
-      ))}
-    </Stack>
+/**
+ * Player Directory (issue #147, task 8): a single filterable/sortable list of
+ * pena members with season membership rendered as a STATUS column, plus the
+ * header actions and every player dialog. All data + mutations live in
+ * `useAdminPlayers` (passed in as `adminPlayers`); this section only composes
+ * the already-built presentational pieces and owns the three header dialogs'
+ * open/close booleans.
+ */
+export default function AdminPlayersSection({
+  adminPlayers,
+  selectedSeasonGuid,
+  nationalities,
+  penaLabels,
+  t,
+  formatPlayerDisplayName,
+  formatEpochSeconds,
+}) {
+  const [addSeasonOpen, setAddSeasonOpen] = useState(false)
+  const [newPlayerOpen, setNewPlayerOpen] = useState(false)
+  const [labelsOpen, setLabelsOpen] = useState(false)
+
+  const { state, actions, toolbar, toolbarActions } = adminPlayers
+  const loading = state.loading
+
+  const roleOptions = penaLabels.role_labels || []
+  const positionOptions = penaLabels.position_labels || []
+
+  const filtered = sortPlayers(
+    filterPlayers(
+      adminPlayers.players,
+      {
+        search: toolbar.search,
+        roles: toolbar.roleFilter,
+        positions: toolbar.positionFilter,
+        status: toolbar.statusFilter,
+      },
+      adminPlayers.seasonRosterGuids
+    ),
+    toolbar.sort
   )
-}
+  const paged = paginate(filtered, toolbar.page, PAGE_SIZE)
 
-export default function AdminPlayersSection({ state, actions, helpers }) {
-  const { t, formatPlayerDisplayName, formatEpochSeconds } = helpers
-  const {
-    selectedSeason,
-    selectedSeasonLabel,
-    seasonList,
-    selectedHistoricalGuids,
-    availableHistoricalPlayers,
-    loading,
-    selectedSeasonGuid,
-    seasonRosterLoading,
-    seasonRoster,
-    historicalPlayers,
-    filteredHistoricalPlayers,
-    penaLabels,
-    labelsDraft,
-    draftRoleLabels,
-    draftPositionLabels,
-    draftRoleColors,
-    draftPositionColors,
-    memberFilters,
-    guestForm,
-    nationalities,
-    claimLinkPayload,
-  } = state
-  const {
-    handleSelectHistoricalPlayers,
-    handleRegisterHistoricalPlayersInSeason,
-    handleRegisterSinglePlayerInSeason,
-    handleEditSeasonPlayer,
-    handleRequestRemoveSeasonPlayer,
-    onGuestField,
-    handleCreateGuestPlayer,
-    handleEditMembershipPlayer,
-    handleRequestRemoveMembershipPlayer,
-    handleGenerateClaimLink,
-    onCloseClaimLink,
-    onMemberFilterField,
-    onLabelsDraftField,
-    onLabelColorDraftChange,
-    handleSavePenaLabels,
-  } = actions
+  const handleRowAction = (key, player) => {
+    switch (key) {
+      case 'edit':
+        actions.handleEditMembershipPlayer(player)
+        break
+      case 'editStats':
+        actions.handleEditSeasonPlayer(player)
+        break
+      case 'addToSeason':
+        actions.handleRegisterSinglePlayerInSeason(player.guid)
+        break
+      case 'removeFromSeason':
+        actions.handleRequestRemoveSeasonPlayer(player)
+        break
+      case 'invite':
+        actions.handleGenerateClaimLink(player)
+        break
+      case 'remove':
+        actions.handleRequestRemoveMembershipPlayer(player)
+        break
+      default:
+        break
+    }
+  }
 
-  const [membersPage, setMembersPage] = useState(0)
-  const [membersRowsPerPage, setMembersRowsPerPage] = useState(25)
-  const [seasonRosterPage, setSeasonRosterPage] = useState(0)
-  const [seasonRosterRowsPerPage, setSeasonRosterRowsPerPage] = useState(25)
-  const [labelsEditorOpen, setLabelsEditorOpen] = useState(false)
-  const [claimLinkCopied, setClaimLinkCopied] = useState(false)
-
-  const claimUrl = claimLinkPayload?.token
-    ? `${window.location.origin}/claim/${claimLinkPayload.token}`
+  const confirmState = adminPlayers.confirmState
+  const isSeasonConfirm = confirmState?.kind === 'season'
+  const confirmPlayerName = confirmState
+    ? isSeasonConfirm
+      ? formatPlayerDisplayName(confirmState.player)
+      : [confirmState.player.name, confirmState.player.surname1, confirmState.player.surname2]
+          .filter(Boolean)
+          .join(' ')
     : ''
 
-  useEffect(() => {
-    setClaimLinkCopied(false)
-  }, [claimLinkPayload])
-
-  const handleCopyClaimLink = async () => {
-    if (!claimUrl) {
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(claimUrl)
-      setClaimLinkCopied(true)
-    } catch {
-      setClaimLinkCopied(false)
-    }
-  }
-
-  const seasonRosterGuids = useMemo(
-    () => new Set(seasonRoster.map((player) => player.player_guid)),
-    [seasonRoster]
-  )
-
-  const historicalPlayersByGuid = useMemo(
-    () => new Map(historicalPlayers.map((player) => [player.guid, player])),
-    [historicalPlayers]
-  )
-
-  const selectedHistoricalPlayers = useMemo(
-    () => selectedHistoricalGuids.map((guid) => historicalPlayersByGuid.get(guid)).filter(Boolean),
-    [selectedHistoricalGuids, historicalPlayersByGuid]
-  )
-
-  const pagedSeasonRoster = useMemo(() => {
-    const start = seasonRosterPage * seasonRosterRowsPerPage
-    return seasonRoster.slice(start, start + seasonRosterRowsPerPage)
-  }, [seasonRoster, seasonRosterPage, seasonRosterRowsPerPage])
-
-  const pagedHistoricalPlayers = useMemo(() => {
-    const start = membersPage * membersRowsPerPage
-    return filteredHistoricalPlayers.slice(start, start + membersRowsPerPage)
-  }, [filteredHistoricalPlayers, membersPage, membersRowsPerPage])
-
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(seasonRoster.length / seasonRosterRowsPerPage) - 1)
-    if (seasonRosterPage > maxPage) {
-      setSeasonRosterPage(maxPage)
-    }
-  }, [seasonRoster.length, seasonRosterPage, seasonRosterRowsPerPage])
-
-  useEffect(() => {
-    const maxPage = Math.max(
-      0,
-      Math.ceil(filteredHistoricalPlayers.length / membersRowsPerPage) - 1
-    )
-    if (membersPage > maxPage) {
-      setMembersPage(maxPage)
-    }
-  }, [filteredHistoricalPlayers.length, membersPage, membersRowsPerPage])
-
   return (
-    <Grid container spacing={2.5} sx={{ width: '100%' }}>
-      <Grid item xs={12} md={8}>
-        <Stack spacing={2.5}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  alignItems={{ sm: 'center' }}
-                  justifyContent="space-between"
-                  spacing={1.5}
-                >
-                  <Typography variant="h6">{t('dashboard.admin.players.squadTitle')}</Typography>
-                  {selectedSeason && (
-                    <Chip size="small" color="primary" label={selectedSeasonLabel} />
-                  )}
-                </Stack>
+    <Stack spacing={2.5} sx={{ width: '100%' }}>
+      <Box>
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>
+          {t('dashboard.admin.directory.title')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('dashboard.admin.directory.subtitle')}
+        </Typography>
+      </Box>
 
-                {!seasonList.length && (
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.players.createSeasonFirst')}
-                  </Typography>
-                )}
-
-                <Autocomplete
-                  multiple
-                  disableCloseOnSelect
-                  options={availableHistoricalPlayers}
-                  value={selectedHistoricalPlayers}
-                  onChange={(_, selectedPlayers) =>
-                    handleSelectHistoricalPlayers({
-                      target: {
-                        value: selectedPlayers.map((player) => player.guid),
-                      },
-                    })
-                  }
-                  getOptionLabel={(option) => formatPlayerDisplayName(option)}
-                  isOptionEqualToValue={(option, value) => option.guid === value.guid}
-                  disabled={loading || !selectedSeasonGuid || !availableHistoricalPlayers.length}
-                  filterSelectedOptions
-                  fullWidth
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label={t('dashboard.admin.players.historicalMembersLabel')}
-                      helperText={
-                        !selectedSeasonGuid
-                          ? t('dashboard.admin.players.helperSelectSeason')
-                          : availableHistoricalPlayers.length
-                            ? t('dashboard.admin.players.helperSome')
-                            : t('dashboard.admin.players.helperNone')
-                      }
-                    />
-                  )}
-                />
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    onClick={handleRegisterHistoricalPlayersInSeason}
-                    disabled={loading || !selectedSeasonGuid || !selectedHistoricalGuids.length}
-                  >
-                    {t('dashboard.admin.players.addSelectedToSeason')}
-                  </Button>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.players.registeredAvailable', {
-                      registered: seasonRoster.length,
-                      available: availableHistoricalPlayers.length,
-                    })}
-                  </Typography>
-                </Stack>
-
-                {seasonRosterLoading && <LoadingState variant="skeleton" rows={5} />}
-
-                {selectedSeasonGuid && !seasonRosterLoading && (
-                  <>
-                    <TableContainer>
-                      <Table size="small" sx={{ minWidth: 820 }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.role')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.position')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.played')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.w')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.d')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
-                            <TableCell align="right">
-                              {t('dashboard.admin.table.assists')}
-                            </TableCell>
-                            <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
-                            <TableCell>{t('dashboard.admin.players.actions')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {pagedSeasonRoster.map((player) => (
-                            <TableRow key={player.player_guid}>
-                              <TableCell>{formatPlayerDisplayName(player)}</TableCell>
-                              <TableCell>
-                                {player.role ? (
-                                  <Chip
-                                    size="small"
-                                    label={translateRoleLabel(t, player.role)}
-                                    sx={labelChipSx(penaLabels.role_colors?.[player.role])}
-                                  />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {player.position ? (
-                                  <Chip
-                                    size="small"
-                                    label={translatePositionLabel(t, player.position)}
-                                    sx={labelChipSx(penaLabels.position_colors?.[player.position])}
-                                  />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                {player.played ?? player.wins + player.draws + player.losses}
-                              </TableCell>
-                              <TableCell align="right">{player.wins}</TableCell>
-                              <TableCell align="right">{player.draws}</TableCell>
-                              <TableCell align="right">{player.losses}</TableCell>
-                              <TableCell align="right">{player.goals ?? 0}</TableCell>
-                              <TableCell align="right">{player.assists ?? 0}</TableCell>
-                              <TableCell align="right">{player.points}</TableCell>
-                              <TableCell>
-                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    onClick={() => handleEditSeasonPlayer(player)}
-                                    disabled={loading}
-                                  >
-                                    {t('dashboard.admin.players.editSeasonPlayer')}
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    color="error"
-                                    onClick={() => handleRequestRemoveSeasonPlayer(player)}
-                                    disabled={loading}
-                                  >
-                                    {t('dashboard.admin.players.removeFromSeason')}
-                                  </Button>
-                                </Stack>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {!seasonRoster.length && (
-                            <TableRow>
-                              <TableCell colSpan={11}>
-                                {t('dashboard.admin.players.noPlayersInSeason')}
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    <TablePagination
-                      component="div"
-                      count={seasonRoster.length}
-                      page={seasonRosterPage}
-                      onPageChange={(_, nextPage) => setSeasonRosterPage(nextPage)}
-                      rowsPerPage={seasonRosterRowsPerPage}
-                      onRowsPerPageChange={(event) => {
-                        setSeasonRosterRowsPerPage(Number(event.target.value))
-                        setSeasonRosterPage(0)
-                      }}
-                      rowsPerPageOptions={[10, 25, 50, 100]}
-                    />
-                  </>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent>
-              <Stack spacing={1.5}>
-                <Typography variant="h6">{t('dashboard.admin.members.title')}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.members.description')}
-                </Typography>
-                {!historicalPlayers.length && (
-                  <Typography variant="body2" color="text.secondary">
-                    {t('dashboard.admin.members.noMembers')}
-                  </Typography>
-                )}
-                {historicalPlayers.length > 0 && (
-                  <Stack spacing={1.5}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                      <TextField
-                        select
-                        size="small"
-                        label={t('dashboard.admin.members.filterRole')}
-                        value={memberFilters.role}
-                        onChange={onMemberFilterField('role')}
-                        InputLabelProps={{ shrink: true }}
-                        SelectProps={{
-                          multiple: true,
-                          displayEmpty: true,
-                          renderValue: (selected) =>
-                            renderFilterValue(
-                              selected,
-                              t('dashboard.admin.members.filterAllRoles'),
-                              (value) => translateRoleLabel(t, value)
-                            ),
-                        }}
-                        fullWidth
-                      >
-                        {penaLabels.role_labels.map((roleLabel) => (
-                          <MenuItem key={roleLabel} value={roleLabel.toLowerCase()}>
-                            {translateRoleLabel(t, roleLabel)}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                      <TextField
-                        select
-                        size="small"
-                        label={t('dashboard.admin.members.filterPosition')}
-                        value={memberFilters.position}
-                        onChange={onMemberFilterField('position')}
-                        InputLabelProps={{ shrink: true }}
-                        SelectProps={{
-                          multiple: true,
-                          displayEmpty: true,
-                          renderValue: (selected) =>
-                            renderFilterValue(
-                              selected,
-                              t('dashboard.admin.members.filterAllPositions'),
-                              (value) => translatePositionLabel(t, value)
-                            ),
-                        }}
-                        fullWidth
-                      >
-                        {penaLabels.position_labels.map((positionLabel) => (
-                          <MenuItem key={positionLabel} value={positionLabel.toLowerCase()}>
-                            {translatePositionLabel(t, positionLabel)}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Stack>
-
-                    <TableContainer>
-                      <Table size="small" sx={{ minWidth: 820 }}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('dashboard.admin.table.player')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.nickname')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.role')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.position')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.seasonColumn')}</TableCell>
-                            <TableCell>{t('dashboard.admin.members.actions')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {pagedHistoricalPlayers.map((player) => (
-                            <TableRow key={player.guid}>
-                              <TableCell>
-                                {[player.name, player.surname1, player.surname2]
-                                  .filter(Boolean)
-                                  .join(' ')}
-                              </TableCell>
-                              <TableCell>{player.nickname || '-'}</TableCell>
-                              <TableCell>
-                                {player.role ? (
-                                  <Chip
-                                    size="small"
-                                    label={translateRoleLabel(t, player.role)}
-                                    sx={labelChipSx(penaLabels.role_colors?.[player.role])}
-                                  />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {player.position ? (
-                                  <Chip
-                                    size="small"
-                                    label={translatePositionLabel(t, player.position)}
-                                    sx={labelChipSx(penaLabels.position_colors?.[player.position])}
-                                  />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {!selectedSeasonGuid ? (
-                                  '-'
-                                ) : seasonRosterGuids.has(player.guid) ? (
-                                  <Chip
-                                    size="small"
-                                    variant="outlined"
-                                    color="success"
-                                    label={t('dashboard.admin.members.inSeason')}
-                                  />
-                                ) : (
-                                  <Stack
-                                    direction="row"
-                                    spacing={1}
-                                    alignItems="center"
-                                    flexWrap="wrap"
-                                    useFlexGap
-                                  >
-                                    <Chip
-                                      size="small"
-                                      variant="outlined"
-                                      color="warning"
-                                      label={t('dashboard.admin.members.notInSeason')}
-                                    />
-                                    <Button
-                                      size="small"
-                                      variant="text"
-                                      onClick={() =>
-                                        handleRegisterSinglePlayerInSeason(player.guid)
-                                      }
-                                      disabled={loading}
-                                    >
-                                      {t('dashboard.admin.members.addToSeason')}
-                                    </Button>
-                                  </Stack>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    onClick={() => handleEditMembershipPlayer(player)}
-                                    disabled={loading}
-                                  >
-                                    {t('dashboard.admin.members.edit')}
-                                  </Button>
-                                  {!player.has_account && (
-                                    <Button
-                                      size="small"
-                                      variant="text"
-                                      color="secondary"
-                                      onClick={() => handleGenerateClaimLink(player)}
-                                      disabled={loading}
-                                    >
-                                      {t('dashboard.admin.members.generateClaimLink')}
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    color="error"
-                                    onClick={() => handleRequestRemoveMembershipPlayer(player)}
-                                    disabled={loading}
-                                  >
-                                    {t('dashboard.admin.members.remove')}
-                                  </Button>
-                                </Stack>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {!filteredHistoricalPlayers.length && (
-                            <TableRow>
-                              <TableCell colSpan={6}>
-                                {t('dashboard.admin.members.noMembersForFilters')}
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    <TablePagination
-                      component="div"
-                      count={filteredHistoricalPlayers.length}
-                      page={membersPage}
-                      onPageChange={(_, nextPage) => setMembersPage(nextPage)}
-                      rowsPerPage={membersRowsPerPage}
-                      onRowsPerPageChange={(event) => {
-                        setMembersRowsPerPage(Number(event.target.value))
-                        setMembersPage(0)
-                      }}
-                      rowsPerPageOptions={[10, 25, 50, 100]}
-                    />
-                  </Stack>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
-      </Grid>
-
-      <Grid item xs={12} xl={4} sx={{ minWidth: 0 }}>
-        <Stack spacing={2.5}>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">{t('dashboard.admin.guest.title')}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.guest.description')}
-                </Typography>
-                <TextField
-                  label={t('dashboard.admin.guest.name')}
-                  value={guestForm.name}
-                  onChange={onGuestField('name')}
-                  fullWidth
-                />
-                <TextField
-                  label={t('dashboard.admin.guest.surname1')}
-                  value={guestForm.surname1}
-                  onChange={onGuestField('surname1')}
-                  fullWidth
-                />
-                <TextField
-                  label={t('dashboard.admin.guest.surname2')}
-                  value={guestForm.surname2}
-                  onChange={onGuestField('surname2')}
-                  fullWidth
-                />
-                {nationalities.length > 0 ? (
-                  <TextField
-                    select
-                    label={t('dashboard.admin.guest.nationality')}
-                    value={guestForm.nationality}
-                    onChange={onGuestField('nationality')}
-                    fullWidth
-                  >
-                    {nationalities.map((nationality) => (
-                      <MenuItem key={nationality} value={nationality}>
-                        {translateNationalityLabel(t, nationality)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                ) : (
-                  <TextField
-                    label={t('dashboard.admin.guest.nationality')}
-                    value={guestForm.nationality}
-                    onChange={onGuestField('nationality')}
-                    fullWidth
-                  />
-                )}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <TextField
-                    label={t('dashboard.admin.guest.nickname')}
-                    value={guestForm.nickname}
-                    onChange={onGuestField('nickname')}
-                    fullWidth
-                  />
-                </Stack>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <TextField
-                    select
-                    label={t('dashboard.admin.guest.role')}
-                    value={guestForm.role}
-                    onChange={onGuestField('role')}
-                    fullWidth
-                  >
-                    <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
-                    {penaLabels.role_labels.map((roleLabel) => (
-                      <MenuItem key={roleLabel} value={roleLabel}>
-                        {translateRoleLabel(t, roleLabel)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField
-                    select
-                    label={t('dashboard.admin.guest.position')}
-                    value={guestForm.position}
-                    onChange={onGuestField('position')}
-                    fullWidth
-                  >
-                    <MenuItem value="">{t('dashboard.admin.guest.positionNone')}</MenuItem>
-                    {penaLabels.position_labels.map((positionLabel) => (
-                      <MenuItem key={positionLabel} value={positionLabel}>
-                        {translatePositionLabel(t, positionLabel)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Stack>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => handleCreateGuestPlayer(false)}
-                    disabled={loading}
-                  >
-                    {t('dashboard.admin.guest.createGuest')}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={() => handleCreateGuestPlayer(true)}
-                    disabled={loading || !selectedSeasonGuid}
-                  >
-                    {t('dashboard.admin.guest.createAndAdd')}
-                  </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card variant="outlined">
-            <CardContent>
-              <Stack spacing={1.75}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  justifyContent="space-between"
-                  alignItems={{ sm: 'center' }}
-                  spacing={1}
-                >
-                  <Box>
-                    <Typography variant="h6">{t('dashboard.admin.labels.title')}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('dashboard.admin.labels.currentCounts', {
-                        roles: penaLabels.role_labels.length,
-                        positions: penaLabels.position_labels.length,
-                      })}
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="outlined"
-                    onClick={() => setLabelsEditorOpen(true)}
-                    disabled={loading}
-                  >
-                    {t('dashboard.admin.labels.editAction')}
-                  </Button>
-                </Stack>
-
-                <Typography variant="body2" color="text.secondary">
-                  {t('dashboard.admin.labels.description')}
-                </Typography>
-
-                <Stack spacing={1.25}>
-                  <Box>
-                    <Typography variant="overline" color="text.secondary">
-                      {t('dashboard.admin.labels.roleLabels')}
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 0.75 }}>
-                      {penaLabels.role_labels.map((roleLabel) => (
-                        <Chip
-                          key={roleLabel}
-                          size="small"
-                          label={translateRoleLabel(t, roleLabel)}
-                          sx={labelChipSx(penaLabels.role_colors?.[roleLabel])}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="overline" color="text.secondary">
-                      {t('dashboard.admin.labels.positionLabels')}
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 0.75 }}>
-                      {penaLabels.position_labels.map((positionLabel) => (
-                        <Chip
-                          key={positionLabel}
-                          size="small"
-                          label={translatePositionLabel(t, positionLabel)}
-                          sx={labelChipSx(penaLabels.position_colors?.[positionLabel])}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
-      </Grid>
-
-      <Dialog
-        open={labelsEditorOpen}
-        onClose={() => setLabelsEditorOpen(false)}
-        fullWidth
-        maxWidth="md"
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
       >
-        <DialogTitle>{t('dashboard.admin.labels.title')}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              {t('dashboard.admin.labels.description')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t('dashboard.admin.labels.colorHelper')}
-            </Typography>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+          <Button
+            variant="outlined"
+            onClick={() => setAddSeasonOpen(true)}
+            disabled={!selectedSeasonGuid}
+            startIcon={<HeaderIcon name="group_add" />}
+          >
+            {t('dashboard.admin.directory.btnAddSeasonPlayers')}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setNewPlayerOpen(true)}
+            startIcon={<HeaderIcon name="person_add" />}
+          >
+            {t('dashboard.admin.directory.btnAddNewPlayer')}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => setLabelsOpen(true)}
+            startIcon={<HeaderIcon name="sell" />}
+          >
+            {t('dashboard.admin.directory.btnTagConfig')}
+          </Button>
+        </Stack>
 
-            <Grid container spacing={1.5}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('dashboard.admin.labels.roleLabels')}
-                  value={labelsDraft.role_labels}
-                  onChange={onLabelsDraftField('role_labels')}
-                  helperText={t('dashboard.admin.labels.inputHelper')}
-                  multiline
-                  minRows={2}
-                  fullWidth
-                />
-                <LabelColorList
-                  labels={draftRoleLabels}
-                  colors={draftRoleColors}
-                  onColorChange={(roleLabel) => onLabelColorDraftChange('role_colors', roleLabel)}
-                />
-              </Grid>
+        <Box sx={{ width: { xs: '100%', md: 280 }, flexShrink: 0 }}>
+          <StatCard
+            label={t('dashboard.admin.directory.statRegisteredLabel')}
+            value={adminPlayers.players.length}
+            icon="groups"
+            accent={ACCENT}
+          />
+        </Box>
+      </Stack>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={t('dashboard.admin.labels.positionLabels')}
-                  value={labelsDraft.position_labels}
-                  onChange={onLabelsDraftField('position_labels')}
-                  helperText={t('dashboard.admin.labels.inputHelper')}
-                  multiline
-                  minRows={2}
-                  fullWidth
-                />
-                <LabelColorList
-                  labels={draftPositionLabels}
-                  colors={draftPositionColors}
-                  onColorChange={(positionLabel) =>
-                    onLabelColorDraftChange('position_colors', positionLabel)
-                  }
-                />
-              </Grid>
-            </Grid>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLabelsEditorOpen(false)}>
-            {t('dashboard.common.matchDetail.closeAction')}
-          </Button>
-          <Button variant="contained" onClick={handleSavePenaLabels} disabled={loading}>
-            {t('dashboard.admin.labels.save')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PlayerToolbar
+        toolbar={toolbar}
+        actions={toolbarActions}
+        roleOptions={roleOptions}
+        positionOptions={positionOptions}
+        t={t}
+      />
 
-      <Dialog open={Boolean(claimLinkPayload)} onClose={onCloseClaimLink} fullWidth maxWidth="sm">
-        <DialogTitle>{t('dashboard.admin.members.claimLinkTitle')}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2}>
-            <Typography variant="body2" color="text.secondary">
-              {claimLinkPayload?.player
-                ? t('dashboard.admin.members.claimLinkDescription', {
-                    player: formatPlayerDisplayName(claimLinkPayload.player),
-                  })
-                : t('dashboard.admin.members.claimLinkDescriptionGeneric')}
-            </Typography>
-            <TextField
-              label={t('dashboard.admin.members.claimLinkUrlLabel')}
-              value={claimUrl}
-              InputProps={{ readOnly: true }}
-              fullWidth
-              multiline
-            />
-            {claimLinkPayload?.expires_at && (
-              <Typography variant="body2" color="text.secondary">
-                <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
-                {formatEpochSeconds(claimLinkPayload.expires_at)}
-              </Typography>
-            )}
-            {claimLinkCopied && (
-              <Typography variant="body2" color="success.main">
-                {t('dashboard.admin.members.claimLinkCopied')}
-              </Typography>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onCloseClaimLink}>
-            {t('dashboard.common.matchDetail.closeAction')}
-          </Button>
-          <Button variant="contained" onClick={handleCopyClaimLink} disabled={!claimUrl}>
-            {t('dashboard.admin.members.claimLinkCopy')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Grid>
+      <PlayerList
+        pageItems={paged.pageItems}
+        seasonRosterGuids={adminPlayers.seasonRosterGuids}
+        total={paged.total}
+        shown={paged.shown}
+        page={toolbar.page}
+        pageCount={paged.pageCount}
+        onPageChange={toolbarActions.setPage}
+        onAddToSeason={(player) => actions.handleRegisterSinglePlayerInSeason(player.guid)}
+        onRowAction={handleRowAction}
+        t={t}
+        formatPlayerDisplayName={formatPlayerDisplayName}
+        penaLabels={penaLabels}
+        seasonSelected={Boolean(selectedSeasonGuid)}
+      />
+
+      <AddSeasonPlayersDialog
+        open={addSeasonOpen}
+        onClose={() => setAddSeasonOpen(false)}
+        availablePlayers={state.availableHistoricalPlayers}
+        selectedGuids={state.selectedHistoricalGuids}
+        onSelect={actions.handleSelectHistoricalPlayers}
+        onAdd={async () => {
+          const ok = await actions.handleRegisterHistoricalPlayersInSeason()
+          if (ok !== false) setAddSeasonOpen(false)
+        }}
+        formatPlayerDisplayName={formatPlayerDisplayName}
+        registeredCount={state.seasonRoster.length}
+        availableCount={state.availableHistoricalPlayers.length}
+        t={t}
+      />
+
+      <NewPlayerDialog
+        open={newPlayerOpen}
+        onClose={() => setNewPlayerOpen(false)}
+        guestForm={state.guestForm}
+        onGuestField={actions.onGuestField}
+        nationalities={nationalities}
+        roleOptions={roleOptions}
+        positionOptions={positionOptions}
+        onCreate={async (addToSeason) => {
+          const ok = await actions.handleCreateGuestPlayer(addToSeason)
+          if (ok !== false) setNewPlayerOpen(false)
+        }}
+        t={t}
+      />
+
+      <LabelsDialog
+        open={labelsOpen}
+        onClose={() => setLabelsOpen(false)}
+        labelsDraft={state.labelsDraft}
+        draftRoleLabels={state.draftRoleLabels}
+        draftPositionLabels={state.draftPositionLabels}
+        draftRoleColors={state.draftRoleColors}
+        draftPositionColors={state.draftPositionColors}
+        onLabelsDraftField={actions.onLabelsDraftField}
+        onLabelColorDraftChange={actions.onLabelColorDraftChange}
+        onSave={async () => {
+          const ok = await actions.handleSavePenaLabels()
+          if (ok !== false) setLabelsOpen(false)
+        }}
+        t={t}
+      />
+
+      <ClaimLinkDialog
+        open={Boolean(adminPlayers.claimLinkPayload)}
+        onClose={actions.onCloseClaimLink}
+        claimLinkPayload={adminPlayers.claimLinkPayload}
+        formatEpochSeconds={formatEpochSeconds}
+        formatPlayerDisplayName={formatPlayerDisplayName}
+        t={t}
+      />
+
+      <EditSeasonPlayerDialog
+        player={adminPlayers.editingSeasonPlayer}
+        draft={adminPlayers.seasonPlayerDraft}
+        onField={adminPlayers.onSeasonPlayerDraftField}
+        onClose={adminPlayers.closeEditSeason}
+        onSave={adminPlayers.saveSeasonPlayer}
+        penaLabels={penaLabels}
+        loading={loading}
+        t={t}
+        formatPlayerDisplayName={formatPlayerDisplayName}
+      />
+
+      <EditMembershipDialog
+        player={adminPlayers.editingMembershipPlayer}
+        draft={adminPlayers.membershipDraft}
+        onField={adminPlayers.onMembershipDraftField}
+        onClose={adminPlayers.closeEditMembership}
+        onSave={adminPlayers.saveMembershipPlayer}
+        penaLabels={penaLabels}
+        loading={loading}
+        t={t}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmState)}
+        onCancel={adminPlayers.cancelConfirm}
+        onConfirm={adminPlayers.confirmRemove}
+        title={
+          isSeasonConfirm
+            ? t('dashboard.admin.players.removeSeasonPlayerTitle')
+            : t('dashboard.admin.members.removeTitle')
+        }
+        description={
+          confirmState
+            ? isSeasonConfirm
+              ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
+                  player: confirmPlayerName,
+                })
+              : t('dashboard.admin.members.removeConfirm', { player: confirmPlayerName })
+            : ''
+        }
+        cancelLabel={
+          isSeasonConfirm
+            ? t('dashboard.admin.players.cancelRemoveSeasonPlayer')
+            : t('dashboard.admin.members.cancelRemove')
+        }
+        confirmLabel={
+          isSeasonConfirm
+            ? t('dashboard.admin.players.removeFromSeason')
+            : t('dashboard.admin.members.remove')
+        }
+        loading={loading}
+      />
+    </Stack>
   )
 }
