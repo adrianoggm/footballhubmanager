@@ -1641,8 +1641,8 @@ export default function AdminDashboard({
         navItems={adminNavItems}
         activeNavId={activeSection}
         onNavChange={handleSectionChange}
-        title={activeSection !== 'overview' ? activeAdminSectionLabel : ''}
-        subtitle={activeSection !== 'overview' ? activeAdminHeroSubtitle : ''}
+        title={!['overview', 'players'].includes(activeSection) ? activeAdminSectionLabel : ''}
+        subtitle={!['overview', 'players'].includes(activeSection) ? activeAdminHeroSubtitle : ''}
         headerAside={
           <Stack
             direction={{ xs: 'column', md: 'row' }}
