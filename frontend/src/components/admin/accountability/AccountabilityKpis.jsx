@@ -2,7 +2,7 @@ import { Grid } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { useState } from 'react'
 import DebtorsDialog from './DebtorsDialog.jsx'
-import StatCard from './StatCard.jsx'
+import StatCard from '../../common/StatCard.jsx'
 import { formatMoney, formatTrendPct } from './accountabilityHelpers.js'
 
 const DASH = '—'

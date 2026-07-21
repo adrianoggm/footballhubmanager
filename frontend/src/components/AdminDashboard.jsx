@@ -27,6 +27,7 @@ import {
   Tooltip,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
 import { useAdminSeasons } from '../hooks/useAdminSeasons.js'
 import { useFetchWithStaleCheck } from '../hooks/useFetchWithStaleCheck.js'
 import { useForm } from '../hooks/useForm.js'
@@ -52,7 +53,6 @@ import {
   normalizePlayerGuids,
   setUnionSize,
 } from './admin/matches/lineupHelpers.js'
-import { EditMembershipDialog, EditSeasonPlayerDialog } from './admin/PlayerEditDialogs.jsx'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
 import { ConfirmDialog, EmptyState } from './common'
 import { DashboardContext } from '../context/dashboardContext.js'
@@ -91,21 +91,6 @@ const defaultGuestForm = () => ({
   surname1: '',
   surname2: '',
   nationality: 'Spain',
-  nickname: '',
-  role: '',
-  position: '',
-})
-
-const defaultSeasonPlayerDraft = () => ({
-  wins: '0',
-  draws: '0',
-  losses: '0',
-  quality_level: '0',
-  role: '',
-  position: '',
-})
-
-const defaultMembershipDraft = () => ({
   nickname: '',
   role: '',
   position: '',
@@ -454,7 +439,7 @@ export default function AdminDashboard({
   routeSectionId = '',
   onSectionChange = null,
 }) {
-  const { language, t } = useI18n()
+  const { t } = useI18n()
   const { showToast } = useToast()
   const penaDataFetch = useFetchWithStaleCheck()
   const [loading, setLoading] = useState(false)
@@ -471,8 +456,6 @@ export default function AdminDashboard({
   const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
   const [seasonRoster, setSeasonRoster] = useState([])
   const [seasonRosterLoading, setSeasonRosterLoading] = useState(false)
-  const [historicalPlayers, setHistoricalPlayers] = useState([])
-  const [selectedHistoricalGuids, setSelectedHistoricalGuids] = useState([])
   const [standings, setStandings] = useState([])
   const [insightsScope, setInsightsScope] = useState('selected_season')
   const [lastCreatedMatch, setLastCreatedMatch] = useState(null)
@@ -494,7 +477,6 @@ export default function AdminDashboard({
     setValues: setLabelsDraft,
     onField: onLabelsDraftField,
   } = useForm(defaultLabelsDraft)
-  const [memberFilters, setMemberFilters] = useState(defaultLabelFilters)
   const [standingsFilters, setStandingsFilters] = useState(defaultLabelFilters)
   const {
     values: matchForm,
@@ -507,20 +489,6 @@ export default function AdminDashboard({
     onField: onGuestField,
   } = useForm(defaultGuestForm)
   const [pendingDeleteSeason, setPendingDeleteSeason] = useState(null)
-  const [editingSeasonPlayer, setEditingSeasonPlayer] = useState(null)
-  const {
-    values: seasonPlayerDraft,
-    setValues: setSeasonPlayerDraft,
-    onField: onSeasonPlayerDraftField,
-  } = useForm(defaultSeasonPlayerDraft)
-  const [pendingRemoveSeasonPlayer, setPendingRemoveSeasonPlayer] = useState(null)
-  const [editingMembershipPlayer, setEditingMembershipPlayer] = useState(null)
-  const {
-    values: membershipDraft,
-    setValues: setMembershipDraft,
-    onField: onMembershipDraftField,
-  } = useForm(defaultMembershipDraft)
-  const [pendingRemoveMembershipPlayer, setPendingRemoveMembershipPlayer] = useState(null)
   const { values: penaProfileDraft, setValues: setPenaProfileDraft } =
     useForm(defaultPenaProfileDraft)
 
@@ -668,37 +636,6 @@ export default function AdminDashboard({
   const shouldLoadPenaLabels = activeSection === 'players' || activeSection === 'standings'
   const shouldLoadStandings = activeSection === 'overview' || activeSection === 'standings'
 
-  const registeredSeasonPlayerGuids = useMemo(
-    () => new Set(seasonRoster.map((player) => player.player_guid)),
-    [seasonRoster]
-  )
-
-  const availableHistoricalPlayers = useMemo(
-    () =>
-      historicalPlayers
-        .filter((player) => !registeredSeasonPlayerGuids.has(player.guid))
-        .sort((left, right) =>
-          formatPlayerDisplayName(left).localeCompare(formatPlayerDisplayName(right))
-        ),
-    [historicalPlayers, registeredSeasonPlayerGuids]
-  )
-
-  const filteredHistoricalPlayers = useMemo(() => {
-    const roleFilters = normalizeFilterValues(memberFilters.role)
-    const positionFilters = normalizeFilterValues(memberFilters.position)
-    return historicalPlayers.filter((player) => {
-      const playerRole = String(player.role || '').toLowerCase()
-      const playerPosition = String(player.position || '').toLowerCase()
-      if (roleFilters.length && !roleFilters.includes(playerRole)) {
-        return false
-      }
-      if (positionFilters.length && !positionFilters.includes(playerPosition)) {
-        return false
-      }
-      return true
-    })
-  }, [historicalPlayers, memberFilters.position, memberFilters.role])
-
   const createMatchLineupPlayers = useMemo(
     () => buildLineupPlayerOptions(seasonRoster),
     [seasonRoster]
@@ -751,14 +688,6 @@ export default function AdminDashboard({
     }))
   }
 
-  const onMemberFilterField = (name) => (event) => {
-    const nextValue = normalizeFilterValues(event.target.value)
-    setMemberFilters((prev) => ({
-      ...prev,
-      [name]: nextValue,
-    }))
-  }
-
   const onStandingsFilterField = (name) => (event) => {
     const nextValue = normalizeFilterValues(event.target.value)
     const nextFilters = { ...standingsFilters, [name]: nextValue }
@@ -776,9 +705,11 @@ export default function AdminDashboard({
     setImportSourceSeasonGuid(event.target.value)
   }
 
+  // Same success/failure resolution contract as
+  // `handleRegisterHistoricalPlayersInSeason`/`handleCreateGuestPlayer` above.
   const handleSavePenaLabels = async () => {
     if (!selectedPenaGuid) {
-      return
+      return false
     }
     const roleLabels = normalizeLabelList(labelsDraft.role_labels)
     const positionLabels = normalizeLabelList(labelsDraft.position_labels)
@@ -794,9 +725,10 @@ export default function AdminDashboard({
     )
     if (!roleLabels.length || !positionLabels.length) {
       setError(new Error(t('dashboard.admin.errors.invalidPenaLabels')))
-      return
+      return false
     }
 
+    let succeeded = false
     await runAction(async () => {
       const updatedRaw = await adminService.updatePenaLabels(selectedPenaGuid, {
         role_labels: roleLabels,
@@ -814,15 +746,7 @@ export default function AdminDashboard({
           : pickPreferredLabel(updated.role_labels, 'guest'),
         position: hasLabel(updated.position_labels, prev.position) ? prev.position : '',
       }))
-      setMembershipDraft((prev) => ({
-        ...prev,
-        role: hasLabel(updated.role_labels, prev.role) ? prev.role : '',
-        position: hasLabel(updated.position_labels, prev.position) ? prev.position : '',
-      }))
-      setMemberFilters((prev) => ({
-        role: pruneFilterValues(prev.role, updated.role_labels),
-        position: pruneFilterValues(prev.position, updated.position_labels),
-      }))
+      adminPlayers.syncMembershipDraftLabels(updated)
       const nextStandingsFilters = {
         role: pruneFilterValues(standingsFilters.role, updated.role_labels),
         position: pruneFilterValues(standingsFilters.position, updated.position_labels),
@@ -831,7 +755,9 @@ export default function AdminDashboard({
       if (selectedSeasonGuid) {
         await loadStandings(selectedPenaGuid, selectedSeasonGuid, nextStandingsFilters)
       }
+      succeeded = true
     }, t('dashboard.admin.notices.labelsUpdated'))
+    return succeeded
   }
 
   const runAction = async (action, successMessage) => {
@@ -985,11 +911,10 @@ export default function AdminDashboard({
         const nextLabels = shouldLoadPenaLabels ? sanitizePenaLabels(labels) : penaLabels
         setActiveSeason(active)
         setSeasonList(seasonItems)
-        setMemberFilters(defaultLabelFilters())
         setStandingsFilters(defaultLabelFilters())
 
         if (shouldLoadHistoricalPlayers) {
-          setHistoricalPlayers(penaPlayers || [])
+          adminPlayers.refreshHistoricalPlayers(penaPlayers || [])
         }
 
         if (shouldLoadPenaLabels) {
@@ -1000,11 +925,6 @@ export default function AdminDashboard({
             role: hasLabel(nextLabels.role_labels, prev.role)
               ? prev.role
               : pickPreferredLabel(nextLabels.role_labels, 'guest'),
-            position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
-          }))
-          setMembershipDraft((prev) => ({
-            ...prev,
-            role: hasLabel(nextLabels.role_labels, prev.role) ? prev.role : '',
             position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
           }))
         }
@@ -1024,10 +944,8 @@ export default function AdminDashboard({
             ? selectedSeasonGuid
             : fallbackSeasonGuid
         setSelectedSeasonGuid(resolvedSeasonGuid)
-        setSelectedHistoricalGuids([])
-        setEditingMembershipPlayer(null)
-        setMembershipDraft(defaultMembershipDraft)
-        setPendingRemoveMembershipPlayer(null)
+        adminPlayers.clearHistoricalSelection()
+        adminPlayers.resetMembershipDialog()
         setGuestForm((prev) => ({
           ...prev,
           role: hasLabel(nextLabels.role_labels, prev.role)
@@ -1068,7 +986,6 @@ export default function AdminDashboard({
         const fallbackLabels = defaultPenaLabels()
         setPenaLabels(fallbackLabels)
         setLabelsDraft(defaultLabelsDraft(fallbackLabels))
-        setMemberFilters(defaultLabelFilters())
         setStandingsFilters(defaultLabelFilters())
         setStandings([])
         // The season-matches list is cleared by useMatchTracking's own effect
@@ -1135,7 +1052,7 @@ export default function AdminDashboard({
         }
 
         if (shouldLoadHistoricalPlayers) {
-          setHistoricalPlayers(players || [])
+          adminPlayers.refreshHistoricalPlayers(players || [])
         }
 
         if (shouldLoadPenaLabels && labels) {
@@ -1148,15 +1065,7 @@ export default function AdminDashboard({
               : pickPreferredLabel(labels.role_labels, 'guest'),
             position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
           }))
-          setMembershipDraft((prev) => ({
-            ...prev,
-            role: hasLabel(labels.role_labels, prev.role) ? prev.role : '',
-            position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
-          }))
-          setMemberFilters((prev) => ({
-            role: pruneFilterValues(prev.role, labels.role_labels),
-            position: pruneFilterValues(prev.position, labels.position_labels),
-          }))
+          adminPlayers.syncMembershipDraftLabels(labels)
           setStandingsFilters((prev) => ({
             role: pruneFilterValues(prev.role, labels.role_labels),
             position: pruneFilterValues(prev.position, labels.position_labels),
@@ -1270,11 +1179,6 @@ export default function AdminDashboard({
   }, [insightsScope, resetInsightsReport, selectedPenaGuid, selectedSeasonGuid])
 
   useEffect(() => {
-    const availableGuids = new Set(availableHistoricalPlayers.map((player) => player.guid))
-    setSelectedHistoricalGuids((current) => current.filter((guid) => availableGuids.has(guid)))
-  }, [availableHistoricalPlayers])
-
-  useEffect(() => {
     if (!seasonImportCandidates.length) {
       setImportSourceSeasonGuid('')
       return
@@ -1305,11 +1209,9 @@ export default function AdminDashboard({
 
   const applySeasonContext = (nextSeasonGuid) => {
     setSelectedSeasonGuid(nextSeasonGuid)
-    setSelectedHistoricalGuids([])
+    adminPlayers.clearHistoricalSelection()
     setPendingDeleteSeason(null)
-    setEditingSeasonPlayer(null)
-    setSeasonPlayerDraft(defaultSeasonPlayerDraft)
-    setPendingRemoveSeasonPlayer(null)
+    adminPlayers.resetSeasonPlayerDialog()
     setMatchForm((prev) => ({
       ...prev,
       home_player_guids: [],
@@ -1475,249 +1377,8 @@ export default function AdminDashboard({
     }, t('dashboard.admin.notices.detailedMatchCreated'))
   }
 
-  const handleCreateGuestPlayer = async (registerInSelectedSeason) => {
-    if (!selectedPenaGuid) {
-      return
-    }
-    if (registerInSelectedSeason && !selectedSeasonGuid) {
-      setError(new Error(t('dashboard.admin.errors.selectedSeasonRequired')))
-      return
-    }
-    await runAction(
-      async () => {
-        const created = await adminService.createGuestPlayer(selectedPenaGuid, {
-          name: guestForm.name,
-          surname1: guestForm.surname1,
-          surname2: guestForm.surname2 || null,
-          nationality: guestForm.nationality,
-          nickname: guestForm.nickname || null,
-          role: guestForm.role || null,
-          position: guestForm.position || null,
-        })
-        if (registerInSelectedSeason && selectedSeasonGuid) {
-          await adminService.registerSeasonPlayer(
-            selectedPenaGuid,
-            selectedSeasonGuid,
-            created.player_guid
-          )
-        }
-        setGuestForm((prev) => ({
-          ...defaultGuestForm(),
-          nationality: prev.nationality || 'Spain',
-          role: pickPreferredLabel(penaLabels.role_labels, 'guest'),
-        }))
-        await loadPenaData(selectedPenaGuid)
-        if (registerInSelectedSeason && selectedSeasonGuid) {
-          await Promise.all([
-            loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-            loadStandings(selectedPenaGuid, selectedSeasonGuid),
-          ])
-        }
-      },
-      registerInSelectedSeason
-        ? t('dashboard.admin.notices.guestCreatedAdded')
-        : t('dashboard.admin.notices.guestCreated')
-    )
-  }
-
   const handleSelectSeasonFromHistory = (seasonGuid) => {
     selectSeason(selectedSeasonGuid === seasonGuid ? '' : seasonGuid)
-  }
-
-  const handleSelectHistoricalPlayers = (event) => {
-    const value = event.target.value
-    setSelectedHistoricalGuids(typeof value === 'string' ? value.split(',') : value)
-  }
-
-  const handleRegisterHistoricalPlayersInSeason = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !selectedHistoricalGuids.length) {
-      return
-    }
-    const totalSelected = selectedHistoricalGuids.length
-    await runAction(
-      async () => {
-        await adminService.registerSeasonPlayersBulk(
-          selectedPenaGuid,
-          selectedSeasonGuid,
-          selectedHistoricalGuids
-        )
-        setSelectedHistoricalGuids([])
-        await loadPenaData(selectedPenaGuid)
-      },
-      t('dashboard.admin.notices.playersAdded', {
-        count: totalSelected,
-        suffix: totalSelected === 1 ? '' : language === 'es' ? 'es' : 's',
-      })
-    )
-  }
-
-  const handleRegisterSinglePlayerInSeason = async (playerGuid) => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !playerGuid) {
-      return
-    }
-    await runAction(
-      async () => {
-        await adminService.registerSeasonPlayersBulk(selectedPenaGuid, selectedSeasonGuid, [
-          playerGuid,
-        ])
-        await loadPenaData(selectedPenaGuid)
-      },
-      t('dashboard.admin.notices.playersAdded', { count: 1, suffix: '' })
-    )
-  }
-
-  const handleEditSeasonPlayer = (player) => {
-    setEditingSeasonPlayer(player)
-    setSeasonPlayerDraft({
-      wins: String(player.wins ?? 0),
-      draws: String(player.draws ?? 0),
-      losses: String(player.losses ?? 0),
-      quality_level: String(player.quality_level ?? 0),
-      role: player.role || '',
-      position: player.position || '',
-    })
-  }
-
-  const handleCloseEditSeasonPlayer = () => {
-    if (loading) {
-      return
-    }
-    setEditingSeasonPlayer(null)
-    setSeasonPlayerDraft(defaultSeasonPlayerDraft)
-  }
-
-  const handleSaveSeasonPlayer = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !editingSeasonPlayer?.player_guid) {
-      return
-    }
-    const wins = Number(seasonPlayerDraft.wins)
-    const draws = Number(seasonPlayerDraft.draws)
-    const losses = Number(seasonPlayerDraft.losses)
-    const qualityLevel = Number(seasonPlayerDraft.quality_level)
-    const invalid =
-      !Number.isInteger(wins) ||
-      wins < 0 ||
-      !Number.isInteger(draws) ||
-      draws < 0 ||
-      !Number.isInteger(losses) ||
-      losses < 0 ||
-      Number.isNaN(qualityLevel) ||
-      qualityLevel < 0
-    if (invalid) {
-      setError(new Error(t('dashboard.admin.errors.invalidSeasonPlayerStats')))
-      return
-    }
-    await runAction(async () => {
-      await adminService.updateSeasonPlayerStats(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        editingSeasonPlayer.player_guid,
-        {
-          wins,
-          draws,
-          losses,
-          quality_level: qualityLevel,
-          role: seasonPlayerDraft.role.trim() || null,
-          position: seasonPlayerDraft.position.trim() || null,
-        }
-      )
-      await Promise.all([
-        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        loadStandings(selectedPenaGuid, selectedSeasonGuid),
-      ])
-      setEditingSeasonPlayer(null)
-      setSeasonPlayerDraft(defaultSeasonPlayerDraft)
-    }, t('dashboard.admin.notices.seasonPlayerUpdated'))
-  }
-
-  const handleRequestRemoveSeasonPlayer = (player) => {
-    setPendingRemoveSeasonPlayer(player)
-  }
-
-  const handleCancelRemoveSeasonPlayer = () => {
-    if (loading) {
-      return
-    }
-    setPendingRemoveSeasonPlayer(null)
-  }
-
-  const handleRemoveSeasonPlayer = async () => {
-    if (!selectedPenaGuid || !selectedSeasonGuid || !pendingRemoveSeasonPlayer?.player_guid) {
-      return
-    }
-    const playerToRemove = pendingRemoveSeasonPlayer
-    setPendingRemoveSeasonPlayer(null)
-    await runAction(async () => {
-      await adminService.unregisterSeasonPlayer(
-        selectedPenaGuid,
-        selectedSeasonGuid,
-        playerToRemove.player_guid
-      )
-      await Promise.all([
-        loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster),
-        loadStandings(selectedPenaGuid, selectedSeasonGuid),
-      ])
-    }, t('dashboard.admin.notices.seasonPlayerRemoved'))
-  }
-
-  const handleEditMembershipPlayer = (player) => {
-    setEditingMembershipPlayer(player)
-    setMembershipDraft({
-      nickname: player.nickname || '',
-      role: player.role || '',
-      position: player.position || '',
-    })
-  }
-
-  const handleCloseEditMembershipPlayer = () => {
-    if (loading) {
-      return
-    }
-    setEditingMembershipPlayer(null)
-    setMembershipDraft(defaultMembershipDraft)
-  }
-
-  const handleSaveMembershipPlayer = async () => {
-    if (!selectedPenaGuid || !editingMembershipPlayer?.guid) {
-      return
-    }
-    await runAction(async () => {
-      await adminService.updatePenaPlayerMembership(
-        selectedPenaGuid,
-        editingMembershipPlayer.guid,
-        {
-          nickname: membershipDraft.nickname.trim() || null,
-          role: membershipDraft.role.trim() || null,
-          position: membershipDraft.position.trim() || null,
-        }
-      )
-      await loadPenaData(selectedPenaGuid)
-      setEditingMembershipPlayer(null)
-      setMembershipDraft(defaultMembershipDraft)
-    }, t('dashboard.admin.notices.membershipUpdatedByAdmin'))
-  }
-
-  const handleRequestRemoveMembershipPlayer = (player) => {
-    setPendingRemoveMembershipPlayer(player)
-  }
-
-  const handleCancelRemoveMembershipPlayer = () => {
-    if (loading) {
-      return
-    }
-    setPendingRemoveMembershipPlayer(null)
-  }
-
-  const handleRemoveMembershipPlayer = async () => {
-    if (!selectedPenaGuid || !pendingRemoveMembershipPlayer?.guid) {
-      return
-    }
-    const playerToRemove = pendingRemoveMembershipPlayer
-    setPendingRemoveMembershipPlayer(null)
-    await runAction(async () => {
-      await adminService.removePenaPlayerMembership(selectedPenaGuid, playerToRemove.guid)
-      await loadPenaData(selectedPenaGuid)
-    }, t('dashboard.admin.notices.membershipRemovedByAdmin'))
   }
 
   const handleRefreshStandings = async () => {
@@ -1765,55 +1426,44 @@ export default function AdminDashboard({
     ? `${formatDate(selectedSeason.start_date)} - ${formatDate(selectedSeason.end_date)}`
     : t('dashboard.admin.status.noSeasonSelected')
 
-  // Plain view-model bundles for the section components.
-  const playersSection = {
-    state: {
-      selectedSeason,
-      selectedSeasonLabel,
-      seasonList,
-      selectedHistoricalGuids,
-      availableHistoricalPlayers,
-      loading,
-      selectedSeasonGuid,
-      seasonRosterLoading,
-      seasonRoster,
-      historicalPlayers,
-      filteredHistoricalPlayers,
-      penaLabels,
-      labelsDraft,
-      draftRoleLabels,
-      draftPositionLabels,
-      draftRoleColors,
-      draftPositionColors,
-      memberFilters,
-      guestForm,
-      nationalities,
-      claimLinkPayload,
-    },
-    actions: {
-      handleSelectHistoricalPlayers,
-      handleRegisterHistoricalPlayersInSeason,
-      handleRegisterSinglePlayerInSeason,
-      handleEditSeasonPlayer,
-      handleRequestRemoveSeasonPlayer,
-      onGuestField,
-      handleCreateGuestPlayer,
-      handleEditMembershipPlayer,
-      handleRequestRemoveMembershipPlayer,
-      handleGenerateClaimLink,
-      onCloseClaimLink: closeClaimLink,
-      onMemberFilterField,
-      onLabelsDraftField,
-      onLabelColorDraftChange,
-      handleSavePenaLabels,
-    },
-    helpers: {
-      t,
-      formatPlayerDisplayName,
-      formatEpochSeconds,
-    },
-  }
+  // Player state + mutation handlers are owned by useAdminPlayers (issue #147,
+  // task 4). This call must stay after runAction/loadPenaData/loadSeasonRoster/
+  // loadStandings/penaLabels/guestForm/the dialog-open setters are all defined
+  // above, since they're passed in by value as args.
+  const adminPlayers = useAdminPlayers({
+    selectedPenaGuid,
+    selectedSeasonGuid,
+    selectedSeasonLabel,
+    selectedSeason,
+    seasonList,
+    loading,
+    seasonRoster,
+    seasonRosterLoading,
+    setSeasonRoster,
+    penaLabels,
+    labelsDraft,
+    draftRoleLabels,
+    draftPositionLabels,
+    draftRoleColors,
+    draftPositionColors,
+    onLabelsDraftField,
+    onLabelColorDraftChange,
+    handleSavePenaLabels,
+    guestForm,
+    setGuestForm,
+    onGuestField,
+    nationalities,
+    claimLinkPayload,
+    handleGenerateClaimLink,
+    onCloseClaimLink: closeClaimLink,
+    runAction,
+    setError,
+    loadPenaData,
+    loadSeasonRoster,
+    loadStandings,
+  })
 
+  // Plain view-model bundles for the section components.
   const matchesSection = {
     state: {
       selectedSeasonGuid,
@@ -1991,8 +1641,8 @@ export default function AdminDashboard({
         navItems={adminNavItems}
         activeNavId={activeSection}
         onNavChange={handleSectionChange}
-        title={activeSection !== 'overview' ? activeAdminSectionLabel : ''}
-        subtitle={activeSection !== 'overview' ? activeAdminHeroSubtitle : ''}
+        title={!['overview', 'players'].includes(activeSection) ? activeAdminSectionLabel : ''}
+        subtitle={!['overview', 'players'].includes(activeSection) ? activeAdminHeroSubtitle : ''}
         headerAside={
           <Stack
             direction={{ xs: 'column', md: 'row' }}
@@ -2093,7 +1743,7 @@ export default function AdminDashboard({
               onGenerateJoinCode: handleGenerateJoinCode,
               onOpenMatchDetail: handleOpenOverviewMatchDetail,
               onAddPlayer: () => handleSectionChange('players'),
-              onAddGuest: () => handleCreateGuestPlayer(true),
+              onAddGuest: () => adminPlayers.actions.handleCreateGuestPlayer(true),
               onAddFunds: () => handleSectionChange('accountability'),
               onAddExpenses: () => handleSectionChange('accountability'),
               onStandings: () => handleSectionChange('standings'),
@@ -2147,7 +1797,7 @@ export default function AdminDashboard({
 
         {selectedPenaGuid &&
           activeSection === 'accountability' &&
-          (!loading && historicalPlayers.length === 0 ? (
+          (!loading && adminPlayers.players.length === 0 ? (
             <EmptyState
               title={t('dashboard.admin.gating.noPlayersTitle')}
               description={t('dashboard.admin.gating.noPlayersBody')}
@@ -2161,7 +1811,7 @@ export default function AdminDashboard({
             <Suspense fallback={<SectionLoader />}>
               <AdminAccountabilitySection
                 penaGuid={selectedPenaGuid}
-                players={historicalPlayers}
+                players={adminPlayers.players}
                 t={t}
                 formatPlayerDisplayName={formatPlayerDisplayName}
               />
@@ -2171,9 +1821,16 @@ export default function AdminDashboard({
         {selectedPenaGuid && activeSection === 'players' && (
           <Suspense fallback={<SectionLoader />}>
             <AdminPlayersSection
-              state={playersSection.state}
-              actions={playersSection.actions}
-              helpers={playersSection.helpers}
+              adminPlayers={adminPlayers}
+              penaGuid={selectedPenaGuid}
+              selectedSeasonGuid={selectedSeasonGuid}
+              selectedSeasonLabel={selectedSeasonLabel}
+              seasons={seasonList}
+              nationalities={nationalities}
+              penaLabels={penaLabels}
+              t={t}
+              formatPlayerDisplayName={formatPlayerDisplayName}
+              formatEpochSeconds={formatEpochSeconds}
             />
           </Suspense>
         )}
@@ -2304,69 +1961,6 @@ export default function AdminDashboard({
           }
           cancelLabel={t('dashboard.admin.seasons.cancelDeleteSeason')}
           confirmLabel={t('dashboard.admin.seasons.deleteSelectedSeason')}
-          loading={loading}
-        />
-
-        <EditSeasonPlayerDialog
-          player={editingSeasonPlayer}
-          draft={seasonPlayerDraft}
-          onField={onSeasonPlayerDraftField}
-          onClose={handleCloseEditSeasonPlayer}
-          onSave={handleSaveSeasonPlayer}
-          penaLabels={penaLabels}
-          loading={loading}
-          t={t}
-          formatPlayerDisplayName={formatPlayerDisplayName}
-        />
-
-        <ConfirmDialog
-          open={Boolean(pendingRemoveSeasonPlayer)}
-          onCancel={handleCancelRemoveSeasonPlayer}
-          onConfirm={handleRemoveSeasonPlayer}
-          title={t('dashboard.admin.players.removeSeasonPlayerTitle')}
-          description={
-            pendingRemoveSeasonPlayer
-              ? t('dashboard.admin.players.removeSeasonPlayerConfirm', {
-                  player: formatPlayerDisplayName(pendingRemoveSeasonPlayer),
-                })
-              : ''
-          }
-          cancelLabel={t('dashboard.admin.players.cancelRemoveSeasonPlayer')}
-          confirmLabel={t('dashboard.admin.players.removeFromSeason')}
-          loading={loading}
-        />
-
-        <EditMembershipDialog
-          player={editingMembershipPlayer}
-          draft={membershipDraft}
-          onField={onMembershipDraftField}
-          onClose={handleCloseEditMembershipPlayer}
-          onSave={handleSaveMembershipPlayer}
-          penaLabels={penaLabels}
-          loading={loading}
-          t={t}
-        />
-
-        <ConfirmDialog
-          open={Boolean(pendingRemoveMembershipPlayer)}
-          onCancel={handleCancelRemoveMembershipPlayer}
-          onConfirm={handleRemoveMembershipPlayer}
-          title={t('dashboard.admin.members.removeTitle')}
-          description={
-            pendingRemoveMembershipPlayer
-              ? t('dashboard.admin.members.removeConfirm', {
-                  player: [
-                    pendingRemoveMembershipPlayer.name,
-                    pendingRemoveMembershipPlayer.surname1,
-                    pendingRemoveMembershipPlayer.surname2,
-                  ]
-                    .filter(Boolean)
-                    .join(' '),
-                })
-              : ''
-          }
-          cancelLabel={t('dashboard.admin.members.cancelRemove')}
-          confirmLabel={t('dashboard.admin.members.remove')}
           loading={loading}
         />
 
