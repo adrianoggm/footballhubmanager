@@ -14,6 +14,13 @@ import { filterPlayers, paginate, sortPlayers } from './players/playersHelpers.j
 const PAGE_SIZE = 10
 const ACCENT = '#FCB491'
 
+// Header action buttons share the peach accent used for nicknames / "add to season".
+const headerButtonSx = {
+  color: ACCENT,
+  borderColor: ACCENT,
+  '&:hover': { borderColor: ACCENT, backgroundColor: 'rgba(252, 180, 145, 0.08)' },
+}
+
 const HeaderIcon = ({ name }) => (
   <Box component="span" className="material-symbols-rounded">
     {name}
@@ -121,6 +128,7 @@ export default function AdminPlayersSection({
             onClick={() => setAddSeasonOpen(true)}
             disabled={!selectedSeasonGuid}
             startIcon={<HeaderIcon name="group_add" />}
+            sx={headerButtonSx}
           >
             {t('dashboard.admin.directory.btnAddSeasonPlayers')}
           </Button>
@@ -128,6 +136,7 @@ export default function AdminPlayersSection({
             variant="outlined"
             onClick={() => setNewPlayerOpen(true)}
             startIcon={<HeaderIcon name="person_add" />}
+            sx={headerButtonSx}
           >
             {t('dashboard.admin.directory.btnAddNewPlayer')}
           </Button>
@@ -135,6 +144,7 @@ export default function AdminPlayersSection({
             variant="outlined"
             onClick={() => setLabelsOpen(true)}
             startIcon={<HeaderIcon name="sell" />}
+            sx={headerButtonSx}
           >
             {t('dashboard.admin.directory.btnTagConfig')}
           </Button>
