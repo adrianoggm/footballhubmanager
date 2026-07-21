@@ -35,11 +35,19 @@ export function filterPlayers(players, { search, roles, positions, status }, sea
   })
 }
 
-export function sortPlayers(players, sort) {
+export function sortPlayers(players, sort, seasonRosterGuids) {
+  const byName = (a, b) => playerSortKey(a).localeCompare(playerSortKey(b))
   const copy = [...(players || [])]
-  copy.sort((a, b) => playerSortKey(a).localeCompare(playerSortKey(b)))
-  if (sort === 'name_desc') copy.reverse()
-  return copy
+  if (sort === 'name_desc') return copy.sort((a, b) => byName(b, a))
+  if (sort === 'status_active' || sort === 'status_inactive') {
+    const dir = sort === 'status_active' ? 1 : -1
+    return copy.sort((a, b) => {
+      const d =
+        (isInSeason(a, seasonRosterGuids) ? 0 : 1) - (isInSeason(b, seasonRosterGuids) ? 0 : 1)
+      return d !== 0 ? d * dir : byName(a, b)
+    })
+  }
+  return copy.sort(byName)
 }
 
 export function paginate(items, page, pageSize) {

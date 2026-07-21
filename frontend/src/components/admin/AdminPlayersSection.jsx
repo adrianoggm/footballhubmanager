@@ -58,7 +58,8 @@ export default function AdminPlayersSection({
       },
       adminPlayers.seasonRosterGuids
     ),
-    toolbar.sort
+    toolbar.sort,
+    adminPlayers.seasonRosterGuids
   )
   const paged = paginate(filtered, toolbar.page, PAGE_SIZE)
 

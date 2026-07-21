@@ -111,6 +111,16 @@ describe('playersHelpers', () => {
     expect(list.map((p) => p.guid)).toEqual(['1', '2'])
   })
 
+  it('sorts by season status, tiebreaking by name', () => {
+    const list = [
+      P({ guid: '1', name: 'Zed', surname1: '' }),
+      P({ guid: '2', name: 'Ana', surname1: '' }),
+    ]
+    const inSeason = new Set(['2'])
+    expect(sortPlayers(list, 'status_active', inSeason).map((p) => p.guid)).toEqual(['2', '1'])
+    expect(sortPlayers(list, 'status_inactive', inSeason).map((p) => p.guid)).toEqual(['1', '2'])
+  })
+
   it('paginates and clamps the page into range', () => {
     const items = Array.from({ length: 23 }, (_, i) => i)
     const r = paginate(items, 3, 10)

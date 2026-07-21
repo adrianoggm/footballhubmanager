@@ -253,6 +253,18 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
             control={<Radio size="small" sx={radioCheckboxSx} />}
             label={t('dashboard.admin.directory.sortNameDesc')}
           />
+          <FormControlLabel
+            value="status_active"
+            sx={controlLabelSx}
+            control={<Radio size="small" sx={radioCheckboxSx} />}
+            label={t('dashboard.admin.directory.sortStatusActive')}
+          />
+          <FormControlLabel
+            value="status_inactive"
+            sx={controlLabelSx}
+            control={<Radio size="small" sx={radioCheckboxSx} />}
+            label={t('dashboard.admin.directory.sortStatusInactive')}
+          />
         </RadioGroup>
       </Menu>
     </Stack>
