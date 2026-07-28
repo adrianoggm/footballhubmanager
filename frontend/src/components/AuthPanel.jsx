@@ -36,6 +36,17 @@ const initialAdmin = {
 
 const mapAuthErrorMessage = (error, t) => {
   const raw = String(error?.message || '').toLowerCase()
+
+  // FastAPI 422: detail is an array of per-field errors (String(array) is useless),
+  // so read error.payload.detail directly to surface the real reason.
+  const details = Array.isArray(error?.payload?.detail) ? error.payload.detail : []
+  const pwdTooShort = details.find(
+    (d) => d?.type === 'string_too_short' && d?.loc?.includes('password')
+  )
+  if (pwdTooShort) {
+    return t('auth.errors.passwordTooShort', { min: pwdTooShort?.ctx?.min_length ?? 12 })
+  }
+
   if (error?.status === 401) {
     return t('auth.errors.invalidCredentials')
   }
@@ -259,6 +270,7 @@ export default function AuthPanel({ auth }) {
                 name="password"
                 value={adminRegister.password}
                 onChange={onField(setAdminRegister)}
+                helperText={t('auth.passwordHint')}
               />
               <TextField
                 label={t('auth.adminPenaName')}
@@ -284,6 +296,7 @@ export default function AuthPanel({ auth }) {
                 name="password"
                 value={userRegister.password}
                 onChange={onField(setUserRegister)}
+                helperText={t('auth.passwordHint')}
               />
               <TextField
                 label={t('auth.userName')}

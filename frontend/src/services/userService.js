@@ -28,6 +28,16 @@ export class UserService {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/accountability`)
   }
 
+  listPenaTransactions(penaGuid, { page = 1, pageSize = 10, type = '' } = {}) {
+    const query = new URLSearchParams()
+    query.set('page', String(page))
+    query.set('page_size', String(pageSize))
+    if (type) {
+      query.set('type', type)
+    }
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/accountability/transactions?${query}`)
+  }
+
   listSeasons(penaGuid, { page = 1, pageSize = 100 } = {}) {
     return httpClient.get(`${API_V1}/penas/${penaGuid}/seasons?page=${page}&page_size=${pageSize}`)
   }

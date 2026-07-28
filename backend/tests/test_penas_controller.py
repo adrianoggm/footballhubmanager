@@ -5,7 +5,7 @@ import pytest
 from api.dependencies import use_cases as use_case_dependencies
 from api.interface.controller.v1 import penas_controller
 from api.interface.controller.v1.model.request.pena_accountability_request import (
-    CreatePenaExpenseRequest,
+    RecordPenaTransactionRequest,
     UpdatePenaAccountabilityRequest,
     UpsertPenaMemberAccountRequest,
 )
@@ -18,7 +18,7 @@ from api.interface.controller.v1.model.request.penas_request import (
 from auth.dependencies import require_user
 from auth.session import SessionData
 from core.application.commands.pena_accountability_commands import (
-    CreateExpenseCommand,
+    RecordTransactionCommand,
     UpdateAccountabilitySettingsCommand,
     UpsertMemberAccountCommand,
 )
@@ -34,19 +34,22 @@ from core.application.models import (
     ClaimLink,
     ClaimRegistration,
     ClaimTokenInfo,
-    PenaAccountabilityExpenseInfo,
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
     PenaInfo,
     PenaLabelsInfo,
     PenaLinkToken,
+    PenaMonthlyCashflowInfo,
     PenaProfileInfo,
     PenasPage,
     PenasPageResult,
+    PenaTransactionInfo,
+    PenaTransactionPage,
 )
 from core.application.queries.pena_accountability_queries import (
     GetPenaAccountabilityQuery,
     GetPlayerGuidForAccountQuery,
+    ListPenaTransactionsQuery,
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_link_queries import InspectClaimTokenQuery
@@ -61,9 +64,9 @@ from core.domain.errors import (
     InvalidPenaLabelsDataError,
     InvalidProfileImageError,
     PenaAccountabilityAccessDeniedError,
-    PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
+    PenaAccountabilityTransactionNotFoundError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
     PenaLinkAccessDeniedError,
@@ -108,7 +111,7 @@ def _labels_info() -> PenaLabelsInfo:
 def _accountability_info() -> PenaAccountabilityInfo:
     return PenaAccountabilityInfo(
         currency="EUR",
-        balance_cents=20_000,
+        opening_balance_cents=20_000,
         reserve_cents=4_000,
         budget_visibility="summary",
         expenses_visibility="full",
@@ -122,25 +125,45 @@ def _accountability_info() -> PenaAccountabilityInfo:
                 updated_at=datetime(2026, 3, 1, 10, 0, 0),
             )
         ],
-        expenses=[
-            PenaAccountabilityExpenseInfo(
-                guid="expense-1",
-                title="Balls",
-                category="equipment",
+        monthly_cashflow=[
+            PenaMonthlyCashflowInfo(year=2026, month=2, income_cents=1000, expense_cents=500),
+            PenaMonthlyCashflowInfo(year=2026, month=3, income_cents=800, expense_cents=2500),
+        ],
+        updated_at=datetime(2026, 3, 1, 11, 0, 0),
+        total_income_cents=1800,
+        total_expense_cents=3000,
+        total_balance_cents=18_800,
+        balance_trend_pct=-330.0,
+        total_debt_cents=1200,
+        total_contribution_cents=800,
+        membership_fees_cents=800,
+        membership_collected_pct=40.0,
+        expenses_this_month_count=1,
+        members_pending_count=1,
+    )
+
+
+def _transaction_page() -> PenaTransactionPage:
+    return PenaTransactionPage(
+        items=[
+            PenaTransactionInfo(
+                guid="tx-1",
+                type="expense",
                 amount_cents=2500,
+                entity="Volt & Co.",
+                concept="Stadium Lighting Repair",
+                category="maintenance",
+                note="Invoice #99",
                 occurred_on=date(2026, 3, 1),
-                note=None,
+                player_guid=None,
+                player_name=None,
                 created_at=datetime(2026, 3, 1, 8, 0, 0),
                 updated_at=datetime(2026, 3, 1, 9, 0, 0),
             )
         ],
-        updated_at=datetime(2026, 3, 1, 11, 0, 0),
-        total_debt_cents=1200,
-        total_contribution_cents=800,
-        total_expenses_cents=2500,
-        current_cash_cents=18300,
-        projected_balance_cents=19500,
-        expense_entries=1,
+        page=1,
+        page_size=10,
+        total=1,
     )
 
 
@@ -763,17 +786,24 @@ def test_get_pena_accountability_buses_build_expected_dependencies(monkeypatch):
     assert isinstance(command_bus, CommandBus)
     assert captured["db"] == "db-session"
     assert GetPenaAccountabilityQuery in query_bus._handlers
+    assert ListPenaTransactionsQuery in query_bus._handlers
     assert UpdateAccountabilitySettingsCommand in command_bus._handlers
+    assert RecordTransactionCommand in command_bus._handlers
 
 
 class _AccountabilityQueryBus:
-    def __init__(self, info, player_guid=None):
+    def __init__(self, info, player_guid=None, transaction_page=None):
         self._info = info
         self._player_guid = player_guid
+        self._transaction_page = transaction_page
+        self.last_transactions_query = None
 
     def ask(self, query):
         if isinstance(query, GetPenaAccountabilityQuery):
             return self._info
+        if isinstance(query, ListPenaTransactionsQuery):
+            self.last_transactions_query = query
+            return self._transaction_page
         if isinstance(query, GetPlayerGuidForAccountQuery):
             return self._player_guid
         raise AssertionError(f"unexpected query {type(query)!r}")
@@ -797,9 +827,11 @@ def test_get_pena_accountability_for_admin_returns_full_payload():
         query_bus=bus,
     )
 
-    assert response.balance_cents == 20_000
+    assert response.total_balance_cents == 18_800
+    assert response.opening_balance_cents == 20_000
     assert len(response.member_accounts) == 1
-    assert len(response.expenses) == 1
+    assert len(response.monthly_cashflow) == 2
+    assert response.outstanding_dues_cents == 1200
     assert response.my_account is None
 
 
@@ -820,13 +852,55 @@ def test_get_pena_accountability_for_user_hides_data_by_transparency():
         query_bus=bus,
     )
 
-    assert response.balance_cents is None
-    assert response.total_debt_cents is None
+    assert response.total_balance_cents is None
+    assert response.outstanding_dues_cents is None
     assert response.member_accounts == []
-    assert response.expenses == []
-    assert response.total_expenses_cents == 2500
+    assert response.monthly_cashflow == []
+    # expenses_visibility=summary still exposes the expense total to users
+    assert response.total_expense_cents == 3000
     assert response.my_account is not None
     assert response.my_account.player_guid == "player-1"
+
+
+def test_list_pena_transactions_admin_uses_requested_filter():
+    bus = _AccountabilityQueryBus(_accountability_info(), transaction_page=_transaction_page())
+    response = penas_controller.list_pena_transactions(
+        "pena-1",
+        page=1,
+        page_size=10,
+        type="expense",
+        session=_session(user_type="admin", user_id=7),
+        query_bus=bus,
+    )
+
+    assert response.total == 1
+    assert response.total_pages == 1
+    assert response.items[0].concept == "Stadium Lighting Repair"
+    assert bus.last_transactions_query.type_filter == "expense"
+
+
+def test_list_pena_transactions_user_without_visibility_gets_empty_page():
+    info = PenaAccountabilityInfo(
+        **{
+            **_accountability_info().__dict__,
+            "budget_visibility": "summary",
+            "expenses_visibility": "summary",
+        }
+    )
+    bus = _AccountabilityQueryBus(info, transaction_page=_transaction_page())
+    response = penas_controller.list_pena_transactions(
+        "pena-1",
+        page=1,
+        page_size=10,
+        type=None,
+        session=_session(user_type="user", user_id=9),
+        query_bus=bus,
+    )
+
+    assert response.total == 0
+    assert response.items == []
+    # no ledger query issued once visibility is denied
+    assert bus.last_transactions_query is None
 
 
 def test_get_pena_accountability_maps_not_found_error():
@@ -881,29 +955,35 @@ def test_upsert_member_accountability_success_builds_command():
     assert command.note == "x"
 
 
-def test_create_pena_expense_success_builds_command():
+def test_record_pena_transaction_success_builds_command():
     bus = _AccountabilityCommandBus(_accountability_info())
-    response = penas_controller.create_pena_expense(
+    response = penas_controller.record_pena_transaction(
         "pena-1",
-        payload=CreatePenaExpenseRequest(
-            title="Travel",
-            category="transport",
-            amount_cents=2000,
+        payload=RecordPenaTransactionRequest(
+            type="income",
+            amount_cents=5000,
+            concept="Monthly Membership Fee",
             occurred_on=date(2026, 3, 2),
-            note="bus",
+            entity="Antonio Conte",
+            category="membership",
+            note="Membership #442",
+            player_guid="player-1",
         ),
         admin_session=_session(user_type="admin", user_id=3),
         command_bus=bus,
     )
 
-    assert response.expenses[0].guid == "expense-1"
+    assert response.total_balance_cents == 18_800
     command = bus.last_command
-    assert isinstance(command, CreateExpenseCommand)
-    assert command.title == "Travel"
-    assert command.category == "transport"
-    assert command.amount_cents == 2000
+    assert isinstance(command, RecordTransactionCommand)
+    assert command.type == "income"
+    assert command.amount_cents == 5000
+    assert command.concept == "Monthly Membership Fee"
     assert command.occurred_on == date(2026, 3, 2)
-    assert command.note == "bus"
+    assert command.entity == "Antonio Conte"
+    assert command.category == "membership"
+    assert command.note == "Membership #442"
+    assert command.player_guid == "player-1"
 
 
 @pytest.mark.parametrize(
@@ -921,7 +1001,12 @@ def test_create_pena_expense_success_builds_command():
             404,
             "Member not found",
         ),
-        ("delete_pena_expense", PenaAccountabilityExpenseNotFoundError(), 404, "Expense not found"),
+        (
+            "delete_pena_transaction",
+            PenaAccountabilityTransactionNotFoundError(),
+            404,
+            "Transaction not found",
+        ),
     ],
 )
 def test_accountability_mutations_map_not_found_errors(fn_name, error, status_code, detail):
@@ -943,9 +1028,9 @@ def test_accountability_mutations_map_not_found_errors(fn_name, error, status_co
                 command_bus=bus,
             )
         else:
-            penas_controller.delete_pena_expense(
+            penas_controller.delete_pena_transaction(
                 "pena-1",
-                "expense-1",
+                "tx-1",
                 admin_session=_session(user_type="admin", user_id=1),
                 command_bus=bus,
             )

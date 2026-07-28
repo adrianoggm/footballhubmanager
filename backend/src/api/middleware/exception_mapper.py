@@ -50,6 +50,7 @@ from core.domain.errors import (
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
+    PenaAccountabilityTransactionNotFoundError,
     PenaLabelsAccessDeniedError,
     PenaLabelsPenaNotFoundError,
     PenaLinkAccessDeniedError,
@@ -127,6 +128,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     ),
     PenaAccountabilityMemberNotFoundError: (status.HTTP_404_NOT_FOUND, "Member not found"),
     PenaAccountabilityExpenseNotFoundError: (status.HTTP_404_NOT_FOUND, "Expense not found"),
+    PenaAccountabilityTransactionNotFoundError: (
+        status.HTTP_404_NOT_FOUND,
+        "Transaction not found",
+    ),
     InvalidPenaGuestPlayerDataError: (status.HTTP_400_BAD_REQUEST, "Invalid guest player data"),
     InvalidPenaMembershipUpdateDataError: (
         status.HTTP_400_BAD_REQUEST,

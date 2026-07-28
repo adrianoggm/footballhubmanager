@@ -459,10 +459,23 @@ export const DARK_THEME_PRESET_IDS = Object.values(THEME_PRESETS)
   .filter((preset) => preset.palette.mode === 'dark')
   .map((preset) => preset.id)
 
+const hexToRgb = (hex) => {
+  if (!hex || typeof hex !== 'string') return '0, 0, 0'
+  const cleanHex = hex.replace('#', '')
+  const num = parseInt(cleanHex, 16)
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  return `${r}, ${g}, ${b}`
+}
+
 const createCustomTokens = (preset) => {
   const { palette, shape } = preset
   const mode = palette.mode
   const baseRadius = Number(shape.borderRadius || 12)
+  const primaryRgb = hexToRgb(palette.primary.main)
+  const secondaryRgb = hexToRgb(palette.secondary?.main || palette.primary.main)
+
   const defaultTokens = {
     radius: {
       none: 0,
@@ -493,7 +506,7 @@ const createCustomTokens = (preset) => {
     gradients: {
       cardDepth1:
         mode === 'dark'
-          ? 'radial-gradient(ellipse 680px 420px at 18% 0%, rgba(53, 185, 171, 0.12) 0%, rgba(53, 185, 171, 0) 58%)'
+          ? `radial-gradient(ellipse 680px 420px at 18% 0%, rgba(${primaryRgb}, 0.12) 0%, rgba(${primaryRgb}, 0) 58%)`
           : 'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.08) 0%, rgba(4, 4, 6, 0) 60%)',
       cardDepthBig:
         mode === 'dark'
@@ -521,8 +534,8 @@ const createCustomTokens = (preset) => {
           : '0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)',
       gradient1:
         mode === 'dark'
-          ? 'inset 0 1px 0 rgba(255,255,255,0.04), inset -80px 80px 90px -120px rgba(53, 185, 171, 0.2)'
-          : 'inset -8px 6px 15px 0 rgba(234, 95, 20, 0.2), inset -80px 80px 80px -102px rgba(234, 95, 20, 0.3)',
+          ? `inset 0 1px 0 rgba(255,255,255,0.04), inset -80px 80px 90px -120px rgba(${primaryRgb}, 0.2)`
+          : `inset -8px 6px 15px 0 rgba(${primaryRgb}, 0.2), inset -80px 80px 80px -102px rgba(${secondaryRgb}, 0.3)`,
     },
     transitions: {
       fast: 'all 150ms ease-out',
