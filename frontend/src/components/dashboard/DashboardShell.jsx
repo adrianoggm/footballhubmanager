@@ -1,5 +1,6 @@
 import { Box, ButtonBase, Grid, Paper, Stack, SvgIcon, Tooltip, Typography } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
+import LogoHorizontal from '../common/LogoHorizontal.jsx'
 
 const toneMap = {
   primary: 'primary.main',
@@ -703,17 +704,7 @@ export default function DashboardShell({
               >
                 <Stack spacing={0.6} sx={{ maxWidth: 680, minWidth: 0 }}>
                   <Stack direction="row" spacing={0.55} alignItems="center" flexWrap="wrap">
-                    <Typography
-                      variant="overline"
-                      sx={{
-                        color: 'secondary.dark',
-                        fontWeight: 800,
-                        letterSpacing: 0.75,
-                        overflowWrap: 'anywhere',
-                      }}
-                    >
-                      {brand}
-                    </Typography>
+                    <LogoHorizontal height={24} />
                     <Box
                       sx={{
                         width: 5,

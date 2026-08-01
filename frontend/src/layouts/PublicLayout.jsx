@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom'
 import AppFooter from '../components/common/AppFooter.jsx'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import ThemeModeSwitcher from '../components/ThemeModeSwitcher.jsx'
+import { LogoHorizontal } from '../components/common'
 import { useI18n } from '../i18n/useI18n.js'
 
 export default function PublicLayout() {
@@ -70,12 +71,7 @@ export default function PublicLayout() {
             }}
           >
             <Stack spacing={0.35}>
-              <Typography
-                variant="overline"
-                sx={{ color: 'secondary.dark', fontWeight: 800, letterSpacing: 1.3 }}
-              >
-                {t('app.brand')}
-              </Typography>
+              <LogoHorizontal height={52} />
               <Typography variant="body2" color="text.secondary">
                 {t('app.overview.sectionHint')}
               </Typography>
