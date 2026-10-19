@@ -197,24 +197,26 @@ def _accountability_response(
     )
 
 
-def _resolve_transaction_type_filter(
+def _requested_type_filter(requested_type: str | None) -> str | None:
+    """The requested type when valid, otherwise None (both types). Admins always get this."""
+    return requested_type if requested_type in {"income", "expense"} else None
+
+
+def _member_transaction_type_filter(
     *,
     info: PenaAccountabilityInfo,
-    is_admin: bool,
     requested_type: str | None,
 ) -> str | None | bool:
-    """Which transaction types a viewer may list.
+    """Which transaction types a member may list.
 
     Returns a type string ('income'/'expense'), None for "both", or False when the
-    viewer may see nothing (caller returns an empty page). Admins get their requested
-    filter; users are constrained to the types their visibility settings expose.
+    member may see nothing (caller returns an empty page). Members are constrained
+    to the types their pena's visibility settings expose.
     """
-    if is_admin:
-        return requested_type if requested_type in {"income", "expense"} else None
     income_visible = info.budget_visibility == "full"
     expense_visible = info.expenses_visibility == "full"
     if income_visible and expense_visible:
-        return requested_type if requested_type in {"income", "expense"} else None
+        return _requested_type_filter(requested_type)
     if income_visible:
         return "income"
     if expense_visible:
@@ -480,11 +482,11 @@ def list_pena_transactions(
     session=Depends(authorize_pena_access),
     query_bus: QueryBus = Depends(get_pena_accountability_query_bus),
 ):
-    is_admin = session.user_type == "admin"
     info = query_bus.ask(GetPenaAccountabilityQuery(pena_guid=pena_guid))
-    type_filter = _resolve_transaction_type_filter(
-        info=info, is_admin=is_admin, requested_type=type
-    )
+    if session.user_type == "admin":
+        type_filter = _requested_type_filter(type)
+    else:
+        type_filter = _member_transaction_type_filter(info=info, requested_type=type)
     if type_filter is False:
         return PenaTransactionPageResponse(
             items=[], page=page, page_size=page_size, total=0, total_pages=0
