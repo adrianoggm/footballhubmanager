@@ -2,10 +2,15 @@ import { Box, Link, Stack, Typography } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import { Link as RouterLink } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n.js'
+import { legalPath } from '../legal/legalDocuments.js'
 
 const GITHUB_URL = 'https://github.com/adrianoggm/footballhubmanager'
-// Placeholder address until a real support inbox exists.
-const CONTACT_EMAIL = 'contacto@footballhubmanager.app'
+const LEGAL_LINKS = [
+  { document: 'contact', labelKey: 'footer.contact' },
+  { document: 'terms', labelKey: 'footer.terms' },
+  { document: 'privacy', labelKey: 'footer.privacy' },
+  { document: 'accessibility', labelKey: 'footer.accessibility' },
+]
 
 const footerLinkSx = {
   color: 'text.secondary',
@@ -59,18 +64,17 @@ export default function AppFooter({ sections = [] }) {
             {t(section.titleKey)}
           </Link>
         ))}
-        <Link href={`mailto:${CONTACT_EMAIL}`} underline="none" sx={footerLinkSx}>
-          {t('footer.contact')}
-        </Link>
-        <Link component={RouterLink} to="/legal/terms" underline="none" sx={footerLinkSx}>
-          {t('footer.terms')}
-        </Link>
-        <Link component={RouterLink} to="/legal/privacy" underline="none" sx={footerLinkSx}>
-          {t('footer.privacy')}
-        </Link>
-        <Link component={RouterLink} to="/legal/accessibility" underline="none" sx={footerLinkSx}>
-          {t('footer.accessibility')}
-        </Link>
+        {LEGAL_LINKS.map((link) => (
+          <Link
+            key={link.document}
+            component={RouterLink}
+            to={legalPath(link.document)}
+            underline="none"
+            sx={footerLinkSx}
+          >
+            {t(link.labelKey)}
+          </Link>
+        ))}
         <Link
           href={GITHUB_URL}
           target="_blank"
