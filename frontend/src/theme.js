@@ -377,11 +377,15 @@ export const THEME_PRESETS = {
     labelKey: 'theme.presets.ember',
     palette: createPalette({
       mode: 'dark',
+      // Like every other dark preset, `primary` must be a LIGHT foreground tone:
+      // MUI uses it by default for text/icons/indicators (Tabs, LinearProgress,
+      // Checkbox, color="primary" icons, primary.main typography, KPI tones). A
+      // near-black primary rendered those as black-on-dark in Ember (#84).
       primary: {
-        main: '#101820',
-        light: '#435363',
-        dark: '#0A0E13',
-        contrastText: '#F5F5F5',
+        main: '#efe4da',
+        light: '#faf4ee',
+        dark: '#cbb8a8',
+        contrastText: '#1e1712',
       },
       secondary: {
         main: '#FF6B00',
