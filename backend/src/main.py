@@ -17,7 +17,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from metrics_collectors import ActiveSessionsCollector, register_once
-from observability_logging import RequestIdMiddleware, configure_logging
+from observability_logging import LogFormat, RequestIdMiddleware, configure_logging
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 from uvicorn import run
@@ -27,8 +27,9 @@ logger = logging.getLogger(__name__)
 
 # JSON logs in the cluster (Loki/LogQL), human-readable text in local dev.
 configure_logging(
-    json_logs=os.getenv("APP_ENV", "production").strip().lower()
-    not in {"dev", "development", "local", "test"}
+    log_format=LogFormat.TEXT
+    if os.getenv("APP_ENV", "production").strip().lower() in {"dev", "development", "local", "test"}
+    else LogFormat.JSON
 )
 
 
