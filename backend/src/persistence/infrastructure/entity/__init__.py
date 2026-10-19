@@ -5,11 +5,11 @@ from .football_match_event_entity import FootballMatchEvent
 from .nationality_entity import Nationality
 from .pena_accountability_entity import PenaAccountability
 from .pena_entity import Pena
-from .pena_expense_entity import PenaExpense
 from .pena_link_token_entity import PenaLinkToken
 from .pena_member_account_entity import PenaMemberAccount
 from .pena_player_entity import PenaPlayer
 from .pena_role_entity import PenaRole
+from .pena_transaction_entity import PenaTransaction
 from .player_account_entity import PlayerAccount
 from .player_entity import Player
 from .season_entity import Season
@@ -27,7 +27,7 @@ __all__ = [
     "Pena",
     "PenaAccountability",
     "PenaMemberAccount",
-    "PenaExpense",
+    "PenaTransaction",
     "AdminAccounts",
     "PlayerAccount",
     "PenaPlayer",

@@ -250,23 +250,31 @@ create table if not exists pena_member_account (
     on delete cascade on update cascade
 ) engine=innodb;
 
-create table if not exists pena_expense (
+create table if not exists pena_transaction (
   id           int auto_increment primary key,
   guid         char(36) not null default (uuid()),
   id_pena      int not null,
-  title        varchar(160) not null,
-  category     varchar(80) null,
+  type         varchar(10) not null,
   amount_cents bigint not null default 0,
-  occurred_on  date not null,
+  entity       varchar(160) null,
+  concept      varchar(160) not null,
+  category     varchar(80) null,
   note         varchar(255) null,
+  occurred_on  date not null,
+  id_player    int null,
   created_at   timestamp not null default current_timestamp,
   updated_at   timestamp not null default current_timestamp on update current_timestamp,
-  unique key uq_pena_expense_guid (guid),
-  key idx_pena_expense_pena (id_pena),
-  key idx_pena_expense_date (occurred_on),
-  constraint fk_pena_expense_pena
+  unique key uq_pena_transaction_guid (guid),
+  key idx_pena_transaction_pena (id_pena),
+  key idx_pena_transaction_date (id_pena, occurred_on),
+  key idx_pena_transaction_type (id_pena, type),
+  key idx_pena_transaction_player (id_player),
+  constraint fk_pena_transaction_pena
     foreign key (id_pena) references pena(id)
-    on delete cascade on update cascade
+    on delete cascade on update cascade,
+  constraint fk_pena_transaction_player
+    foreign key (id_player) references player(id)
+    on delete set null on update cascade
 ) engine=innodb;
 
 create table if not exists season_player (

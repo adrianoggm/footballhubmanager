@@ -12,7 +12,7 @@ from api.dependencies.use_cases import (
     get_pena_query_bus,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
-    CreatePenaExpenseRequest,
+    RecordPenaTransactionRequest,
     UpdatePenaAccountabilityRequest,
     UpsertPenaMemberAccountRequest,
 )
@@ -26,7 +26,9 @@ from api.interface.controller.v1.model.response.auth_response import LoginRespon
 from api.interface.controller.v1.model.response.pena_accountability_response import (
     PenaAccountabilityMemberAccountResponse,
     PenaAccountabilityResponse,
-    PenaExpenseResponse,
+    PenaMonthlyCashflowResponse,
+    PenaTransactionPageResponse,
+    PenaTransactionResponse,
 )
 from api.interface.controller.v1.model.response.pena_labels_response import PenaLabelsResponse
 from api.interface.controller.v1.model.response.penas_response import (
@@ -47,9 +49,9 @@ from auth.dependencies import (
 )
 from auth.session import create_session
 from core.application.commands.pena_accountability_commands import (
-    CreateExpenseCommand,
-    RemoveExpenseCommand,
+    RecordTransactionCommand,
     RemoveMemberAccountCommand,
+    RemoveTransactionCommand,
     UpdateAccountabilitySettingsCommand,
     UpsertMemberAccountCommand,
 )
@@ -63,14 +65,17 @@ from core.application.commands.pena_link_commands import (
 )
 from core.application.commands.update_pena_profile_command import UpdatePenaProfileCommand
 from core.application.models import (
-    PenaAccountabilityExpenseInfo,
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
+    PenaMonthlyCashflowInfo,
     PenasPage,
+    PenaTransactionInfo,
+    PenaTransactionPage,
 )
 from core.application.queries.pena_accountability_queries import (
     GetPenaAccountabilityQuery,
     GetPlayerGuidForAccountQuery,
+    ListPenaTransactionsQuery,
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_link_queries import InspectClaimTokenQuery
@@ -111,14 +116,27 @@ def _accountability_member_response(
     )
 
 
-def _accountability_expense_response(item: PenaAccountabilityExpenseInfo) -> PenaExpenseResponse:
-    return PenaExpenseResponse(
+def _monthly_cashflow_response(item: PenaMonthlyCashflowInfo) -> PenaMonthlyCashflowResponse:
+    return PenaMonthlyCashflowResponse(
+        year=item.year,
+        month=item.month,
+        income_cents=item.income_cents,
+        expense_cents=item.expense_cents,
+    )
+
+
+def _transaction_response(item: PenaTransactionInfo) -> PenaTransactionResponse:
+    return PenaTransactionResponse(
         guid=item.guid,
-        title=item.title,
-        category=item.category,
+        type=item.type,
         amount_cents=item.amount_cents,
-        occurred_on=item.occurred_on,
+        entity=item.entity,
+        concept=item.concept,
+        category=item.category,
         note=item.note,
+        occurred_on=item.occurred_on,
+        player_guid=item.player_guid,
+        player_name=item.player_name,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -134,7 +152,6 @@ def _accountability_response(
     budget_summary_visible = is_admin or info.budget_visibility in {"summary", "full"}
     budget_details_visible = is_admin or info.budget_visibility == "full"
     expenses_summary_visible = is_admin or info.expenses_visibility in {"summary", "full"}
-    expenses_details_visible = is_admin or info.expenses_visibility == "full"
 
     my_account = None
     if current_player_guid:
@@ -150,29 +167,59 @@ def _accountability_response(
         if budget_details_visible
         else []
     )
-    expenses = (
-        [_accountability_expense_response(item) for item in info.expenses]
-        if expenses_details_visible
+    monthly_cashflow = (
+        [_monthly_cashflow_response(item) for item in info.monthly_cashflow]
+        if budget_summary_visible
         else []
     )
 
     return PenaAccountabilityResponse(
         currency=info.currency,
-        balance_cents=info.balance_cents if budget_summary_visible else None,
+        opening_balance_cents=info.opening_balance_cents if budget_summary_visible else None,
         reserve_cents=info.reserve_cents if budget_summary_visible else None,
         budget_visibility=info.budget_visibility,
         expenses_visibility=info.expenses_visibility,
         member_accounts=member_accounts,
         my_account=my_account,
-        expenses=expenses,
-        total_debt_cents=info.total_debt_cents if budget_summary_visible else None,
-        total_contribution_cents=info.total_contribution_cents if budget_summary_visible else None,
-        total_expenses_cents=info.total_expenses_cents if expenses_summary_visible else None,
-        current_cash_cents=info.current_cash_cents if budget_summary_visible else None,
-        projected_balance_cents=info.projected_balance_cents if budget_summary_visible else None,
-        expense_entries=info.expense_entries if expenses_summary_visible else None,
+        monthly_cashflow=monthly_cashflow,
+        total_balance_cents=info.total_balance_cents if budget_summary_visible else None,
+        balance_trend_pct=info.balance_trend_pct if budget_summary_visible else None,
+        total_income_cents=info.total_income_cents if budget_summary_visible else None,
+        total_expense_cents=info.total_expense_cents if expenses_summary_visible else None,
+        expenses_this_month_count=(
+            info.expenses_this_month_count if expenses_summary_visible else None
+        ),
+        membership_fees_cents=info.membership_fees_cents if budget_summary_visible else None,
+        membership_collected_pct=info.membership_collected_pct if budget_summary_visible else None,
+        outstanding_dues_cents=info.total_debt_cents if budget_summary_visible else None,
+        members_pending_count=info.members_pending_count if budget_summary_visible else None,
         updated_at=info.updated_at,
     )
+
+
+def _resolve_transaction_type_filter(
+    *,
+    info: PenaAccountabilityInfo,
+    is_admin: bool,
+    requested_type: str | None,
+) -> str | None | bool:
+    """Which transaction types a viewer may list.
+
+    Returns a type string ('income'/'expense'), None for "both", or False when the
+    viewer may see nothing (caller returns an empty page). Admins get their requested
+    filter; users are constrained to the types their visibility settings expose.
+    """
+    if is_admin:
+        return requested_type if requested_type in {"income", "expense"} else None
+    income_visible = info.budget_visibility == "full"
+    expense_visible = info.expenses_visibility == "full"
+    if income_visible and expense_visible:
+        return requested_type if requested_type in {"income", "expense"} else None
+    if income_visible:
+        return "income"
+    if expense_visible:
+        return "expense"
+    return False
 
 
 @router.get("/penas", response_model=PenasPageResponse)
@@ -420,26 +467,70 @@ def delete_member_accountability(
     )
 
 
+@router.get(
+    "/penas/{pena_guid}/accountability/transactions",
+    response_model=PenaTransactionPageResponse,
+)
+@map_exceptions
+def list_pena_transactions(
+    pena_guid: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    type: str | None = Query(None),
+    session=Depends(authorize_pena_access),
+    query_bus: QueryBus = Depends(get_pena_accountability_query_bus),
+):
+    is_admin = session.user_type == "admin"
+    info = query_bus.ask(GetPenaAccountabilityQuery(pena_guid=pena_guid))
+    type_filter = _resolve_transaction_type_filter(
+        info=info, is_admin=is_admin, requested_type=type
+    )
+    if type_filter is False:
+        return PenaTransactionPageResponse(
+            items=[], page=page, page_size=page_size, total=0, total_pages=0
+        )
+
+    result: PenaTransactionPage = query_bus.ask(
+        ListPenaTransactionsQuery(
+            pena_guid=pena_guid,
+            page=page,
+            page_size=page_size,
+            type_filter=type_filter,
+        )
+    )
+    total_pages = math.ceil(result.total / result.page_size) if result.total else 0
+    return PenaTransactionPageResponse(
+        items=[_transaction_response(item) for item in result.items],
+        page=result.page,
+        page_size=result.page_size,
+        total=result.total,
+        total_pages=total_pages,
+    )
+
+
 @router.post(
-    "/penas/{pena_guid}/accountability/expenses",
+    "/penas/{pena_guid}/accountability/transactions",
     response_model=PenaAccountabilityResponse,
 )
 @map_exceptions
-def create_pena_expense(
+def record_pena_transaction(
     pena_guid: str,
-    payload: CreatePenaExpenseRequest,
+    payload: RecordPenaTransactionRequest,
     admin_session=Depends(require_admin),
     command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
     info = command_bus.dispatch(
-        CreateExpenseCommand(
+        RecordTransactionCommand(
             pena_guid=pena_guid,
             admin_id=admin_session.user_id,
-            title=payload.title,
-            category=payload.category,
+            type=payload.type,
             amount_cents=payload.amount_cents,
+            concept=payload.concept,
             occurred_on=payload.occurred_on,
+            entity=payload.entity,
+            category=payload.category,
             note=payload.note,
+            player_guid=payload.player_guid,
         )
     )
     return _accountability_response(
@@ -450,21 +541,21 @@ def create_pena_expense(
 
 
 @router.delete(
-    "/penas/{pena_guid}/accountability/expenses/{expense_guid}",
+    "/penas/{pena_guid}/accountability/transactions/{transaction_guid}",
     response_model=PenaAccountabilityResponse,
 )
 @map_exceptions
-def delete_pena_expense(
+def delete_pena_transaction(
     pena_guid: str,
-    expense_guid: str,
+    transaction_guid: str,
     admin_session=Depends(require_admin),
     command_bus: CommandBus = Depends(get_pena_accountability_command_bus),
 ):
     info = command_bus.dispatch(
-        RemoveExpenseCommand(
+        RemoveTransactionCommand(
             pena_guid=pena_guid,
             admin_id=admin_session.user_id,
-            expense_guid=expense_guid,
+            transaction_guid=transaction_guid,
         )
     )
     return _accountability_response(

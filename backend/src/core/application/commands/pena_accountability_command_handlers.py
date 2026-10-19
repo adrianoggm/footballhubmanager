@@ -1,13 +1,13 @@
-"""Handlers de escritura de accountability (settings, miembros, gastos)."""
+"""Handlers de escritura de accountability (settings, miembros, transacciones)."""
 
 from __future__ import annotations
 
 from datetime import date
 
 from core.application.commands.pena_accountability_commands import (
-    CreateExpenseCommand,
-    RemoveExpenseCommand,
+    RecordTransactionCommand,
     RemoveMemberAccountCommand,
+    RemoveTransactionCommand,
     UpdateAccountabilitySettingsCommand,
     UpsertMemberAccountCommand,
 )
@@ -18,6 +18,7 @@ from core.application.queries.pena_accountability_query_handlers import to_accou
 from core.domain.errors import InvalidPenaAccountabilityDataError
 
 VISIBILITY_LEVELS = {"private", "summary", "full"}
+TRANSACTION_TYPES = {"income", "expense"}
 
 
 def _required_text(value: str | None, *, max_length: int) -> str:
@@ -82,7 +83,7 @@ class UpdateAccountabilitySettingsHandler:
             currency=_currency(command.currency, fallback=current.currency),
             balance_cents=_amount(
                 command.balance_cents,
-                fallback=current.balance_cents,
+                fallback=current.opening_balance_cents,
                 sign_policy=AmountSignPolicy.ALLOW_NEGATIVE,
             ),
             reserve_cents=_amount(
@@ -135,35 +136,45 @@ class RemoveMemberAccountHandler:
         return to_accountability_info(result)
 
 
-class CreateExpenseHandler:
+class RecordTransactionHandler:
     def __init__(self, repository: PenaAccountabilityPort) -> None:
         self._repository = repository
 
-    def handle(self, command: CreateExpenseCommand) -> PenaAccountabilityInfo:
+    def handle(self, command: RecordTransactionCommand) -> PenaAccountabilityInfo:
         if not isinstance(command.occurred_on, date):
             raise InvalidPenaAccountabilityDataError()
-        result = self._repository.create_expense_for_admin(
+        transaction_type = str(command.type or "").strip().lower()
+        if transaction_type not in TRANSACTION_TYPES:
+            raise InvalidPenaAccountabilityDataError()
+        player_guid = _optional_text(command.player_guid, max_length=64)
+        # A member link only makes sense for income (a member paying dues).
+        if transaction_type != "income":
+            player_guid = None
+        result = self._repository.record_transaction_for_admin(
             pena_guid=command.pena_guid,
             admin_id=command.admin_id,
-            title=_required_text(command.title, max_length=160),
-            category=_optional_text(command.category, max_length=80),
+            type=transaction_type,
             amount_cents=_amount(
                 command.amount_cents, fallback=0, sign_policy=AmountSignPolicy.REQUIRE_NON_NEGATIVE
             ),
+            concept=_required_text(command.concept, max_length=160),
             occurred_on=command.occurred_on,
+            entity=_optional_text(command.entity, max_length=160),
+            category=_optional_text(command.category, max_length=80),
             note=_optional_text(command.note, max_length=255),
+            player_guid=player_guid,
         )
         return to_accountability_info(result)
 
 
-class RemoveExpenseHandler:
+class RemoveTransactionHandler:
     def __init__(self, repository: PenaAccountabilityPort) -> None:
         self._repository = repository
 
-    def handle(self, command: RemoveExpenseCommand) -> PenaAccountabilityInfo:
-        result = self._repository.delete_expense_for_admin(
+    def handle(self, command: RemoveTransactionCommand) -> PenaAccountabilityInfo:
+        result = self._repository.delete_transaction_for_admin(
             pena_guid=command.pena_guid,
             admin_id=command.admin_id,
-            expense_guid=_required_text(command.expense_guid, max_length=64),
+            transaction_guid=_required_text(command.transaction_guid, max_length=64),
         )
         return to_accountability_info(result)

@@ -143,6 +143,10 @@ class PenaAccountabilityExpenseNotFoundError(DomainError):
     code = "pena_accountability_expense_not_found"
 
 
+class PenaAccountabilityTransactionNotFoundError(DomainError):
+    code = "pena_accountability_transaction_not_found"
+
+
 # --- Pena membership ---
 
 

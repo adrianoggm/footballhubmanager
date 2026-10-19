@@ -4,7 +4,7 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterUserRequest,
 )
 from api.interface.controller.v1.model.request.pena_accountability_request import (
-    CreatePenaExpenseRequest,
+    RecordPenaTransactionRequest,
     UpdatePenaAccountabilityRequest,
     UpsertPenaMemberAccountRequest,
 )
@@ -42,7 +42,6 @@ from api.interface.controller.v1.model.request.season_competition_request import
 
 __all__ = [
     "ConsumeLinkTokenRequest",
-    "CreatePenaExpenseRequest",
     "CreateSeasonMatchDetailedRequest",
     "CreateSeasonMatchEventRequest",
     "CreateSeasonMatchRequest",
@@ -55,6 +54,7 @@ __all__ = [
     "MatchTeamLineupsRequest",
     "MatchTeamStatsRequest",
     "PlayerUpdateRequest",
+    "RecordPenaTransactionRequest",
     "RegisterSeasonPlayerRequest",
     "RegisterSeasonPlayersBulkRequest",
     "RegisterAdminRequest",

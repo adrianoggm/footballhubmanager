@@ -33,18 +33,21 @@ class RemoveMemberAccountCommand:
 
 
 @dataclass(frozen=True)
-class CreateExpenseCommand:
+class RecordTransactionCommand:
     pena_guid: str
     admin_id: int
-    title: str
+    type: str
     amount_cents: int | None
+    concept: str
     occurred_on: date
+    entity: str | None = None
     category: str | None = None
     note: str | None = None
+    player_guid: str | None = None
 
 
 @dataclass(frozen=True)
-class RemoveExpenseCommand:
+class RemoveTransactionCommand:
     pena_guid: str
     admin_id: int
-    expense_guid: str
+    transaction_guid: str

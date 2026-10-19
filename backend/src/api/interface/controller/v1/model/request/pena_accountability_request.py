@@ -17,9 +17,12 @@ class UpsertPenaMemberAccountRequest(BaseModel):
     note: str | None = None
 
 
-class CreatePenaExpenseRequest(BaseModel):
-    title: str
-    category: str | None = None
+class RecordPenaTransactionRequest(BaseModel):
+    type: str
     amount_cents: int
+    concept: str
     occurred_on: date
+    entity: str | None = None
+    category: str | None = None
     note: str | None = None
+    player_guid: str | None = None
