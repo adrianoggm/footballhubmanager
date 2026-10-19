@@ -74,7 +74,7 @@ export default function AppRouter({ auth, onLogout }) {
             </Route>
           </Route>
 
-          {/* Legal/info placeholders: public regardless of session. */}
+          {/* Legal/info pages (contact, terms, privacy, accessibility): public regardless of session. */}
           <Route element={<PublicLayout />}>
             <Route path="/legal/:section" element={<LegalPage />} />
             {/* Invitation claim link: public so a brand-new invitee can register

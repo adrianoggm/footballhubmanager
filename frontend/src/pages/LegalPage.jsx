@@ -1,25 +1,25 @@
 import { Button } from '@mui/material'
-import { useNavigate, useParams } from 'react-router-dom'
-import { EmptyState } from '../components/common'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import LegalDocument from '../components/legal/LegalDocument.jsx'
+import { isLegalDocument, legalPath } from '../components/legal/legalDocuments.js'
 import { useI18n } from '../i18n/useI18n.js'
 
-const KNOWN_SECTIONS = ['terms', 'privacy', 'accessibility']
-
 /**
- * Placeholder for legal/info pages (terms, privacy, accessibility) so footer
- * links are real routes before launch. Replace the body with final copy when
- * the documents are ready.
+ * Public legal/info page (/legal/:section): contact, terms, privacy and
+ * accessibility. Unknown sections redirect to the terms page.
  */
 export default function LegalPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const { section } = useParams()
-  const resolved = KNOWN_SECTIONS.includes(section) ? section : 'terms'
+
+  if (!isLegalDocument(section)) {
+    return <Navigate to={legalPath('terms')} replace />
+  }
 
   return (
-    <EmptyState
-      title={t(`legal.titles.${resolved}`)}
-      description={t('legal.placeholderBody')}
+    <LegalDocument
+      document={section}
       action={
         <Button variant="outlined" onClick={() => navigate(-1)}>
           {t('legal.back')}
