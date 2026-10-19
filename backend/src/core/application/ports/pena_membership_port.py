@@ -45,6 +45,10 @@ class InvalidRoleLabelError(Exception):
     pass
 
 
+class InvalidPositionLabelError(Exception):
+    """Position is not one of the pena's configured position labels."""
+
+
 class PenaMembershipPort(Protocol):
     def get_by_pena_and_player(
         self, *, pena_guid: str, player_guid: str

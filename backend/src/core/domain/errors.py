@@ -55,6 +55,12 @@ class PenaLabelsAccessDeniedError(DomainError):
     code = "pena_labels_access_denied"
 
 
+class InvalidPenaPositionError(DomainError):
+    """The requested position is not one of the pena's configured position labels."""
+
+    code = "invalid_pena_position"
+
+
 # --- Player profile ---
 
 

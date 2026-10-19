@@ -148,3 +148,14 @@ def pick_preferred_label(options: list[str], preferred: str) -> str | None:
         if option.casefold() == preferred_key:
             return option
     return options[0]
+
+
+def find_label(options: Iterable[str], value: str) -> str | None:
+    """Return the configured label matching ``value`` (case-insensitive), or None."""
+    key = str(value or "").strip().casefold()
+    if not key:
+        return None
+    for option in options:
+        if str(option or "").strip().casefold() == key:
+            return option
+    return None

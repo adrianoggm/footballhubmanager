@@ -35,6 +35,10 @@ class ClaimLinkResult:
     pena_guid: str
 
 
+class InvalidPositionLabelError(Exception):
+    """Position is not one of the pena's configured position labels."""
+
+
 class PenaLinkPort(Protocol):
     def create_token_for_admin_pena(
         self, *, admin_id: int, pena_guid: str, ttl_seconds: int

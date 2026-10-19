@@ -8,6 +8,7 @@ from core.domain.label_config import (
     default_color_for_label,
     dump_label_colors_payload,
     dump_labels_payload,
+    find_label,
     normalize_hex_color,
     parse_label_colors_payload,
     parse_labels_payload,
@@ -92,3 +93,13 @@ def test_align_label_colors_prefers_configured_colors_and_falls_back_to_defaults
 )
 def test_pick_preferred_label_returns_expected_option(options, preferred, expected):
     assert pick_preferred_label(options, preferred) == expected
+
+
+def test_find_label_returns_configured_label_case_insensitively():
+    assert find_label(["Portero", "defender"], "  portero ") == "Portero"
+    assert find_label(["Portero", "defender"], "DEFENDER") == "defender"
+
+
+@pytest.mark.parametrize("value", ["", "   ", "12", "striker"])
+def test_find_label_returns_none_for_unknown_or_blank(value):
+    assert find_label(["attacker", "keeper"], value) is None

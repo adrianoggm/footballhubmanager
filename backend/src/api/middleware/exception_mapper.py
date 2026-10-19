@@ -40,6 +40,7 @@ from core.domain.errors import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
+    InvalidPenaPositionError,
     InvalidPenaSeasonDataError,
     InvalidPlayerNationalityError,
     InvalidPlayerUpdateDataError,
@@ -112,6 +113,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Player has already been linked to an account",
     ),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
+    InvalidPenaPositionError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Position must be one of the pena's configured position labels",
+    ),
     InvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaLabelsAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),

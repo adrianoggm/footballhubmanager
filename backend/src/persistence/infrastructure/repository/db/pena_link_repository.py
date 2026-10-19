@@ -5,6 +5,7 @@ from core.application.ports.pena_link_port import (
     ClaimLinkResult,
     ClaimRegistrationResult,
     ClaimTokenInfoResult,
+    InvalidPositionLabelError,
     PenaLinkPort,
     PenaLinkTokenResult,
 )
@@ -17,7 +18,13 @@ from core.domain.errors import (
     UserProfileNotFoundError,
     UserUsernameExistsError,
 )
-from core.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
+from core.domain.label_config import (
+    DEFAULT_POSITION_LABELS,
+    DEFAULT_ROLE_LABELS,
+    find_label,
+    parse_labels_payload,
+    pick_preferred_label,
+)
 from persistence.infrastructure.entity import (
     FootballMatchEvent,
     Pena,
@@ -316,6 +323,16 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                 if not link:
                     raise InvalidLinkTokenError()
 
+                if position is not None:
+                    pena = self.session.get(Pena, link.id_pena)
+                    allowed = parse_labels_payload(
+                        pena.position_labels if pena else None,
+                        fallback=DEFAULT_POSITION_LABELS,
+                    )
+                    position = find_label(allowed, position)
+                    if position is None:
+                        raise InvalidPositionLabelError()
+
                 roles = list(
                     self.session.execute(
                         select(PenaRole)
@@ -356,7 +373,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                         position=position,
                     )
                     self.session.add(membership)
-        except (InvalidLinkTokenError, UserProfileNotFoundError):
+        except (InvalidLinkTokenError, InvalidPositionLabelError, UserProfileNotFoundError):
             self.session.rollback()
             raise
         except IntegrityError as exc:
