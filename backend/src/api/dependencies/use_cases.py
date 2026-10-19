@@ -3,16 +3,16 @@ from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import 
     SqlAlchemyAuthAccountRepository,
 )
 from core.application.commands.pena_accountability_command_handlers import (
-    CreateExpenseHandler,
-    RemoveExpenseHandler,
+    RecordTransactionHandler,
     RemoveMemberAccountHandler,
+    RemoveTransactionHandler,
     UpdateAccountabilitySettingsHandler,
     UpsertMemberAccountHandler,
 )
 from core.application.commands.pena_accountability_commands import (
-    CreateExpenseCommand,
-    RemoveExpenseCommand,
+    RecordTransactionCommand,
     RemoveMemberAccountCommand,
+    RemoveTransactionCommand,
     UpdateAccountabilitySettingsCommand,
     UpsertMemberAccountCommand,
 )
@@ -123,10 +123,12 @@ from core.application.queries.nationality_query_handler import GetNationalitiesH
 from core.application.queries.pena_accountability_queries import (
     GetPenaAccountabilityQuery,
     GetPlayerGuidForAccountQuery,
+    ListPenaTransactionsQuery,
 )
 from core.application.queries.pena_accountability_query_handlers import (
     GetPenaAccountabilityHandler,
     GetPlayerGuidForAccountHandler,
+    ListPenaTransactionsHandler,
 )
 from core.application.queries.pena_labels_query import GetPenaLabelsQuery
 from core.application.queries.pena_labels_query_handler import GetPenaLabelsHandler
@@ -307,6 +309,7 @@ def get_pena_accountability_query_bus(db: Session = Depends(get_db)) -> QueryBus
     repository = SqlAlchemyPenaAccountabilityRepository(db)
     bus = QueryBus()
     bus.register(GetPenaAccountabilityQuery, GetPenaAccountabilityHandler(repository))
+    bus.register(ListPenaTransactionsQuery, ListPenaTransactionsHandler(repository))
     bus.register(GetPlayerGuidForAccountQuery, GetPlayerGuidForAccountHandler(repository))
     return bus
 
@@ -319,8 +322,8 @@ def get_pena_accountability_command_bus(db: Session = Depends(get_db)) -> Comman
     )
     bus.register(UpsertMemberAccountCommand, UpsertMemberAccountHandler(repository))
     bus.register(RemoveMemberAccountCommand, RemoveMemberAccountHandler(repository))
-    bus.register(CreateExpenseCommand, CreateExpenseHandler(repository))
-    bus.register(RemoveExpenseCommand, RemoveExpenseHandler(repository))
+    bus.register(RecordTransactionCommand, RecordTransactionHandler(repository))
+    bus.register(RemoveTransactionCommand, RemoveTransactionHandler(repository))
     return bus
 
 

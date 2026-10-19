@@ -15,6 +15,7 @@ export default function LanguageSwitcher() {
             setLanguage(value)
           }
         }}
+        sx={{ alignSelf: 'flex-start' }}
       >
         <ToggleButton value="en">{t('language.en')}</ToggleButton>
         <ToggleButton value="es">{t('language.es')}</ToggleButton>

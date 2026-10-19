@@ -19,9 +19,7 @@ export default function AppearanceSettings() {
       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
         {t('dashboard.common.appearanceTitle')}
       </Typography>
-      <DashboardControlField label={t('theme.label')}>
-        <ThemeModeSwitcher />
-      </DashboardControlField>
+      <ThemeModeSwitcher showLabels />
       <DashboardControlField label={t('language.label')}>
         <LanguageSwitcher />
       </DashboardControlField>

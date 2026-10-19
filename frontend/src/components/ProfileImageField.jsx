@@ -99,7 +99,11 @@ export default function ProfileImageField({
             onChange={handleSelectFile}
           />
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Button variant="outlined" onClick={handleOpenPicker} disabled={disabled || processing}>
+            <Button
+              variant="contained"
+              onClick={handleOpenPicker}
+              disabled={disabled || processing}
+            >
               {hasValue ? replaceLabel : chooseLabel}
             </Button>
             <Button

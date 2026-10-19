@@ -13,33 +13,58 @@ class PenaAccountabilityMemberAccountInfo:
 
 
 @dataclass(frozen=True)
-class PenaAccountabilityExpenseInfo:
+class PenaTransactionInfo:
     guid: str
-    title: str
-    category: str | None
+    type: str  # 'income' | 'expense'
     amount_cents: int
-    occurred_on: date
+    entity: str | None
+    concept: str
+    category: str | None
     note: str | None
+    occurred_on: date
+    player_guid: str | None
+    player_name: str | None
     created_at: datetime | None
     updated_at: datetime | None
 
 
 @dataclass(frozen=True)
+class PenaMonthlyCashflowInfo:
+    year: int
+    month: int
+    income_cents: int
+    expense_cents: int
+
+
+@dataclass(frozen=True)
 class PenaAccountabilityInfo:
     currency: str
-    balance_cents: int
+    opening_balance_cents: int
     reserve_cents: int
     budget_visibility: str
     expenses_visibility: str
     member_accounts: list[PenaAccountabilityMemberAccountInfo]
-    expenses: list[PenaAccountabilityExpenseInfo]
+    monthly_cashflow: list[PenaMonthlyCashflowInfo]
     updated_at: datetime | None
+    # Derived KPIs (computed in the query handler from ledger aggregates).
+    total_income_cents: int
+    total_expense_cents: int
+    total_balance_cents: int
+    balance_trend_pct: float | None
     total_debt_cents: int
     total_contribution_cents: int
-    total_expenses_cents: int
-    current_cash_cents: int
-    projected_balance_cents: int
-    expense_entries: int
+    membership_fees_cents: int
+    membership_collected_pct: float | None
+    expenses_this_month_count: int
+    members_pending_count: int
+
+
+@dataclass(frozen=True)
+class PenaTransactionPage:
+    items: list[PenaTransactionInfo]
+    page: int
+    page_size: int
+    total: int
 
 
 @dataclass(frozen=True)
@@ -60,9 +85,12 @@ class PenaAccountabilityMemberAccountUpsert:
 
 
 @dataclass(frozen=True)
-class PenaAccountabilityExpenseCreate:
-    title: str
-    category: str | None
+class PenaTransactionCreate:
+    type: str
     amount_cents: int
+    concept: str
     occurred_on: date
+    entity: str | None = None
+    category: str | None = None
     note: str | None = None
+    player_guid: str | None = None
