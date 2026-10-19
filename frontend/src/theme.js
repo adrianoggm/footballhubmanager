@@ -1,5 +1,5 @@
 import { alpha, createTheme } from '@mui/material/styles'
-import { designTokens } from './theme/tokens.js'
+import { designTokens, INSIGHT_MATRIX_SCALES, MATRIX_CELL_TEXT_COLOR } from './theme/tokens.js'
 
 const DEFAULT_LIGHT_THEME_PRESET_ID = 'sand-light'
 const DEFAULT_DARK_THEME_PRESET_ID = 'midnight-dark'
@@ -549,6 +549,17 @@ const createCustomTokens = (preset) => {
     styleProfile: 'base',
     labels: designTokens.labels,
     insightAccents: designTokens.insightAccents,
+    insightMatrix: {
+      ...(mode === 'dark' ? INSIGHT_MATRIX_SCALES.dark : INSIGHT_MATRIX_SCALES.light),
+      text: mode === 'dark' ? palette.text.primary : MATRIX_CELL_TEXT_COLOR,
+      subtext: alpha(mode === 'dark' ? palette.text.primary : MATRIX_CELL_TEXT_COLOR, 0.72),
+      cellBorder: alpha(
+        mode === 'dark' ? palette.text.primary : MATRIX_CELL_TEXT_COLOR,
+        mode === 'dark' ? 0.1 : 0.08
+      ),
+      samePlayerBackground: alpha(palette.text.secondary, 0.16),
+      emptyBackground: alpha(palette.text.secondary, 0.08),
+    },
     themeMeta: {
       presetId: preset.id,
       mode: palette.mode,
