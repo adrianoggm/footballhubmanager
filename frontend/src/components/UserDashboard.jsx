@@ -49,7 +49,6 @@ const defaultProfileForm = () => ({
 const defaultJoinForm = () => ({
   token: '',
   nickname: '',
-  position: '',
 })
 
 const defaultMembershipForm = () => ({
@@ -149,6 +148,7 @@ export default function UserDashboard({
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
   const [membership, setMembership] = useState(null)
+  const [positionOptions, setPositionOptions] = useState([])
   const {
     values: membershipForm,
     setValues: setMembershipForm,
@@ -301,11 +301,18 @@ export default function UserDashboard({
     if (!penaGuid) {
       setMembership(null)
       setMembershipForm(defaultMembershipForm())
+      setPositionOptions([])
       return
     }
     try {
-      const currentMembership = await userService.getMyMembership(penaGuid)
+      const [currentMembership, labels] = await Promise.all([
+        userService.getMyMembership(penaGuid),
+        // Position is restricted to the pena's configured labels; a labels
+        // failure must not block the membership view.
+        userService.getPenaLabels(penaGuid).catch(() => null),
+      ])
       setMembership(currentMembership)
+      setPositionOptions(labels?.position_labels || [])
       setMembershipForm({
         nickname: asText(currentMembership.nickname),
         position: asText(currentMembership.position),
@@ -314,6 +321,7 @@ export default function UserDashboard({
       if (requestError.status === 403 || requestError.status === 404) {
         setMembership(null)
         setMembershipForm(defaultMembershipForm())
+        setPositionOptions([])
         return
       }
       throw requestError
@@ -588,7 +596,6 @@ export default function UserDashboard({
       await userService.consumeJoinToken({
         token,
         nickname: joinForm.nickname.trim() || null,
-        position: joinForm.position.trim() || null,
       })
       resetJoinForm()
       await loadDashboard()
@@ -854,6 +861,7 @@ export default function UserDashboard({
             membership={membership}
             membershipForm={membershipForm}
             onMembershipField={onMembershipField}
+            positionOptions={positionOptions}
             onUpdateMembership={handleUpdateMembership}
             onLeavePena={handleLeavePena}
             seasonList={seasonList}

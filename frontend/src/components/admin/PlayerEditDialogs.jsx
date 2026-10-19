@@ -5,37 +5,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  MenuItem,
   Stack,
   TextField,
 } from '@mui/material'
-import { translateLabel } from '../../i18n/labels.js'
-
-const hasLabel = (options, value) => {
-  const needle = String(value || '')
-    .trim()
-    .toLowerCase()
-  return options.some((option) => String(option || '').toLowerCase() === needle)
-}
-
-// Role/position select that keeps an out-of-catalog current value selectable
-// (legacy labels) while offering the pena's configured labels. Known default
-// labels are translated for display; values stay raw.
-function LabelSelect({ label, noneLabel, value, onChange, options, kind, t }) {
-  return (
-    <TextField select label={label} value={value} onChange={onChange} fullWidth>
-      <MenuItem value="">{noneLabel}</MenuItem>
-      {value && !hasLabel(options, value) && (
-        <MenuItem value={value}>{translateLabel(t, kind, value)}</MenuItem>
-      )}
-      {options.map((option) => (
-        <MenuItem key={option} value={option}>
-          {translateLabel(t, kind, option)}
-        </MenuItem>
-      ))}
-    </TextField>
-  )
-}
+import LabelSelect from '../common/LabelSelect.jsx'
 
 /**
  * Edit a player's season registration (role/position labels + W/D/L + quality).

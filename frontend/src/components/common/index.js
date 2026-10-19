@@ -3,6 +3,7 @@
 export { default as ConfirmDialog } from './ConfirmDialog.jsx'
 export { default as EmptyState } from './EmptyState.jsx'
 export { default as ErrorState } from './ErrorState.jsx'
+export { default as LabelSelect } from './LabelSelect.jsx'
 export { default as LoadingState } from './LoadingState.jsx'
 export { default as LogoHorizontal } from './LogoHorizontal.jsx'
 export { default as PaginatedTable } from './PaginatedTable.jsx'
