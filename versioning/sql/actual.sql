@@ -14,8 +14,11 @@ create table if not exists admin_accounts (
   username  varchar(50)  not null,
   password  varchar(255) not null,
   name      varchar(100) not null,
+  email     varchar(254) null,
+  email_verified_at bigint null,
   unique key uq_admin_guid (guid),
-  unique key uq_admin_username (username)
+  unique key uq_admin_username (username),
+  unique key uq_admin_email (email)
 ) engine=innodb;
 
 create table if not exists player_account (
@@ -24,8 +27,11 @@ create table if not exists player_account (
   username  varchar(50)  not null,
   password  varchar(255) not null,
   name      varchar(100) not null,
+  email     varchar(254) null,
+  email_verified_at bigint null,
   unique key uq_player_account_guid (guid),
-  unique key uq_player_account_username (username)
+  unique key uq_player_account_username (username),
+  unique key uq_player_account_email (email)
 ) engine=innodb;
 
 create table if not exists user_session (
@@ -34,7 +40,22 @@ create table if not exists user_session (
   user_guid  char(36) not null,
   user_type  varchar(20) not null,
   expires_at bigint not null,
-  key idx_user_session_expires_at (expires_at)
+  key idx_user_session_expires_at (expires_at),
+  key idx_user_session_user (user_id, user_type)
+) engine=innodb;
+
+-- Single-use email-verification / password-reset tokens. Only sha256(token) is
+-- stored. Epoch-second timestamps, like user_session.
+create table if not exists account_token (
+  token_hash   char(64) primary key,
+  purpose      varchar(30) not null,
+  account_type varchar(20) not null,
+  account_id   int not null,
+  email        varchar(254) null,
+  expires_at   bigint not null,
+  created_at   bigint not null,
+  key idx_account_token_account (account_type, account_id, purpose),
+  key idx_account_token_expires_at (expires_at)
 ) engine=innodb;
 
 create table if not exists pena (
@@ -386,5 +407,7 @@ insert into schema_migrations (version, description, success) values
   ('8', 'football match official status and lineup audit', 1),
   ('9', 'football match clock pause', 1),
   ('10', 'football match goalkeeper rotation', 1),
-  ('11', 'pena link token player claim', 1)
+  ('11', 'pena link token player claim', 1),
+  ('12', 'pena transaction unified ledger', 1),
+  ('13', 'account email and tokens', 1)
 on duplicate key update description=values(description), success=values(success);
