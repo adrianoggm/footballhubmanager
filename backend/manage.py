@@ -1,6 +1,6 @@
 """Dev convenience wrapper for the migration CLI (cross-shell, repo-root paths).
 
-    python backend/manage.py status|migrate|stamp [N]
+    python backend/manage.py status|migrate|stamp [N]|rollback N
 
 Inside the image the entrypoint uses `python -m db_migrations` directly (PYTHONPATH
 is set there); this wrapper just puts `backend/src` on the path for local use.

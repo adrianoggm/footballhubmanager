@@ -13,6 +13,11 @@ from sqlalchemy.engine import Connection, Engine
 logger = logging.getLogger(__name__)
 
 _VERSION_RE = re.compile(r"^v(\d+)\.sql$", re.IGNORECASE)
+_DOWN_RE = re.compile(r"^v(\d+)\.down\.sql$", re.IGNORECASE)
+
+# From this version onward every vN.sql must ship a paired vN.down.sql (enforced by
+# a unit test that scans the real versions directory).
+DOWN_REQUIRED_FROM_VERSION = 13
 
 # Portable across MySQL (prod) and SQLite (tests). On an existing prod DB the
 # table already exists (created by v1.sql), so IF NOT EXISTS is a no-op there.
@@ -30,6 +35,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 class Migration:
     version: str  # numeric part as a string, e.g. "11" (matches schema_migrations)
     path: Path
+    down_path: Path | None = None  # optional paired vN.down.sql, used by rollback
 
     @property
     def description(self) -> str:
@@ -53,12 +59,19 @@ def find_migrations_dir(explicit: str | Path | None = None) -> Path:
 
 
 def discover(migrations_dir: str | Path) -> list[Migration]:
-    directory = Path(migrations_dir)
-    migrations = [
-        Migration(version=str(int(match.group(1))), path=entry)
-        for entry in directory.iterdir()
-        if (match := _VERSION_RE.match(entry.name))
-    ]
+    """List the up migrations (``vN.sql``) with their optional ``vN.down.sql``."""
+    entries = list(Path(migrations_dir).iterdir())
+    downs = {
+        str(int(match.group(1))): entry
+        for entry in entries
+        if (match := _DOWN_RE.match(entry.name))
+    }
+    migrations: list[Migration] = []
+    for entry in entries:
+        match = _VERSION_RE.match(entry.name)
+        if match:
+            version = str(int(match.group(1)))
+            migrations.append(Migration(version=version, path=entry, down_path=downs.get(version)))
     migrations.sort(key=lambda migration: int(migration.version))
     return migrations
 
@@ -170,3 +183,57 @@ def stamp(
                 _record(conn, migration.version, migration.description, success=True)
                 stamped.append(migration.version)
     return stamped
+
+
+class MissingDownMigrationError(RuntimeError):
+    """A rollback was requested past a version that has no ``vN.down.sql``."""
+
+
+def rollback(
+    engine: Engine, to_version: str | int, migrations_dir: str | Path | None = None
+) -> list[str]:
+    """Revert every applied migration newer than ``to_version``, newest first.
+
+    All-or-nothing precheck: if ANY version to revert lacks a down file (or its up
+    file is gone), nothing is executed. Each down file then runs in its own
+    transaction together with the deletion of its ``schema_migrations`` row; the
+    run stops at the first failure and re-raises. ``to_version=0`` reverts all.
+    Returns the versions rolled back, in the order they were reverted.
+    """
+    target = int(to_version)
+    if target < 0:
+        raise ValueError("to_version must be >= 0")
+    downs = {
+        m.version: m.down_path
+        for m in discover(find_migrations_dir(migrations_dir))
+        if m.down_path is not None
+    }
+    with engine.begin() as conn:
+        ensure_table(conn)
+        applied = applied_versions(conn)
+
+    to_revert = sorted((v for v in applied if int(v) > target), key=int, reverse=True)
+    missing = [version for version in to_revert if version not in downs]
+    if missing:
+        raise MissingDownMigrationError(
+            f"Cannot roll back to v{target}: no down file for "
+            f"{', '.join(f'v{v}' for v in missing)}. Nothing was rolled back."
+        )
+
+    reverted: list[str] = []
+    for version in to_revert:
+        down_path = downs[version]
+        statements = _split_statements(down_path.read_text(encoding="utf-8"))
+        try:
+            with engine.begin() as conn:
+                for statement in statements:
+                    conn.exec_driver_sql(statement)
+                conn.execute(
+                    text("DELETE FROM schema_migrations WHERE version = :v"), {"v": version}
+                )
+        except Exception:
+            logger.exception("Rollback %s failed; stopping.", down_path.name)
+            raise
+        logger.info("Rolled back migration %s", down_path.name)
+        reverted.append(version)
+    return reverted

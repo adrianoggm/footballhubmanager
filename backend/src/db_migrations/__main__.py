@@ -1,4 +1,4 @@
-"""CLI entrypoint: ``python -m db_migrations <migrate|stamp|status> [args]``.
+"""CLI entrypoint: ``python -m db_migrations <migrate|stamp|rollback|status> [args]``.
 
 Used by the backend image entrypoint (the Kubernetes pre-upgrade migration Job
 runs ``migrate``; ``stamp`` baselines an existing database once).
@@ -32,6 +32,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Stamped {len(stamped)} version(s) ({scope}): {', '.join(stamped) or 'none'}")
         return 0
 
+    if command == "rollback":
+        # The target is mandatory on purpose: nobody rolls back by accident.
+        if len(args) < 2:
+            print("Usage: rollback <N>  (reverts every applied version > N)", file=sys.stderr)
+            return 2
+        target = args[1]
+        try:
+            reverted = runner.rollback(engine, target)
+        except runner.MissingDownMigrationError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(
+            f"Rolled back {len(reverted)} migration(s) to v{target}: "
+            f"{', '.join(reverted) or 'none'}"
+        )
+        return 0
+
     if command == "status":
         migrations, applied = runner.status(engine)
         for migration in migrations:
@@ -41,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{len(applied)} applied, {len(pending)} pending")
         return 0
 
-    print(f"Unknown command: {command!r} (use migrate|stamp|status)", file=sys.stderr)
+    print(f"Unknown command: {command!r} (use migrate|stamp|rollback|status)", file=sys.stderr)
     return 2
 
 
