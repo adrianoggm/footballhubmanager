@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from unittest.mock import ANY
 
 import pytest
+from auth.domain.errors import InvalidEmailError
 from core.application.commands.registration_command_handlers import (
     RegisterAdminHandler,
     RegisterUserHandler,
@@ -28,10 +29,15 @@ class _AdminRepo:
     should_raise_duplicate: bool = False
     last_payload: dict | None = None
 
-    def register_admin(self, *, username: str, password_hash: str, name: str):
+    def register_admin(self, *, username: str, password_hash: str, name: str, email: str):
         if self.should_raise_duplicate:
             raise AdminUsernameExistsError()
-        self.last_payload = {"username": username, "password_hash": password_hash, "name": name}
+        self.last_payload = {
+            "username": username,
+            "password_hash": password_hash,
+            "name": name,
+            "email": email,
+        }
         return RegisteredAdminResult(admin_id=7, admin_guid="admin-guid")
 
 
@@ -42,7 +48,7 @@ class _UserRepo:
     last_payload: dict | None = None
 
     def register_user(
-        self, *, username, password_hash, name, surname1, surname2, nationality
+        self, *, username, password_hash, name, surname1, surname2, nationality, email
     ) -> RegisteredUserResult:
         if self.should_raise_duplicate:
             raise UserUsernameExistsError()
@@ -55,6 +61,7 @@ class _UserRepo:
             "surname1": surname1,
             "surname2": surname2,
             "nationality": nationality,
+            "email": email,
         }
         return RegisteredUserResult(
             account_id=1, account_guid="acc-guid", player_guid="player-guid"
@@ -64,7 +71,9 @@ class _UserRepo:
 def test_register_admin_normalizes_and_persists():
     repo = _AdminRepo()
     result = RegisterAdminHandler(repo).handle(
-        RegisterAdminCommand(username="  admin.one  ", password="secret", name="  Admin Name ")
+        RegisterAdminCommand(
+            username="  admin.one  ", password="secret", name="  Admin Name ", email="a@example.com"
+        )
     )
 
     assert result.admin_id == 7
@@ -72,21 +81,28 @@ def test_register_admin_normalizes_and_persists():
         "username": "admin.one",
         "password_hash": ANY,
         "name": "Admin Name",
+        "email": "a@example.com",
     }
 
 
 def test_register_admin_propagates_duplicate_username():
     with pytest.raises(AdminUsernameExistsError):
         RegisterAdminHandler(_AdminRepo(should_raise_duplicate=True)).handle(
-            RegisterAdminCommand(username="admin.one", password="secret", name="Admin Name")
+            RegisterAdminCommand(
+                username="admin.one", password="secret", name="Admin Name", email="a@example.com"
+            )
         )
 
 
 @pytest.mark.parametrize(
     "command",
     [
-        RegisterAdminCommand(username="   ", password="secret", name="Admin Name"),
-        RegisterAdminCommand(username="admin.one", password="secret", name="   "),
+        RegisterAdminCommand(
+            username="   ", password="secret", name="Admin Name", email="a@example.com"
+        ),
+        RegisterAdminCommand(
+            username="admin.one", password="secret", name="   ", email="a@example.com"
+        ),
     ],
 )
 def test_register_admin_rejects_blank_required_fields(command):
@@ -104,6 +120,7 @@ def test_register_user_normalizes_and_persists():
             surname1="  Garcia  ",
             surname2="  Milena ",
             nationality=" Spain ",
+            email=" User.One@Example.COM ",
         )
     )
 
@@ -115,6 +132,7 @@ def test_register_user_normalizes_and_persists():
         "surname1": "Garcia",
         "surname2": "Milena",
         "nationality": "Spain",
+        "email": "user.one@example.com",
     }
 
 
@@ -128,6 +146,7 @@ def test_register_user_propagates_duplicate_username():
                 surname1="Garcia",
                 surname2=None,
                 nationality="Spain",
+                email="u@example.com",
             )
         )
 
@@ -142,6 +161,7 @@ def test_register_user_rejects_blank_required_field():
                 surname1="Garcia",
                 surname2=None,
                 nationality="Spain",
+                email="u@example.com",
             )
         )
 
@@ -156,5 +176,25 @@ def test_register_user_propagates_invalid_nationality():
                 surname1="Garcia",
                 surname2=None,
                 nationality="Atlantis",
+                email="u@example.com",
+            )
+        )
+
+
+def test_register_handlers_reject_invalid_email():
+    with pytest.raises(InvalidEmailError):
+        RegisterAdminHandler(_AdminRepo()).handle(
+            RegisterAdminCommand(username="root", password="secret", name="Root", email="nope")
+        )
+    with pytest.raises(InvalidEmailError):
+        RegisterUserHandler(_UserRepo()).handle(
+            RegisterUserCommand(
+                username="ana",
+                password="secret",
+                name="Ana",
+                surname1="Lopez",
+                surname2=None,
+                nationality="Spain",
+                email="ana@",
             )
         )

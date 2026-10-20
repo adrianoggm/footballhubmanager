@@ -8,6 +8,7 @@ class RegisterAdminCommand:
     username: str
     password: str
     name: str
+    email: str
 
 
 @dataclass(frozen=True)
@@ -18,3 +19,4 @@ class RegisterUserCommand:
     surname1: str
     surname2: str | None
     nationality: str
+    email: str

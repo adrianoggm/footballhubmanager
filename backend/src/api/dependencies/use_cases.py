@@ -1,7 +1,34 @@
+from app.config import config as app_config
+from auth.application.commands.account_email_command_handlers import (
+    ChangeAccountEmailHandler,
+    ResendEmailVerificationHandler,
+    SendRegistrationEmailVerificationHandler,
+    VerifyEmailHandler,
+)
+from auth.application.commands.account_email_commands import (
+    ChangeAccountEmailCommand,
+    ResendEmailVerificationCommand,
+    SendRegistrationEmailVerificationCommand,
+    VerifyEmailCommand,
+)
+from auth.application.queries.account_email_queries import GetAccountEmailQuery
+from auth.application.queries.account_email_query_handlers import GetAccountEmailHandler
+from auth.application.services.account_email_composer import AccountEmailComposer
+from auth.application.services.email_verification_issuer import EmailVerificationIssuer
 from auth.application.use_cases.login import LoginAdminUseCase, LoginUserUseCase
+from auth.domain.policies.token_cooldown_policy import TokenCooldownPolicy
+from auth.domain.ports.mail_sender_port import MailSenderPort
+from auth.infrastructure.mail.mail_sender_factory import build_mail_sender
+from auth.infrastructure.repositories.sqlalchemy_account_email_repository import (
+    SqlAlchemyAccountEmailRepository,
+)
 from auth.infrastructure.repositories.sqlalchemy_auth_account_repository import (
     SqlAlchemyAuthAccountRepository,
 )
+from auth.infrastructure.repositories.sqlalchemy_email_verification_token_repository import (
+    SqlAlchemyEmailVerificationTokenRepository,
+)
+from auth.infrastructure.system_clock import SystemClock
 from core.application.commands.pena_accountability_command_handlers import (
     RecordTransactionHandler,
     RemoveMemberAccountHandler,
@@ -248,11 +275,72 @@ def get_login_admin_use_case(db: Session = Depends(get_db)) -> LoginAdminUseCase
     return LoginAdminUseCase(SqlAlchemyAuthAccountRepository(db))
 
 
+def build_configured_mail_sender() -> MailSenderPort:
+    return build_mail_sender(app_config.MAIL_BACKEND, app_config.smtp_settings())
+
+
+def _account_email_composer() -> AccountEmailComposer:
+    return AccountEmailComposer(app_config.APP_PUBLIC_URL)
+
+
+def _account_token_cooldown() -> TokenCooldownPolicy:
+    return TokenCooldownPolicy(seconds=app_config.ACCOUNT_EMAIL_COOLDOWN_SECONDS)
+
+
+def _email_verification_issuer(
+    tokens: SqlAlchemyEmailVerificationTokenRepository,
+) -> EmailVerificationIssuer:
+    return EmailVerificationIssuer(
+        tokens=tokens,
+        mail_sender=build_configured_mail_sender(),
+        composer=_account_email_composer(),
+        clock=SystemClock(),
+        ttl_seconds=app_config.EMAIL_VERIFICATION_TOKEN_TTL_SECONDS,
+    )
+
+
 def get_registration_command_bus(db: Session = Depends(get_db)) -> CommandBus:
     repository = SqlAlchemyRegistrationRepository(db)
+    accounts = SqlAlchemyAccountEmailRepository(db)
+    issuer = _email_verification_issuer(SqlAlchemyEmailVerificationTokenRepository(db))
     bus = CommandBus()
     bus.register(RegisterUserCommand, RegisterUserHandler(repository))
     bus.register(RegisterAdminCommand, RegisterAdminHandler(repository))
+    bus.register(
+        SendRegistrationEmailVerificationCommand,
+        SendRegistrationEmailVerificationHandler(accounts=accounts, issuer=issuer),
+    )
+    return bus
+
+
+def get_account_email_command_bus(db: Session = Depends(get_db)) -> CommandBus:
+    accounts = SqlAlchemyAccountEmailRepository(db)
+    tokens = SqlAlchemyEmailVerificationTokenRepository(db)
+    issuer = _email_verification_issuer(tokens)
+    cooldown = _account_token_cooldown()
+    clock = SystemClock()
+    bus = CommandBus()
+    bus.register(
+        ChangeAccountEmailCommand,
+        ChangeAccountEmailHandler(
+            accounts=accounts, tokens=tokens, issuer=issuer, cooldown=cooldown, clock=clock
+        ),
+    )
+    bus.register(
+        ResendEmailVerificationCommand,
+        ResendEmailVerificationHandler(
+            accounts=accounts, tokens=tokens, issuer=issuer, cooldown=cooldown, clock=clock
+        ),
+    )
+    bus.register(
+        VerifyEmailCommand, VerifyEmailHandler(accounts=accounts, tokens=tokens, clock=clock)
+    )
+    return bus
+
+
+def get_account_email_query_bus(db: Session = Depends(get_db)) -> QueryBus:
+    bus = QueryBus()
+    bus.register(GetAccountEmailQuery, GetAccountEmailHandler(SqlAlchemyAccountEmailRepository(db)))
     return bus
 
 

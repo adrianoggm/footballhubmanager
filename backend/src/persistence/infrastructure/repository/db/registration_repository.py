@@ -1,3 +1,6 @@
+import re
+
+from auth.domain.errors import AccountEmailInUseError
 from core.application.ports.registration_port import (
     AdminRegistrationPort,
     RegisteredAdminResult,
@@ -22,6 +25,22 @@ from persistence.infrastructure.entity import AdminAccounts, Pena, PenaRole, Pla
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+_VIOLATED_KEY_PATTERNS = (
+    re.compile(r"for key '([^']+)'"),  # MySQL: ... for key 'player_account.uq_..._email'
+    re.compile(r"unique constraint failed: (\S+)"),  # SQLite: ... failed: player_account.email
+)
+
+
+def _is_email_conflict(exc: IntegrityError) -> bool:
+    # Inspect only the violated key name: the duplicated value (e.g. a username that
+    # happens to contain "email") is also part of the message.
+    message = str(exc.orig).lower()
+    for pattern in _VIOLATED_KEY_PATTERNS:
+        match = pattern.search(message)
+        if match:
+            return match.group(1).endswith("email")
+    return False
+
 
 class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPort):
     def __init__(self, session: Session):
@@ -36,12 +55,14 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
         surname1: str,
         surname2: str | None,
         nationality: str,
+        email: str,
     ) -> RegisteredUserResult:
         try:
             account = PlayerAccount(
                 username=username,
                 password=password_hash,
                 name=name,
+                email=email,
             )
             self.session.add(account)
             self.session.flush()
@@ -66,16 +87,19 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
             self.session.rollback()
             if "fk_player_nationality" in str(exc.orig).lower():
                 raise UserInvalidNationalityError() from exc
+            if _is_email_conflict(exc):
+                raise AccountEmailInUseError() from exc
             raise UserUsernameExistsError() from exc
 
     def register_admin(
-        self, *, username: str, password_hash: str, name: str
+        self, *, username: str, password_hash: str, name: str, email: str
     ) -> RegisteredAdminResult:
         try:
             admin = AdminAccounts(
                 username=username,
                 password=password_hash,
                 name=name,
+                email=email,
             )
             self.session.add(admin)
             self.session.flush()
@@ -116,4 +140,6 @@ class SqlAlchemyRegistrationRepository(UserRegistrationPort, AdminRegistrationPo
             return RegisteredAdminResult(admin_id=admin.id, admin_guid=admin.guid)
         except IntegrityError as exc:
             self.session.rollback()
+            if _is_email_conflict(exc):
+                raise AccountEmailInUseError() from exc
             raise AdminUsernameExistsError() from exc
