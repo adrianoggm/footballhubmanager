@@ -47,7 +47,7 @@ def test_migrate_applies_pending_and_records(tmp_path):
     assert applied == ["1", "2"]
     assert _table_exists(engine, "t1")
     assert _table_exists(engine, "t2")
-    _, recorded = runner.status(engine, migrations_dir=tmp_path)
+    recorded = runner.status(engine, migrations_dir=tmp_path).applied
     assert recorded == {"1", "2"}
 
 
@@ -93,7 +93,7 @@ def test_migrate_stops_and_raises_on_failure(tmp_path):
         runner.migrate(engine, migrations_dir=tmp_path)
 
     # v1 committed, v2 failed, v3 never ran.
-    _, recorded = runner.status(engine, migrations_dir=tmp_path)
+    recorded = runner.status(engine, migrations_dir=tmp_path).applied
     assert recorded == {"1"}
     assert not _table_exists(engine, "t3")
 
@@ -139,7 +139,7 @@ def _schema(engine) -> dict[str, list[str]]:
 
 
 def _applied(engine, directory: Path) -> set[str]:
-    return runner.status(engine, migrations_dir=directory)[1]
+    return runner.status(engine, migrations_dir=directory).applied
 
 
 def _write_pairs(directory: Path) -> None:
@@ -229,3 +229,68 @@ def test_real_migrations_ship_down_files_from_policy_version():
         if int(m.version) >= threshold and m.down_path is None
     ]
     assert missing == [], f"Every vN.sql from v{threshold} on needs a paired vN.down.sql"
+
+
+def _stored_checksums(engine) -> dict[str, str | None]:
+    with engine.begin() as conn:
+        rows = conn.execute(text("SELECT version, checksum FROM schema_migrations"))
+        return {str(version): checksum for version, checksum in rows}
+
+
+def test_checksum_ignores_line_endings(tmp_path):
+    (tmp_path / "lf.sql").write_bytes(b"CREATE TABLE t1 (id INTEGER);\n")
+    (tmp_path / "crlf.sql").write_bytes(b"CREATE TABLE t1 (id INTEGER);\r\n")
+
+    assert runner.file_checksum(tmp_path / "lf.sql") == runner.file_checksum(tmp_path / "crlf.sql")
+
+
+def test_migrate_and_stamp_record_checksums(tmp_path):
+    _write(tmp_path, "v1.sql", "CREATE TABLE t1 (id INTEGER);")
+    _write(tmp_path, "v2.sql", "CREATE TABLE t2 (id INTEGER);")
+    engine = _engine()
+
+    runner.stamp(engine, migrations_dir=tmp_path, up_to=1)
+    runner.migrate(engine, migrations_dir=tmp_path)
+
+    assert _stored_checksums(engine) == {
+        "1": runner.file_checksum(tmp_path / "v1.sql"),
+        "2": runner.file_checksum(tmp_path / "v2.sql"),
+    }
+
+
+def test_status_reports_drift_when_an_applied_file_changes(tmp_path):
+    _write(tmp_path, "v1.sql", "CREATE TABLE t1 (id INTEGER);")
+    _write(tmp_path, "v2.sql", "CREATE TABLE t2 (id INTEGER);")
+    engine = _engine()
+    runner.migrate(engine, migrations_dir=tmp_path)
+    assert runner.status(engine, migrations_dir=tmp_path).drifted == []
+
+    _write(tmp_path, "v2.sql", "CREATE TABLE t2 (id INTEGER, name TEXT);")
+
+    report = runner.status(engine, migrations_dir=tmp_path)
+    assert report.drifted == ["2"]
+    assert report.pending == []
+
+
+def test_legacy_table_gets_checksum_column_and_backfill(tmp_path):
+    _write(tmp_path, "v1.sql", "CREATE TABLE t1 (id INTEGER);")
+    _write(tmp_path, "v2.sql", "CREATE TABLE t2 (id INTEGER);")
+    engine = _engine()
+    # A database created before checksums existed (by v1.sql / actual.sql).
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "CREATE TABLE schema_migrations (version VARCHAR(50) PRIMARY KEY, "
+            "description VARCHAR(255), success TINYINT NOT NULL DEFAULT 1, "
+            "applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        )
+        conn.exec_driver_sql(
+            "INSERT INTO schema_migrations (version, description) VALUES ('1', 'x')"
+        )
+
+    # NULL legacy checksums are not drift ...
+    assert runner.status(engine, migrations_dir=tmp_path).drifted == []
+    assert _stored_checksums(engine) == {"1": None}
+
+    # ... and the next migrate backfills them from the current file.
+    assert runner.migrate(engine, migrations_dir=tmp_path) == ["2"]
+    assert _stored_checksums(engine)["1"] == runner.file_checksum(tmp_path / "v1.sql")

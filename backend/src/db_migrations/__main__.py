@@ -50,12 +50,25 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if command == "status":
-        migrations, applied = runner.status(engine)
-        for migration in migrations:
-            mark = "x" if migration.version in applied else " "
+        report = runner.status(engine)
+        for migration in report.migrations:
+            if migration.version in report.drifted:
+                mark = "!"
+            elif migration.version in report.applied:
+                mark = "x"
+            else:
+                mark = " "
             print(f"[{mark}] v{migration.version}  {migration.description}")
-        pending = [m.version for m in migrations if m.version not in applied]
-        print(f"\n{len(applied)} applied, {len(pending)} pending")
+        print(
+            f"\n{len(report.applied)} applied, {len(report.pending)} pending, "
+            f"{len(report.drifted)} drifted"
+        )
+        if report.drifted:
+            print(
+                "DRIFT [!]: applied file(s) changed since they ran: "
+                f"{', '.join(f'v{v}' for v in report.drifted)}. "
+                "Never edit an applied migration; restore the file and add a new vN.sql."
+            )
         return 0
 
     print(f"Unknown command: {command!r} (use migrate|stamp|rollback|status)", file=sys.stderr)

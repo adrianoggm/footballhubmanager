@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Connection, Engine
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,18 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 )
 """
 
+# Columns added after the table first shipped. Existing databases (created by v1.sql
+# or actual.sql) get them via ALTER TABLE ... ADD COLUMN when missing, which is the
+# only portable approach across MySQL and SQLite.
+_ADDED_COLUMNS: dict[str, str] = {
+    "checksum": "CHAR(64) NULL",
+}
+
+
+def file_checksum(path: Path) -> str:
+    """sha256 hex of a migration file, with CRLF normalized so OS checkouts agree."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
 
 @dataclass(frozen=True)
 class Migration:
@@ -40,6 +53,22 @@ class Migration:
     @property
     def description(self) -> str:
         return self.path.stem  # e.g. "v11"
+
+    @property
+    def checksum(self) -> str:
+        return file_checksum(self.path)
+
+
+@dataclass(frozen=True)
+class MigrationStatus:
+    migrations: list[Migration]
+    applied: set[str]
+    # Applied versions whose recorded checksum no longer matches the file on disk.
+    drifted: list[str] = field(default_factory=list)
+
+    @property
+    def pending(self) -> list[str]:
+        return [m.version for m in self.migrations if m.version not in self.applied]
 
 
 def find_migrations_dir(explicit: str | Path | None = None) -> Path:
@@ -97,32 +126,65 @@ def _split_statements(sql: str) -> list[str]:
 
 
 def ensure_table(conn: Connection) -> None:
+    """Create ``schema_migrations`` if absent and add any column it is missing."""
     conn.execute(text(_SCHEMA_MIGRATIONS_DDL))
+    existing = {column["name"].lower() for column in inspect(conn).get_columns("schema_migrations")}
+    for name, ddl in _ADDED_COLUMNS.items():
+        if name not in existing:
+            conn.exec_driver_sql(f"ALTER TABLE schema_migrations ADD COLUMN {name} {ddl}")
+            logger.info("Added column schema_migrations.%s", name)
 
 
 def applied_versions(conn: Connection) -> set[str]:
-    rows = conn.execute(text("SELECT version FROM schema_migrations")).scalars()
-    return {str(value) for value in rows}
+    return set(_applied_checksums(conn))
 
 
-def _record(conn: Connection, version: str, description: str, *, success: bool) -> None:
+def _applied_checksums(conn: Connection) -> dict[str, str | None]:
+    rows = conn.execute(text("SELECT version, checksum FROM schema_migrations"))
+    return {str(version): checksum for version, checksum in rows}
+
+
+def _drifted(migrations: list[Migration], stored: dict[str, str | None]) -> list[str]:
+    # Legacy rows with a NULL checksum are not drift: they get backfilled instead.
+    return [
+        m.version
+        for m in migrations
+        if stored.get(m.version) is not None and stored[m.version] != m.checksum
+    ]
+
+
+def _backfill_checksums(conn: Connection, migrations: list[Migration]) -> None:
+    """Record the current file checksum on applied rows that predate checksums."""
+    stored = _applied_checksums(conn)
+    for migration in migrations:
+        if migration.version in stored and stored[migration.version] is None:
+            conn.execute(
+                text("UPDATE schema_migrations SET checksum = :c WHERE version = :v"),
+                {"c": migration.checksum, "v": migration.version},
+            )
+
+
+def _record_applied(conn: Connection, migration: Migration) -> None:
     # Idempotent upsert: some legacy files (v1-v8) self-record their version, so a
     # plain INSERT could clash. DELETE+INSERT is portable and leaves one clean row.
-    conn.execute(text("DELETE FROM schema_migrations WHERE version = :v"), {"v": version})
+    conn.execute(text("DELETE FROM schema_migrations WHERE version = :v"), {"v": migration.version})
     conn.execute(
-        text("INSERT INTO schema_migrations (version, description, success) VALUES (:v, :d, :s)"),
-        {"v": version, "d": description[:255], "s": 1 if success else 0},
+        text(
+            "INSERT INTO schema_migrations (version, description, success, checksum) "
+            "VALUES (:v, :d, 1, :c)"
+        ),
+        {"v": migration.version, "d": migration.description[:255], "c": migration.checksum},
     )
 
 
-def status(
-    engine: Engine, migrations_dir: str | Path | None = None
-) -> tuple[list[Migration], set[str]]:
+def status(engine: Engine, migrations_dir: str | Path | None = None) -> MigrationStatus:
     migrations = discover(find_migrations_dir(migrations_dir))
     with engine.begin() as conn:
         ensure_table(conn)
-        applied = applied_versions(conn)
-    return migrations, applied
+        stored = _applied_checksums(conn)
+    return MigrationStatus(
+        migrations=migrations, applied=set(stored), drifted=_drifted(migrations, stored)
+    )
 
 
 def migrate(engine: Engine, migrations_dir: str | Path | None = None) -> list[str]:
@@ -137,6 +199,7 @@ def migrate(engine: Engine, migrations_dir: str | Path | None = None) -> list[st
     migrations = discover(directory)
     with engine.begin() as conn:
         ensure_table(conn)
+        _backfill_checksums(conn, migrations)
         applied = applied_versions(conn)
 
     pending = [migration for migration in migrations if migration.version not in applied]
@@ -151,7 +214,7 @@ def migrate(engine: Engine, migrations_dir: str | Path | None = None) -> list[st
             with engine.begin() as conn:
                 for statement in statements:
                     conn.exec_driver_sql(statement)
-                _record(conn, migration.version, migration.description, success=True)
+                _record_applied(conn, migration)
         except Exception:
             logger.exception("Migration %s failed; stopping.", migration.path.name)
             raise
@@ -170,17 +233,19 @@ def stamp(
     versions that are physically present. ``up_to`` limits to ``version <= up_to``
     (default: every discovered version = current head).
     """
-    migrations = discover(find_migrations_dir(migrations_dir))
+    discovered = discover(find_migrations_dir(migrations_dir))
+    migrations = discovered
     if up_to is not None:
-        migrations = [m for m in migrations if int(m.version) <= int(up_to)]
+        migrations = [m for m in discovered if int(m.version) <= int(up_to)]
 
     stamped: list[str] = []
     with engine.begin() as conn:
         ensure_table(conn)
+        _backfill_checksums(conn, discovered)
         applied = applied_versions(conn)
         for migration in migrations:
             if migration.version not in applied:
-                _record(conn, migration.version, migration.description, success=True)
+                _record_applied(conn, migration)
                 stamped.append(migration.version)
     return stamped
 

@@ -2,13 +2,12 @@ from pathlib import Path
 
 import main
 import pytest
-from db_migrations.runner import Migration
+from db_migrations.runner import Migration, MigrationStatus
 
 
-def _status(monkeypatch, migrations, applied):
-    monkeypatch.setattr(
-        "db_migrations.runner.status", lambda _engine, *a, **k: (migrations, applied)
-    )
+def _status(monkeypatch, migrations, applied, drifted=None):
+    report = MigrationStatus(migrations=migrations, applied=applied, drifted=drifted or [])
+    monkeypatch.setattr("db_migrations.runner.status", lambda _engine, *a, **k: report)
 
 
 def test_verify_passes_when_up_to_date(monkeypatch):
@@ -30,6 +29,19 @@ def test_verify_raises_when_pending_and_strict(monkeypatch):
     monkeypatch.setenv("STRICT_MIGRATION_CHECK", "1")
     with pytest.raises(RuntimeError, match="Pending schema migrations: 2"):
         main._verify_schema_migrations()
+
+
+def test_verify_raises_on_checksum_drift_when_strict(monkeypatch):
+    _status(monkeypatch, [Migration("1", Path("v1.sql"))], {"1"}, drifted=["1"])
+    monkeypatch.setenv("STRICT_MIGRATION_CHECK", "true")
+    with pytest.raises(RuntimeError, match="checksum drift: 1"):
+        main._verify_schema_migrations()
+
+
+def test_verify_warns_on_checksum_drift_when_not_strict(monkeypatch):
+    _status(monkeypatch, [Migration("1", Path("v1.sql"))], {"1"}, drifted=["1"])
+    monkeypatch.delenv("STRICT_MIGRATION_CHECK", raising=False)
+    main._verify_schema_migrations()
 
 
 def test_verify_is_non_fatal_when_status_errors(monkeypatch):
