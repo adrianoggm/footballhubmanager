@@ -5,20 +5,26 @@ from api.dependencies.use_cases import (
     get_account_email_query_bus,
     get_login_admin_use_case,
     get_login_user_use_case,
+    get_password_reset_command_bus,
+    get_password_reset_query_bus,
     get_registration_command_bus,
 )
 from api.interface.controller.v1.model.request.auth_request import (
     ChangeAccountEmailRequest,
+    ForgotPasswordRequest,
     LoginRequest,
+    PasswordResetTokenRequest,
     RegisterAdminRequest,
     RegisterUserRequest,
     ResendEmailVerificationRequest,
+    ResetPasswordRequest,
     VerifyEmailRequest,
 )
 from api.interface.controller.v1.model.response.auth_response import (
     AccountEmailResponse,
     AuthStatusResponse,
     LoginResponse,
+    PasswordResetTokenInfoResponse,
     SessionResponse,
 )
 from api.middleware.exception_mapper import map_exceptions
@@ -28,10 +34,15 @@ from auth.application.commands.account_email_commands import (
     SendRegistrationEmailVerificationCommand,
     VerifyEmailCommand,
 )
+from auth.application.commands.password_reset_commands import (
+    RequestPasswordResetCommand,
+    ResetPasswordCommand,
+)
 from auth.application.queries.account_email_queries import (
     AccountEmailStatusResult,
     GetAccountEmailQuery,
 )
+from auth.application.queries.password_reset_queries import InspectPasswordResetTokenQuery
 from auth.application.use_cases.login import (
     InvalidCredentialsError,
     LoginAdminUseCase,
@@ -290,3 +301,48 @@ def logout(
     invalidate_session(db, session.token)
     clear_session_cookie(response)
     return {"status": "ok"}
+
+
+@router.post(
+    "/auth/password/forgot",
+    response_model=AuthStatusResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+@map_exceptions
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    command_bus: CommandBus = Depends(get_password_reset_command_bus),
+):
+    """Always 202 with the same body: the answer never tells whether the email exists."""
+    command_bus.dispatch(
+        RequestPasswordResetCommand(email=payload.email, lang=MailLanguage(payload.lang))
+    )
+    return AuthStatusResponse(status="accepted")
+
+
+# POST (not GET /reset/{token}) so the raw token never lands in access logs.
+@router.post("/auth/password/reset/inspect", response_model=PasswordResetTokenInfoResponse)
+@map_exceptions
+def inspect_password_reset_token(
+    payload: PasswordResetTokenRequest,
+    query_bus: QueryBus = Depends(get_password_reset_query_bus),
+):
+    info = query_bus.ask(InspectPasswordResetTokenQuery(token=payload.token))
+    return PasswordResetTokenInfoResponse(
+        username=info.username, account_type=info.account_type, expires_at=info.expires_at
+    )
+
+
+@router.post("/auth/password/reset", response_model=AuthStatusResponse)
+@map_exceptions
+def reset_password(
+    payload: ResetPasswordRequest,
+    response: Response,
+    command_bus: CommandBus = Depends(get_password_reset_command_bus),
+):
+    """Every session of the account is revoked; the user must log in again."""
+    command_bus.dispatch(
+        ResetPasswordCommand(token=payload.token, new_password=payload.new_password)
+    )
+    clear_session_cookie(response)
+    return AuthStatusResponse(status="password_reset")
