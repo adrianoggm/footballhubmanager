@@ -36,7 +36,11 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 # only portable approach across MySQL and SQLite.
 _ADDED_COLUMNS: dict[str, str] = {
     "checksum": "CHAR(64) NULL",
+    "error": "TEXT NULL",
 }
+
+# Failure messages are stored truncated: enough to diagnose, never a full dump.
+_MAX_ERROR_LENGTH = 2000
 
 
 def file_checksum(path: Path) -> str:
@@ -65,6 +69,8 @@ class MigrationStatus:
     applied: set[str]
     # Applied versions whose recorded checksum no longer matches the file on disk.
     drifted: list[str] = field(default_factory=list)
+    # Versions whose last run failed (success=0) -> truncated error. Still pending.
+    failed: dict[str, str | None] = field(default_factory=dict)
 
     @property
     def pending(self) -> list[str]:
@@ -140,8 +146,14 @@ def applied_versions(conn: Connection) -> set[str]:
 
 
 def _applied_checksums(conn: Connection) -> dict[str, str | None]:
-    rows = conn.execute(text("SELECT version, checksum FROM schema_migrations"))
+    # Only successful rows count as applied; failed rows (success=0) stay pending.
+    rows = conn.execute(text("SELECT version, checksum FROM schema_migrations WHERE success = 1"))
     return {str(version): checksum for version, checksum in rows}
+
+
+def _failed_versions(conn: Connection) -> dict[str, str | None]:
+    rows = conn.execute(text("SELECT version, error FROM schema_migrations WHERE success = 0"))
+    return {str(version): error for version, error in rows}
 
 
 def _drifted(migrations: list[Migration], stored: dict[str, str | None]) -> list[str]:
@@ -164,17 +176,41 @@ def _backfill_checksums(conn: Connection, migrations: list[Migration]) -> None:
             )
 
 
-def _record_applied(conn: Connection, migration: Migration) -> None:
-    # Idempotent upsert: some legacy files (v1-v8) self-record their version, so a
-    # plain INSERT could clash. DELETE+INSERT is portable and leaves one clean row.
+def _replace_row(conn: Connection, migration: Migration, success: int, error: str | None) -> None:
+    # Idempotent upsert: some legacy files (v1-v8) self-record their version, and a
+    # retried version replaces its failed row. DELETE+INSERT is portable and leaves
+    # exactly one row per version.
     conn.execute(text("DELETE FROM schema_migrations WHERE version = :v"), {"v": migration.version})
     conn.execute(
         text(
-            "INSERT INTO schema_migrations (version, description, success, checksum) "
-            "VALUES (:v, :d, 1, :c)"
+            "INSERT INTO schema_migrations (version, description, success, checksum, error) "
+            "VALUES (:v, :d, :s, :c, :e)"
         ),
-        {"v": migration.version, "d": migration.description[:255], "c": migration.checksum},
+        {
+            "v": migration.version,
+            "d": migration.description[:255],
+            "s": success,
+            "c": migration.checksum,
+            "e": error,
+        },
     )
+
+
+def _record_applied(conn: Connection, migration: Migration) -> None:
+    _replace_row(conn, migration, success=1, error=None)
+
+
+def _record_failure(conn: Connection, migration: Migration, error: BaseException) -> None:
+    _replace_row(conn, migration, success=0, error=str(error)[:_MAX_ERROR_LENGTH])
+
+
+def _record_failure_safely(engine: Engine, migration: Migration, error: BaseException) -> None:
+    """Persist the failure row; never mask the original migration error."""
+    try:
+        with engine.begin() as conn:
+            _record_failure(conn, migration, error)
+    except Exception:
+        logger.exception("Could not record the failure of %s", migration.path.name)
 
 
 def status(engine: Engine, migrations_dir: str | Path | None = None) -> MigrationStatus:
@@ -182,8 +218,12 @@ def status(engine: Engine, migrations_dir: str | Path | None = None) -> Migratio
     with engine.begin() as conn:
         ensure_table(conn)
         stored = _applied_checksums(conn)
+        failed = _failed_versions(conn)
     return MigrationStatus(
-        migrations=migrations, applied=set(stored), drifted=_drifted(migrations, stored)
+        migrations=migrations,
+        applied=set(stored),
+        drifted=_drifted(migrations, stored),
+        failed=failed,
     )
 
 
@@ -193,7 +233,10 @@ def migrate(engine: Engine, migrations_dir: str | Path | None = None) -> list[st
     Each migration runs in its own transaction together with its bookkeeping row.
     NOTE: MySQL performs an implicit commit per DDL statement, so a multi-statement
     migration that fails midway cannot be fully rolled back — fix forward. The run
-    stops at the first failing migration and re-raises.
+    stops at the first failing migration, records a ``success=0`` row with the
+    truncated error (in a fresh transaction) and re-raises. A failed version is
+    not "applied": the next ``migrate`` retries it, and a successful retry replaces
+    the failed row.
     """
     directory = find_migrations_dir(migrations_dir)
     migrations = discover(directory)
@@ -201,11 +244,14 @@ def migrate(engine: Engine, migrations_dir: str | Path | None = None) -> list[st
         ensure_table(conn)
         _backfill_checksums(conn, migrations)
         applied = applied_versions(conn)
+        failed = _failed_versions(conn)
 
     pending = [migration for migration in migrations if migration.version not in applied]
     if not pending:
         logger.info("No pending migrations (%s applied).", len(applied))
         return []
+    if failed:
+        logger.warning("Retrying previously failed migration(s): %s", ", ".join(sorted(failed)))
 
     done: list[str] = []
     for migration in pending:
@@ -215,8 +261,9 @@ def migrate(engine: Engine, migrations_dir: str | Path | None = None) -> list[st
                 for statement in statements:
                     conn.exec_driver_sql(statement)
                 _record_applied(conn, migration)
-        except Exception:
+        except Exception as exc:
             logger.exception("Migration %s failed; stopping.", migration.path.name)
+            _record_failure_safely(engine, migration, exc)
             raise
         logger.info("Applied migration %s", migration.path.name)
         done.append(migration.version)

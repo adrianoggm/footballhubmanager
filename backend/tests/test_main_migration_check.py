@@ -44,6 +44,17 @@ def test_verify_warns_on_checksum_drift_when_not_strict(monkeypatch):
     main._verify_schema_migrations()
 
 
+def test_verify_raises_on_failed_migration_when_strict(monkeypatch):
+    # A failed version is not applied, so it shows up as pending.
+    report = MigrationStatus(
+        migrations=[Migration("1", Path("v1.sql"))], applied=set(), failed={"1": "boom"}
+    )
+    monkeypatch.setattr("db_migrations.runner.status", lambda _engine, *a, **k: report)
+    monkeypatch.setenv("STRICT_MIGRATION_CHECK", "true")
+    with pytest.raises(RuntimeError, match="Pending schema migrations: 1"):
+        main._verify_schema_migrations()
+
+
 def test_verify_is_non_fatal_when_status_errors(monkeypatch):
     def _boom(_engine, *a, **k):
         raise RuntimeError("db unreachable")

@@ -231,6 +231,65 @@ def test_real_migrations_ship_down_files_from_policy_version():
     assert missing == [], f"Every vN.sql from v{threshold} on needs a paired vN.down.sql"
 
 
+def _rows(engine) -> dict[str, tuple[int, str | None]]:
+    with engine.begin() as conn:
+        rows = conn.execute(text("SELECT version, success, error FROM schema_migrations"))
+        return {str(version): (success, error) for version, success, error in rows}
+
+
+def test_failed_migration_records_row_and_stays_pending(tmp_path):
+    _write(tmp_path, "v1.sql", "CREATE TABLE t1 (id INTEGER);")
+    _write(tmp_path, "v2.sql", "THIS IS NOT VALID SQL;")
+    engine = _engine()
+
+    with pytest.raises(Exception, match="syntax error"):
+        runner.migrate(engine, migrations_dir=tmp_path)
+
+    rows = _rows(engine)
+    assert rows["1"] == (1, None)
+    success, error = rows["2"]
+    assert success == 0
+    assert "syntax error" in error
+    report = runner.status(engine, migrations_dir=tmp_path)
+    assert report.applied == {"1"}
+    assert report.pending == ["2"]
+    assert list(report.failed) == ["2"]
+
+
+def test_failure_error_is_truncated(tmp_path):
+    _write(tmp_path, "v1.sql", "SELECT * FROM " + "x" * 5000 + ";")
+    engine = _engine()
+
+    with pytest.raises(Exception):
+        runner.migrate(engine, migrations_dir=tmp_path)
+
+    assert len(_rows(engine)["1"][1]) <= 2000
+
+
+def test_fixed_failed_migration_is_retried_and_replaces_failed_row(tmp_path):
+    _write(tmp_path, "v1.sql", "THIS IS NOT VALID SQL;")
+    engine = _engine()
+    with pytest.raises(Exception):
+        runner.migrate(engine, migrations_dir=tmp_path)
+
+    _write(tmp_path, "v1.sql", "CREATE TABLE t1 (id INTEGER);")
+
+    assert runner.migrate(engine, migrations_dir=tmp_path) == ["1"]
+    assert _rows(engine) == {"1": (1, None)}
+    assert runner.status(engine, migrations_dir=tmp_path).failed == {}
+
+
+def test_stamp_marks_a_failed_version_as_applied(tmp_path):
+    # Operator fixed the schema by hand: stamping records it as done.
+    _write(tmp_path, "v1.sql", "THIS IS NOT VALID SQL;")
+    engine = _engine()
+    with pytest.raises(Exception):
+        runner.migrate(engine, migrations_dir=tmp_path)
+
+    assert runner.stamp(engine, migrations_dir=tmp_path) == ["1"]
+    assert _rows(engine) == {"1": (1, None)}
+
+
 def _stored_checksums(engine) -> dict[str, str | None]:
     with engine.begin() as conn:
         rows = conn.execute(text("SELECT version, checksum FROM schema_migrations"))

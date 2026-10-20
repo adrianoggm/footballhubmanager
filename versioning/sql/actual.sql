@@ -6,7 +6,8 @@ create table if not exists schema_migrations (
   description varchar(255) not null,
   success     tinyint(1) not null default 1,
   applied_at  timestamp not null default current_timestamp,
-  checksum    char(64) null
+  checksum    char(64) null,
+  error       text null
 ) engine=innodb;
 
 create table if not exists admin_accounts (

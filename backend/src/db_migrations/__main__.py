@@ -54,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
         for migration in report.migrations:
             if migration.version in report.drifted:
                 mark = "!"
+            elif migration.version in report.failed:
+                mark = "F"
             elif migration.version in report.applied:
                 mark = "x"
             else:
@@ -68,6 +70,12 @@ def main(argv: list[str] | None = None) -> int:
                 "DRIFT [!]: applied file(s) changed since they ran: "
                 f"{', '.join(f'v{v}' for v in report.drifted)}. "
                 "Never edit an applied migration; restore the file and add a new vN.sql."
+            )
+        for version, error in sorted(report.failed.items(), key=lambda item: int(item[0])):
+            print(
+                f"FAILED [F]: v{version} last run failed: {error or 'unknown error'}. "
+                "Fix the cause (on MySQL also undo any DDL that did commit), then run "
+                "migrate again to retry it."
             )
         return 0
 
