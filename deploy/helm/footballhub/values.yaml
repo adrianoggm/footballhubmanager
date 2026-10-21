@@ -58,6 +58,14 @@ migrations:
   resources:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { cpu: "1", memory: 512Mi }
+  # mysqldump of the database (initContainer) before the migrate container runs.
+  # A failed dump fails the Job, so the schema is never changed without a backup.
+  backup:
+    enabled: true
+    image: mysql:8.0
+    # PVC that keeps the dumps (<db>-<UTC timestamp>.sql). Empty -> emptyDir, so the
+    # dump is discarded with the pod: set this in production. Prune old dumps yourself.
+    existingClaim: ""
 
 # Database connection. Two modes via `mysql.enabled`:
 #   true  -> an in-cluster MySQL StatefulSet (good for dev / small setups)

@@ -30,8 +30,14 @@ helm upgrade --install fhm deploy/helm/footballhub \
   --set mysql.enabled=false \
   --set externalDatabase.host=your-db-host \
   --set database.existingSecret=fhm-db \
-  --set ingress.host=app.example.com
+  --set ingress.host=app.example.com \
+  --set migrations.backup.existingClaim=fhm-db-backups
 ```
+
+The migrate Job runs a `backup-db` initContainer (`mysqldump`) before `migrate`; a
+failed dump blocks the migration. Without `migrations.backup.existingClaim` the dump
+goes to an `emptyDir` and is discarded, so create a PVC (e.g. `fhm-db-backups`) for
+production. See `docs/deployment.md` ("Backup before migrate").
 
 ## First deploy against a database that already has data
 

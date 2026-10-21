@@ -21,6 +21,13 @@ app:
     windowSeconds: 60
   strictMigrationCheck: true
 
+# The migrate Job dumps the DB before migrating. Keep the dumps on a PVC you create
+# once (see docs/deployment.md, "Backup before migrate").
+migrations:
+  backup:
+    enabled: true
+    existingClaim: "footballhub-db-backups"
+
 # In-cluster MySQL is fine for a small single-node setup. For real production
 # prefer an external/managed DB (set mysql.enabled=false + externalDatabase.host).
 mysql:

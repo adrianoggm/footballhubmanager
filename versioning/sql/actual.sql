@@ -5,7 +5,9 @@ create table if not exists schema_migrations (
   version     varchar(50) primary key,
   description varchar(255) not null,
   success     tinyint(1) not null default 1,
-  applied_at  timestamp not null default current_timestamp
+  applied_at  timestamp not null default current_timestamp,
+  checksum    char(64) null,
+  error       text null
 ) engine=innodb;
 
 create table if not exists admin_accounts (
@@ -375,6 +377,8 @@ set foreign_key_checks = 1;
 -- actual.sql is the cumulative head schema, so it records EVERY version as
 -- applied. A database initialized from this file is already at head and the
 -- migration runner will treat all versions as done (no re-apply, no stamp step).
+-- checksum is left NULL here on purpose: the runner backfills it from the files on
+-- the next migrate/stamp.
 insert into schema_migrations (version, description, success) values
   ('1', 'init schema (lowercase tables)', 1),
   ('2', 'pena roles normalized', 1),
@@ -386,5 +390,6 @@ insert into schema_migrations (version, description, success) values
   ('8', 'football match official status and lineup audit', 1),
   ('9', 'football match clock pause', 1),
   ('10', 'football match goalkeeper rotation', 1),
-  ('11', 'pena link token player claim', 1)
+  ('11', 'pena link token player claim', 1),
+  ('12', 'pena transaction unified ledger', 1)
 on duplicate key update description=values(description), success=values(success);

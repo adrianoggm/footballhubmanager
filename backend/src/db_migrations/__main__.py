@@ -1,4 +1,4 @@
-"""CLI entrypoint: ``python -m db_migrations <migrate|stamp|status> [args]``.
+"""CLI entrypoint: ``python -m db_migrations <migrate|stamp|rollback|status> [args]``.
 
 Used by the backend image entrypoint (the Kubernetes pre-upgrade migration Job
 runs ``migrate``; ``stamp`` baselines an existing database once).
@@ -32,16 +32,54 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Stamped {len(stamped)} version(s) ({scope}): {', '.join(stamped) or 'none'}")
         return 0
 
-    if command == "status":
-        migrations, applied = runner.status(engine)
-        for migration in migrations:
-            mark = "x" if migration.version in applied else " "
-            print(f"[{mark}] v{migration.version}  {migration.description}")
-        pending = [m.version for m in migrations if m.version not in applied]
-        print(f"\n{len(applied)} applied, {len(pending)} pending")
+    if command == "rollback":
+        # The target is mandatory on purpose: nobody rolls back by accident.
+        if len(args) < 2:
+            print("Usage: rollback <N>  (reverts every applied version > N)", file=sys.stderr)
+            return 2
+        target = args[1]
+        try:
+            reverted = runner.rollback(engine, target)
+        except runner.MissingDownMigrationError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(
+            f"Rolled back {len(reverted)} migration(s) to v{target}: "
+            f"{', '.join(reverted) or 'none'}"
+        )
         return 0
 
-    print(f"Unknown command: {command!r} (use migrate|stamp|status)", file=sys.stderr)
+    if command == "status":
+        report = runner.status(engine)
+        for migration in report.migrations:
+            if migration.version in report.drifted:
+                mark = "!"
+            elif migration.version in report.failed:
+                mark = "F"
+            elif migration.version in report.applied:
+                mark = "x"
+            else:
+                mark = " "
+            print(f"[{mark}] v{migration.version}  {migration.description}")
+        print(
+            f"\n{len(report.applied)} applied, {len(report.pending)} pending, "
+            f"{len(report.drifted)} drifted"
+        )
+        if report.drifted:
+            print(
+                "DRIFT [!]: applied file(s) changed since they ran: "
+                f"{', '.join(f'v{v}' for v in report.drifted)}. "
+                "Never edit an applied migration; restore the file and add a new vN.sql."
+            )
+        for version, error in sorted(report.failed.items(), key=lambda item: int(item[0])):
+            print(
+                f"FAILED [F]: v{version} last run failed: {error or 'unknown error'}. "
+                "Fix the cause (on MySQL also undo any DDL that did commit), then run "
+                "migrate again to retry it."
+            )
+        return 0
+
+    print(f"Unknown command: {command!r} (use migrate|stamp|rollback|status)", file=sys.stderr)
     return 2
 
 

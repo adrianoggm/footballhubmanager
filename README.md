@@ -84,7 +84,7 @@ The project solves operational friction for community football organizers:
 - [x] CI pipeline covering backend quality/tests and frontend quality/build
 - [x] Dependency audit hardening in frontend (`npm audit` currently clean)
 - [x] Container images (backend + frontend) published to GHCR on semver tag
-- [x] Forward-only DB migration runner with `schema_migrations` tracking (no Alembic)
+- [x] DB migration runner with `schema_migrations` tracking, checksums and down-file rollback (no Alembic)
 - [x] Kubernetes Helm chart with a pre-upgrade migration hook (in-cluster or external MySQL)
 
 ## Tech Stack
@@ -162,7 +162,8 @@ nginx; the Ingress routes `/api` to the backend and everything else to the front
 
 ### 2. Database migrations (no Alembic)
 
-The schema evolves through forward-only `versioning/sql/versions/vN.sql` files. A
+The schema evolves through `versioning/sql/versions/vN.sql` files (plus a paired `vN.down.sql`
+from v13 on, used by `rollback`). A
 migration runner (`backend/src/db_migrations`) tracks applied versions in
 `schema_migrations` and applies only the pending ones. **MySQL's docker-entrypoint
 init (`actual.sql`) only runs on an empty volume**, so production always evolves via
@@ -195,7 +196,9 @@ flowchart TD
 >   --set image.tag=1.2.0 --set 'migrations.args={stamp}'
 > ```
 
-Locally: `just db-status`, `just db-migrate`, `just db-stamp [N]`.
+Locally: `just db-status`, `just db-migrate`, `just db-stamp [N]`, `just db-rollback N`.
+The Helm Job dumps the DB (`mysqldump`) before migrating. Rollback, checksum drift and
+failed-run rules: [docs/deployment.md](docs/deployment.md#database-migrations-the-production-flow).
 
 ### 3. Install with Helm
 
