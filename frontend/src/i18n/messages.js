@@ -74,14 +74,124 @@ export const messages = {
       accessibility: 'Accessibility',
     },
     legal: {
-      titles: {
-        terms: 'Terms of Service',
-        privacy: 'Privacy Policy',
-        accessibility: 'Accessibility',
-      },
-      placeholderBody:
-        'This content is being prepared and will be available at launch. If you need it sooner, reach us through the contact link in the footer.',
+      draftNotice: 'Draft — pending legal review',
+      draftHint:
+        'This text is a working draft. Bracketed values such as [Data controller] are placeholders that will be replaced before launch.',
       back: 'Go back',
+      pages: {
+        contact: {
+          title: 'Contact',
+          intro:
+            'Questions, feedback or requests about footballhubmanager? Write to us and we will get back to you.',
+          sections: {
+            channel: {
+              heading: 'How to reach us',
+              body: 'Email: [contact email]. Please include the name of your pena and, if relevant, the season or match your message is about.',
+            },
+            response: {
+              heading: 'Response time',
+              body: 'footballhubmanager is run by a small team. We aim to answer within [response time] working days.',
+            },
+            dataRequests: {
+              heading: 'Privacy requests',
+              body: 'To exercise your data protection rights (access, rectification, erasure, objection, restriction or portability), write to [contact email] from the address linked to your account. See the Privacy Policy for details.',
+            },
+          },
+        },
+        terms: {
+          title: 'Terms of Service',
+          intro:
+            'These terms govern the use of footballhubmanager, a tool for organising amateur football penas: members, seasons, matches, standings and shared expenses.',
+          sections: {
+            provider: {
+              heading: '1. Service provider',
+              body: 'The service is provided by [Data controller], with address at [postal address] and tax ID [tax ID]. Contact: [contact email].',
+            },
+            accounts: {
+              heading: '2. Accounts',
+              body: 'You must provide accurate information when registering and keep your credentials confidential. You are responsible for the activity carried out with your account. Pena administrators are responsible for the members, invitations and data they manage.',
+            },
+            acceptableUse: {
+              heading: '3. Acceptable use',
+              body: 'Do not use the service for unlawful purposes, to publish offensive content about other people, to access data you are not authorised to see, or to disrupt the normal operation of the platform.',
+            },
+            content: {
+              heading: '4. Content you add',
+              body: 'You keep ownership of the data you enter (players, results, payments, etc.). You grant us the permissions strictly necessary to store and display it to the members of your pena.',
+            },
+            availability: {
+              heading: '5. Availability and liability',
+              body: 'The service is offered "as is" for recreational purposes. We work to keep it available and accurate but cannot guarantee uninterrupted operation. To the extent permitted by law, we are not liable for indirect damages arising from its use.',
+            },
+            termination: {
+              heading: '6. Termination',
+              body: 'You can stop using the service and request deletion of your account at any time. We may suspend accounts that seriously breach these terms.',
+            },
+            law: {
+              heading: '7. Changes and applicable law',
+              body: 'We may update these terms and will notify relevant changes within the app. These terms are governed by Spanish law; any disputes will be submitted to the courts that correspond under applicable consumer law.',
+            },
+          },
+        },
+        privacy: {
+          title: 'Privacy Policy',
+          intro:
+            'This policy explains how footballhubmanager processes personal data in accordance with the General Data Protection Regulation (EU) 2016/679 (GDPR) and Spanish Organic Law 3/2018 (LOPDGDD).',
+          sections: {
+            controller: {
+              heading: '1. Data controller',
+              body: '[Data controller], [postal address], tax ID [tax ID]. Contact for privacy matters: [contact email].',
+            },
+            data: {
+              heading: '2. Data we process',
+              body: 'Account data (name, email, password stored as a secure hash), pena membership and role, player profile data entered by you or your administrator (name, nickname, position, shirt number), match activity (lineups, goals, results) and accountability records (payments and balances within the pena).',
+            },
+            purposes: {
+              heading: '3. Purposes and legal basis',
+              body: 'We process data to provide the service you sign up for — managing your pena, seasons, matches and standings — on the basis of the performance of a contract (art. 6.1.b GDPR), and to keep the platform secure on the basis of our legitimate interest (art. 6.1.f GDPR). We do not use your data for advertising or profiling.',
+            },
+            recipients: {
+              heading: '4. Recipients',
+              body: 'Your data is visible to the members and administrators of the penas you belong to. We do not sell or share data with third parties, except technical providers acting as processors (e.g. hosting: [hosting provider]) under a data processing agreement, or where required by law.',
+            },
+            retention: {
+              heading: '5. Retention',
+              body: 'We keep your data while your account is active. After deletion, data is erased or anonymised within [retention period], unless a legal obligation requires us to keep it longer.',
+            },
+            cookies: {
+              heading: '6. Cookies and local storage',
+              body: 'We only use technical storage that is strictly necessary for the service to work: your session token and your language and theme preferences. We do not use analytics, advertising or third-party tracking cookies, so no consent banner is required.',
+            },
+            rights: {
+              heading: '7. Your rights',
+              body: 'You can exercise your rights of access, rectification, erasure, objection, restriction and portability by writing to [contact email]. You also have the right to lodge a complaint with the Spanish Data Protection Agency (www.aepd.es).',
+            },
+          },
+        },
+        accessibility: {
+          title: 'Accessibility',
+          intro:
+            'We want footballhubmanager to be usable by everyone, regardless of ability or device.',
+          sections: {
+            commitment: {
+              heading: 'Our commitment',
+              body: 'We aim to meet the Web Content Accessibility Guidelines (WCAG) 2.1 level AA, in line with the European standard EN 301 549.',
+            },
+            measures: {
+              heading: 'Measures in place',
+              body: 'The interface supports keyboard navigation, light and dark themes, responsive layouts for mobile and desktop, text in English and Spanish, and semantic components with accessible labels.',
+            },
+            limitations: {
+              heading: 'Known limitations',
+              body: 'Some data-dense views, such as standings tables and charts, may be harder to use with screen readers or at high zoom levels. We are reviewing them progressively. Last review: [review date].',
+            },
+            feedback: {
+              heading: 'Feedback',
+              body: 'If you find an accessibility barrier, tell us at [contact email], describing the page and the problem. We will try to provide the information in an accessible format and fix the issue.',
+            },
+          },
+        },
+      },
     },
     app: {
       brand: 'footballhubmanager',
@@ -1272,14 +1382,124 @@ export const messages = {
       accessibility: 'Accesibilidad',
     },
     legal: {
-      titles: {
-        terms: 'Condiciones de Servicio',
-        privacy: 'Política de Privacidad',
-        accessibility: 'Accesibilidad',
-      },
-      placeholderBody:
-        'Este contenido está en preparación y estará disponible en el lanzamiento. Si lo necesitas antes, escríbenos desde el enlace de contacto del pie de página.',
+      draftNotice: 'Borrador — pendiente de revisión legal',
+      draftHint:
+        'Este texto es un borrador de trabajo. Los valores entre corchetes, como [Responsable], son marcadores que se sustituirán antes del lanzamiento.',
       back: 'Volver',
+      pages: {
+        contact: {
+          title: 'Contacto',
+          intro:
+            '¿Dudas, sugerencias o solicitudes sobre footballhubmanager? Escríbenos y te responderemos.',
+          sections: {
+            channel: {
+              heading: 'Cómo contactar',
+              body: 'Correo electrónico: [email de contacto]. Indica el nombre de tu peña y, si aplica, la temporada o el partido al que se refiere tu mensaje.',
+            },
+            response: {
+              heading: 'Plazo de respuesta',
+              body: 'footballhubmanager lo mantiene un equipo pequeño. Intentamos responder en un plazo de [plazo de respuesta] días hábiles.',
+            },
+            dataRequests: {
+              heading: 'Solicitudes de privacidad',
+              body: 'Para ejercer tus derechos de protección de datos (acceso, rectificación, supresión, oposición, limitación o portabilidad), escribe a [email de contacto] desde la dirección asociada a tu cuenta. Consulta la Política de Privacidad para más detalles.',
+            },
+          },
+        },
+        terms: {
+          title: 'Condiciones de Servicio',
+          intro:
+            'Estas condiciones regulan el uso de footballhubmanager, una herramienta para organizar peñas de fútbol amateur: miembros, temporadas, partidos, clasificaciones y gastos compartidos.',
+          sections: {
+            provider: {
+              heading: '1. Titular del servicio',
+              body: 'El servicio lo presta [Responsable], con domicilio en [dirección postal] y NIF [NIF]. Contacto: [email de contacto].',
+            },
+            accounts: {
+              heading: '2. Cuentas',
+              body: 'Debes facilitar información veraz al registrarte y mantener tus credenciales en secreto. Eres responsable de la actividad realizada con tu cuenta. Los administradores de cada peña son responsables de los miembros, invitaciones y datos que gestionan.',
+            },
+            acceptableUse: {
+              heading: '3. Uso aceptable',
+              body: 'No utilices el servicio con fines ilícitos, para publicar contenido ofensivo sobre otras personas, para acceder a datos que no te corresponden ni para alterar el funcionamiento normal de la plataforma.',
+            },
+            content: {
+              heading: '4. Contenido que aportas',
+              body: 'Conservas la titularidad de los datos que introduces (jugadores, resultados, pagos, etc.). Nos concedes únicamente los permisos necesarios para almacenarlos y mostrarlos a los miembros de tu peña.',
+            },
+            availability: {
+              heading: '5. Disponibilidad y responsabilidad',
+              body: 'El servicio se ofrece "tal cual" con fines recreativos. Trabajamos para mantenerlo disponible y correcto, pero no podemos garantizar un funcionamiento ininterrumpido. En la medida permitida por la ley, no respondemos de daños indirectos derivados de su uso.',
+            },
+            termination: {
+              heading: '6. Baja',
+              body: 'Puedes dejar de usar el servicio y solicitar la eliminación de tu cuenta en cualquier momento. Podemos suspender cuentas que incumplan gravemente estas condiciones.',
+            },
+            law: {
+              heading: '7. Cambios y legislación aplicable',
+              body: 'Podemos actualizar estas condiciones y avisaremos de los cambios relevantes en la aplicación. Se rigen por la legislación española; las controversias se someterán a los juzgados que correspondan conforme a la normativa de consumidores.',
+            },
+          },
+        },
+        privacy: {
+          title: 'Política de Privacidad',
+          intro:
+            'Esta política explica cómo footballhubmanager trata los datos personales conforme al Reglamento General de Protección de Datos (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD).',
+          sections: {
+            controller: {
+              heading: '1. Responsable del tratamiento',
+              body: '[Responsable], [dirección postal], NIF [NIF]. Contacto para privacidad: [email de contacto].',
+            },
+            data: {
+              heading: '2. Datos que tratamos',
+              body: 'Datos de cuenta (nombre, email y contraseña almacenada como hash seguro), pertenencia y rol en cada peña, datos de ficha de jugador introducidos por ti o por tu administrador (nombre, apodo, posición, dorsal), actividad de partidos (alineaciones, goles, resultados) y registros de cuentas (pagos y saldos dentro de la peña).',
+            },
+            purposes: {
+              heading: '3. Finalidades y base jurídica',
+              body: 'Tratamos los datos para prestar el servicio que contratas — gestionar tu peña, temporadas, partidos y clasificaciones — con base en la ejecución de un contrato (art. 6.1.b RGPD), y para mantener la seguridad de la plataforma con base en nuestro interés legítimo (art. 6.1.f RGPD). No usamos tus datos para publicidad ni elaboración de perfiles.',
+            },
+            recipients: {
+              heading: '4. Destinatarios',
+              body: 'Tus datos son visibles para los miembros y administradores de las peñas a las que perteneces. No vendemos ni cedemos datos a terceros, salvo proveedores técnicos que actúan como encargados del tratamiento (p. ej. alojamiento: [proveedor de alojamiento]) con el correspondiente contrato, o cuando lo exija la ley.',
+            },
+            retention: {
+              heading: '5. Conservación',
+              body: 'Conservamos tus datos mientras tu cuenta esté activa. Tras su eliminación, los datos se borran o anonimizan en un plazo de [plazo de conservación], salvo que una obligación legal exija conservarlos más tiempo.',
+            },
+            cookies: {
+              heading: '6. Cookies y almacenamiento local',
+              body: 'Solo usamos almacenamiento técnico estrictamente necesario para que el servicio funcione: tu token de sesión y tus preferencias de idioma y tema. No usamos cookies analíticas, publicitarias ni de seguimiento de terceros, por lo que no se requiere banner de consentimiento.',
+            },
+            rights: {
+              heading: '7. Tus derechos',
+              body: 'Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a [email de contacto]. También puedes presentar una reclamación ante la Agencia Española de Protección de Datos (www.aepd.es).',
+            },
+          },
+        },
+        accessibility: {
+          title: 'Accesibilidad',
+          intro:
+            'Queremos que footballhubmanager pueda usarlo cualquier persona, sean cuales sean sus capacidades o su dispositivo.',
+          sections: {
+            commitment: {
+              heading: 'Nuestro compromiso',
+              body: 'Aspiramos a cumplir las Pautas de Accesibilidad para el Contenido Web (WCAG) 2.1 nivel AA, en línea con la norma europea EN 301 549.',
+            },
+            measures: {
+              heading: 'Medidas adoptadas',
+              body: 'La interfaz permite navegación con teclado, temas claro y oscuro, diseño adaptable a móvil y escritorio, textos en español e inglés y componentes semánticos con etiquetas accesibles.',
+            },
+            limitations: {
+              heading: 'Limitaciones conocidas',
+              body: 'Algunas vistas con muchos datos, como tablas de clasificación y gráficas, pueden resultar más difíciles de usar con lectores de pantalla o con mucho zoom. Las estamos revisando de forma progresiva. Última revisión: [fecha de revisión].',
+            },
+            feedback: {
+              heading: 'Comunicaciones',
+              body: 'Si encuentras una barrera de accesibilidad, avísanos en [email de contacto] indicando la página y el problema. Intentaremos facilitarte la información en un formato accesible y corregirlo.',
+            },
+          },
+        },
+      },
     },
     app: {
       brand: 'footballhubmanager',
