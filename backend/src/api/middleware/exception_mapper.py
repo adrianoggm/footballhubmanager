@@ -4,7 +4,18 @@ from collections.abc import Callable, Mapping
 from functools import wraps
 from typing import Any
 
-from auth.domain.errors import InvalidCredentialsError
+from auth.domain.errors import (
+    AccountEmailAlreadyVerifiedError,
+    AccountEmailInUseError,
+    AccountEmailMissingError,
+    AccountNotFoundError,
+    AccountTokenCooldownError,
+    ExpiredAccountTokenError,
+    InvalidAccountTokenError,
+    InvalidCredentialsError,
+    InvalidEmailError,
+    MailDeliveryError,
+)
 from core.application.use_cases.season_competition_errors import (
     InvalidSeasonDataError,
     InvalidSeasonMatchDataError,
@@ -89,6 +100,18 @@ ExceptionStatusMap = Mapping[type[Exception], ExceptionStatus]
 
 EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     InvalidCredentialsError: (status.HTTP_401_UNAUTHORIZED, "Invalid credentials"),
+    InvalidEmailError: (status.HTTP_400_BAD_REQUEST, "Invalid email address"),
+    AccountEmailInUseError: (status.HTTP_409_CONFLICT, "Email already in use"),
+    AccountEmailMissingError: (status.HTTP_409_CONFLICT, "Account has no email address"),
+    AccountEmailAlreadyVerifiedError: (status.HTTP_409_CONFLICT, "Email is already verified"),
+    AccountNotFoundError: (status.HTTP_404_NOT_FOUND, "Account not found"),
+    AccountTokenCooldownError: (
+        status.HTTP_429_TOO_MANY_REQUESTS,
+        "Please wait before requesting another email",
+    ),
+    InvalidAccountTokenError: (status.HTTP_400_BAD_REQUEST, "Invalid or already used token"),
+    ExpiredAccountTokenError: (status.HTTP_410_GONE, "Token has expired"),
+    MailDeliveryError: (status.HTTP_503_SERVICE_UNAVAILABLE, "Email could not be sent"),
     UserUsernameExistsError: (status.HTTP_409_CONFLICT, "Username already exists"),
     AdminUsernameExistsError: (status.HTTP_409_CONFLICT, "Username already exists"),
     InvalidRegistrationDataError: (status.HTTP_400_BAD_REQUEST, "Invalid user registration data"),

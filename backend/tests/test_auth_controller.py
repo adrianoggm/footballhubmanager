@@ -6,8 +6,14 @@ from api.interface.controller.v1.model.request.auth_request import (
     RegisterAdminRequest,
     RegisterUserRequest,
 )
+from auth.application.commands.account_email_commands import (
+    SendRegistrationEmailVerificationCommand,
+)
+from auth.application.queries.account_email_queries import AccountEmailStatusResult
 from auth.application.use_cases.login import InvalidCredentialsError
+from auth.domain.models.account_email import AccountRef, AccountType
 from auth.domain.models.auth_account import AuthAccount
+from auth.domain.models.mail_language import MailLanguage
 from auth.session import SessionData
 from core.application.commands.registration_commands import (
     RegisterAdminCommand,
@@ -201,10 +207,14 @@ def test_login_admin_maps_invalid_credentials():
 class _RegistrationCommandBus:
     def __init__(self, result=None):
         self._result = result
-        self.last_command = None
+        self.commands = []
+
+    @property
+    def registration_command(self):
+        return self.commands[0]
 
     def dispatch(self, command):
-        self.last_command = command
+        self.commands.append(command)
         return self._result
 
 
@@ -241,6 +251,7 @@ def test_register_user_returns_session_response(monkeypatch):
             surname1="Lopez",
             surname2=None,
             nationality="ES",
+            email="ana@example.com",
         ),
         http_response,
         command_bus=bus,
@@ -248,8 +259,13 @@ def test_register_user_returns_session_response(monkeypatch):
     )
 
     assert "session=session-token" in http_response.headers.get("set-cookie", "")
-    assert isinstance(bus.last_command, RegisterUserCommand)
-    assert bus.last_command.username == "u17"
+    assert isinstance(bus.registration_command, RegisterUserCommand)
+    assert bus.registration_command.username == "u17"
+    assert bus.registration_command.email == "ana@example.com"
+    verification = bus.commands[1]
+    assert isinstance(verification, SendRegistrationEmailVerificationCommand)
+    assert verification.ref == AccountRef(account_type=AccountType.USER, account_id=17)
+    assert verification.lang is MailLanguage.ES
     assert response.user_guid == "user-guid-17"
     assert response.user_type == "user"
 
@@ -282,6 +298,7 @@ def test_register_user_rolls_back_when_create_session_fails(monkeypatch):
                 surname1="Lopez",
                 surname2=None,
                 nationality="ES",
+                email="ana@example.com",
             ),
             Response(),
             command_bus=bus,
@@ -309,6 +326,7 @@ def test_register_user_maps_errors(error, status_code, detail):
                 surname1="Lopez",
                 surname2=None,
                 nationality="ES",
+                email="ana@example.com",
             ),
             Response(),
             command_bus=_RaisingCommandBus(error),
@@ -324,15 +342,23 @@ def test_register_admin_returns_session_response(monkeypatch):
 
     http_response = Response()
     response = auth_controller.register_admin(
-        RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
+        RegisterAdminRequest(
+            username="a23",
+            password="secret-pass-123",
+            name="Admin",
+            email="admin@example.com",
+        ),
         http_response,
         command_bus=bus,
         db=object(),
     )
 
     assert "session=session-token" in http_response.headers.get("set-cookie", "")
-    assert isinstance(bus.last_command, RegisterAdminCommand)
-    assert bus.last_command.username == "a23"
+    assert isinstance(bus.registration_command, RegisterAdminCommand)
+    assert bus.registration_command.username == "a23"
+    verification = bus.commands[1]
+    assert isinstance(verification, SendRegistrationEmailVerificationCommand)
+    assert verification.ref == AccountRef(account_type=AccountType.ADMIN, account_id=23)
     assert response.user_guid == "admin-guid-23"
     assert response.user_type == "admin"
 
@@ -356,7 +382,12 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
 
     with pytest.raises(RuntimeError):
         auth_controller.register_admin(
-            RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
+            RegisterAdminRequest(
+                username="a23",
+                password="secret-pass-123",
+                name="Admin",
+                email="admin@example.com",
+            ),
             Response(),
             command_bus=bus,
             db=db,
@@ -375,7 +406,12 @@ def test_register_admin_rolls_back_when_create_session_fails(monkeypatch):
 def test_register_admin_maps_errors(error, status_code, detail):
     with pytest.raises(HTTPException) as exc:
         auth_controller.register_admin(
-            RegisterAdminRequest(username="a23", password="secret-pass-123", name="Admin"),
+            RegisterAdminRequest(
+                username="a23",
+                password="secret-pass-123",
+                name="Admin",
+                email="admin@example.com",
+            ),
             Response(),
             command_bus=_RaisingCommandBus(error),
             db=object(),
@@ -429,8 +465,24 @@ def test_read_session_returns_metadata_without_token():
         user_type="admin",
         expires_at=4242,
     )
-    result = auth_controller.read_session(session=session)
+    query_bus = _RecordingQueryBus(
+        AccountEmailStatusResult(email="root@example.com", email_verified=True)
+    )
+    result = auth_controller.read_session(session=session, query_bus=query_bus)
+    assert query_bus.queries[0].ref == AccountRef(account_type=AccountType.ADMIN, account_id=3)
+    assert result.email == "root@example.com"
+    assert result.email_verified is True
     assert result.user_guid == "guid-3"
     assert result.user_type == "admin"
     assert result.expires_at == 4242
     assert not hasattr(result, "token")
+
+
+class _RecordingQueryBus:
+    def __init__(self, result):
+        self._result = result
+        self.queries = []
+
+    def ask(self, query):
+        self.queries.append(query)
+        return self._result

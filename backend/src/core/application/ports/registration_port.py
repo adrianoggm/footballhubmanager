@@ -25,10 +25,11 @@ class UserRegistrationPort(Protocol):
         surname1: str,
         surname2: str | None,
         nationality: str,
+        email: str,
     ) -> RegisteredUserResult: ...
 
 
 class AdminRegistrationPort(Protocol):
     def register_admin(
-        self, *, username: str, password_hash: str, name: str
+        self, *, username: str, password_hash: str, name: str, email: str
     ) -> RegisteredAdminResult: ...
