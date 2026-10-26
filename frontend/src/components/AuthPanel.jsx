@@ -14,14 +14,17 @@ import {
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useEffect, useMemo, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { translateNationalityLabel } from '../i18n/labels.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { normalizeEmail } from '../services/accountEmailHelpers.js'
 import { normalizeNationalities } from '../services/catalogUtils.js'
 import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
   username: '',
   password: '',
+  email: '',
   name: '',
   surname1: '',
   surname2: '',
@@ -31,6 +34,7 @@ const initialUser = {
 const initialAdmin = {
   username: '',
   password: '',
+  email: '',
   name: '',
 }
 
@@ -45,6 +49,14 @@ const mapAuthErrorMessage = (error, t) => {
   )
   if (pwdTooShort) {
     return t('auth.errors.passwordTooShort', { min: pwdTooShort?.ctx?.min_length ?? 12 })
+  }
+
+  const emailInvalid = details.find((d) => d?.loc?.includes('email'))
+  if (emailInvalid || raw.includes('invalid email address')) {
+    return t('auth.errors.invalidEmail')
+  }
+  if (raw.includes('email already in use')) {
+    return t('auth.errors.emailInUse')
   }
 
   if (error?.status === 401) {
@@ -99,7 +111,7 @@ const mapAuthErrorMessage = (error, t) => {
 }
 
 export default function AuthPanel({ auth }) {
-  const { t } = useI18n()
+  const { language, t } = useI18n()
   const [mode, setMode] = useState('login')
   const [accountType, setAccountType] = useState('admin')
   const [nationalities, setNationalities] = useState([])
@@ -130,12 +142,21 @@ export default function AuthPanel({ auth }) {
       return
     }
 
+    // The verification email is sent in the language currently shown in the UI.
     if (accountType === 'admin') {
-      await auth.registerAdmin(adminRegister)
+      await auth.registerAdmin({
+        ...adminRegister,
+        email: normalizeEmail(adminRegister.email),
+        lang: language,
+      })
       return
     }
 
-    await auth.registerUser(userRegister)
+    await auth.registerUser({
+      ...userRegister,
+      email: normalizeEmail(userRegister.email),
+      lang: language,
+    })
   }
 
   const submitLabel =
@@ -251,6 +272,15 @@ export default function AuthPanel({ auth }) {
                 value={credentials.password}
                 onChange={onField(setCredentials)}
               />
+              <Button
+                component={RouterLink}
+                to="/forgot-password"
+                variant="text"
+                size="small"
+                sx={{ alignSelf: 'flex-end' }}
+              >
+                {t('auth.forgotPassword')}
+              </Button>
             </Stack>
           )}
 
@@ -263,6 +293,16 @@ export default function AuthPanel({ auth }) {
                 value={adminRegister.username}
                 onChange={onField(setAdminRegister)}
                 helperText={t('auth.adminUsernameHint')}
+              />
+              <TextField
+                label={t('auth.email')}
+                type="email"
+                name="email"
+                autoComplete="email"
+                value={adminRegister.email}
+                onChange={onField(setAdminRegister)}
+                helperText={t('auth.emailHint')}
+                required
               />
               <TextField
                 label={t('auth.password')}
@@ -289,6 +329,16 @@ export default function AuthPanel({ auth }) {
                 name="username"
                 value={userRegister.username}
                 onChange={onField(setUserRegister)}
+              />
+              <TextField
+                label={t('auth.email')}
+                type="email"
+                name="email"
+                autoComplete="email"
+                value={userRegister.email}
+                onChange={onField(setUserRegister)}
+                helperText={t('auth.emailHint')}
+                required
               />
               <TextField
                 label={t('auth.password')}

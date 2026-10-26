@@ -13,6 +13,7 @@ import {
 import { translateNationalityLabel } from '../../i18n/labels.js'
 import ProfileImageField from '../ProfileImageField.jsx'
 import AppearanceSettings from '../dashboard/AppearanceSettings.jsx'
+import AccountEmailSettings from '../account/AccountEmailSettings.jsx'
 
 /**
  * User profile settings dialog: avatar, personal fields, nationality, and the
@@ -34,6 +35,7 @@ export default function UserProfileSettingsDialog({
   penas = [],
   selectedPenaGuid = '',
   onSelectPena = () => {},
+  accountEmail = null,
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -102,6 +104,8 @@ export default function UserProfileSettingsDialog({
             ))}
           </TextField>
           <Divider />
+          {accountEmail && <AccountEmailSettings accountEmail={accountEmail} />}
+          {accountEmail && <Divider />}
           <AppearanceSettings />
         </Stack>
       </DialogContent>

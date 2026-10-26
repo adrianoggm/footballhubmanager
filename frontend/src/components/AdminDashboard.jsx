@@ -43,6 +43,9 @@ import { adminService } from '../services/adminService.js'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
+import AccountEmailNotice from './account/AccountEmailNotice.jsx'
+import AccountEmailSettings from './account/AccountEmailSettings.jsx'
+import { useAccountEmail } from '../hooks/useAccountEmail.js'
 import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
@@ -441,6 +444,7 @@ export default function AdminDashboard({
 }) {
   const { t } = useI18n()
   const { showToast } = useToast()
+  const accountEmail = useAccountEmail()
   const penaDataFetch = useFetchWithStaleCheck()
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
@@ -1709,6 +1713,7 @@ export default function AdminDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
+        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openPenaSettings} />
 
         {!selectedPenaGuid && (
           <EmptyState
@@ -1924,6 +1929,8 @@ export default function AdminDashboard({
                 onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
               />
 
+              <Divider />
+              <AccountEmailSettings accountEmail={accountEmail} />
               <Divider />
               <AppearanceSettings />
             </Stack>

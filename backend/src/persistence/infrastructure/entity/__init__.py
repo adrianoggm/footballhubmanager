@@ -1,3 +1,4 @@
+from .account_token_entity import AccountToken
 from .admin_accounts_entity import AdminAccounts
 from .base_entity import Base
 from .football_match_entity import FootballMatch
@@ -20,6 +21,7 @@ from .user_session_entity import UserSession
 
 __all__ = [
     "Base",
+    "AccountToken",
     "Player",
     "Team",
     "FootballMatch",

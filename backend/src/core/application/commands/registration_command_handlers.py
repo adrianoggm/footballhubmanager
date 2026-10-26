@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from auth.domain.value_objects.email_address import EmailAddress
 from auth.security import hash_password
 from core.application.commands.registration_commands import (
     RegisterAdminCommand,
@@ -24,10 +25,12 @@ class RegisterAdminHandler:
         name = command.name.strip()
         if not username or not name:
             raise InvalidAdminRegistrationDataError()
+        email = EmailAddress.parse(command.email)
         registered = self._repository.register_admin(
             username=username,
             password_hash=hash_password(command.password),
             name=name,
+            email=email.value,
         )
         return RegisteredAdmin(admin_id=registered.admin_id, admin_guid=registered.admin_guid)
 
@@ -47,6 +50,7 @@ class RegisterUserHandler:
             raise InvalidRegistrationDataError()
         if surname2 == "":
             surname2 = None
+        email = EmailAddress.parse(command.email)
 
         registered = self._repository.register_user(
             username=username,
@@ -55,6 +59,7 @@ class RegisterUserHandler:
             surname1=surname1,
             surname2=surname2,
             nationality=nationality,
+            email=email.value,
         )
         return RegisteredUser(
             account_id=registered.account_id,

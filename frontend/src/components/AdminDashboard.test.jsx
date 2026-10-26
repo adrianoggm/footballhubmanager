@@ -53,6 +53,12 @@ const { adminServiceMock } = vi.hoisted(() => {
 })
 
 vi.mock('../services/adminService.js', () => ({ adminService: adminServiceMock }))
+// The account email notice loads its status through authService; keep it offline.
+vi.mock('../services/authService.js', () => ({
+  authService: {
+    getAccountEmail: vi.fn(async () => ({ email: 'admin@example.com', email_verified: true })),
+  },
+}))
 
 import { I18nProvider } from '../i18n/I18nProvider.jsx'
 import { ThemeModeProvider } from '../theme/ThemeModeProvider.jsx'

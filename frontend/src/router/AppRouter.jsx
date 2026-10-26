@@ -11,6 +11,9 @@ import { resolveRoleHomePath } from './rolePaths.js'
 
 const AuthLandingPage = lazy(() => import('../pages/AuthLandingPage.jsx'))
 const ClaimPlayerPage = lazy(() => import('../pages/ClaimPlayerPage.jsx'))
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage.jsx'))
+const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage.jsx'))
+const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage.jsx'))
 const LegalPage = lazy(() => import('../pages/LegalPage.jsx'))
 const SessionIncompletePage = lazy(() => import('../pages/SessionIncompletePage.jsx'))
 const AdminOverviewPage = lazy(() => import('../pages/admin/AdminOverviewPage.jsx'))
@@ -74,12 +77,16 @@ export default function AppRouter({ auth, onLogout }) {
             </Route>
           </Route>
 
-          {/* Legal/info placeholders: public regardless of session. */}
+          {/* Legal/info pages (contact, terms, privacy, accessibility): public regardless of session. */}
           <Route element={<PublicLayout />}>
             <Route path="/legal/:section" element={<LegalPage />} />
             {/* Invitation claim link: public so a brand-new invitee can register
                 and adopt their existing guest player without an account first. */}
             <Route path="/claim/:token" element={<ClaimPlayerPage auth={auth} />} />
+            {/* Account email links (#154): reachable with or without a session. */}
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Route path="/verify-email/:token" element={<VerifyEmailPage auth={auth} />} />
           </Route>
 
           <Route element={<RequireAuth isAuthenticated={isAuthenticated} />}>

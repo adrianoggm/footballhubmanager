@@ -22,6 +22,20 @@ def hash_password(password: str) -> str:
     return f"pbkdf2${_ALGO}${_ITERATIONS}${_b64encode(salt)}${_b64encode(dk)}"
 
 
+def generate_account_token() -> str:
+    """Raw single-use token for emailed links. Never persist or log it."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_account_token(token: str) -> str:
+    """sha256 hex digest stored instead of the raw token.
+
+    A plain (unsalted) hash is enough: the token carries 256 bits of entropy, so a
+    leaked table cannot be brute-forced, and lookups stay a primary-key hit.
+    """
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def verify_password(plain: str, stored: str) -> bool:
     if not stored.startswith("pbkdf2$"):
         return False
