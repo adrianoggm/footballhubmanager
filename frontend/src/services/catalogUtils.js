@@ -31,3 +31,12 @@ export const normalizeNationalities = (payload) => {
     return true
   })
 }
+
+// Same default as the admin guest form (PL-13): Spain when the catalog has it,
+// otherwise the first catalog entry.
+export const DEFAULT_NATIONALITY = 'Spain'
+
+export const pickDefaultNationality = (items) => {
+  const list = items || []
+  return list.includes(DEFAULT_NATIONALITY) ? DEFAULT_NATIONALITY : list[0] || ''
+}
