@@ -73,7 +73,7 @@ export default function PublicLayout() {
             <Stack spacing={0.35}>
               <LogoHorizontal height={52} />
               <Typography variant="body2" color="text.secondary">
-                {t('app.overview.sectionHint')}
+                {t('app.tagline')}
               </Typography>
             </Stack>
 

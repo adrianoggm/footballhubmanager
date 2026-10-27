@@ -1,5 +1,5 @@
 import { Alert, Button, Chip, Stack, TextField, Typography } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../../i18n/useI18n.js'
 import { isValidEmail, normalizeEmail } from '../../services/accountEmailHelpers.js'
 
@@ -8,10 +8,20 @@ import { isValidEmail, normalizeEmail } from '../../services/accountEmailHelpers
  * re-send the verification link. Saves on its own button, independently of the
  * dialog's profile save.
  */
-export default function AccountEmailSettings({ accountEmail }) {
+export default function AccountEmailSettings({ accountEmail, autoFocus = false }) {
   const { t } = useI18n()
   const { email, verified, loading, saving, error, info } = accountEmail
   const [draft, setDraft] = useState(email)
+  const inputRef = useRef(null)
+
+  // U-12: opened from the "Add/Change email" notice -> land on the email field.
+  useEffect(() => {
+    if (!autoFocus || !inputRef.current) {
+      return
+    }
+    inputRef.current.focus()
+    inputRef.current.scrollIntoView?.({ block: 'center' })
+  }, [autoFocus])
 
   useEffect(() => {
     setDraft(email)
@@ -45,6 +55,7 @@ export default function AccountEmailSettings({ accountEmail }) {
           size="small"
           type="email"
           autoComplete="email"
+          inputRef={inputRef}
           label={t('accountEmail.label')}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

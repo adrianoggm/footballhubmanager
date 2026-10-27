@@ -14,8 +14,10 @@ import NewTransactionCard from './accountability/NewTransactionCard.jsx'
 import TransactionLedger from './accountability/TransactionLedger.jsx'
 import TransparencyDialog from './accountability/TransparencyDialog.jsx'
 import {
+  accountabilityErrorMessage,
   createMoneyFormatter,
   parseCategoryPresets,
+  toIntlLocale,
 } from './accountability/accountabilityHelpers.js'
 
 const PAGE_SIZE = 8
@@ -23,9 +25,11 @@ const PAGE_SIZE = 8
 export default function AdminAccountabilitySection({
   penaGuid,
   players,
+  language,
   t,
   formatPlayerDisplayName,
 }) {
+  const locale = toIntlLocale(language)
   const [accountability, setAccountability] = useState(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -56,10 +60,8 @@ export default function AdminAccountabilitySection({
     [t]
   )
 
-  const formatter = useMemo(
-    () => createMoneyFormatter(accountability?.currency || 'EUR'),
-    [accountability?.currency]
-  )
+  const currency = accountability?.currency || 'EUR'
+  const formatter = useMemo(() => createMoneyFormatter(currency, locale), [currency, locale])
 
   // Load the summary (KPIs, members, monthly cashflow, settings).
   useEffect(() => {
@@ -80,7 +82,7 @@ export default function AdminAccountabilitySection({
         }
       } catch (loadError) {
         if (active) {
-          setError(loadError?.message || t('dashboard.common.errors.generic'))
+          setError(accountabilityErrorMessage(loadError, t))
         }
       } finally {
         if (active) {
@@ -146,7 +148,7 @@ export default function AdminAccountabilitySection({
         }
         return true
       } catch (mutationError) {
-        setError(mutationError?.message || t('dashboard.common.errors.generic'))
+        setError(accountabilityErrorMessage(mutationError, t))
         return false
       } finally {
         setSaving(false)
@@ -210,6 +212,13 @@ export default function AdminAccountabilitySection({
     )
   }
 
+  // A failed client-side validation must not leave the previous success/error
+  // banner on screen (it read as if the invalid submit had worked).
+  const clearFeedback = () => {
+    setNotice('')
+    setError('')
+  }
+
   const changeFilter = (next) => {
     setFilter(next)
     setPage(1)
@@ -218,7 +227,7 @@ export default function AdminAccountabilitySection({
   const members = accountability?.member_accounts || []
 
   return (
-    <Stack spacing={2.5} sx={{ width: '100%' }}>
+    <Stack useFlexGap spacing={2.5} sx={{ width: '100%' }}>
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
@@ -226,7 +235,7 @@ export default function AdminAccountabilitySection({
         spacing={1.5}
       >
         <Box>
-          <Typography variant="h5" sx={{ color: '#F4EEE8' }}>
+          <Typography variant="h5" sx={{ color: (theme) => theme.custom.tones.onRaised }}>
             {t('dashboard.admin.accountability.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -267,16 +276,18 @@ export default function AdminAccountabilitySection({
       ) : null}
       {loading && !accountability ? <LoadingState /> : null}
 
-      <AccountabilityKpis data={accountability} formatter={formatter} t={t} />
+      <AccountabilityKpis data={accountability} formatter={formatter} locale={locale} t={t} />
 
       <Grid container spacing={2.5}>
         <Grid item xs={12} lg={4} sx={{ minWidth: 0 }}>
           <NewTransactionCard
             t={t}
-            currency={accountability?.currency || 'EUR'}
+            currency={currency}
+            locale={locale}
             playerOptions={playerOptions}
             categoryPresets={categoryPresets}
             onRecord={handleRecord}
+            onInvalid={clearFeedback}
             submitting={saving}
           />
         </Grid>
@@ -284,6 +295,7 @@ export default function AdminAccountabilitySection({
           <TransactionLedger
             t={t}
             formatter={formatter}
+            locale={locale}
             page={ledger}
             filter={filter}
             onFilterChange={changeFilter}
@@ -301,6 +313,7 @@ export default function AdminAccountabilitySection({
         playerOptions={playerOptions}
         onSave={handleSaveMember}
         onDelete={requestDeleteMember}
+        onInvalid={clearFeedback}
         saving={saving}
       />
 
@@ -317,9 +330,11 @@ export default function AdminAccountabilitySection({
         onClose={() => setCashflowOpen(false)}
         t={t}
         formatter={formatter}
+        currency={currency}
+        locale={locale}
         monthly={accountability?.monthly_cashflow || []}
-        openingBalanceCents={accountability?.opening_balance_cents || 0}
-        reserveCents={accountability?.reserve_cents || 0}
+        openingBalanceCents={accountability?.opening_balance_cents}
+        reserveCents={accountability?.reserve_cents}
       />
       <ConfirmDialog
         open={Boolean(confirmState)}

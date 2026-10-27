@@ -18,6 +18,7 @@ from core.application.commands.pena_membership_commands import (
 from core.application.policies import FieldUpdate
 from core.application.ports.pena_membership_port import (
     InvalidNationalityError,
+    InvalidPositionLabelError,
     InvalidRoleLabelError,
     PenaMembershipResult,
     PenaNotFoundError,
@@ -39,6 +40,7 @@ from core.application.queries.pena_membership_query_handlers import (
 from core.domain.errors import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
+    InvalidPenaPositionError,
     PenaMembershipAccessDeniedError,
     PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
@@ -57,6 +59,7 @@ class _FakeRepo:
     should_raise_user_player_not_found: bool = False
     should_raise_invalid_nationality: bool = False
     should_raise_invalid_role_label: bool = False
+    should_raise_invalid_position_label: bool = False
     last_payload: dict | None = None
 
     @staticmethod
@@ -84,6 +87,8 @@ class _FakeRepo:
             raise PlayerNotFoundError()
         if self.should_raise_user_player_not_found:
             raise UserPlayerNotFoundError()
+        if self.should_raise_invalid_position_label:
+            raise InvalidPositionLabelError()
 
     def get_by_pena_and_player(self, *, pena_guid: str, player_guid: str):
         self._raise_maybe()
@@ -109,6 +114,8 @@ class _FakeRepo:
             raise RepositoryPenaMembershipNotFoundError()
         if self.should_raise_user_player_not_found:
             raise UserPlayerNotFoundError()
+        if self.should_raise_invalid_position_label:
+            raise InvalidPositionLabelError()
         self.last_payload = {
             "pena_guid": pena_guid,
             "account_id": account_id,
@@ -172,6 +179,8 @@ class _FakeRepo:
             raise InvalidNationalityError()
         if self.should_raise_invalid_role_label:
             raise InvalidRoleLabelError()
+        if self.should_raise_invalid_position_label:
+            raise InvalidPositionLabelError()
         self.last_payload = {
             "pena_guid": pena_guid,
             "admin_id": admin_id,
@@ -420,5 +429,43 @@ def test_create_guest_maps_access_denied_and_invalid_role_label(repo, expected_e
                 surname1="Player",
                 nationality="Spain",
                 role="captain",
+            )
+        )
+
+
+def test_update_for_user_maps_invalid_position_label():
+    repo = _FakeRepo(should_raise_invalid_position_label=True)
+    with pytest.raises(InvalidPenaPositionError):
+        UpdateMembershipForUserHandler(repo).handle(
+            UpdateMembershipForUserCommand(
+                pena_guid="pena-guid", account_id=12, position=FieldUpdate.set("12")
+            )
+        )
+
+
+def test_update_for_admin_maps_invalid_position_label():
+    repo = _FakeRepo(should_raise_invalid_position_label=True)
+    with pytest.raises(InvalidPenaPositionError):
+        UpdateMembershipForAdminHandler(repo).handle(
+            UpdateMembershipForAdminCommand(
+                pena_guid="pena-guid",
+                admin_id=1,
+                player_guid="player-guid",
+                position=FieldUpdate.set("12"),
+            )
+        )
+
+
+def test_create_guest_maps_invalid_position_label():
+    repo = _FakeRepo(should_raise_invalid_position_label=True)
+    with pytest.raises(InvalidPenaPositionError):
+        CreateGuestPlayerHandler(repo).handle(
+            CreateGuestPlayerCommand(
+                pena_guid="pena-guid",
+                admin_id=7,
+                name="Guest",
+                surname1="Player",
+                nationality="Spain",
+                position="12",
             )
         )

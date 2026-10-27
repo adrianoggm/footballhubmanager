@@ -16,6 +16,9 @@ from core.application.ports.pena_membership_port import (
     InvalidNationalityError as RepositoryInvalidNationalityError,
 )
 from core.application.ports.pena_membership_port import (
+    InvalidPositionLabelError as RepositoryInvalidPositionLabelError,
+)
+from core.application.ports.pena_membership_port import (
     InvalidRoleLabelError as RepositoryInvalidRoleLabelError,
 )
 from core.application.ports.pena_membership_port import (
@@ -38,6 +41,7 @@ from core.application.queries.pena_membership_query_handlers import to_membershi
 from core.domain.errors import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaMembershipUpdateDataError,
+    InvalidPenaPositionError,
     PenaMembershipAccessDeniedError,
     PenaMembershipInvalidNationalityError,
     PenaMembershipNotFoundError,
@@ -87,6 +91,8 @@ class UpdateMembershipForUserHandler:
             raise PenaMembershipUserProfileNotFoundError() from exc
         except RepositoryPenaMembershipNotFoundError as exc:
             raise PenaMembershipAccessDeniedError() from exc
+        except RepositoryInvalidPositionLabelError as exc:
+            raise InvalidPenaPositionError() from exc
         return to_membership_info(membership)
 
 
@@ -134,6 +140,8 @@ class UpdateMembershipForAdminHandler:
             raise PenaMembershipNotFoundError() from exc
         except RepositoryInvalidRoleLabelError as exc:
             raise InvalidPenaMembershipUpdateDataError() from exc
+        except RepositoryInvalidPositionLabelError as exc:
+            raise InvalidPenaPositionError() from exc
         return to_membership_info(membership)
 
 
@@ -198,4 +206,6 @@ class CreateGuestPlayerHandler:
             raise PenaMembershipInvalidNationalityError() from exc
         except RepositoryInvalidRoleLabelError as exc:
             raise InvalidPenaGuestPlayerDataError() from exc
+        except RepositoryInvalidPositionLabelError as exc:
+            raise InvalidPenaPositionError() from exc
         return to_membership_info(created)

@@ -21,6 +21,7 @@ from core.application.use_cases.season_competition_errors import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
+    SeasonMatchDateOutsideSeasonError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
@@ -51,13 +52,16 @@ from core.domain.errors import (
     InvalidPenaGuestPlayerDataError,
     InvalidPenaLabelsDataError,
     InvalidPenaMembershipUpdateDataError,
+    InvalidPenaPositionError,
     InvalidPenaSeasonDataError,
     InvalidPlayerNationalityError,
     InvalidPlayerUpdateDataError,
     InvalidProfileImageError,
     InvalidRegistrationDataError,
     InvalidSeasonInsightsDataError,
+    InvalidSeasonPointsError,
     PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
@@ -135,6 +139,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Player has already been linked to an account",
     ),
     InvalidPenaLabelsDataError: (status.HTTP_400_BAD_REQUEST, "Invalid pena labels data"),
+    InvalidPenaPositionError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Position must be one of the pena's configured position labels",
+    ),
     InvalidProfileImageError: (status.HTTP_400_BAD_REQUEST, "Invalid profile image"),
     PenaLabelsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaLabelsAccessDeniedError: (status.HTTP_403_FORBIDDEN, "Admin does not manage this pena"),
@@ -143,6 +151,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     InvalidPenaAccountabilityDataError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid accountability data",
+    ),
+    PenaAccountabilityAmountOutOfRangeError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Amount out of range",
     ),
     PenaAccountabilityPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaAccountabilityAccessDeniedError: (
@@ -173,6 +185,13 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Player is not linked to this pena",
     ),
     InvalidPenaSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season data"),
+    # Subclass of InvalidPenaSeasonDataError: resolved first through the MRO, so
+    # the create/update endpoint overrides ("Invalid season date range") do not
+    # mislabel a points error.
+    InvalidSeasonPointsError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Season points must be non-negative integers",
+    ),
     PenaSeasonsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaSeasonsAccessDeniedError: (
         status.HTTP_403_FORBIDDEN,
@@ -221,6 +240,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Player already has matches in this season",
     ),
     SeasonMatchNotFoundError: (status.HTTP_404_NOT_FOUND, "Match not found"),
+    SeasonMatchDateOutsideSeasonError: (
+        status.HTTP_400_BAD_REQUEST,
+        "The match date must fall within the season dates",
+    ),
     SeasonMatchPlayersNotInSeasonError: (
         status.HTTP_409_CONFLICT,
         "All called-up players must be registered in this season",

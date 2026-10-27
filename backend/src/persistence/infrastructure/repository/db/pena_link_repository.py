@@ -5,6 +5,7 @@ from core.application.ports.pena_link_port import (
     ClaimLinkResult,
     ClaimRegistrationResult,
     ClaimTokenInfoResult,
+    InvalidPositionLabelError,
     PenaLinkPort,
     PenaLinkTokenResult,
 )
@@ -17,7 +18,13 @@ from core.domain.errors import (
     UserProfileNotFoundError,
     UserUsernameExistsError,
 )
-from core.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
+from core.domain.label_config import (
+    DEFAULT_POSITION_LABELS,
+    DEFAULT_ROLE_LABELS,
+    default_role_label,
+    find_label,
+    parse_labels_payload,
+)
 from persistence.infrastructure.entity import (
     FootballMatchEvent,
     Pena,
@@ -122,7 +129,9 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
             select(Pena.guid, Pena.name).where(Pena.id == link.id_pena)
         ).first()
         player = self.session.execute(
-            select(Player.guid, Player.name).where(Player.id == link.id_player)
+            select(Player.guid, Player.name, Player.surname1, Player.surname2).where(
+                Player.id == link.id_player
+            )
         ).first()
         if not pena or not player:
             raise InvalidLinkTokenError()
@@ -138,7 +147,10 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
             pena_guid=pena.guid,
             pena_name=pena.name,
             player_guid=player.guid,
-            player_name=player.name,
+            # Full name so the invitee recognises which guest player they adopt.
+            player_name=" ".join(
+                part for part in (player.name, player.surname1, player.surname2) if part
+            ),
             player_nickname=nickname,
             expires_at=link.expires_at,
         )
@@ -316,6 +328,16 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                 if not link:
                     raise InvalidLinkTokenError()
 
+                if position is not None:
+                    pena = self.session.get(Pena, link.id_pena)
+                    allowed = parse_labels_payload(
+                        pena.position_labels if pena else None,
+                        fallback=DEFAULT_POSITION_LABELS,
+                    )
+                    position = find_label(allowed, position)
+                    if position is None:
+                        raise InvalidPositionLabelError()
+
                 roles = list(
                     self.session.execute(
                         select(PenaRole)
@@ -324,7 +346,8 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                     ).scalars()
                 )
                 role_options = [role.name for role in roles] or list(DEFAULT_ROLE_LABELS)
-                default_role = pick_preferred_label(role_options, "member") or "member"
+                # The joining player always has an account -> member-first default.
+                default_role = default_role_label(role_options, has_account=True) or "member"
                 default_role_id = next(
                     (role.id for role in roles if role.name.casefold() == default_role.casefold()),
                     roles[0].id if roles else None,
@@ -356,7 +379,7 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                         position=position,
                     )
                     self.session.add(membership)
-        except (InvalidLinkTokenError, UserProfileNotFoundError):
+        except (InvalidLinkTokenError, InvalidPositionLabelError, UserProfileNotFoundError):
             self.session.rollback()
             raise
         except IntegrityError as exc:

@@ -93,6 +93,7 @@ from core.application.use_cases.season_competition_errors import (
     SeasonMatchClockAlreadyPausedError,
     SeasonMatchClockNotPausedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
@@ -280,6 +281,10 @@ CREATE_SEASON_MATCH_EVENT_OVERRIDES = {
     SeasonMatchEventPlayerNotInMatchError: (
         status.HTTP_409_CONFLICT,
         "Event players must belong to the selected match",
+    ),
+    SeasonMatchEventCountBelowZeroError: (
+        status.HTTP_400_BAD_REQUEST,
+        "The player has no recorded events of this type to remove",
     ),
 }
 

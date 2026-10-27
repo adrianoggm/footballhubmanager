@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   Card,
   CardContent,
@@ -18,7 +19,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { translateNationalityLabel } from '../i18n/labels.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { normalizeEmail } from '../services/accountEmailHelpers.js'
-import { normalizeNationalities } from '../services/catalogUtils.js'
+import { normalizeNationalities, pickDefaultNationality } from '../services/catalogUtils.js'
 import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
@@ -124,12 +125,25 @@ export default function AuthPanel({ auth }) {
     setter((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handle = (fn) => async () => {
+  // A real <form> so Enter in any field submits, like a native sign-in form.
+  const onSubmit = async (event) => {
+    event.preventDefault()
     try {
-      await fn()
+      await handleSubmit()
     } catch {
       // handled in hook state
     }
+  }
+
+  // A previous attempt's error belongs to that mode/account type: drop it on switch.
+  const changeMode = (value) => {
+    setMode(value)
+    auth.clearError?.()
+  }
+
+  const changeAccountType = (value) => {
+    setAccountType(value)
+    auth.clearError?.()
   }
 
   const handleSubmit = async () => {
@@ -191,7 +205,7 @@ export default function AuthPanel({ auth }) {
           if (prev.nationality && items.includes(prev.nationality)) {
             return prev
           }
-          return { ...prev, nationality: items[0] }
+          return { ...prev, nationality: pickDefaultNationality(items) }
         })
       } catch {
         setNationalities([])
@@ -230,7 +244,7 @@ export default function AuthPanel({ auth }) {
 
           <Tabs
             value={mode}
-            onChange={(_, value) => setMode(value)}
+            onChange={(_, value) => changeMode(value)}
             variant="fullWidth"
             sx={{ minHeight: 40 }}
             textColor="secondary"
@@ -246,7 +260,7 @@ export default function AuthPanel({ auth }) {
             fullWidth
             onChange={(_, value) => {
               if (value) {
-                setAccountType(value)
+                changeAccountType(value)
               }
             }}
             size="small"
@@ -257,139 +271,149 @@ export default function AuthPanel({ auth }) {
 
           {auth.error && <Alert severity="error">{authErrorMessage}</Alert>}
 
-          {mode === 'login' && (
-            <Stack spacing={2}>
-              <TextField
-                label={t('auth.username')}
-                name="username"
-                value={credentials.username}
-                onChange={onField(setCredentials)}
-              />
-              <TextField
-                label={t('auth.password')}
-                type="password"
-                name="password"
-                value={credentials.password}
-                onChange={onField(setCredentials)}
-              />
+          <Box component="form" onSubmit={onSubmit} noValidate>
+            <Stack spacing={3}>
+              {mode === 'login' && (
+                <Stack spacing={2}>
+                  <TextField
+                    label={t('auth.username')}
+                    name="username"
+                    autoComplete="username"
+                    value={credentials.username}
+                    onChange={onField(setCredentials)}
+                  />
+                  <TextField
+                    label={t('auth.password')}
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    value={credentials.password}
+                    onChange={onField(setCredentials)}
+                  />
+                  <Button
+                    component={RouterLink}
+                    to="/forgot-password"
+                    variant="text"
+                    size="small"
+                    sx={{ alignSelf: 'flex-end' }}
+                  >
+                    {t('auth.forgotPassword')}
+                  </Button>
+                </Stack>
+              )}
+
+              {mode === 'register' && accountType === 'admin' && (
+                <Stack spacing={2}>
+                  <Alert severity="info">{t('auth.adminRegisterHint')}</Alert>
+                  <TextField
+                    label={t('auth.adminUsername')}
+                    name="username"
+                    autoComplete="username"
+                    value={adminRegister.username}
+                    onChange={onField(setAdminRegister)}
+                    helperText={t('auth.adminUsernameHint')}
+                  />
+                  <TextField
+                    label={t('auth.email')}
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    value={adminRegister.email}
+                    onChange={onField(setAdminRegister)}
+                    helperText={t('auth.emailHint')}
+                    required
+                  />
+                  <TextField
+                    label={t('auth.password')}
+                    type="password"
+                    name="password"
+                    autoComplete="new-password"
+                    value={adminRegister.password}
+                    onChange={onField(setAdminRegister)}
+                    helperText={t('auth.passwordHint')}
+                  />
+                  <TextField
+                    label={t('auth.adminPenaName')}
+                    name="name"
+                    value={adminRegister.name}
+                    onChange={onField(setAdminRegister)}
+                    helperText={t('auth.adminPenaNameHint')}
+                  />
+                </Stack>
+              )}
+
+              {mode === 'register' && accountType === 'user' && (
+                <Stack spacing={2}>
+                  <TextField
+                    label={t('auth.username')}
+                    name="username"
+                    autoComplete="username"
+                    value={userRegister.username}
+                    onChange={onField(setUserRegister)}
+                  />
+                  <TextField
+                    label={t('auth.email')}
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    value={userRegister.email}
+                    onChange={onField(setUserRegister)}
+                    helperText={t('auth.emailHint')}
+                    required
+                  />
+                  <TextField
+                    label={t('auth.password')}
+                    type="password"
+                    name="password"
+                    autoComplete="new-password"
+                    value={userRegister.password}
+                    onChange={onField(setUserRegister)}
+                    helperText={t('auth.passwordHint')}
+                  />
+                  <TextField
+                    label={t('auth.userName')}
+                    name="name"
+                    value={userRegister.name}
+                    onChange={onField(setUserRegister)}
+                  />
+                  <TextField
+                    label={t('auth.userSurname1')}
+                    name="surname1"
+                    value={userRegister.surname1}
+                    onChange={onField(setUserRegister)}
+                  />
+                  <TextField
+                    label={t('auth.userSurname2')}
+                    name="surname2"
+                    value={userRegister.surname2}
+                    onChange={onField(setUserRegister)}
+                  />
+                  <TextField
+                    select
+                    label={t('auth.userNationality')}
+                    name="nationality"
+                    value={userRegister.nationality}
+                    onChange={onField(setUserRegister)}
+                  >
+                    {nationalities.map((nationality) => (
+                      <MenuItem key={nationality} value={nationality}>
+                        {translateNationalityLabel(t, nationality)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Stack>
+              )}
+
               <Button
-                component={RouterLink}
-                to="/forgot-password"
-                variant="text"
-                size="small"
-                sx={{ alignSelf: 'flex-end' }}
+                type="submit"
+                variant="contained"
+                size="large"
+                disabled={auth.status === 'loading'}
               >
-                {t('auth.forgotPassword')}
+                {submitLabel}
               </Button>
             </Stack>
-          )}
-
-          {mode === 'register' && accountType === 'admin' && (
-            <Stack spacing={2}>
-              <Alert severity="info">{t('auth.adminRegisterHint')}</Alert>
-              <TextField
-                label={t('auth.adminUsername')}
-                name="username"
-                value={adminRegister.username}
-                onChange={onField(setAdminRegister)}
-                helperText={t('auth.adminUsernameHint')}
-              />
-              <TextField
-                label={t('auth.email')}
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={adminRegister.email}
-                onChange={onField(setAdminRegister)}
-                helperText={t('auth.emailHint')}
-                required
-              />
-              <TextField
-                label={t('auth.password')}
-                type="password"
-                name="password"
-                value={adminRegister.password}
-                onChange={onField(setAdminRegister)}
-                helperText={t('auth.passwordHint')}
-              />
-              <TextField
-                label={t('auth.adminPenaName')}
-                name="name"
-                value={adminRegister.name}
-                onChange={onField(setAdminRegister)}
-                helperText={t('auth.adminPenaNameHint')}
-              />
-            </Stack>
-          )}
-
-          {mode === 'register' && accountType === 'user' && (
-            <Stack spacing={2}>
-              <TextField
-                label={t('auth.username')}
-                name="username"
-                value={userRegister.username}
-                onChange={onField(setUserRegister)}
-              />
-              <TextField
-                label={t('auth.email')}
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={userRegister.email}
-                onChange={onField(setUserRegister)}
-                helperText={t('auth.emailHint')}
-                required
-              />
-              <TextField
-                label={t('auth.password')}
-                type="password"
-                name="password"
-                value={userRegister.password}
-                onChange={onField(setUserRegister)}
-                helperText={t('auth.passwordHint')}
-              />
-              <TextField
-                label={t('auth.userName')}
-                name="name"
-                value={userRegister.name}
-                onChange={onField(setUserRegister)}
-              />
-              <TextField
-                label={t('auth.userSurname1')}
-                name="surname1"
-                value={userRegister.surname1}
-                onChange={onField(setUserRegister)}
-              />
-              <TextField
-                label={t('auth.userSurname2')}
-                name="surname2"
-                value={userRegister.surname2}
-                onChange={onField(setUserRegister)}
-              />
-              <TextField
-                select
-                label={t('auth.userNationality')}
-                name="nationality"
-                value={userRegister.nationality}
-                onChange={onField(setUserRegister)}
-              >
-                {nationalities.map((nationality) => (
-                  <MenuItem key={nationality} value={nationality}>
-                    {translateNationalityLabel(t, nationality)}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-          )}
-
-          <Button
-            variant="contained"
-            size="large"
-            onClick={handle(handleSubmit)}
-            disabled={auth.status === 'loading'}
-          >
-            {submitLabel}
-          </Button>
+          </Box>
 
           <Typography variant="caption" color="text.secondary">
             {accountType === 'admin' ? t('auth.adminFooter') : t('auth.playerFooter')}

@@ -23,16 +23,12 @@ import { useState } from 'react'
 import { translatePositionLabel, translateRoleLabel } from '../../../i18n/labels.js'
 import { readableTextColor } from '../../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../../theme/tokens.js'
+import { stickyLastColumnSx } from '../../common/responsiveTable.js'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
 import { isInSeason } from './playersHelpers.js'
 
-// Warm accountability palette (issue #147) — shared with StatCard / PlayerToolbar
-// so the Player Directory table reads as the same system rather than inventing
-// a new visual language.
-const SURFACE = '#45342C'
-const TEXT_COLOR = '#F4EEE8'
-const MUTED = '#88736A'
-const ACCENT = '#FCB491'
+// Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
+// Player Directory follows the active preset (Ember keeps the warm look, #70).
 
 const COLUMN_COUNT = 6
 
@@ -46,19 +42,19 @@ const labelChipSx = (color) => {
 }
 
 const headerCellSx = {
-  color: MUTED,
+  color: (theme) => theme.custom.tones.muted,
   fontFamily: '"JetBrains Mono", monospace',
   fontWeight: 700,
   fontSize: '0.72rem',
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  borderColor: alpha(TEXT_COLOR, 0.12),
+  borderColor: (theme) => alpha(theme.custom.tones.onRaised, 0.12),
   whiteSpace: 'nowrap',
 }
 
 const bodyCellSx = {
-  color: TEXT_COLOR,
-  borderColor: alpha(TEXT_COLOR, 0.08),
+  color: (theme) => theme.custom.tones.onRaised,
+  borderColor: (theme) => alpha(theme.custom.tones.onRaised, 0.08),
 }
 
 // Build the per-row overflow menu items in the order/conditions the brief
@@ -114,6 +110,11 @@ export default function PlayerList({
   seasonSelected,
 }) {
   const theme = useTheme()
+  const { surfaces, tones } = theme.custom
+  const surface = surfaces.raised
+  const textColor = tones.onRaised
+  const muted = tones.muted
+  const accent = tones.accentStrong
   const geometry = getSurfaceGeometry(theme)
   const [menuState, setMenuState] = useState({ anchorEl: null, player: null })
 
@@ -136,13 +137,11 @@ export default function PlayerList({
   const rows = pageItems || []
 
   return (
-    <Card
-      sx={{ backgroundColor: SURFACE, color: TEXT_COLOR, borderRadius: geometry.surfaceRadius }}
-    >
+    <Card sx={{ backgroundColor: surface, color: textColor, borderRadius: geometry.surfaceRadius }}>
       <CardContent>
         <Stack spacing={1.5}>
           <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small">
+            <Table size="small" sx={stickyLastColumnSx}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={headerCellSx}>{t('dashboard.admin.table.player')}</TableCell>
@@ -161,7 +160,7 @@ export default function PlayerList({
                 {!rows.length && (
                   <TableRow>
                     <TableCell colSpan={COLUMN_COUNT} align="center" sx={bodyCellSx}>
-                      <Typography variant="body2" sx={{ color: MUTED }}>
+                      <Typography variant="body2" sx={{ color: muted }}>
                         {t('dashboard.admin.directory.empty')}
                       </Typography>
                     </TableCell>
@@ -174,7 +173,7 @@ export default function PlayerList({
                   return (
                     <TableRow key={player.guid}>
                       <TableCell sx={bodyCellSx}>{formatPlayerDisplayName(player)}</TableCell>
-                      <TableCell sx={{ ...bodyCellSx, color: ACCENT, fontStyle: 'italic' }}>
+                      <TableCell sx={{ ...bodyCellSx, color: accent, fontStyle: 'italic' }}>
                         {player.nickname || '—'}
                       </TableCell>
                       <TableCell sx={bodyCellSx}>
@@ -212,12 +211,12 @@ export default function PlayerList({
                             size="small"
                             variant="outlined"
                             onClick={() => onAddToSeason(player)}
-                            sx={{ color: ACCENT, borderColor: ACCENT }}
+                            sx={{ color: accent, borderColor: accent }}
                           >
                             {t('dashboard.admin.directory.actionAddToSeason')}
                           </Button>
                         ) : (
-                          <Typography variant="body2" sx={{ color: MUTED }}>
+                          <Typography variant="body2" sx={{ color: muted }}>
                             —
                           </Typography>
                         )}
@@ -227,7 +226,7 @@ export default function PlayerList({
                           size="small"
                           aria-label={t('dashboard.admin.members.actions')}
                           onClick={(event) => openRowMenu(event, player)}
-                          sx={{ color: TEXT_COLOR }}
+                          sx={{ color: textColor }}
                         >
                           <Box component="span" className="material-symbols-rounded">
                             more_vert
@@ -249,8 +248,8 @@ export default function PlayerList({
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             PaperProps={{
               sx: {
-                backgroundColor: SURFACE,
-                color: TEXT_COLOR,
+                backgroundColor: surface,
+                color: textColor,
                 borderRadius: geometry.surfaceRadiusTight,
                 minWidth: 200,
               },
@@ -279,7 +278,7 @@ export default function PlayerList({
             alignItems={{ xs: 'flex-start', sm: 'center' }}
             spacing={1}
           >
-            <Typography variant="caption" sx={{ color: MUTED }}>
+            <Typography variant="caption" sx={{ color: muted }}>
               {t('dashboard.admin.directory.showingOfTotal', {
                 shown: `${shown}`,
                 total: `${total}`,
@@ -291,10 +290,10 @@ export default function PlayerList({
               page={page}
               onChange={(_event, nextPage) => onPageChange(nextPage)}
               sx={{
-                '& .MuiPaginationItem-root': { color: TEXT_COLOR },
+                '& .MuiPaginationItem-root': { color: textColor },
                 '& .MuiPaginationItem-root.Mui-selected': {
-                  backgroundColor: ACCENT,
-                  color: SURFACE,
+                  backgroundColor: accent,
+                  color: surface,
                 },
               }}
             />

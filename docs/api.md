@@ -30,7 +30,7 @@ or `en`) for the verification email it sends.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | `GET` | `/auth/me/email` | session | `{email, email_verified}` |
-| `PUT` | `/auth/me/email` | session | `{email, lang}`. Stores it unverified and emails a verification link. 409 if another account of the same type uses it, 429 inside the cooldown |
+| `PUT` | `/auth/me/email` | session | `{email, lang}` → `{email, email_verified, verification_email_sent}`. Stores it unverified and emails a verification link; inside the resend cooldown the address is still saved but the email is deferred (`verification_email_sent: false`, resend later). 409 if another account of the same type uses it |
 | `POST` | `/auth/me/email/verification` | session | `{lang}`. Resends the link (202). 409 if there is no email or it is already verified, 429 inside the cooldown |
 | `POST` | `/auth/email/verify` | public | `{token}`. 400 invalid/used, 410 expired. Only verifies if the account email still matches the one the link was sent to |
 | `POST` | `/auth/password/forgot` | public | `{email, lang}`. Always 202 with the same body. Emails one reset link per account type whose **verified** email matches |

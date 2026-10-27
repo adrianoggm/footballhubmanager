@@ -15,28 +15,24 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
-import { TX_TYPES, formatSignedMoney } from './accountabilityHelpers.js'
+import { TX_TYPES, formatLedgerDate, formatSignedMoney } from './accountabilityHelpers.js'
 
-const formatDate = (value) => {
-  if (!value) {
-    return '-'
-  }
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
-}
+const ALL_TYPES = [TX_TYPES.INCOME, TX_TYPES.EXPENSE]
 
 export default function TransactionLedger({
   t,
   formatter,
+  locale,
   page,
   filter,
   onFilterChange,
   onPrev,
   onNext,
   onDelete,
-  showFilter = true,
+  // Types the viewer can list; the filter only shows when there is a choice.
+  filterTypes = ALL_TYPES,
+  description,
+  emptyMessage,
   readOnly = false,
 }) {
   const items = page?.items || []
@@ -59,10 +55,10 @@ export default function TransactionLedger({
                 {t('dashboard.admin.accountability.ledgerTitle')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {t('dashboard.admin.accountability.ledgerDescription')}
+                {description || t('dashboard.admin.accountability.ledgerDescription')}
               </Typography>
             </Box>
-            {showFilter ? (
+            {filterTypes.length > 1 ? (
               <ToggleButtonGroup
                 value={filter}
                 exclusive
@@ -72,19 +68,18 @@ export default function TransactionLedger({
                 <ToggleButton value="all">
                   {t('dashboard.admin.accountability.filterAll')}
                 </ToggleButton>
-                <ToggleButton value={TX_TYPES.INCOME}>
-                  {t('dashboard.admin.accountability.income')}
-                </ToggleButton>
-                <ToggleButton value={TX_TYPES.EXPENSE}>
-                  {t('dashboard.admin.accountability.expense')}
-                </ToggleButton>
+                {filterTypes.map((type) => (
+                  <ToggleButton key={type} value={type}>
+                    {t(`dashboard.admin.accountability.${type}`)}
+                  </ToggleButton>
+                ))}
               </ToggleButtonGroup>
             ) : null}
           </Stack>
 
           {!items.length ? (
             <Typography variant="body2" color="text.secondary">
-              {t('dashboard.admin.accountability.noTransactions')}
+              {emptyMessage || t('dashboard.admin.accountability.noTransactions')}
             </Typography>
           ) : (
             <TableContainer sx={{ overflowX: 'auto' }}>
@@ -110,7 +105,7 @@ export default function TransactionLedger({
                     return (
                       <TableRow key={item.guid}>
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          {formatDate(item.occurred_on)}
+                          {formatLedgerDate(item.occurred_on, locale)}
                         </TableCell>
                         <TableCell>{item.entity || item.player_name || '-'}</TableCell>
                         <TableCell>

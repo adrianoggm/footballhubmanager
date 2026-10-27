@@ -106,4 +106,32 @@ describe('buildTrackedTeamScore', () => {
     }
     expect(buildTrackedTeamScore(detail)).toEqual({ home: 0, away: 0 })
   })
+
+  // MT-01: the scoreboard must match the per-player (clamped) goals shown in
+  // the summary tab, so a "-1 goal" on a player with 0 goals never lowers the
+  // team score through another player's goal.
+  it('sums per-player clamped goals so a stray decrement does not lower the team score', () => {
+    const detail = {
+      status: 'open',
+      events: [
+        { event_type: 'goal', team_side: 'home', player_guid: 'ana', value_delta: 1 },
+        { event_type: 'goal', team_side: 'home', player_guid: 'bea', value_delta: -1 },
+        { event_type: 'goal', team_side: 'away', player_guid: 'cris', value_delta: 1 },
+        { event_type: 'goal', team_side: 'away', player_guid: 'cris', value_delta: 1 },
+        { event_type: 'goal', team_side: 'away', player_guid: 'cris', value_delta: -1 },
+      ],
+    }
+    expect(buildTrackedTeamScore(detail)).toEqual({ home: 1, away: 1 })
+  })
+
+  it('defaults a missing value_delta to 1 but never turns an explicit 0 into 1', () => {
+    const detail = {
+      status: 'open',
+      events: [
+        { event_type: 'goal', team_side: 'home', player_guid: 'ana' },
+        { event_type: 'goal', team_side: 'away', player_guid: 'cris', value_delta: 0 },
+      ],
+    }
+    expect(buildTrackedTeamScore(detail)).toEqual({ home: 1, away: 0 })
+  })
 })

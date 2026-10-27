@@ -148,3 +148,42 @@ def pick_preferred_label(options: list[str], preferred: str) -> str | None:
         if option.casefold() == preferred_key:
             return option
     return options[0]
+
+
+MEMBER_ROLE_KEY = "member"
+GUEST_ROLE_KEY = "guest"
+
+
+def default_role_label(options: list[str], *, has_account: bool) -> str | None:
+    """Deterministic default role of a membership (PL-04).
+
+    A membership always has a role (there is no "no role" state): when none is
+    given, or its role label is removed, the peña's default member role applies.
+
+    - players with an account prefer ``member``, then ``guest``;
+    - players without an account (guests) prefer ``guest``, then ``member``;
+    - when the peña configured neither, the LAST label wins. Role labels are
+      ordered by hierarchy (``president`` first), so the last one is the least
+      privileged — never the first label, which would silently promote players.
+    """
+    if not options:
+        return None
+    preferred = (
+        (MEMBER_ROLE_KEY, GUEST_ROLE_KEY) if has_account else (GUEST_ROLE_KEY, MEMBER_ROLE_KEY)
+    )
+    for key in preferred:
+        matched = find_label(options, key)
+        if matched is not None:
+            return matched
+    return options[-1]
+
+
+def find_label(options: Iterable[str], value: str) -> str | None:
+    """Return the configured label matching ``value`` (case-insensitive), or None."""
+    key = str(value or "").strip().casefold()
+    if not key:
+        return None
+    for option in options:
+        if str(option or "").strip().casefold() == key:
+            return option
+    return None

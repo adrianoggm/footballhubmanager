@@ -1,7 +1,10 @@
 import { Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material'
 
 /**
- * Join-a-pena form (invite token + optional nickname/position).
+ * Join-a-pena form (invite token + optional nickname).
+ * The position is not asked here: the pena (and its configured position labels)
+ * is unknown until the invite is consumed, so it is picked afterwards from the
+ * pena's list in the membership section instead of being typed as free text.
  * Extracted from the UserDashboard monolith; state stays in the dashboard.
  */
 export default function UserJoinSection({ anchorId, joinForm, onJoinField, onJoin, loading, t }) {
@@ -21,11 +24,9 @@ export default function UserJoinSection({ anchorId, joinForm, onJoinField, onJoi
             value={joinForm.nickname}
             onChange={onJoinField('nickname')}
           />
-          <TextField
-            label={t('dashboard.user.positionOptional')}
-            value={joinForm.position}
-            onChange={onJoinField('position')}
-          />
+          <Typography variant="body2" color="text.secondary">
+            {t('dashboard.user.joinPositionHint')}
+          </Typography>
           <Button variant="contained" onClick={onJoin} disabled={loading}>
             {t('dashboard.user.join')}
           </Button>

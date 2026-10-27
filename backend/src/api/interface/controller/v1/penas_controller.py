@@ -72,6 +72,11 @@ from core.application.models import (
     PenaTransactionInfo,
     PenaTransactionPage,
 )
+from core.application.policies.accountability_visibility_policy import (
+    AccountabilityAccess,
+    AccountabilityViewer,
+    TransactionTypeScope,
+)
 from core.application.queries.pena_accountability_queries import (
     GetPenaAccountabilityQuery,
     GetPlayerGuidForAccountQuery,
@@ -105,27 +110,34 @@ def _page_response(page: PenasPage) -> PenasPageResponse:
 
 def _accountability_member_response(
     item: PenaAccountabilityMemberAccountInfo,
+    access: AccountabilityAccess,
 ) -> PenaAccountabilityMemberAccountResponse:
     return PenaAccountabilityMemberAccountResponse(
         player_guid=item.player_guid,
         player_name=item.player_name,
         debt_cents=item.debt_cents,
         contribution_cents=item.contribution_cents,
-        note=item.note,
+        note=item.note if access.admin_notes else None,
         updated_at=item.updated_at,
     )
 
 
-def _monthly_cashflow_response(item: PenaMonthlyCashflowInfo) -> PenaMonthlyCashflowResponse:
+def _monthly_cashflow_response(
+    item: PenaMonthlyCashflowInfo,
+    access: AccountabilityAccess,
+) -> PenaMonthlyCashflowResponse:
     return PenaMonthlyCashflowResponse(
         year=item.year,
         month=item.month,
-        income_cents=item.income_cents,
-        expense_cents=item.expense_cents,
+        income_cents=item.income_cents if access.budget_summary else None,
+        expense_cents=item.expense_cents if access.expenses_summary else None,
     )
 
 
-def _transaction_response(item: PenaTransactionInfo) -> PenaTransactionResponse:
+def _transaction_response(
+    item: PenaTransactionInfo,
+    access: AccountabilityAccess,
+) -> PenaTransactionResponse:
     return PenaTransactionResponse(
         guid=item.guid,
         type=item.type,
@@ -133,12 +145,26 @@ def _transaction_response(item: PenaTransactionInfo) -> PenaTransactionResponse:
         entity=item.entity,
         concept=item.concept,
         category=item.category,
-        note=item.note,
+        note=item.note if access.admin_notes else None,
         occurred_on=item.occurred_on,
         player_guid=item.player_guid,
         player_name=item.player_name,
         created_at=item.created_at,
         updated_at=item.updated_at,
+    )
+
+
+def _viewer_of(session) -> AccountabilityViewer:
+    return (
+        AccountabilityViewer.ADMIN if session.user_type == "admin" else AccountabilityViewer.MEMBER
+    )
+
+
+def _access_for(session, info: PenaAccountabilityInfo) -> AccountabilityAccess:
+    return AccountabilityAccess.for_viewer(
+        _viewer_of(session),
+        budget_visibility=info.budget_visibility,
+        expenses_visibility=info.expenses_visibility,
     )
 
 
@@ -148,10 +174,9 @@ def _accountability_response(
     session,
     current_player_guid: str | None,
 ) -> PenaAccountabilityResponse:
-    is_admin = session.user_type == "admin"
-    budget_summary_visible = is_admin or info.budget_visibility in {"summary", "full"}
-    budget_details_visible = is_admin or info.budget_visibility == "full"
-    expenses_summary_visible = is_admin or info.expenses_visibility in {"summary", "full"}
+    access = _access_for(session, info)
+    budget = access.budget_summary
+    expenses = access.expenses_summary
 
     my_account = None
     if current_player_guid:
@@ -160,68 +185,39 @@ def _accountability_response(
             None,
         )
         if my_account_item is not None:
-            my_account = _accountability_member_response(my_account_item)
+            my_account = _accountability_member_response(my_account_item, access)
 
     member_accounts = (
-        [_accountability_member_response(item) for item in info.member_accounts]
-        if budget_details_visible
+        [_accountability_member_response(item, access) for item in info.member_accounts]
+        if access.budget_details
         else []
     )
     monthly_cashflow = (
-        [_monthly_cashflow_response(item) for item in info.monthly_cashflow]
-        if budget_summary_visible
+        [_monthly_cashflow_response(item, access) for item in info.monthly_cashflow]
+        if access.cashflow
         else []
     )
 
     return PenaAccountabilityResponse(
         currency=info.currency,
-        opening_balance_cents=info.opening_balance_cents if budget_summary_visible else None,
-        reserve_cents=info.reserve_cents if budget_summary_visible else None,
+        opening_balance_cents=info.opening_balance_cents if budget else None,
+        reserve_cents=info.reserve_cents if budget else None,
         budget_visibility=info.budget_visibility,
         expenses_visibility=info.expenses_visibility,
         member_accounts=member_accounts,
         my_account=my_account,
         monthly_cashflow=monthly_cashflow,
-        total_balance_cents=info.total_balance_cents if budget_summary_visible else None,
-        balance_trend_pct=info.balance_trend_pct if budget_summary_visible else None,
-        total_income_cents=info.total_income_cents if budget_summary_visible else None,
-        total_expense_cents=info.total_expense_cents if expenses_summary_visible else None,
-        expenses_this_month_count=(
-            info.expenses_this_month_count if expenses_summary_visible else None
-        ),
-        membership_fees_cents=info.membership_fees_cents if budget_summary_visible else None,
-        membership_collected_pct=info.membership_collected_pct if budget_summary_visible else None,
-        outstanding_dues_cents=info.total_debt_cents if budget_summary_visible else None,
-        members_pending_count=info.members_pending_count if budget_summary_visible else None,
+        total_balance_cents=info.total_balance_cents if access.balance else None,
+        balance_trend_pct=info.balance_trend_pct if access.balance else None,
+        total_income_cents=info.total_income_cents if budget else None,
+        total_expense_cents=info.total_expense_cents if expenses else None,
+        expenses_this_month_count=info.expenses_this_month_count if expenses else None,
+        membership_fees_cents=info.membership_fees_cents if budget else None,
+        membership_collected_pct=info.membership_collected_pct if budget else None,
+        outstanding_dues_cents=info.total_debt_cents if budget else None,
+        members_pending_count=info.members_pending_count if budget else None,
         updated_at=info.updated_at,
     )
-
-
-def _requested_type_filter(requested_type: str | None) -> str | None:
-    """The requested type when valid, otherwise None (both types). Admins always get this."""
-    return requested_type if requested_type in {"income", "expense"} else None
-
-
-def _member_transaction_type_filter(
-    *,
-    info: PenaAccountabilityInfo,
-    requested_type: str | None,
-) -> str | None | bool:
-    """Which transaction types a member may list.
-
-    Returns a type string ('income'/'expense'), None for "both", or False when the
-    member may see nothing (caller returns an empty page). Members are constrained
-    to the types their pena's visibility settings expose.
-    """
-    income_visible = info.budget_visibility == "full"
-    expense_visible = info.expenses_visibility == "full"
-    if income_visible and expense_visible:
-        return _requested_type_filter(requested_type)
-    if income_visible:
-        return "income"
-    if expense_visible:
-        return "expense"
-    return False
 
 
 @router.get("/penas", response_model=PenasPageResponse)
@@ -311,6 +307,8 @@ def update_pena_labels(
             position_labels=payload.position_labels,
             role_colors=payload.role_colors,
             position_colors=payload.position_colors,
+            role_renames=payload.role_renames,
+            position_renames=payload.position_renames,
         )
     )
     return PenaLabelsResponse(
@@ -483,11 +481,9 @@ def list_pena_transactions(
     query_bus: QueryBus = Depends(get_pena_accountability_query_bus),
 ):
     info = query_bus.ask(GetPenaAccountabilityQuery(pena_guid=pena_guid))
-    if session.user_type == "admin":
-        type_filter = _requested_type_filter(type)
-    else:
-        type_filter = _member_transaction_type_filter(info=info, requested_type=type)
-    if type_filter is False:
+    access = _access_for(session, info)
+    scope = access.transaction_scope(type)
+    if scope is TransactionTypeScope.NONE:
         return PenaTransactionPageResponse(
             items=[], page=page, page_size=page_size, total=0, total_pages=0
         )
@@ -497,12 +493,12 @@ def list_pena_transactions(
             pena_guid=pena_guid,
             page=page,
             page_size=page_size,
-            type_filter=type_filter,
+            type_filter=scope.type_filter,
         )
     )
     total_pages = math.ceil(result.total / result.page_size) if result.total else 0
     return PenaTransactionPageResponse(
-        items=[_transaction_response(item) for item in result.items],
+        items=[_transaction_response(item, access) for item in result.items],
         page=result.page,
         page_size=result.page_size,
         total=result.total,

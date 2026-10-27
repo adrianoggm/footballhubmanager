@@ -19,7 +19,9 @@ import {
 } from '@mui/material'
 import { Suspense, lazy } from 'react'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
+import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
+import { stickyLastColumnSx } from '../common/responsiveTable.js'
 
 const AdminInsightsSection = lazy(() => import('./AdminInsightsSection.jsx'))
 
@@ -143,7 +145,7 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
 
           {selectedSeasonGuid && (
             <TableContainer>
-              <Table size="small">
+              <Table size="small" sx={stickyLastColumnSx}>
                 <TableHead>
                   <TableRow>
                     <TableCell>{t('dashboard.admin.table.player')}</TableCell>
@@ -155,6 +157,8 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                     <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
                     <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
                     <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
+                    <TableCell align="right">{t('dashboard.admin.table.saves')}</TableCell>
+                    <TableCell align="right">{t('dashboard.admin.table.rating')}</TableCell>
                     <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -171,7 +175,7 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                             label={translateRoleLabel(t, player.role)}
                             sx={{
                               backgroundColor: player.role_color || DEFAULT_LABEL_COLOR,
-                              color: '#fff',
+                              color: readableTextColor(player.role_color || DEFAULT_LABEL_COLOR),
                             }}
                           />
                         ) : (
@@ -185,7 +189,9 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                             label={translatePositionLabel(t, player.position)}
                             sx={{
                               backgroundColor: player.position_color || DEFAULT_LABEL_COLOR,
-                              color: '#fff',
+                              color: readableTextColor(
+                                player.position_color || DEFAULT_LABEL_COLOR
+                              ),
                             }}
                           />
                         ) : (
@@ -200,12 +206,18 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                       <TableCell align="right">{player.losses}</TableCell>
                       <TableCell align="right">{player.goals ?? 0}</TableCell>
                       <TableCell align="right">{player.assists ?? 0}</TableCell>
+                      <TableCell align="right">{player.saves ?? 0}</TableCell>
+                      <TableCell align="right">
+                        {Number(player.average_rating) > 0
+                          ? formatDecimal(player.average_rating, 1)
+                          : '-'}
+                      </TableCell>
                       <TableCell align="right">{player.points}</TableCell>
                     </TableRow>
                   ))}
                   {!standings.length && (
                     <TableRow>
-                      <TableCell colSpan={10}>
+                      <TableCell colSpan={12}>
                         {t('dashboard.admin.standings.noSeasonPlayers')}
                       </TableCell>
                     </TableRow>

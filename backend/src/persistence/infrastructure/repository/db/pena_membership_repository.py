@@ -1,6 +1,7 @@
 from core.application.policies import FieldUpdate
 from core.application.ports.pena_membership_port import (
     InvalidNationalityError,
+    InvalidPositionLabelError,
     InvalidRoleLabelError,
     PenaMembershipNotFoundError,
     PenaMembershipPort,
@@ -10,7 +11,13 @@ from core.application.ports.pena_membership_port import (
     PlayerNotFoundError,
     UserPlayerNotFoundError,
 )
-from core.domain.label_config import DEFAULT_ROLE_LABELS, pick_preferred_label
+from core.domain.label_config import (
+    DEFAULT_POSITION_LABELS,
+    DEFAULT_ROLE_LABELS,
+    default_role_label,
+    find_label,
+    parse_labels_payload,
+)
 from persistence.infrastructure.entity import Nationality, Pena, PenaPlayer, PenaRole, Player
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -57,7 +64,9 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
                 role=role.value,
             )
         if position.is_set():
-            link.position = position.value
+            link.position = self._resolve_position(
+                pena=pena, position=position.value, current=link.position
+            )
 
         self.session.commit()
         return self._to_result(pena=pena, player=player, link=link, roles=roles)
@@ -103,7 +112,9 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
                 role=role.value,
             )
         if position.is_set():
-            link.position = position.value
+            link.position = self._resolve_position(
+                pena=pena, position=position.value, current=link.position
+            )
 
         self.session.commit()
         return self._to_result(pena=pena, player=player, link=link, roles=roles)
@@ -144,6 +155,8 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
             self.session.rollback()
             raise PenaNotManagedByAdminError()
 
+        resolved_position = self._resolve_position(pena=pena, position=position, current=None)
+
         nationality_exists = self.session.execute(
             select(Nationality.name).where(Nationality.name == nationality)
         ).scalar_one_or_none()
@@ -167,7 +180,7 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
             id_pena=pena.id,
             nickname=nickname,
             id_role=self._resolve_assigned_role_id(roles=roles, player=player, role=role),
-            position=position,
+            position=resolved_position,
         )
         self.session.add(link)
         self.session.commit()
@@ -266,11 +279,37 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
                 raise InvalidRoleLabelError()
             return matched.id
 
-        preferred = "member" if player.id_player_account is not None else "guest"
-        role_names = [item.name for item in roles] or list(DEFAULT_ROLE_LABELS)
-        resolved_name = pick_preferred_label(role_names, preferred) or preferred
-        matched = self._find_role_by_name(roles, resolved_name)
+        # PL-04: a membership always has a role; omitting it means the pena's
+        # deterministic default member role (never the first/top label).
+        resolved_name = default_role_label(
+            [item.name for item in roles],
+            has_account=player.id_player_account is not None,
+        )
+        matched = self._find_role_by_name(roles, resolved_name) if resolved_name else None
         return matched.id if matched else None
+
+    def _resolve_position(
+        self,
+        *,
+        pena: Pena,
+        position: str | None,
+        current: str | None,
+    ) -> str | None:
+        """Accept only the pena's configured position labels (canonical casing).
+
+        Re-sending the currently stored value is tolerated so legacy positions
+        stored before labels were enforced do not block unrelated edits.
+        """
+        if position is None:
+            return None
+        if current is not None and position == current:
+            return current
+        allowed = parse_labels_payload(pena.position_labels, fallback=DEFAULT_POSITION_LABELS)
+        matched = find_label(allowed, position)
+        if matched is None:
+            self.session.rollback()
+            raise InvalidPositionLabelError()
+        return matched
 
     def _resolve_assigned_role_name(
         self,
@@ -284,9 +323,10 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
                 if role.id == role_id:
                     return role.name
 
-        preferred = "member" if player.id_player_account is not None else "guest"
+        has_account = player.id_player_account is not None
         role_names = [item.name for item in roles] or list(DEFAULT_ROLE_LABELS)
-        return pick_preferred_label(role_names, preferred) or preferred
+        fallback = "member" if has_account else "guest"
+        return default_role_label(role_names, has_account=has_account) or fallback
 
     def _to_result(
         self,

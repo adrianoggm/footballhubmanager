@@ -54,6 +54,7 @@ export default function UserMatchesSection({
             rows={orderedSeasonMatches}
             getRowKey={(m) => m.guid}
             minWidth={640}
+            stickyLastColumn
             emptyState={<EmptyState title={t('dashboard.user.noMatchesForSeason')} dense />}
           />
         </Stack>

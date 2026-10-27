@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   SEASON_STATUS,
+  buildPlayerLabeler,
+  defaultRoleLabel,
   filterPlayers,
+  findDuplicatePlayers,
   isInSeason,
   paginate,
   playerSortKey,
@@ -130,5 +133,67 @@ describe('playersHelpers', () => {
     expect(r.shown).toBe(3)
     expect(paginate(items, 99, 10).pageItems).toEqual([20, 21, 22])
     expect(paginate([], 1, 10)).toEqual({ pageItems: [], total: 0, pageCount: 1, shown: 0 })
+  })
+})
+
+describe('defaultRoleLabel (PL-04)', () => {
+  it('prefers guest for players without account and member for account holders', () => {
+    const roles = ['president', 'coordinator', 'member', 'guest']
+    expect(defaultRoleLabel(roles, { hasAccount: false })).toBe('guest')
+    expect(defaultRoleLabel(roles, { hasAccount: true })).toBe('member')
+  })
+
+  it('never falls back to the first label (president) once guest is removed', () => {
+    expect(defaultRoleLabel(['president', 'coordinator', 'member'], { hasAccount: false })).toBe(
+      'member'
+    )
+    expect(defaultRoleLabel(['president', 'socio'], { hasAccount: false })).toBe('socio')
+    expect(defaultRoleLabel([], { hasAccount: false })).toBe('')
+  })
+})
+
+describe('findDuplicatePlayers (PL-06)', () => {
+  const players = [
+    P({ guid: 'a', name: 'Juan', surname1: 'García', nickname: '' }),
+    P({ guid: 'b', name: 'Juan', surname1: 'López', nickname: '' }),
+    P({ guid: 'c', name: 'Luis', surname1: 'García', nickname: 'Lucho' }),
+  ]
+
+  it('matches name + first surname case-insensitively', () => {
+    const dups = findDuplicatePlayers(players, { name: ' juan ', surname1: 'GARCÍA' })
+    expect(dups.map((p) => p.guid)).toEqual(['a'])
+  })
+
+  it('treats a different nickname as a different player', () => {
+    expect(
+      findDuplicatePlayers(players, { name: 'Luis', surname1: 'García', nickname: 'Otro' })
+    ).toEqual([])
+    expect(
+      findDuplicatePlayers(players, { name: 'Luis', surname1: 'García', nickname: 'lucho' })
+    ).toHaveLength(1)
+  })
+
+  it('does not warn until name and surname are filled in', () => {
+    expect(findDuplicatePlayers(players, { name: 'Juan', surname1: '' })).toEqual([])
+  })
+})
+
+describe('buildPlayerLabeler (PL-06)', () => {
+  const format = (p) => `${p.name} ${p.surname1}`
+
+  it('keeps unique names untouched', () => {
+    const players = [P({ guid: 'a', name: 'Ana', surname1: 'Ruiz' })]
+    expect(buildPlayerLabeler(players, format)(players[0])).toBe('Ana Ruiz')
+  })
+
+  it('adds a distinguishing detail when display names collide', () => {
+    const players = [
+      P({ guid: 'aaaa1111-x', name: 'Ana', surname1: 'Ruiz', surname2: '', nationality: 'Spain' }),
+      P({ guid: 'bbbb2222-y', name: 'Ana', surname1: 'Ruiz', surname2: 'Gil', nationality: '' }),
+    ]
+    const label = buildPlayerLabeler(players, format)
+    expect(label(players[0])).toBe('Ana Ruiz (Spain · #AAAA11)')
+    expect(label(players[1])).toBe('Ana Ruiz (Gil · #BBBB22)')
+    expect(label(players[0])).not.toBe(label(players[1]))
   })
 })

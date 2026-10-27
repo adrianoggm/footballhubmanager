@@ -46,7 +46,8 @@ import {
   YAxis,
 } from 'recharts'
 import { EmptyState, LoadingState } from '../common'
-import { INSIGHT_ACCENTS, MATRIX_CELL_TEXT_COLOR } from '../../theme/tokens.js'
+import DateField from '../common/DateField.jsx'
+import { INSIGHT_ACCENTS } from '../../theme/tokens.js'
 
 const getDashboardGeometry = (theme) => ({
   surfaceRadius: theme.custom?.dashboard?.radius?.surface || '14px',
@@ -161,12 +162,12 @@ const getRateColor = (rate) => {
   return 'error'
 }
 
-const MATRIX_CELL_SUBTEXT_COLOR = alpha(MATRIX_CELL_TEXT_COLOR, 0.72)
-
-const buildMatrixCellSx = (cell, maxSharedMatches) => {
+// Matrix cell colors come from the mode-aware `theme.custom.insightMatrix` token
+// (pale cells + dark text in light mode, deep tinted cells + light text in dark mode).
+const buildMatrixCellSx = (matrix, cell, maxSharedMatches) => {
   if (cell.same_player) {
     return {
-      backgroundColor: 'rgba(148, 163, 184, 0.16)',
+      backgroundColor: matrix.samePlayerBackground,
       color: 'text.secondary',
       fontWeight: 700,
     }
@@ -174,20 +175,20 @@ const buildMatrixCellSx = (cell, maxSharedMatches) => {
 
   if (!cell.matches) {
     return {
-      backgroundColor: 'rgba(148, 163, 184, 0.08)',
+      backgroundColor: matrix.emptyBackground,
       color: 'text.secondary',
     }
   }
 
   const sharedRatio = maxSharedMatches > 0 ? cell.matches / maxSharedMatches : 0
   const hue = Math.round(8 + cell.win_rate * 120)
-  const saturation = Math.round(35 + sharedRatio * 45)
-  const lightness = Math.round(96 - sharedRatio * 28)
+  const saturation = Math.round(matrix.saturation.start + sharedRatio * matrix.saturation.delta)
+  const lightness = Math.round(matrix.lightness.start + sharedRatio * matrix.lightness.delta)
 
   return {
     backgroundColor: `hsl(${hue} ${saturation}% ${lightness}%)`,
-    border: '1px solid rgba(15, 23, 42, 0.08)',
-    color: MATRIX_CELL_TEXT_COLOR,
+    border: `1px solid ${matrix.cellBorder}`,
+    color: matrix.text,
   }
 }
 
@@ -991,6 +992,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
   const geometry = getDashboardGeometry(theme)
   const isDark = theme.palette.mode === 'dark'
   const chartTooltipProps = buildInsightTooltipProps(theme)
+  const matrixTokens = theme.custom.insightMatrix
   const {
     selectedSeasonGuid,
     insightsScope,
@@ -1139,25 +1141,21 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               {t('dashboard.admin.standings.insightsScopeAllSeasons')}
             </MenuItem>
           </TextField>
-          <TextField
-            type="date"
+          <DateField
             size="small"
             label={t('dashboard.admin.standings.insightsDateFrom')}
             value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ max: dateTo || undefined }}
-            sx={{ minWidth: 150 }}
+            onChange={setDateFrom}
+            maxIso={dateTo}
+            sx={{ minWidth: 170 }}
           />
-          <TextField
-            type="date"
+          <DateField
             size="small"
             label={t('dashboard.admin.standings.insightsDateTo')}
             value={dateTo}
-            onChange={(event) => setDateTo(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ min: dateFrom || undefined }}
-            sx={{ minWidth: 150 }}
+            onChange={setDateTo}
+            minIso={dateFrom}
+            sx={{ minWidth: 170 }}
           />
           {(dateFrom || dateTo) && (
             <Button onClick={clearDates} disabled={insightsLoading}>
@@ -1176,20 +1174,13 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
 
       {insightsLoading && <LoadingState />}
 
+      {/* U-18: the toolbar button (with the date range) is the only refresh action. */}
       {!insightsLoading && !insightsReport && (
-        <EmptyState
-          dense
-          description={t('dashboard.admin.standings.insightsEmpty')}
-          action={
-            <Button variant="contained" onClick={onRefreshInsights} disabled={!selectedSeasonGuid}>
-              {t('dashboard.admin.standings.refreshInsights')}
-            </Button>
-          }
-        />
+        <EmptyState dense description={t('dashboard.admin.standings.insightsEmpty')} />
       )}
 
       {!insightsLoading && insightsReport && (
-        <Stack spacing={2.25}>
+        <Stack useFlexGap spacing={2.25}>
           <Grid container spacing={1.2}>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
@@ -1297,7 +1288,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
           </Tabs>
 
           {activeInsightTab === 'trends' && (
-            <Stack spacing={2.25}>
+            <Stack useFlexGap spacing={2.25}>
               <Grid container spacing={2}>
                 <Grid item xs={12} lg={8}>
                   <Card
@@ -1593,6 +1584,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                         size="small"
                         variant="outlined"
                         sx={buildMatrixCellSx(
+                          matrixTokens,
                           {
                             same_player: false,
                             matches: Math.max(1, Math.round(maxSharedMatches * item.matches)),
@@ -1680,7 +1672,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                                 >
                                   <TableCell
                                     align="center"
-                                    sx={buildMatrixCellSx(cell, maxSharedMatches)}
+                                    sx={buildMatrixCellSx(matrixTokens, cell, maxSharedMatches)}
                                   >
                                     {cell.same_player ? (
                                       <Typography variant="caption" sx={{ color: 'inherit' }}>
@@ -1696,7 +1688,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
                                         </Typography>
                                         <Typography
                                           variant="caption"
-                                          sx={{ color: MATRIX_CELL_SUBTEXT_COLOR }}
+                                          sx={{ color: matrixTokens.subtext }}
                                         >
                                           {cell.matches}
                                         </Typography>

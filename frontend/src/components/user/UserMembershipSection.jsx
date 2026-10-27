@@ -1,5 +1,6 @@
 import { Box, Button, Card, CardContent, Chip, Stack, TextField, Typography } from '@mui/material'
 import { translateRoleLabel } from '../../i18n/labels.js'
+import LabelSelect from '../common/LabelSelect.jsx'
 
 /**
  * "My peñas" overview + membership editing (nickname/position) and leave action.
@@ -10,9 +11,11 @@ export default function UserMembershipSection({
   penas,
   selectedPenaGuid,
   selectedPena,
+  onSelectPena = null,
   membership,
   membershipForm,
   onMembershipField,
+  positionOptions,
   onUpdateMembership,
   onLeavePena,
   seasonList,
@@ -42,6 +45,12 @@ export default function UserMembershipSection({
                 label={pena.name}
                 color={pena.guid === selectedPenaGuid ? 'secondary' : 'default'}
                 variant={pena.guid === selectedPenaGuid ? 'filled' : 'outlined'}
+                aria-pressed={pena.guid === selectedPenaGuid}
+                onClick={
+                  onSelectPena && pena.guid !== selectedPenaGuid && !loading
+                    ? () => onSelectPena(pena.guid)
+                    : undefined
+                }
               />
             ))}
             {!penas.length && <Chip label={t('dashboard.user.noPenasLinked')} />}
@@ -59,10 +68,14 @@ export default function UserMembershipSection({
                     value={membershipForm.nickname}
                     onChange={onMembershipField('nickname')}
                   />
-                  <TextField
+                  <LabelSelect
                     label={t('dashboard.user.position')}
+                    noneLabel={t('dashboard.user.positionNone')}
                     value={membershipForm.position}
                     onChange={onMembershipField('position')}
+                    options={positionOptions}
+                    kind="position"
+                    t={t}
                   />
                   {membership?.role && (
                     <Typography variant="body2" color="text.secondary">

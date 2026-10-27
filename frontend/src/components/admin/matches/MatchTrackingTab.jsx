@@ -14,6 +14,7 @@ import { alpha } from '@mui/material/styles'
 import { memo } from 'react'
 
 import { translatePositionLabel } from '../../../i18n/labels.js'
+import InlineActionError from './InlineActionError.jsx'
 import ManualEventForm from './ManualEventForm.jsx'
 import { clampTrackedValue, isLiveTrackingStatus, trackingLabel } from './trackingHelpers.js'
 
@@ -65,7 +66,7 @@ function TrackingMetricControl({
             variant="text"
             color={color}
             onClick={onDecrease}
-            disabled={disabled}
+            disabled={disabled || clampTrackedValue(value) <= 0}
             aria-label={`−1 ${context}`}
             sx={{ minWidth: 0, flex: 1 }}
           >
@@ -255,6 +256,7 @@ export default function MatchTrackingTab({
   primaryEventPlayers,
   relatedEventPlayers,
   t,
+  inlineError = '',
 }) {
   return (
     <Card variant="outlined" sx={{ borderColor: trackingIsLive ? 'success.main' : 'divider' }}>
@@ -282,6 +284,8 @@ export default function MatchTrackingTab({
               {t('dashboard.admin.matches.trackingDescription')}
             </Typography>
           </Box>
+
+          <InlineActionError message={inlineError} />
 
           <Box
             sx={(theme) => ({

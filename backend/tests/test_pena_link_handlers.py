@@ -19,12 +19,14 @@ from core.application.ports.pena_link_port import (
     ClaimLinkResult,
     ClaimRegistrationResult,
     ClaimTokenInfoResult,
+    InvalidPositionLabelError,
     PenaLinkTokenResult,
 )
 from core.application.queries.pena_link_queries import InspectClaimTokenQuery
 from core.application.queries.pena_link_query_handlers import InspectClaimTokenHandler
 from core.domain.errors import (
     InvalidLinkTokenError,
+    InvalidPenaPositionError,
     InvalidRegistrationDataError,
     PenaLinkAccessDeniedError,
     PlayerAlreadyClaimedError,
@@ -54,9 +56,12 @@ class _ConsumeRepo:
     should_raise_invalid: bool = False
     should_raise_already_linked: bool = False
     should_raise_user_not_found: bool = False
+    should_raise_invalid_position: bool = False
     last_payload: dict | None = None
 
     def consume_token_for_user(self, *, token: str, account_id: int, nickname, position):
+        if self.should_raise_invalid_position:
+            raise InvalidPositionLabelError()
         if self.should_raise_invalid:
             raise InvalidLinkTokenError()
         if self.should_raise_already_linked:
@@ -315,4 +320,12 @@ def test_link_existing_account_handler_propagates_already_linked():
     with pytest.raises(UserAlreadyLinkedError):
         LinkExistingAccountToClaimHandler(repo).handle(
             LinkExistingAccountToClaimCommand(token="tok-link", account_id=50)
+        )
+
+
+def test_link_handler_maps_invalid_position_to_domain_error():
+    repo = _ConsumeRepo(should_raise_invalid_position=True)
+    with pytest.raises(InvalidPenaPositionError):
+        LinkUserToPenaHandler(repo).handle(
+            LinkUserToPenaCommand(token="token-123", account_id=4, nickname=None, position="12")
         )

@@ -22,6 +22,7 @@ from core.application.queries.pena_season_queries import (
 )
 from core.domain.errors import (
     InvalidPenaSeasonDataError,
+    InvalidSeasonPointsError,
     PenaSeasonAccessDeniedError,
     PenaSeasonDateOverlapError,
     PenaSeasonNotFoundError,
@@ -207,6 +208,7 @@ def test_create_pena_season_success_passes_admin_id_and_payload():
     ("error", "status_code", "detail"),
     [
         (InvalidPenaSeasonDataError(), 400, "Invalid season date range"),
+        (InvalidSeasonPointsError(), 400, "Season points must be non-negative integers"),
         (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
         (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
         (PenaSeasonDateOverlapError(), 409, "Season range overlaps an existing season"),
@@ -248,6 +250,7 @@ def test_update_pena_season_sets_model_fields_flags_for_partial_update():
     ("error", "status_code", "detail"),
     [
         (InvalidPenaSeasonDataError(), 400, "Invalid season update data"),
+        (InvalidSeasonPointsError(), 400, "Season points must be non-negative integers"),
         (PenaSeasonPenaNotFoundError(), 404, "Pena not found"),
         (PenaSeasonNotFoundError(), 404, "Season not found"),
         (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),

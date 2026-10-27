@@ -195,6 +195,7 @@ export const messages = {
     },
     app: {
       brand: 'footballhubmanager',
+      tagline: 'Run your pena: seasons, matches, standings and accounts.',
       auth: {
         sectionTitle: 'Authentication',
         sectionHint: 'Use this panel to sign in or create your account.',
@@ -204,7 +205,6 @@ export const messages = {
       },
       overview: {
         sectionTitle: 'Product overview',
-        sectionHint: 'Core value and capabilities for admins and players.',
         hero: 'Run your pena from invite to final standings in one place.',
         description:
           'footballhubmanager centralizes seasons, memberships, matches, and rankings with clear workflows for admins and players.',
@@ -228,6 +228,9 @@ export const messages = {
           'Register as admin to create your competition, or as player to join a pena in seconds with an invite token.',
       },
       sessionIncomplete: 'Session metadata is incomplete. Please logout and login again.',
+      sessionUnavailable:
+        'We could not check your session because the server is not responding. Try again in a moment.',
+      retry: 'Try again',
     },
     auth: {
       titleLogin: 'Sign in to footballhubmanager',
@@ -315,6 +318,8 @@ export const messages = {
       addAction: 'Add email',
       changeAction: 'Change email',
       changed: 'Email saved. Check your inbox to verify it.',
+      changedResendLater:
+        'Email saved. We just sent you another email, so wait a minute and use "Resend verification".',
       resent: 'Verification email sent. Check your inbox.',
       noticeMissing:
         'Your account has no email. Add one so you can recover your password if you forget it.',
@@ -371,6 +376,7 @@ export const messages = {
         appearanceTitle: 'Appearance & language',
         identityPlaceholder: 'Crest',
         profileImageLabel: 'Pena shield',
+        profilePhotoLabel: 'Profile photo',
         imageEmpty: 'No image selected',
         imageActions: {
           choose: 'Choose image',
@@ -506,6 +512,8 @@ export const messages = {
           w: 'W',
           d: 'D',
           l: 'L',
+          saves: 'Sv',
+          rating: 'Rtg',
           pts: 'Pts',
         },
         overview: {
@@ -546,6 +554,8 @@ export const messages = {
           nextMatchPlace: 'To be confirmed',
           rosterHome: 'Home',
           rosterAway: 'Away',
+          rosterPlayersOne: '{count} player',
+          rosterPlayersOther: '{count} players',
           // stat carousel
           statsTitle: 'Season Stats',
           statClassification: 'Classification',
@@ -655,8 +665,21 @@ export const messages = {
           editAction: 'Edit labels',
           roleLabels: 'Role labels',
           positionLabels: 'Position labels',
-          inputHelper: 'Separate labels with commas or line breaks.',
+          inputHelper:
+            'Separate labels with commas or line breaks. Use rename to change a label without losing its players.',
           save: 'Save labels',
+          usage: { one: '{count} player', other: '{count} players' },
+          renameAction: 'Rename {label}',
+          renameField: 'New name for {label}',
+          renameApply: 'Apply',
+          renameCancel: 'Cancel',
+          renameInvalid: 'Use a non-empty name that is not already in the list',
+          removeTitle: 'Remove labels in use?',
+          removeDescription:
+            'These labels are assigned to players. Players with a removed role get the default member role; players with a removed position are left without position. To keep them, cancel and use rename instead.',
+          removeItem: '{label}: {usage}',
+          removeConfirm: 'Remove and save',
+          removeCancel: 'Back',
           currentCounts: 'Roles: {roles} | Positions: {positions}',
         },
         accountability: {
@@ -668,11 +691,12 @@ export const messages = {
           kpiBalance: 'Total balance',
           kpiBalanceTrend: '{pct} vs last month',
           kpiFees: 'Membership fees',
-          kpiFeesCollected: '{pct}% collected',
+          kpiFeesCollected: '{pct} collected',
           kpiExpenses: 'Total expenses',
           kpiExpensesMonth: '{count} this month',
           kpiDues: 'Outstanding dues',
-          kpiDuesPending: '{count} members pending',
+          kpiDuesPendingOne: '{count} member pending',
+          kpiDuesPendingOther: '{count} members pending',
           // New transaction form
           newTransaction: 'New transaction',
           income: 'Income',
@@ -692,6 +716,9 @@ export const messages = {
           // Ledger
           ledgerTitle: 'Transaction ledger',
           ledgerDescription: 'Detailed history of all movements.',
+          ledgerDescriptionIncome: 'Detailed history of income movements.',
+          ledgerDescriptionExpense: 'Detailed history of expense movements.',
+          ledgerDetailNotShared: 'The admins have not shared the movement details.',
           filterAll: 'All',
           noTransactions: 'No transactions recorded yet.',
           colDate: 'Date',
@@ -705,6 +732,10 @@ export const messages = {
           // Members
           membersTitle: 'Member accounts',
           membersDescription: 'Track what each member owes and has paid. Toggle a row to edit it.',
+          membersManualHint:
+            'Debt and paid are manual adjustments: they do not create ledger movements or change the balance. To register a payment, record an income linked to the member.',
+          note: 'Internal note',
+          noteHelp: 'Only admins see it',
           member: 'Member',
           debt: 'Debt',
           paid: 'Paid',
@@ -746,6 +777,21 @@ export const messages = {
             memberSaved: 'Member account saved',
             memberDeleted: 'Member account removed',
           },
+          validation: {
+            amountRequired: 'Enter an amount',
+            amountPositive: 'The amount must be greater than 0',
+            amountNegative: 'The amount cannot be negative',
+            amountTooLarge: 'The amount is too large (max. 99,999,999.99)',
+            conceptRequired: 'Enter a concept',
+            dateRequired: 'Choose a date',
+          },
+          errors: {
+            amountOutOfRange: 'The amount is out of the allowed range.',
+            invalidData: 'Some data is not valid. Check the form and try again.',
+            memberNotFound: 'That member no longer belongs to the pena.',
+            transactionNotFound: 'That transaction no longer exists.',
+            accessDenied: 'You do not manage this pena.',
+          },
         },
         guest: {
           title: 'Guest Players',
@@ -761,6 +807,10 @@ export const messages = {
           positionNone: 'No position',
           createGuest: 'Create Guest',
           createAndAdd: 'Create + Add To Season',
+          newPlayerTitle: 'New player',
+          requiredField: 'This field is required',
+          duplicateWarning: 'A player with the same name already exists: {players}.',
+          duplicateConfirm: 'Create it anyway',
         },
         members: {
           title: 'Pena Members',
@@ -823,7 +873,7 @@ export const messages = {
           sortStatusActive: 'Active first',
           sortStatusInactive: 'Inactive first',
           showingOfTotal: 'Showing {shown} of {total} players registered',
-          rowActionEdit: 'Edit player',
+          rowActionEdit: 'Edit membership',
           rowActionEditStats: 'Edit season stats',
           rowActionAddToSeason: 'Add to season',
           rowActionRemoveFromSeason: 'Remove from season',
@@ -850,7 +900,7 @@ export const messages = {
           actions: 'Actions',
           result: 'Result',
           resultSource: 'Update source',
-          finalScore: 'Final score',
+          finalScore: 'Final score: {score}',
           scoreFromStats: 'Set score from team/player stats.',
           scoreFromTracking: 'Preview from live tracking timeline.',
           manageStats: 'Manage stats',
@@ -946,6 +996,8 @@ export const messages = {
           eventPlayerOptional: 'No player selected',
           eventRelatedPlayer: 'Related player',
           eventRelatedPlayerOptional: 'No related player',
+          eventRelatedPlayerGoalHint:
+            'Informational only: it does not count as an assist. Log the assist with an Assist event.',
           eventMinute: 'Minute',
           eventSecond: 'Second',
           eventNote: 'Note',
@@ -997,7 +1049,7 @@ export const messages = {
           moveToAway: 'To away',
           removeFromLineup: 'Remove',
           createDetailedMatch: 'Create Detailed Match',
-          matchCreated: 'Match {guid} created for {date}.',
+          matchCreated: 'Match {home} vs {away} created for {date}.',
           lineupHelperTitle: 'Lineup Helper',
           lineupHelperDescription:
             'Select players from the selected season roster to compose lineups.',
@@ -1121,7 +1173,10 @@ export const messages = {
           claimLinkGenerated: 'Claim link generated',
           guestCreatedAdded: 'Guest created and added to selected season',
           guestCreated: 'Guest player created',
-          playersAdded: '{count} player{suffix} added to season',
+          playersAdded: {
+            one: '{count} player added to the season',
+            other: '{count} players added to the season',
+          },
           seasonPlayerUpdated: 'Season player updated',
           seasonPlayerRemoved: 'Player removed from season',
           membershipUpdatedByAdmin: 'Membership updated',
@@ -1137,7 +1192,7 @@ export const messages = {
             'Lineups cannot be changed after the match clock starts or when timeline events already exist.',
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
-            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
+            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be between 0 and 10',
           invalidMatchEventElapsed:
             'Event time must use a valid minute and a second between 0 and 59.',
           invalidMatchEventDelta: 'Event action must be increase or decrease.',
@@ -1157,6 +1212,10 @@ export const messages = {
           invalidPenaLabels:
             'Role and position labels are required. Use commas or line breaks to separate values.',
           selectedSeasonRequired: 'Select a season to complete this action',
+          matchDateRequired: 'Select a match date',
+          matchDateOutsideSeason: 'The match date must be within the season ({start} – {end})',
+          seasonPointsRequired: 'Points are required',
+          seasonPointsInvalid: 'Use an integer greater than or equal to zero',
         },
       },
       user: {
@@ -1187,7 +1246,8 @@ export const messages = {
         inviteCode: 'Invite code',
         invitePlaceholder: 'Paste invite token',
         nicknameOptional: 'Nickname (optional)',
-        positionOptional: 'Position (optional)',
+        joinPositionHint:
+          "After joining, you can pick your position from the pena's list in My Penas.",
         join: 'Join',
         myPenasTitle: 'My Penas',
         accountabilityTitle: 'Accountability',
@@ -1199,6 +1259,7 @@ export const messages = {
         membershipIn: 'Membership in {name}',
         nickname: 'Nickname',
         position: 'Position',
+        positionNone: 'No position',
         role: 'Role: {role}',
         saveMembership: 'Save membership',
         leavePena: 'Leave pena',
@@ -1254,7 +1315,7 @@ export const messages = {
           player: 'Player',
           role: 'Role',
           position: 'Position',
-          played: 'PJ',
+          played: 'P',
           goals: 'G',
           assists: 'A',
           w: 'W',
@@ -1283,6 +1344,14 @@ export const messages = {
           nationality: 'Nationality',
         },
       },
+    },
+    apiErrors: {
+      seasonOverlap: 'The season dates overlap an existing season.',
+      seasonDateRange: 'The season start date must be before or equal to its end date.',
+      seasonData: 'The season data is not valid.',
+      seasonPoints: 'Season points must be integers greater than or equal to zero.',
+      guestPlayerData: 'Name, first surname and nationality are required to create the player.',
+      linkToken: 'This link or code is invalid or has expired.',
     },
     language: {
       label: 'Language',
@@ -1503,6 +1572,7 @@ export const messages = {
     },
     app: {
       brand: 'footballhubmanager',
+      tagline: 'Gestiona tu peña: temporadas, partidos, clasificación y cuentas.',
       auth: {
         sectionTitle: 'Autenticación',
         sectionHint: 'Usa este panel para iniciar sesión o crear tu cuenta.',
@@ -1512,7 +1582,6 @@ export const messages = {
       },
       overview: {
         sectionTitle: 'Resumen del producto',
-        sectionHint: 'Valor principal y capacidades para admins y jugadores.',
         hero: 'Gestiona tu peña desde la invitación hasta la tabla final en un solo lugar.',
         description:
           'footballhubmanager centraliza temporadas, membresías, partidos y clasificaciones con flujos claros para admins y jugadores.',
@@ -1537,6 +1606,9 @@ export const messages = {
       },
       sessionIncomplete:
         'Los metadatos de sesión están incompletos. Cierra sesión y vuelve a iniciar.',
+      sessionUnavailable:
+        'No hemos podido comprobar tu sesión porque el servidor no responde. Inténtalo de nuevo en un momento.',
+      retry: 'Reintentar',
     },
     auth: {
       titleLogin: 'Inicia sesión en footballhubmanager',
@@ -1627,6 +1699,8 @@ export const messages = {
       addAction: 'Añadir email',
       changeAction: 'Cambiar email',
       changed: 'Email guardado. Revisa tu bandeja de entrada para verificarlo.',
+      changedResendLater:
+        'Email guardado. Acabamos de enviarte otro email, así que espera un minuto y pulsa "Reenviar verificación".',
       resent: 'Email de verificación enviado. Revisa tu bandeja de entrada.',
       noticeMissing:
         'Tu cuenta no tiene email. Añade uno para poder recuperar tu contraseña si la olvidas.',
@@ -1683,6 +1757,7 @@ export const messages = {
         appearanceTitle: 'Apariencia e idioma',
         identityPlaceholder: 'Escudo',
         profileImageLabel: 'Escudo de la peña',
+        profilePhotoLabel: 'Foto de perfil',
         imageEmpty: 'No hay imagen seleccionada',
         imageActions: {
           choose: 'Elegir imagen',
@@ -1822,6 +1897,8 @@ export const messages = {
           w: 'V',
           d: 'E',
           l: 'D',
+          saves: 'Par',
+          rating: 'Val',
           pts: 'Pts',
         },
         overview: {
@@ -1860,6 +1937,8 @@ export const messages = {
           nextMatchPlace: 'Por confirmar',
           rosterHome: 'Local',
           rosterAway: 'Visitante',
+          rosterPlayersOne: '{count} jugador',
+          rosterPlayersOther: '{count} jugadores',
           statsTitle: 'Estadísticas de temporada',
           statClassification: 'Clasificación',
           statGoalsByMatchday: 'Goles por jornada',
@@ -1882,7 +1961,7 @@ export const messages = {
           versus: 'vs',
           rankingTitle: 'Ranking de rendimiento',
           rankingTop: 'Top {n}',
-          rankingLineItem: '{played}J · {wins}G · {draws}E · {points} PTS',
+          rankingLineItem: '{played}PJ · {wins}V · {draws}E · {points} PTS',
           recentMatchesTitle: 'Historial de partidos',
           recentMatchesLast: 'Últimos {n}',
           viewFullHistory: 'Ver historial completo',
@@ -1971,8 +2050,21 @@ export const messages = {
           editAction: 'Editar etiquetas',
           roleLabels: 'Etiquetas de rol',
           positionLabels: 'Etiquetas de posición',
-          inputHelper: 'Separa etiquetas por comas o saltos de línea.',
+          inputHelper:
+            'Separa etiquetas por comas o saltos de línea. Usa renombrar para cambiar una etiqueta sin perder sus jugadores.',
           save: 'Guardar etiquetas',
+          usage: { one: '{count} jugador', other: '{count} jugadores' },
+          renameAction: 'Renombrar {label}',
+          renameField: 'Nuevo nombre para {label}',
+          renameApply: 'Aplicar',
+          renameCancel: 'Cancelar',
+          renameInvalid: 'Usa un nombre no vacío que no esté ya en la lista',
+          removeTitle: '¿Eliminar etiquetas en uso?',
+          removeDescription:
+            'Estas etiquetas están asignadas a jugadores. Los jugadores con un rol eliminado pasan al rol de miembro por defecto; los que tengan una posición eliminada se quedan sin posición. Para conservarlos, vuelve atrás y usa renombrar.',
+          removeItem: '{label}: {usage}',
+          removeConfirm: 'Eliminar y guardar',
+          removeCancel: 'Volver',
           currentCounts: 'Roles: {roles} | Posiciones: {positions}',
         },
         accountability: {
@@ -1984,11 +2076,12 @@ export const messages = {
           kpiBalance: 'Balance total',
           kpiBalanceTrend: '{pct} vs mes anterior',
           kpiFees: 'Cuotas de socios',
-          kpiFeesCollected: '{pct}% cobrado',
+          kpiFeesCollected: '{pct} cobrado',
           kpiExpenses: 'Gastos totales',
           kpiExpensesMonth: '{count} este mes',
           kpiDues: 'Deuda pendiente',
-          kpiDuesPending: '{count} socios pendientes',
+          kpiDuesPendingOne: '{count} socio pendiente',
+          kpiDuesPendingOther: '{count} socios pendientes',
           // Formulario de nuevo movimiento
           newTransaction: 'Nuevo movimiento',
           income: 'Ingreso',
@@ -2008,6 +2101,10 @@ export const messages = {
           // Libro de movimientos
           ledgerTitle: 'Libro de movimientos',
           ledgerDescription: 'Historial detallado de todos los movimientos.',
+          ledgerDescriptionIncome: 'Historial detallado de los ingresos.',
+          ledgerDescriptionExpense: 'Historial detallado de los gastos.',
+          ledgerDetailNotShared:
+            'Los administradores no han compartido el detalle de los movimientos.',
           filterAll: 'Todos',
           noTransactions: 'Aún no hay movimientos registrados.',
           colDate: 'Fecha',
@@ -2022,6 +2119,10 @@ export const messages = {
           membersTitle: 'Cuentas de socios',
           membersDescription:
             'Controla lo que debe y ha pagado cada socio. Activa una fila para editarla.',
+          membersManualHint:
+            'Deuda y pagado son ajustes manuales: no crean movimientos ni cambian el balance. Para registrar un pago, añade un ingreso vinculado al socio.',
+          note: 'Nota interna',
+          noteHelp: 'Solo la ven los administradores',
           member: 'Miembro',
           debt: 'Deuda',
           paid: 'Pagado',
@@ -2062,6 +2163,21 @@ export const messages = {
             memberSaved: 'Cuenta de miembro guardada',
             memberDeleted: 'Cuenta de miembro eliminada',
           },
+          validation: {
+            amountRequired: 'Introduce un importe',
+            amountPositive: 'El importe debe ser mayor que 0',
+            amountNegative: 'El importe no puede ser negativo',
+            amountTooLarge: 'El importe es demasiado alto (máx. 99.999.999,99)',
+            conceptRequired: 'Introduce un concepto',
+            dateRequired: 'Elige una fecha',
+          },
+          errors: {
+            amountOutOfRange: 'El importe está fuera del rango permitido.',
+            invalidData: 'Hay datos no válidos. Revisa el formulario e inténtalo de nuevo.',
+            memberNotFound: 'Ese socio ya no pertenece a la peña.',
+            transactionNotFound: 'Ese movimiento ya no existe.',
+            accessDenied: 'No administras esta peña.',
+          },
         },
         guest: {
           title: 'Jugadores invitados',
@@ -2077,6 +2193,10 @@ export const messages = {
           positionNone: 'Sin posición',
           createGuest: 'Crear invitado',
           createAndAdd: 'Crear + añadir a temporada',
+          newPlayerTitle: 'Nuevo jugador',
+          requiredField: 'Este campo es obligatorio',
+          duplicateWarning: 'Ya existe un jugador con el mismo nombre: {players}.',
+          duplicateConfirm: 'Crearlo de todos modos',
         },
         members: {
           title: 'Miembros de la peña',
@@ -2139,7 +2259,7 @@ export const messages = {
           sortStatusActive: 'Activos primero',
           sortStatusInactive: 'Inactivos primero',
           showingOfTotal: 'Mostrando {shown} de {total} jugadores registrados',
-          rowActionEdit: 'Editar jugador',
+          rowActionEdit: 'Editar membresía',
           rowActionEditStats: 'Editar stats de temporada',
           rowActionAddToSeason: 'Añadir a temporada',
           rowActionRemoveFromSeason: 'Quitar de temporada',
@@ -2166,7 +2286,7 @@ export const messages = {
           actions: 'Acciones',
           result: 'Resultado',
           resultSource: 'Origen de actualización',
-          finalScore: 'Marcador final',
+          finalScore: 'Marcador final: {score}',
           scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
           scoreFromTracking: 'Vista previa desde la cronología del seguimiento en vivo.',
           manageStats: 'Editar estadísticas',
@@ -2263,6 +2383,8 @@ export const messages = {
           eventPlayerOptional: 'Sin jugador',
           eventRelatedPlayer: 'Jugador relacionado',
           eventRelatedPlayerOptional: 'Sin jugador relacionado',
+          eventRelatedPlayerGoalHint:
+            'Solo informativo: no cuenta como asistencia. Registra la asistencia con un evento Asistencia.',
           eventMinute: 'Minuto',
           eventSecond: 'Segundo',
           eventNote: 'Nota',
@@ -2314,7 +2436,7 @@ export const messages = {
           moveToAway: 'Mover a visitante',
           removeFromLineup: 'Quitar',
           createDetailedMatch: 'Crear partido detallado',
-          matchCreated: 'Partido {guid} creado para {date}.',
+          matchCreated: 'Partido {home} vs {away} creado para el {date}.',
           lineupHelperTitle: 'Asistente de alineación',
           lineupHelperDescription:
             'Selecciona jugadores de la plantilla de la temporada seleccionada para componer alineaciones.',
@@ -2440,7 +2562,10 @@ export const messages = {
           claimLinkGenerated: 'Enlace de invitación generado',
           guestCreatedAdded: 'Invitado creado y añadido a la temporada seleccionada',
           guestCreated: 'Jugador invitado creado',
-          playersAdded: '{count} jugador{suffix} añadido a la temporada',
+          playersAdded: {
+            one: '{count} jugador añadido a la temporada',
+            other: '{count} jugadores añadidos a la temporada',
+          },
           seasonPlayerUpdated: 'Jugador de temporada actualizado',
           seasonPlayerRemoved: 'Jugador quitado de la temporada',
           membershipUpdatedByAdmin: 'Membresía actualizada',
@@ -2457,7 +2582,7 @@ export const messages = {
           invalidMatchResult:
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
-            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
+            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe estar entre 0 y 10',
           invalidMatchEventElapsed:
             'El tiempo del evento debe usar un minuto válido y un segundo entre 0 y 59.',
           invalidMatchEventDelta: 'La acción del evento debe ser incrementar o disminuir.',
@@ -2478,6 +2603,11 @@ export const messages = {
           invalidPenaLabels:
             'Las etiquetas de rol y posición son obligatorias. Usa comas o saltos de línea para separarlas.',
           selectedSeasonRequired: 'Selecciona una temporada para completar esta acción',
+          matchDateRequired: 'Selecciona la fecha del partido',
+          matchDateOutsideSeason:
+            'La fecha del partido debe estar dentro de la temporada ({start} – {end})',
+          seasonPointsRequired: 'Los puntos son obligatorios',
+          seasonPointsInvalid: 'Usa un número entero mayor o igual que cero',
         },
       },
       user: {
@@ -2511,7 +2641,8 @@ export const messages = {
         inviteCode: 'Código de invitación',
         invitePlaceholder: 'Pega el token de invitación',
         nicknameOptional: 'Apodo (opcional)',
-        positionOptional: 'Posición (opcional)',
+        joinPositionHint:
+          'Tras unirte, podrás elegir tu posición de la lista de la peña en Mis peñas.',
         join: 'Unirme',
         myPenasTitle: 'Mis peñas',
         accountabilityTitle: 'Contabilidad',
@@ -2523,6 +2654,7 @@ export const messages = {
         membershipIn: 'Membresía en {name}',
         nickname: 'Apodo',
         position: 'Posición',
+        positionNone: 'Sin posición',
         role: 'Rol: {role}',
         saveMembership: 'Guardar membresía',
         leavePena: 'Salir de la peña',
@@ -2608,6 +2740,16 @@ export const messages = {
           nationality: 'Nacionalidad',
         },
       },
+    },
+    apiErrors: {
+      seasonOverlap: 'Las fechas de la temporada se solapan con otra temporada existente.',
+      seasonDateRange:
+        'La fecha de inicio de la temporada debe ser anterior o igual a la fecha de fin.',
+      seasonData: 'Los datos de la temporada no son válidos.',
+      seasonPoints: 'Los puntos de temporada deben ser enteros mayores o iguales a cero.',
+      guestPlayerData:
+        'El nombre, el primer apellido y la nacionalidad son obligatorios para crear el jugador.',
+      linkToken: 'Este enlace o código no es válido o ha caducado.',
     },
     language: {
       label: 'Idioma',

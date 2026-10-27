@@ -465,7 +465,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                 display: 'grid',
                 placeItems: 'center',
                 color: 'common.white',
-                background: 'linear-gradient(160deg, rgba(21,33,55,1) 0%, rgba(22,84,84,1) 85%)',
+                background: theme.custom.gradients.brand,
                 boxShadow: '0 12px 24px rgba(15, 23, 42, 0.2)',
               }}
             >
@@ -664,7 +664,7 @@ export default function DashboardShell({
         railLabel={railLabel}
       />
 
-      <Stack flex={1} spacing={2} sx={{ minWidth: 0 }}>
+      <Stack useFlexGap flex={1} spacing={2} sx={{ minWidth: 0 }}>
         <Paper
           elevation={0}
           sx={{
@@ -725,7 +725,7 @@ export default function DashboardShell({
             justifyContent="space-between"
             alignItems={{ xs: 'flex-start', sm: 'center' }}
             spacing={2}
-            sx={{ px: 0.5, mt: 0.5 }}
+            sx={{ px: 0.5 }}
           >
             <Stack spacing={0.6} sx={{ minWidth: 0, flexGrow: 1 }}>
               <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap" useFlexGap>
@@ -788,7 +788,9 @@ export default function DashboardShell({
           </Grid>
         ) : null}
 
-        <Stack spacing={1.5}>{children}</Stack>
+        <Stack useFlexGap spacing={1.5}>
+          {children}
+        </Stack>
       </Stack>
     </Box>
   )

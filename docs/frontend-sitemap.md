@@ -112,7 +112,7 @@ Global tokens and behavior are centralized in:
 
 1. Add or update the section definition in `frontend/src/navigation/sitemap.js`.
 2. Render the section in the role dashboard (`AdminDashboard` or `UserDashboard`).
-3. Ensure route normalization (default/invalid section behavior) in route pages under `frontend/src/pages/*RoutePage.jsx`.
+3. Ensure route normalization (default/invalid section behavior) in `frontend/src/pages/*RoutePage.jsx`; section routes are generated from the sitemap ids in `frontend/src/router/AppRouter.jsx`.
 4. If user-facing anchor navigation is needed, assign an anchor id and mark it as `data-sitemap-anchor`.
 5. Add i18n labels in `frontend/src/i18n/messages.js`.
 6. Validate with `npm --prefix frontend run check`.

@@ -9,6 +9,8 @@ import {
   TableRow,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { stickyLastColumnSx } from './responsiveTable.js'
+import { touchTargetSx } from './touchTarget.js'
 
 /**
  * Generic, self-paginating table. Centralizes the duplicated TablePagination
@@ -25,6 +27,7 @@ import { useEffect, useMemo, useState } from 'react'
  *  - onRowClick?: (row, index) => void
  *  - labelRowsPerPage?: string
  *  - minWidth?: number
+ *  - stickyLastColumn?: boolean â€” pin the last (actions) column while scrolling
  */
 export default function PaginatedTable({
   columns = [],
@@ -37,6 +40,7 @@ export default function PaginatedTable({
   onRowClick = null,
   labelRowsPerPage,
   minWidth,
+  stickyLastColumn = false,
 }) {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage)
@@ -67,7 +71,13 @@ export default function PaginatedTable({
   return (
     <Box sx={{ width: '100%' }}>
       <TableContainer>
-        <Table size={size} sx={minWidth ? { minWidth } : undefined}>
+        <Table
+          size={size}
+          sx={{
+            ...(minWidth ? { minWidth } : {}),
+            ...(stickyLastColumn ? stickyLastColumnSx : {}),
+          }}
+        >
           <TableHead>
             <TableRow>
               {columns.map((column) => (
@@ -110,6 +120,7 @@ export default function PaginatedTable({
           onRowsPerPageChange={handleChangeRowsPerPage}
           rowsPerPageOptions={rowsPerPageOptions}
           labelRowsPerPage={labelRowsPerPage}
+          sx={{ '& .MuiTablePagination-actions .MuiIconButton-root': touchTargetSx }}
         />
       ) : null}
     </Box>

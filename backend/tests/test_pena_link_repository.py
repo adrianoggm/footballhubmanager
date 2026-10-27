@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from core.application.ports.pena_link_port import InvalidPositionLabelError
 from core.domain.errors import (
     InvalidLinkTokenError,
     PenaLinkAccessDeniedError,
@@ -163,7 +164,7 @@ def test_inspect_claim_token_returns_preview():
 
     assert info.pena_name == "Los Amigos"
     assert info.player_guid == "player-200"
-    assert info.player_name == "Ana"
+    assert info.player_name == "Ana Lopez"
     assert info.player_nickname == "Nani"
 
 
@@ -393,10 +394,69 @@ def test_consume_token_links_own_player_for_generic_token():
     _make_token(db, token="generic", id_player=None)
     repo = SqlAlchemyPenaLinkRepository(db)
 
-    repo.consume_token_for_user(token="generic", account_id=50, nickname="Nick", position="GK")
+    repo.consume_token_for_user(token="generic", account_id=50, nickname="Nick", position="Keeper")
 
     membership = db.execute(
         select(PenaPlayer).where(PenaPlayer.id_player == 60, PenaPlayer.id_pena == 100)
     ).scalar_one()
     assert membership.nickname == "Nick"
+    # Stored with the pena's canonical label casing.
+    assert membership.position == "keeper"
     assert db.execute(select(PenaLinkToken).where(PenaLinkToken.token == "generic")).first() is None
+
+
+def test_consume_token_rejects_free_text_position_and_keeps_token():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    _make_token(db, token="generic", id_player=None)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(InvalidPositionLabelError):
+        repo.consume_token_for_user(token="generic", account_id=50, nickname=None, position="12")
+
+    assert (
+        db.execute(
+            select(PenaPlayer).where(PenaPlayer.id_player == 60, PenaPlayer.id_pena == 100)
+        ).first()
+        is None
+    )
+    # The invite survives so the user can retry with a valid position.
+    assert db.execute(select(PenaLinkToken).where(PenaLinkToken.token == "generic")).first()
+
+
+def test_consume_token_validates_against_pena_custom_position_labels():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    pena = db.get(Pena, 100)
+    pena.position_labels = '["Portero", "Delantero"]'
+    db.commit()
+    _make_token(db, token="generic", id_player=None)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    with pytest.raises(InvalidPositionLabelError):
+        repo.consume_token_for_user(
+            token="generic", account_id=50, nickname=None, position="keeper"
+        )
+
+    repo.consume_token_for_user(token="generic", account_id=50, nickname=None, position="portero")
+    membership = db.execute(
+        select(PenaPlayer).where(PenaPlayer.id_player == 60, PenaPlayer.id_pena == 100)
+    ).scalar_one()
+    assert membership.position == "Portero"
+
+
+def test_consume_token_without_position_links_with_no_position():
+    db = _db_session()
+    _seed(db)
+    _seed_existing_account(db)
+    _make_token(db, token="generic", id_player=None)
+    repo = SqlAlchemyPenaLinkRepository(db)
+
+    repo.consume_token_for_user(token="generic", account_id=50, nickname=None, position=None)
+
+    membership = db.execute(
+        select(PenaPlayer).where(PenaPlayer.id_player == 60, PenaPlayer.id_pena == 100)
+    ).scalar_one()
+    assert membership.position is None

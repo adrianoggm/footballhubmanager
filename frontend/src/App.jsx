@@ -1,4 +1,5 @@
 import { useAuth } from './hooks/useAuth.js'
+import SessionUnavailablePage from './pages/SessionUnavailablePage.jsx'
 import AppRouter from './router/AppRouter.jsx'
 
 export default function App() {
@@ -16,6 +17,10 @@ export default function App() {
   // reload doesn't bounce an authenticated user through the logged-out routes.
   if (auth.status === 'restoring') {
     return null
+  }
+
+  if (auth.status === 'unavailable') {
+    return <SessionUnavailablePage onRetry={auth.retryRestore} />
   }
 
   return <AppRouter auth={auth} onLogout={handleLogout} />

@@ -13,7 +13,8 @@ const ICONS = {
 
 function ActionTile({ icon, title, desc, onClick }) {
   const theme = useTheme()
-  const accent = '#FCB491' // design-system peach accent for quick actions
+  const { surfaces, tones } = theme.custom
+  const accent = tones.accentStrong // design-system accent for quick actions
   const radius = theme.custom?.dashboard?.radius?.surface || '14px'
   const badgeRadius = theme.custom?.dashboard?.radius?.badge || '10px'
   const isDark = theme.palette.mode === 'dark'
@@ -29,7 +30,7 @@ function ActionTile({ icon, title, desc, onClick }) {
         p: 1.75,
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.07 : 0.09)}`,
-        backgroundColor: '#1E1E1E',
+        backgroundColor: surfaces.card,
         transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
         '&:hover': {
           transform: 'translateY(-2px)',
@@ -53,6 +54,7 @@ function ActionTile({ icon, title, desc, onClick }) {
           <Box
             component="span"
             className="material-symbols-rounded"
+            aria-hidden="true"
             sx={{
               fontSize: 24,
               fontVariationSettings: "'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24",
@@ -75,7 +77,7 @@ function ActionTile({ icon, title, desc, onClick }) {
           </Typography>
           <Typography
             color="text.secondary"
-            sx={{ fontSize: '0.8rem', lineHeight: 1.35, color: '#88736A' }}
+            sx={{ fontSize: '0.8rem', lineHeight: 1.35, color: tones.muted }}
           >
             {desc}
           </Typography>

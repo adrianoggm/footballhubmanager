@@ -72,6 +72,8 @@ from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchDateOutsideSeasonError,
+    SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
@@ -1034,6 +1036,11 @@ def test_create_season_match_event_success():
             409,
             "Event players must belong to the selected match",
         ),
+        (
+            SeasonMatchEventCountBelowZeroError(),
+            400,
+            "The player has no recorded events of this type to remove",
+        ),
     ],
 )
 def test_create_season_match_event_maps_domain_errors(error, status_code, detail):
@@ -1475,6 +1482,9 @@ def test_update_season_match_result_maps_domain_errors(error, status_code, detai
     assert exc.value.detail == detail
 
 
+_DATE_OUTSIDE_SEASON_DETAIL = "The match date must fall within the season dates"
+
+
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
     [
@@ -1483,6 +1493,11 @@ def test_update_season_match_result_maps_domain_errors(error, status_code, detai
         (PenaSeasonNotFoundError(), 404, "Season not found"),
         (PenaSeasonAccessDeniedError(), 403, "Admin does not manage this pena"),
         (SeasonMatchNotFoundError(), 404, "Match not found"),
+        (
+            SeasonMatchDateOutsideSeasonError(),
+            400,
+            "The match date must fall within the season dates",
+        ),
     ],
 )
 def test_update_season_match_maps_domain_errors(error, status_code, detail):
@@ -1517,6 +1532,11 @@ def test_update_season_match_maps_domain_errors(error, status_code, detail):
             "All called-up players must be registered in this season",
         ),
         (SeasonPlayerNotFoundError(), 404, "Player not found"),
+        (
+            SeasonMatchDateOutsideSeasonError(),
+            400,
+            "The match date must fall within the season dates",
+        ),
     ],
 )
 def test_create_season_match_with_lineups_maps_domain_errors(error, status_code, detail):
@@ -1742,3 +1762,12 @@ def test_get_season_standings_maps_not_found_errors(error, detail):
 
     assert exc.value.status_code == 404
     assert exc.value.detail == detail
+
+
+# MT-09: ratings above 10 are rejected at the API boundary (422).
+def test_match_player_stats_request_bounds_rating_to_ten():
+    from pydantic import ValidationError
+
+    assert MatchPlayerStatsRequest(player_guid="p1", rating=10).rating == 10
+    with pytest.raises(ValidationError):
+        MatchPlayerStatsRequest(player_guid="p1", rating=10.5)

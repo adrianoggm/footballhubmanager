@@ -46,7 +46,7 @@ export default function ManualEventForm({
       </Button>
 
       <Collapse in={show}>
-        <Stack spacing={2}>
+        <Stack useFlexGap spacing={2}>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('dashboard.admin.matches.manualEventTitle')}
@@ -130,6 +130,11 @@ export default function ManualEventForm({
                 label={t('dashboard.admin.matches.eventRelatedPlayer')}
                 value={matchEventDraft?.related_player_guid || ''}
                 onChange={onMatchEventDraftField('related_player_guid')}
+                helperText={
+                  (matchEventDraft?.event_type || 'goal') === 'goal'
+                    ? t('dashboard.admin.matches.eventRelatedPlayerGoalHint')
+                    : undefined
+                }
               >
                 <MenuItem value="">
                   {t('dashboard.admin.matches.eventRelatedPlayerOptional')}

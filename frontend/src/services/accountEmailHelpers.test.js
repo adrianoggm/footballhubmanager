@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   EMAIL_NOTICE,
   accountEmailErrorKey,
+  changeEmailSuccessKey,
   isValidEmail,
   normalizeEmail,
   resolveEmailNotice,
@@ -58,5 +59,33 @@ describe('error keys', () => {
     expect(tokenErrorKey({ status: 410 })).toBe('passwordRecovery.errors.expiredToken')
     expect(tokenErrorKey({ status: 400 })).toBe('passwordRecovery.errors.invalidToken')
     expect(tokenErrorKey({ status: 500 })).toBe('passwordRecovery.errors.generic')
+  })
+})
+
+describe('changeEmailSuccessKey', () => {
+  it('asks to check the inbox when the verification email was sent', () => {
+    expect(
+      changeEmailSuccessKey({
+        email: 'a@x.es',
+        email_verified: false,
+        verification_email_sent: true,
+      })
+    ).toBe('accountEmail.changed')
+  })
+
+  it('tells the user to resend later when the email was deferred by the cooldown (F8)', () => {
+    expect(
+      changeEmailSuccessKey({
+        email: 'a@x.es',
+        email_verified: false,
+        verification_email_sent: false,
+      })
+    ).toBe('accountEmail.changedResendLater')
+  })
+
+  it('keeps the default message for older responses without the flag', () => {
+    expect(changeEmailSuccessKey({ email: 'a@x.es', email_verified: false })).toBe(
+      'accountEmail.changed'
+    )
   })
 })

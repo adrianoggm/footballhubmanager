@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 import pytest
 from core.application.commands.pena_accountability_command_handlers import (
+    MAX_AMOUNT_CENTS,
     RecordTransactionHandler,
     RemoveMemberAccountHandler,
     RemoveTransactionHandler,
@@ -32,10 +33,12 @@ from core.application.queries.pena_accountability_query_handlers import (
     GetPenaAccountabilityHandler,
     GetPlayerGuidForAccountHandler,
     ListPenaTransactionsHandler,
+    to_accountability_info,
 )
 from core.domain.errors import (
     InvalidPenaAccountabilityDataError,
     PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
     PenaAccountabilityTransactionNotFoundError,
@@ -186,25 +189,6 @@ def test_get_handler_computes_kpis():
     assert result.membership_collected_pct == 38.5
     assert result.members_pending_count == 2
     assert result.expenses_this_month_count == 1
-    # net this month 700 vs prev 600 -> +16.7%
-    assert result.balance_trend_pct == 16.7
-
-
-def test_get_handler_trend_is_none_without_prior_month():
-    repo = _FakeRepo()
-    single_month = PenaAccountabilityResult(
-        **{
-            **repo._sample_result().__dict__,
-            "monthly_cashflow": [
-                PenaMonthlyCashflowResult(year=2026, month=1, income_cents=100, expense_cents=0)
-            ],
-        }
-    )
-    repo.get_for_pena = lambda *, pena_guid: single_month
-    result = GetPenaAccountabilityHandler(repo).handle(
-        GetPenaAccountabilityQuery(pena_guid="pena-guid")
-    )
-    assert result.balance_trend_pct is None
 
 
 def test_get_handler_propagates_not_found():
@@ -485,3 +469,108 @@ def test_remove_transaction_propagates_not_found():
         RemoveTransactionHandler(_FakeRepo(should_raise_transaction_not_found=True)).handle(
             RemoveTransactionCommand(pena_guid="pena-guid", admin_id=1, transaction_guid="tx-x")
         )
+
+
+def _record(amount_cents):
+    return RecordTransactionHandler(_FakeRepo()).handle(
+        RecordTransactionCommand(
+            pena_guid="pena-guid",
+            admin_id=1,
+            type="income",
+            amount_cents=amount_cents,
+            concept="X",
+            occurred_on=date(2026, 1, 1),
+        )
+    )
+
+
+def test_record_transaction_rejects_absurd_amount():
+    """MO-04: 99999999999999999 overflowed the DB column and returned a 500."""
+    with pytest.raises(PenaAccountabilityAmountOutOfRangeError):
+        _record(99_999_999_999_999_999)
+
+
+def test_record_transaction_accepts_max_amount():
+    _record(MAX_AMOUNT_CENTS)
+
+
+def test_record_transaction_rejects_zero_amount():
+    """MO-03: a 0 EUR movement is meaningless and was being stored."""
+    with pytest.raises(PenaAccountabilityAmountOutOfRangeError):
+        _record(0)
+
+
+@pytest.mark.parametrize("field", ["debt_cents", "contribution_cents"])
+def test_upsert_member_rejects_absurd_amounts(field):
+    """MO-04: member debt/paid share the transaction upper bound."""
+    with pytest.raises(PenaAccountabilityAmountOutOfRangeError):
+        UpsertMemberAccountHandler(_FakeRepo()).handle(
+            UpsertMemberAccountCommand(
+                pena_guid="pena-guid",
+                admin_id=1,
+                player_guid="player-1",
+                **{field: 10**17},
+            )
+        )
+
+
+def test_upsert_member_still_accepts_zero():
+    repo = _FakeRepo()
+    UpsertMemberAccountHandler(repo).handle(
+        UpsertMemberAccountCommand(
+            pena_guid="pena-guid", admin_id=1, player_guid="p", debt_cents=0, contribution_cents=0
+        )
+    )
+    assert repo.last_call["debt_cents"] == 0
+
+
+def _trend_for(monthly, *, opening=10_000, today=date(2026, 1, 20)):
+    base = _FakeRepo._sample_result()
+    income = sum(item.income_cents for item in monthly)
+    expense = sum(item.expense_cents for item in monthly)
+    result = PenaAccountabilityResult(
+        **{
+            **base.__dict__,
+            "opening_balance_cents": opening,
+            "total_income_cents": income,
+            "total_expense_cents": expense,
+            "monthly_cashflow": monthly,
+        }
+    )
+    return to_accountability_info(result, today=today).balance_trend_pct
+
+
+def test_balance_trend_compares_balance_not_net_flow():
+    """MO-15: +1588.6% came from comparing this month's net flow with last month's.
+
+    Balance end of Dec = 10_000 + 1_000 - 400 = 10_600; now = 10_600 + 700 = 11_300.
+    """
+    monthly = [
+        PenaMonthlyCashflowResult(year=2025, month=12, income_cents=1_000, expense_cents=400),
+        PenaMonthlyCashflowResult(year=2026, month=1, income_cents=1_500, expense_cents=800),
+    ]
+    assert _trend_for(monthly) == 6.6
+
+
+def test_balance_trend_after_a_negative_month_is_bounded():
+    # Dec net -1_000, Jan net +2_000: old formula gave -300%; balance went 9_000 -> 11_000.
+    monthly = [
+        PenaMonthlyCashflowResult(year=2025, month=12, income_cents=0, expense_cents=1_000),
+        PenaMonthlyCashflowResult(year=2026, month=1, income_cents=2_000, expense_cents=0),
+    ]
+    assert _trend_for(monthly) == 22.2
+
+
+def test_balance_trend_is_zero_without_movements_this_month():
+    monthly = [
+        PenaMonthlyCashflowResult(year=2025, month=12, income_cents=1_000, expense_cents=400),
+    ]
+    assert _trend_for(monthly) == 0.0
+
+
+@pytest.mark.parametrize("opening", [0, -5_000])
+def test_balance_trend_is_none_without_positive_base(opening):
+    monthly = [
+        PenaMonthlyCashflowResult(year=2026, month=1, income_cents=1_500, expense_cents=0),
+    ]
+    assert _trend_for(monthly, opening=opening) is None

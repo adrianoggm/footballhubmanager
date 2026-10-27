@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { translateApiError } from '../i18n/apiErrors.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { resolveRoleHomePath } from '../router/rolePaths.js'
 import { claimService } from '../services/claimService.js'
@@ -65,7 +66,9 @@ export default function ClaimPlayerPage({ auth }) {
       })
       .catch((error) => {
         if (active) {
-          setInspectError(error?.message || t('claim.errors.invalidToken'))
+          setInspectError(
+            translateApiError(error, t) || error?.message || t('claim.errors.invalidToken')
+          )
         }
       })
       .finally(() => {
@@ -85,7 +88,7 @@ export default function ClaimPlayerPage({ auth }) {
       await claimService.attachExistingAccount(token)
       navigate(resolveRoleHomePath(auth.session), { replace: true })
     } catch (error) {
-      setSubmitError(error?.message || t('claim.errors.generic'))
+      setSubmitError(translateApiError(error, t) || error?.message || t('claim.errors.generic'))
     } finally {
       setSubmitting(false)
     }
@@ -122,7 +125,7 @@ export default function ClaimPlayerPage({ auth }) {
       const session = await auth.claimPlayer({ token, username: username.trim(), password })
       navigate(resolveRoleHomePath(session), { replace: true })
     } catch (error) {
-      setSubmitError(error?.message || t('claim.errors.generic'))
+      setSubmitError(translateApiError(error, t) || error?.message || t('claim.errors.generic'))
     } finally {
       setSubmitting(false)
     }
@@ -143,7 +146,7 @@ export default function ClaimPlayerPage({ auth }) {
       await claimService.attachExistingAccount(token)
       navigate(resolveRoleHomePath(session), { replace: true })
     } catch (error) {
-      setSubmitError(error?.message || t('claim.errors.generic'))
+      setSubmitError(translateApiError(error, t) || error?.message || t('claim.errors.generic'))
     } finally {
       setSubmitting(false)
     }

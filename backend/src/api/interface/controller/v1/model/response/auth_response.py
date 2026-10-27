@@ -22,6 +22,9 @@ class SessionResponse(BaseModel):
 class AccountEmailResponse(BaseModel):
     email: str | None
     email_verified: bool
+    # Only meaningful on PUT /auth/me/email: False when the change was saved but the
+    # verification email was deferred by the resend cooldown.
+    verification_email_sent: bool = False
 
 
 class AuthStatusResponse(BaseModel):

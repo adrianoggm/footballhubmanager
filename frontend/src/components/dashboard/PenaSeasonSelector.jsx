@@ -104,7 +104,8 @@ export default function PenaSeasonSelector() {
       {seasons.map((season) => (
         <MenuItem key={season.guid} value={season.guid} sx={{ fontSize: '0.875rem' }}>
           {formatSeasonRange(season)}
-          {activeSeason?.guid === season.guid ? ` (${labels.activeSuffix || 'Active'})` : ''}
+          {/* activeSuffix is a full translated suffix, e.g. " (Active)" (U-08). */}
+          {activeSeason?.guid === season.guid ? labels.activeSuffix || '' : ''}
         </MenuItem>
       ))}
     </Select>

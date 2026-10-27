@@ -3,46 +3,44 @@ import { useTheme } from '@mui/material/styles'
 import { useState } from 'react'
 import DebtorsDialog from './DebtorsDialog.jsx'
 import StatCard from '../../common/StatCard.jsx'
-import { formatMoney, formatTrendPct } from './accountabilityHelpers.js'
+import { countKey, formatMoney, formatPercent, formatTrendPct } from './accountabilityHelpers.js'
 
 const DASH = '—'
+const P = 'dashboard.admin.accountability'
+
+const isMissing = (value) => value === null || value === undefined
 
 /**
- * The four headline KPI cards. `data` is the accountability payload; any KPI the
- * viewer isn't allowed to see arrives as null and renders as a dash. Clicking the
- * dues card opens the debtor breakdown (when the member list is visible).
+ * The headline KPI cards. `data` is the accountability payload; any KPI the viewer
+ * isn't allowed to see arrives as null and its card is left out (until the data
+ * has loaded, every card shows a dash). Clicking the dues card opens the debtor
+ * breakdown (when the member list is visible).
  */
-export default function AccountabilityKpis({ data, formatter, t }) {
+export default function AccountabilityKpis({ data, formatter, locale, t }) {
   const theme = useTheme()
   const [debtorsOpen, setDebtorsOpen] = useState(false)
 
-  const money = (cents) =>
-    cents === null || cents === undefined ? DASH : formatMoney(formatter, cents)
+  const money = (cents) => (isMissing(cents) ? DASH : formatMoney(formatter, cents))
 
   const trendPct = data?.balance_trend_pct
-  const trendText = formatTrendPct(trendPct)
-  const balanceSub = trendText
-    ? t('dashboard.admin.accountability.kpiBalanceTrend', { pct: trendText })
-    : null
+  const trendText = formatTrendPct(trendPct, locale)
+  const balanceSub = trendText ? t(`${P}.kpiBalanceTrend`, { pct: trendText }) : null
   const balanceTone = trendPct > 0 ? 'positive' : trendPct < 0 ? 'negative' : 'neutral'
 
   const collectedPct = data?.membership_collected_pct
-  const feesSub =
-    collectedPct === null || collectedPct === undefined
-      ? null
-      : t('dashboard.admin.accountability.kpiFeesCollected', { pct: `${collectedPct}` })
+  const feesSub = isMissing(collectedPct)
+    ? null
+    : t(`${P}.kpiFeesCollected`, { pct: formatPercent(collectedPct, locale) })
 
   const expensesCount = data?.expenses_this_month_count
-  const expensesSub =
-    expensesCount === null || expensesCount === undefined
-      ? null
-      : t('dashboard.admin.accountability.kpiExpensesMonth', { count: `${expensesCount}` })
+  const expensesSub = isMissing(expensesCount)
+    ? null
+    : t(`${P}.kpiExpensesMonth`, { count: `${expensesCount}` })
 
   const pending = data?.members_pending_count
-  const duesSub =
-    pending === null || pending === undefined
-      ? null
-      : t('dashboard.admin.accountability.kpiDuesPending', { count: `${pending}` })
+  const duesSub = isMissing(pending)
+    ? null
+    : t(countKey(`${P}.kpiDuesPending`, pending), { count: `${pending}` })
 
   // Debtors are only listable when the member breakdown is present (admin, or a
   // user at full budget visibility). Otherwise the card stays non-interactive.
@@ -51,8 +49,8 @@ export default function AccountabilityKpis({ data, formatter, t }) {
   const cards = [
     {
       key: 'balance',
-      label: t('dashboard.admin.accountability.kpiBalance'),
-      value: money(data?.total_balance_cents),
+      cents: data?.total_balance_cents,
+      label: t(`${P}.kpiBalance`),
       sub: balanceSub,
       subTone: balanceTone,
       icon: 'account_balance',
@@ -60,8 +58,8 @@ export default function AccountabilityKpis({ data, formatter, t }) {
     },
     {
       key: 'fees',
-      label: t('dashboard.admin.accountability.kpiFees'),
-      value: money(data?.membership_fees_cents),
+      cents: data?.membership_fees_cents,
+      label: t(`${P}.kpiFees`),
       sub: feesSub,
       subTone: 'neutral',
       icon: 'payments',
@@ -69,17 +67,17 @@ export default function AccountabilityKpis({ data, formatter, t }) {
     },
     {
       key: 'expenses',
-      label: t('dashboard.admin.accountability.kpiExpenses'),
-      value: money(data?.total_expense_cents),
+      cents: data?.total_expense_cents,
+      label: t(`${P}.kpiExpenses`),
       sub: expensesSub,
       subTone: 'neutral',
       icon: 'receipt_long',
-      accent: '#88736A',
+      accent: theme.custom.tones.muted,
     },
     {
       key: 'dues',
-      label: t('dashboard.admin.accountability.kpiDues'),
-      value: money(data?.outstanding_dues_cents),
+      cents: data?.outstanding_dues_cents,
+      label: t(`${P}.kpiDues`),
       sub: duesSub,
       subTone: pending ? 'negative' : 'neutral',
       icon: 'warning',
@@ -87,15 +85,16 @@ export default function AccountabilityKpis({ data, formatter, t }) {
       onClick: debtors.length ? () => setDebtorsOpen(true) : undefined,
     },
   ]
+  const visibleCards = data ? cards.filter((card) => !isMissing(card.cents)) : cards
 
   return (
     <>
       <Grid container spacing={1.5}>
-        {cards.map((card) => (
+        {visibleCards.map((card) => (
           <Grid key={card.key} item xs={12} sm={6} xl={3}>
             <StatCard
               label={card.label}
-              value={card.value}
+              value={money(card.cents)}
               sub={card.sub}
               subTone={card.subTone}
               icon={card.icon}

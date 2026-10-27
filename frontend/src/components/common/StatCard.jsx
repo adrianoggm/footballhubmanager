@@ -18,6 +18,7 @@ export default function StatCard({
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const radius = theme.custom?.dashboard?.radius?.surface || '14px'
+  const { surfaces, tones } = theme.custom
   const accentColor = accent || theme.palette.secondary.main
 
   const toneColor =
@@ -25,7 +26,7 @@ export default function StatCard({
       ? theme.palette.success.main
       : subTone === 'negative'
         ? theme.palette.error.main
-        : '#88736A'
+        : tones.muted
 
   const interactive = typeof onClick === 'function'
 
@@ -54,7 +55,7 @@ export default function StatCard({
         alignItems: 'center',
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.05 : 0.07)}`,
-        backgroundColor: '#45342C',
+        backgroundColor: surfaces.raised,
         px: '24px',
         py: '18px',
         ...(interactive
@@ -100,7 +101,7 @@ export default function StatCard({
             letterSpacing: '0.06em',
             fontSize: '0.82rem',
             lineHeight: 1.25,
-            color: '#88736A',
+            color: tones.muted,
           }}
         >
           {label}
@@ -109,7 +110,7 @@ export default function StatCard({
           sx={{
             fontFamily: '"Hanken Grotesk", sans-serif',
             fontWeight: 800,
-            color: '#F4EEE8',
+            color: tones.onRaised,
             lineHeight: 1.02,
             fontSize: '2.1rem',
             letterSpacing: -0.5,

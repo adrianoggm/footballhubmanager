@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import '@testing-library/jest-dom/vitest'
-import { render, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Integration safety net for dashboard hook extraction. We mount the real
@@ -48,6 +49,8 @@ const { adminServiceMock } = vi.hoisted(() => {
       listPenaPlayers: vi.fn(async () => page([])),
       listSeasonPlayers: vi.fn(async () => page([])),
       getMatchInsights: vi.fn(async () => ({ items: [] })),
+      createGuestPlayer: vi.fn(async () => ({ player_guid: 'new' })),
+      registerSeasonPlayer: vi.fn(async () => ({})),
     },
   }
 })
@@ -94,6 +97,50 @@ describe('AdminDashboard (integration)', () => {
     expect(adminServiceMock.listSeasons).toHaveBeenCalledWith('p1', expect.anything())
   })
 
+  it('does not request the active season for a pena without seasons (F12)', async () => {
+    const empty = { items: [], total: 0, total_pages: 0, page: 1, page_size: 100 }
+    const original = adminServiceMock.listSeasons.getMockImplementation()
+    adminServiceMock.listSeasons.mockImplementation(async () => empty)
+    try {
+      renderDashboard('overview')
+      await waitFor(() =>
+        expect(adminServiceMock.listSeasons).toHaveBeenCalledWith('p1', expect.anything())
+      )
+      // Let the season-load chain settle before asserting nothing else was requested.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(adminServiceMock.getActiveSeason).not.toHaveBeenCalled()
+    } finally {
+      adminServiceMock.listSeasons.mockImplementation(original)
+    }
+  })
+
+  it('gives the header icon buttons translated accessible names (F2)', async () => {
+    renderDashboard('overview')
+    expect(await screen.findByRole('button', { name: 'Logout' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pena settings' })).toBeInTheDocument()
+  })
+
+  it('returns focus from the pena settings dialog without hitting aria-hidden (F9)', async () => {
+    const user = userEvent.setup()
+    renderDashboard('overview')
+    const opener = await screen.findByRole('button', { name: 'Pena settings' })
+    await waitFor(() => expect(opener).toBeEnabled())
+    const hiddenAtFocus = []
+    opener.addEventListener('focus', () =>
+      hiddenAtFocus.push(Boolean(opener.closest('[aria-hidden="true"]')))
+    )
+
+    await user.click(opener)
+    await screen.findByRole('dialog')
+    hiddenAtFocus.length = 0
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(opener).toHaveFocus())
+    expect(hiddenAtFocus).not.toContain(true)
+  })
+
   it('loads season standings for the overview section', async () => {
     renderDashboard('overview')
     await waitFor(() => expect(adminServiceMock.listStandings).toHaveBeenCalled())
@@ -107,5 +154,30 @@ describe('AdminDashboard (integration)', () => {
   it('loads the season roster/players when on the players section', async () => {
     renderDashboard('players')
     await waitFor(() => expect(adminServiceMock.listSeasonPlayers).toHaveBeenCalled())
+  })
+
+  it('opens the new-player form from the "Add guest" quick action instead of POSTing an empty guest (PL-01)', async () => {
+    const onSectionChange = vi.fn()
+    render(
+      <I18nProvider>
+        <ThemeModeProvider>
+          <ToastProvider>
+            <AdminDashboard
+              session={{ user_guid: 'admin-1', user_type: 'admin' }}
+              onLogout={vi.fn()}
+              routeSectionId="overview"
+              onSectionChange={onSectionChange}
+            />
+          </ToastProvider>
+        </ThemeModeProvider>
+      </I18nProvider>
+    )
+
+    const quickAction = await screen.findByText(/^(Add Guest|Añadir invitado)$/)
+    fireEvent.click(quickAction)
+
+    expect(adminServiceMock.createGuestPlayer).not.toHaveBeenCalled()
+    expect(adminServiceMock.registerSeasonPlayer).not.toHaveBeenCalled()
+    expect(onSectionChange).toHaveBeenCalledWith('players')
   })
 })

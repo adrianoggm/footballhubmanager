@@ -1,18 +1,32 @@
-import { Box, Button, Stack, Typography } from '@mui/material'
+import { Box, Button, Chip, Stack, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 
 /**
  * Componente puro para renderizar un item de temporada en el historial
  * Responsabilidad única: Renderizar información de una temporada
+ * (PL-20: the season active today is marked with a badge).
  */
-export function SeasonHistoryItem({ season, formatDate, t, isSelected, onSelect }) {
+export function SeasonHistoryItem({
+  season,
+  formatDate,
+  t,
+  isSelected,
+  isActive = false,
+  onSelect,
+}) {
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
         p: 1.5,
         borderRadius: 2,
-        border: isSelected ? '1px solid rgba(25,118,210,0.35)' : '1px solid rgba(15,23,42,0.08)',
-        backgroundColor: 'rgba(255,255,255,0.6)',
-      }}
+        border: `1px solid ${
+          isSelected
+            ? alpha(theme.palette.secondary.main, 0.45)
+            : alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.08)
+        }`,
+        // theme surface instead of a translucent white that washed out dark presets
+        backgroundColor: theme.custom.surfaces.inset,
+      })}
     >
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
@@ -21,9 +35,18 @@ export function SeasonHistoryItem({ season, formatDate, t, isSelected, onSelect 
         justifyContent="space-between"
       >
         <Box>
-          <Typography variant="body2">
-            {formatDate(season.start_date)} - {formatDate(season.end_date)}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="body2">
+              {formatDate(season.start_date)} - {formatDate(season.end_date)}
+            </Typography>
+            {isActive && (
+              <Chip
+                size="small"
+                color="secondary"
+                label={t('dashboard.admin.seasons.historyActiveBadge')}
+              />
+            )}
+          </Stack>
           <Typography variant="caption" color="text.secondary">
             {t('dashboard.admin.seasons.historyPoints', {
               win: season.points_win,

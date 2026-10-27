@@ -1,8 +1,26 @@
 import { Card, CardContent, Grid, LinearProgress, Stack } from '@mui/material'
+import { useMemo, useState } from 'react'
 import MatchCreateCard from './matches/MatchCreateCard.jsx'
 import MatchEditorCard from './matches/MatchEditorCard.jsx'
 import MatchListCard from './matches/MatchListCard.jsx'
 import { buildTrackedTeamScore } from './matches/trackingHelpers.js'
+
+// MT-06: which card shows the (page-level) action error inline. The last
+// triggered action owns it; actions not listed here clear the scope so a later
+// unrelated error is never attached to a stale card.
+const ACTION_ERROR_SCOPES = {
+  handleCreateDetailedMatch: 'create',
+  handleSaveMatchStats: 'stats',
+  handleSaveMatchLineups: 'lineups',
+  handleStartMatch: 'tracking',
+  handleStopMatch: 'tracking',
+  handlePauseMatch: 'tracking',
+  handleResumeMatch: 'tracking',
+  handleSetGoalkeeperRotation: 'tracking',
+  handleQuickMatchEvent: 'tracking',
+  handleCreateMatchEvent: 'tracking',
+  handleDeleteMatchEvent: 'tracking',
+}
 
 /**
  * Matches section, composed of three focused surfaces under `./matches/`:
@@ -12,8 +30,27 @@ import { buildTrackedTeamScore } from './matches/trackingHelpers.js'
  * All data state lives in AdminDashboard and flows through the
  * state/actions/helpers bundles; this component only composes.
  */
-export default function AdminMatchesSection({ state, actions, helpers }) {
+export default function AdminMatchesSection({ state, actions: rawActions, helpers }) {
   const { t, formatDate, formatElapsedDuration } = helpers
+  const [errorScope, setErrorScope] = useState(null)
+  const actions = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(rawActions).map(([name, action]) =>
+          name.startsWith('handle') && typeof action === 'function'
+            ? [
+                name,
+                (...args) => {
+                  setErrorScope(ACTION_ERROR_SCOPES[name] || null)
+                  return action(...args)
+                },
+              ]
+            : [name, action]
+        )
+      ),
+    [rawActions]
+  )
+  const scopedError = (scope) => (errorScope === scope ? state.actionError || '' : '')
   const {
     selectedSeasonGuid,
     seasonMatchesLoading,
@@ -37,9 +74,14 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
   )
 
   return (
-    <Grid container spacing={2.5} sx={{ width: '100%' }}>
+    <Grid container spacing={2.5}>
       <Grid item xs={12}>
-        <MatchCreateCard state={state} actions={actions} helpers={helpers} />
+        <MatchCreateCard
+          state={state}
+          actions={actions}
+          helpers={helpers}
+          inlineError={scopedError('create')}
+        />
       </Grid>
 
       <Grid item xs={12}>
@@ -62,7 +104,18 @@ export default function AdminMatchesSection({ state, actions, helpers }) {
               />
 
               {selectedSeasonGuid && matchStatsLoading && <LinearProgress />}
-              {editorReady && <MatchEditorCard state={state} actions={actions} helpers={helpers} />}
+              {editorReady && (
+                <MatchEditorCard
+                  state={state}
+                  actions={actions}
+                  helpers={helpers}
+                  inlineErrors={{
+                    stats: scopedError('stats'),
+                    lineups: scopedError('lineups'),
+                    tracking: scopedError('tracking'),
+                  }}
+                />
+              )}
             </Stack>
           </CardContent>
         </Card>

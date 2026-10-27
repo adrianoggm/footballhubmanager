@@ -1,5 +1,5 @@
 import { alpha, createTheme } from '@mui/material/styles'
-import { designTokens } from './theme/tokens.js'
+import { designTokens, INSIGHT_MATRIX_SCALES, MATRIX_CELL_TEXT_COLOR } from './theme/tokens.js'
 
 const DEFAULT_LIGHT_THEME_PRESET_ID = 'sand-light'
 const DEFAULT_DARK_THEME_PRESET_ID = 'midnight-dark'
@@ -135,6 +135,7 @@ export const THEME_PRESETS = {
   'sand-light': {
     id: 'sand-light',
     labelKey: 'theme.presets.sand',
+    // Warm sand paper + deep pitch-teal accent: the light "terrace" sibling of Ember.
     palette: createPalette({
       mode: 'light',
       primary: {
@@ -145,14 +146,14 @@ export const THEME_PRESETS = {
       },
       secondary: {
         main: '#0f766e',
-        light: '#35b9ab',
-        dark: '#115e59',
-        contrastText: '#f0fdfa',
+        light: '#117c72',
+        dark: '#0b5b55',
+        contrastText: '#f3fffc',
       },
       alternate: {
-        main: '#dbe8ee',
-        light: '#eef6fa',
-        dark: '#b7cad5',
+        main: '#dbe8e3',
+        light: '#eef6f3',
+        dark: '#b5cdc5',
         contrastText: '#0f172a',
       },
       brandExtras: {
@@ -160,77 +161,133 @@ export const THEME_PRESETS = {
         pink: '#db2777',
         navyBlue: '#1d4ed8',
       },
-      info: { main: '#0284c7' },
-      success: { main: '#15803d' },
-      warning: { main: '#b7791f' },
-      error: { main: '#b91c1c' },
+      info: { main: '#0b6e99' },
+      success: { main: '#2e7d32' },
+      warning: { main: '#a3620c' },
+      error: { main: '#b42318' },
       background: {
-        default: '#f3f0e6',
+        default: '#f1ece1',
         paper: '#fffdf8',
       },
       text: {
         primary: '#0f172a',
-        secondary: '#526073',
+        secondary: '#4f5b6b',
       },
     }),
     shape: {
-      borderRadius: 14,
+      borderRadius: 10,
     },
-    typography: createSpaceTypography(),
+    typography: createSystemTypography(),
     pageBackground:
-      'radial-gradient(960px 560px at 92% 6%, rgba(19, 132, 119, 0.14) 0%, rgba(19, 132, 119, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(183, 121, 31, 0.14) 0%, rgba(183, 121, 31, 0) 52%), linear-gradient(180deg, #f4f1e8 0%, #f1eee5 100%)',
+      'radial-gradient(960px 560px at 92% 6%, rgba(15, 118, 110, 0.12) 0%, rgba(15, 118, 110, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(176, 124, 52, 0.14) 0%, rgba(176, 124, 52, 0) 52%), linear-gradient(180deg, #f3eee3 0%, #eee8da 100%)',
+    custom: {
+      surfaces: {
+        card: '#fffdf8',
+        cardAlt: '#f9f5ec',
+        raised: '#e6efea',
+        inset: '#efe9dc',
+        chipHome: '#d5e8e1',
+        chipAway: '#ebe4d5',
+        tooltip: '#ffffff',
+      },
+      tones: {
+        heading: '#243246',
+        muted: '#515e70',
+        subtle: '#46525f',
+        accent: '#0d6d65',
+        accentStrong: '#0b5b55',
+        accentHover: '#0f766e',
+        accentSoftBg: alpha('#0d6d65', 0.12),
+        onRaised: '#0f172a',
+      },
+      controls: {
+        inputBorder: '#8f8a7e',
+        inputBorderHover: '#4f5b6b',
+        containedDisabledImage: 'none',
+      },
+      styleProfile: 'accented',
+    },
   },
   'paper-light': {
     id: 'paper-light',
     labelKey: 'theme.presets.paper',
+    // Warm off-white paper, stone ink and a burnt-orange accent: the light twin of Ember.
     palette: createPalette({
       mode: 'light',
       primary: {
-        main: '#1f2937',
-        light: '#526174',
-        dark: '#111827',
-        contrastText: '#f8fafc',
+        main: '#292524',
+        light: '#57534e',
+        dark: '#1c1917',
+        contrastText: '#fafaf9',
       },
       secondary: {
-        main: '#c26a1c',
-        light: '#efb067',
-        dark: '#8a4811',
+        main: '#ad4f09',
+        light: '#b9560b',
+        dark: '#8a3f08',
         contrastText: '#fffaf3',
       },
       alternate: {
-        main: '#e8edf3',
-        light: '#f8fbff',
-        dark: '#d7e1ea',
-        contrastText: '#111827',
+        main: '#f1ebe4',
+        light: '#faf7f3',
+        dark: '#e2d8cd',
+        contrastText: '#1c1917',
       },
       brandExtras: {
         purple: '#7c3aed',
         pink: '#ec4899',
         navyBlue: '#1d4ed8',
       },
-      info: { main: '#0284c7' },
-      success: { main: '#15803d' },
-      warning: { main: '#d97706' },
-      error: { main: '#b91c1c' },
+      info: { main: '#0369a1' },
+      success: { main: '#2f7d3a' },
+      warning: { main: '#a85f00' },
+      error: { main: '#b42335' },
       background: {
-        default: '#f6f8fb',
+        default: '#f4f2ee',
         paper: '#ffffff',
       },
       text: {
-        primary: '#111827',
-        secondary: '#5b697b',
+        primary: '#1c1917',
+        secondary: '#57534e',
       },
     }),
     shape: {
-      borderRadius: 12,
+      borderRadius: 10,
     },
-    typography: createSpaceTypography(),
+    typography: createSystemTypography(),
     pageBackground:
-      'radial-gradient(900px 520px at 100% 0%, rgba(194, 106, 28, 0.12) 0%, rgba(194, 106, 28, 0) 55%), radial-gradient(920px 540px at 0% 100%, rgba(2, 132, 199, 0.1) 0%, rgba(2, 132, 199, 0) 52%), linear-gradient(180deg, #fafbfd 0%, #f4f7fb 100%)',
+      'radial-gradient(900px 520px at 100% 0%, rgba(173, 79, 9, 0.1) 0%, rgba(173, 79, 9, 0) 55%), radial-gradient(920px 540px at 0% 100%, rgba(120, 100, 80, 0.08) 0%, rgba(120, 100, 80, 0) 52%), linear-gradient(180deg, #f6f4f0 0%, #f0ede8 100%)',
+    custom: {
+      surfaces: {
+        card: '#ffffff',
+        cardAlt: '#fbf9f6',
+        raised: '#f7ebdf',
+        inset: '#f2eee8',
+        chipHome: '#f7e2cf',
+        chipAway: '#ecebe7',
+        tooltip: '#ffffff',
+      },
+      tones: {
+        heading: '#3a302a',
+        muted: '#5f5650',
+        subtle: '#4e4640',
+        accent: '#a14a0a',
+        accentStrong: '#8a3f08',
+        accentHover: '#ad4f09',
+        accentSoftBg: alpha('#ad4f09', 0.12),
+        onRaised: '#1c1917',
+      },
+      controls: {
+        inputBorder: '#8f8780',
+        inputBorderHover: '#57534e',
+        containedDisabledImage: 'none',
+      },
+      styleProfile: 'accented',
+    },
   },
   'coast-light': {
     id: 'coast-light',
     labelKey: 'theme.presets.coast',
+    // Sea-glass aqua base with an ocean-blue accent (teal now belongs to Sand).
     palette: createPalette({
       mode: 'light',
       primary: {
@@ -240,64 +297,93 @@ export const THEME_PRESETS = {
         contrastText: '#f8fbff',
       },
       secondary: {
-        main: '#0c8b7a',
-        light: '#4fc5b7',
-        dark: '#0b6458',
-        contrastText: '#ecfdf8',
+        main: '#0b63c4',
+        light: '#1a6fd0',
+        dark: '#094f96',
+        contrastText: '#f5faff',
       },
       alternate: {
-        main: '#d7eef1',
-        light: '#f1fafb',
-        dark: '#b2dbe1',
-        contrastText: '#10212f',
+        main: '#d4e6f4',
+        light: '#eef6fb',
+        dark: '#a9c9e3',
+        contrastText: '#0f2233',
       },
       brandExtras: {
         purple: '#7c3aed',
         pink: '#db2777',
         navyBlue: '#0f5fb8',
       },
-      info: { main: '#0ea5e9' },
-      success: { main: '#059669' },
-      warning: { main: '#d97706' },
-      error: { main: '#dc2626' },
+      info: { main: '#0e7490' },
+      success: { main: '#0f7a5a' },
+      warning: { main: '#a8620a' },
+      error: { main: '#c0262d' },
       background: {
-        default: '#edf6f7',
-        paper: '#fbfeff',
+        default: '#eaf3f6',
+        paper: '#fbfdfe',
       },
       text: {
-        primary: '#10212f',
-        secondary: '#567181',
+        primary: '#0f2233',
+        secondary: '#4c6577',
       },
     }),
     shape: {
-      borderRadius: 14,
+      borderRadius: 10,
     },
-    typography: createSpaceTypography(),
+    typography: createSystemTypography(),
     pageBackground:
-      'radial-gradient(980px 540px at 90% 0%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0) 56%), radial-gradient(940px 540px at 0% 100%, rgba(12, 139, 122, 0.14) 0%, rgba(12, 139, 122, 0) 54%), linear-gradient(180deg, #eff8f8 0%, #eaf3f5 100%)',
+      'radial-gradient(980px 540px at 90% 0%, rgba(11, 99, 196, 0.1) 0%, rgba(11, 99, 196, 0) 56%), radial-gradient(940px 540px at 0% 100%, rgba(14, 116, 144, 0.12) 0%, rgba(14, 116, 144, 0) 54%), linear-gradient(180deg, #edf5f8 0%, #e5eff4 100%)',
+    custom: {
+      surfaces: {
+        card: '#fbfdfe',
+        cardAlt: '#f2f8fb',
+        raised: '#e0edf6',
+        inset: '#e9f1f5',
+        chipHome: '#d4e6f4',
+        chipAway: '#e3ebef',
+        tooltip: '#ffffff',
+      },
+      tones: {
+        heading: '#1f3a52',
+        muted: '#4b6476',
+        subtle: '#3d5668',
+        accent: '#0a5cad',
+        accentStrong: '#094f96',
+        accentHover: '#0b63c4',
+        accentSoftBg: alpha('#0b63c4', 0.12),
+        onRaised: '#0f2233',
+      },
+      controls: {
+        inputBorder: '#7f93a2',
+        inputBorderHover: '#4c6577',
+        containedDisabledImage: 'none',
+      },
+      styleProfile: 'accented',
+    },
   },
   'midnight-dark': {
     id: 'midnight-dark',
     labelKey: 'theme.presets.midnight',
+    // Near-black navy stage, slate-blue panels and an electric-blue accent: the
+    // Ember structure (dark page < neutral card < lifted panels) in cool tones.
     palette: createPalette({
       mode: 'dark',
       primary: {
-        main: '#dbe7ff',
-        light: '#f5f8ff',
-        dark: '#9fb5d1',
-        contrastText: '#0f172a',
+        main: '#dbe5f7',
+        light: '#f3f6fc',
+        dark: '#9fb0cf',
+        contrastText: '#0b1220',
       },
       secondary: {
-        main: '#35b9ab',
-        light: '#79ddd2',
-        dark: '#1d8479',
-        contrastText: '#061311',
+        main: '#5b8cff',
+        light: '#8cb0ff',
+        dark: '#4a7bf0',
+        contrastText: '#07101f',
       },
       alternate: {
-        main: '#17303e',
-        light: '#21485d',
-        dark: '#11222d',
-        contrastText: '#eef2f7',
+        main: '#16233a',
+        light: '#22365a',
+        dark: '#0a1428',
+        contrastText: '#eef2fa',
       },
       brandExtras: {
         purple: '#8b5cf6',
@@ -305,83 +391,143 @@ export const THEME_PRESETS = {
         navyBlue: '#3b82f6',
       },
       info: { main: '#38bdf8' },
-      success: { main: '#22c55e' },
-      warning: { main: '#f59e0b' },
-      error: { main: '#ef4444' },
+      success: { main: '#3fcf8e' },
+      warning: { main: '#f2b84b' },
+      error: { main: '#f87171' },
       background: {
-        default: '#0b1118',
-        paper: '#121922',
+        default: '#0d1320',
+        paper: '#182233',
       },
       text: {
-        primary: '#eef2f7',
-        secondary: '#9ca9ba',
+        primary: '#edf1f8',
+        secondary: '#96a3b8',
       },
     }),
     shape: {
-      borderRadius: 14,
+      borderRadius: 10,
     },
-    typography: createSpaceTypography(),
+    typography: createSystemTypography(),
     pageBackground:
-      'radial-gradient(960px 560px at 92% 6%, rgba(53, 185, 171, 0.14) 0%, rgba(53, 185, 171, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 52%), linear-gradient(180deg, #0c121a 0%, #0a1017 100%)',
+      'radial-gradient(960px 560px at 92% 6%, rgba(91, 140, 255, 0.12) 0%, rgba(91, 140, 255, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(56, 189, 248, 0.06) 0%, rgba(56, 189, 248, 0) 52%), linear-gradient(180deg, #070b13 0%, #05080e 100%)',
+    custom: {
+      surfaces: {
+        card: '#111823',
+        cardAlt: '#1c283b',
+        raised: '#1f2c42',
+        inset: '#0b111c',
+        chipHome: '#1f2c42',
+        chipAway: '#171d27',
+        tooltip: '#0b111c',
+      },
+      tones: {
+        heading: '#b9c5d8',
+        muted: '#8f9cb2',
+        subtle: '#a7b3c6',
+        accent: '#8fb2ff',
+        accentStrong: '#b3cbff',
+        accentHover: '#a3c0ff',
+        accentSoftBg: alpha('#8fb2ff', 0.14),
+        onRaised: '#eef2fa',
+      },
+      controls: {
+        inputBorder: '#5f6d86',
+        inputBorderHover: '#96a3b8',
+        containedDisabledImage: 'none',
+      },
+      styleProfile: 'accented',
+    },
   },
   'forest-dark': {
     id: 'forest-dark',
     labelKey: 'theme.presets.forest',
+    // Floodlit pitch at night: black-green stage, moss panels, mint accent and a
+    // lime success tone so status chips never blend into the accent.
     palette: createPalette({
       mode: 'dark',
       primary: {
-        main: '#d9f7ee',
-        light: '#eefcf7',
-        dark: '#a7d0c2',
-        contrastText: '#091311',
+        main: '#d9f2e7',
+        light: '#eefaf4',
+        dark: '#a7cbbb',
+        contrastText: '#06120d',
       },
       secondary: {
-        main: '#20b486',
-        light: '#6dd8b5',
-        dark: '#13765b',
-        contrastText: '#04110d',
+        main: '#2ecc8a',
+        light: '#6ee7b7',
+        dark: '#1a9466',
+        contrastText: '#03130c',
       },
       alternate: {
         main: '#12302a',
         light: '#1c4c43',
-        dark: '#0a1c18',
-        contrastText: '#eefbf6',
+        dark: '#082018',
+        contrastText: '#eef8f3',
       },
       brandExtras: {
         purple: '#8b5cf6',
         pink: '#ec4899',
         navyBlue: '#38bdf8',
       },
-      info: { main: '#38bdf8' },
-      success: { main: '#22c55e' },
-      warning: { main: '#f59e0b' },
-      error: { main: '#ef4444' },
+      info: { main: '#5cc8f0' },
+      success: { main: '#a3d65c' },
+      warning: { main: '#e8b54a' },
+      error: { main: '#f07a6a' },
       background: {
-        default: '#0b1311',
-        paper: '#121b18',
+        default: '#0b1310',
+        paper: '#16231e',
       },
       text: {
-        primary: '#ecf8f1',
-        secondary: '#a0b9af',
+        primary: '#ecf6f0',
+        secondary: '#93aba1',
       },
     }),
     shape: {
-      borderRadius: 14,
+      borderRadius: 10,
     },
-    typography: createSpaceTypography(),
+    typography: createSystemTypography(),
     pageBackground:
-      'radial-gradient(960px 560px at 92% 6%, rgba(32, 180, 134, 0.16) 0%, rgba(32, 180, 134, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(56, 189, 248, 0.12) 0%, rgba(56, 189, 248, 0) 52%), linear-gradient(180deg, #0c1512 0%, #0a110f 100%)',
+      'radial-gradient(960px 560px at 92% 6%, rgba(46, 204, 138, 0.1) 0%, rgba(46, 204, 138, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(163, 214, 92, 0.05) 0%, rgba(163, 214, 92, 0) 52%), linear-gradient(180deg, #060c09 0%, #040907 100%)',
+    custom: {
+      surfaces: {
+        card: '#101613',
+        cardAlt: '#1a2a24',
+        raised: '#1d2f28',
+        inset: '#0a120f',
+        chipHome: '#1d2f28',
+        chipAway: '#161b19',
+        tooltip: '#0a120f',
+      },
+      tones: {
+        heading: '#b5cbc1',
+        muted: '#8ba398',
+        subtle: '#a3b9af',
+        accent: '#7ddbb0',
+        accentStrong: '#a4ecc9',
+        accentHover: '#8fe3bc',
+        accentSoftBg: alpha('#7ddbb0', 0.14),
+        onRaised: '#eef8f3',
+      },
+      controls: {
+        inputBorder: '#567266',
+        inputBorderHover: '#93aba1',
+        containedDisabledImage: 'none',
+      },
+      styleProfile: 'accented',
+    },
   },
   'ember-dark': {
     id: 'ember-dark',
     labelKey: 'theme.presets.ember',
     palette: createPalette({
       mode: 'dark',
+      // Like every other dark preset, `primary` must be a LIGHT foreground tone:
+      // MUI uses it by default for text/icons/indicators (Tabs, LinearProgress,
+      // Checkbox, color="primary" icons, primary.main typography, KPI tones). A
+      // near-black primary rendered those as black-on-dark in Ember (#84).
       primary: {
-        main: '#101820',
-        light: '#435363',
-        dark: '#0A0E13',
-        contrastText: '#F5F5F5',
+        main: '#efe4da',
+        light: '#faf4ee',
+        dark: '#cbb8a8',
+        contrastText: '#1e1712',
       },
       secondary: {
         main: '#FF6B00',
@@ -419,6 +565,27 @@ export const THEME_PRESETS = {
     typography: createSystemTypography(),
     pageBackground: '#090909',
     custom: {
+      // Ember is the reference look of the admin redesign (#144/#147): these
+      // values are the original hex literals and must stay pixel-identical.
+      surfaces: {
+        card: '#1E1E1E',
+        cardAlt: '#41312A',
+        raised: '#45342C',
+        inset: '#261812',
+        chipHome: '#41312A',
+        chipAway: '#2A2826',
+        tooltip: '#261812',
+      },
+      tones: {
+        heading: '#C1ACA3',
+        muted: '#88736A',
+        subtle: '#A8938A',
+        accent: '#DF9F80',
+        accentStrong: '#FCB491',
+        accentHover: '#f2a074',
+        accentSoftBg: 'rgba(223, 159, 128, 0.14)',
+        onRaised: '#F4EEE8',
+      },
       radius: {
         none: 0,
         sm: '5px',
@@ -426,6 +593,7 @@ export const THEME_PRESETS = {
         full: 9999,
       },
       gradients: {
+        brand: 'linear-gradient(160deg, rgba(21,33,55,1) 0%, rgba(22,84,84,1) 85%)',
         cardDepth1:
           'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.12) 0%, rgba(4, 4, 6, 0) 60%)',
         cardDepthBig:
@@ -504,6 +672,12 @@ const createCustomTokens = (preset) => {
       },
     },
     gradients: {
+      // Brand badge (dashboard rail): a deep tone of the preset into its secondary hue.
+      brand: `linear-gradient(160deg, ${
+        mode === 'dark'
+          ? palette.alternate?.dark || palette.background.default
+          : palette.primary.main
+      } 0%, ${palette.secondary?.dark || palette.primary.dark} 85%)`,
       cardDepth1:
         mode === 'dark'
           ? `radial-gradient(ellipse 680px 420px at 18% 0%, rgba(${primaryRgb}, 0.12) 0%, rgba(${primaryRgb}, 0) 58%)`
@@ -545,6 +719,17 @@ const createCustomTokens = (preset) => {
     styleProfile: 'base',
     labels: designTokens.labels,
     insightAccents: designTokens.insightAccents,
+    insightMatrix: {
+      ...(mode === 'dark' ? INSIGHT_MATRIX_SCALES.dark : INSIGHT_MATRIX_SCALES.light),
+      text: mode === 'dark' ? palette.text.primary : MATRIX_CELL_TEXT_COLOR,
+      subtext: alpha(mode === 'dark' ? palette.text.primary : MATRIX_CELL_TEXT_COLOR, 0.72),
+      cellBorder: alpha(
+        mode === 'dark' ? palette.text.primary : MATRIX_CELL_TEXT_COLOR,
+        mode === 'dark' ? 0.1 : 0.08
+      ),
+      samePlayerBackground: alpha(palette.text.secondary, 0.16),
+      emptyBackground: alpha(palette.text.secondary, 0.08),
+    },
     themeMeta: {
       presetId: preset.id,
       mode: palette.mode,
@@ -574,6 +759,10 @@ const createCustomTokens = (preset) => {
         ...(preset.custom?.dashboard?.shadows || {}),
       },
     },
+    // Semantic admin surfaces/tones: every preset defines the full set (see
+    // THEME_PRESETS[*].custom); theme.test.js enforces keys + WCAG contrast.
+    surfaces: { ...(preset.custom?.surfaces || {}) },
+    tones: { ...(preset.custom?.tones || {}) },
     gradients: {
       ...defaultTokens.gradients,
       ...(preset.custom?.gradients || {}),
@@ -673,6 +862,16 @@ const buildComponentOverrides = (palette, custom, preset) => {
                           boxShadow: custom.shadows.lg,
                           backgroundImage: `linear-gradient(135deg, ${palette.secondary.dark || palette.secondary.main} 0%, ${palette.secondary.main} 100%)`,
                         },
+                        // Presets can drop the accent gradient on disabled
+                        // buttons so they read as disabled (Ember keeps it).
+                        ...(custom.controls?.containedDisabledImage
+                          ? {
+                              '&.Mui-disabled': {
+                                backgroundImage: custom.controls.containedDisabledImage,
+                                boxShadow: 'none',
+                              },
+                            }
+                          : {}),
                       }
                     : {
                         '&:hover': {
@@ -780,14 +979,20 @@ const buildComponentOverrides = (palette, custom, preset) => {
           ),
           backdropFilter: 'blur(10px)',
           minHeight: 36,
+          // Presets may pin AA (>=3:1) field outlines via `custom.controls`;
+          // without it (Ember) the original translucent outline is kept.
           '& fieldset': {
-            borderColor: alpha(
-              isAccentedProfile ? palette.primary.light : palette.text.primary,
-              isDark ? 0.22 : 0.14
-            ),
+            borderColor:
+              custom.controls?.inputBorder ||
+              alpha(
+                isAccentedProfile ? palette.primary.light : palette.text.primary,
+                isDark ? 0.22 : 0.14
+              ),
           },
           '&:hover fieldset': {
-            borderColor: alpha(palette.text.primary, isDark ? 0.28 : 0.18),
+            borderColor:
+              custom.controls?.inputBorderHover ||
+              alpha(palette.text.primary, isDark ? 0.28 : 0.18),
           },
           '&.Mui-focused fieldset': {
             borderColor: palette.text.primary,

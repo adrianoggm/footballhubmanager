@@ -88,14 +88,12 @@ const buildHighlights = (detail, t) => {
     return []
   }
 
-  const pickTop = (metricKey) =>
-    players.reduce((best, current) => {
-      const currentValue = Number(current?.[metricKey] ?? 0)
-      if (!best || currentValue > best.value) {
-        return { player: current, value: currentValue }
-      }
-      return best
-    }, null)
+  // U-14: every player tied for the top value is listed, not just the first.
+  const pickTop = (metricKey) => {
+    const value = Math.max(...players.map((player) => Number(player?.[metricKey] ?? 0)))
+    const leaders = players.filter((player) => Number(player?.[metricKey] ?? 0) === value)
+    return { player: leaders.map(formatPlayerName).join(', '), value }
+  }
 
   const goalsTop = pickTop('goals')
   const assistsTop = pickTop('assists')
@@ -105,7 +103,7 @@ const buildHighlights = (detail, t) => {
   if (goalsTop && goalsTop.value > 0) {
     highlights.push(
       t('dashboard.common.matchDetail.highlightGoals', {
-        player: formatPlayerName(goalsTop.player),
+        player: goalsTop.player,
         value: goalsTop.value,
       })
     )
@@ -113,7 +111,7 @@ const buildHighlights = (detail, t) => {
   if (assistsTop && assistsTop.value > 0) {
     highlights.push(
       t('dashboard.common.matchDetail.highlightAssists', {
-        player: formatPlayerName(assistsTop.player),
+        player: assistsTop.player,
         value: assistsTop.value,
       })
     )
@@ -121,7 +119,7 @@ const buildHighlights = (detail, t) => {
   if (savesTop && savesTop.value > 0) {
     highlights.push(
       t('dashboard.common.matchDetail.highlightSaves', {
-        player: formatPlayerName(savesTop.player),
+        player: savesTop.player,
         value: savesTop.value,
       })
     )
@@ -366,21 +364,21 @@ export default function MatchDetailViewer({
   const isClosed = String(displayedDetail.status || '').toLowerCase() === 'closed'
   const highlights = buildHighlights(displayedDetail, t)
   const displayedElapsed = resolveLiveElapsed(displayedDetail, nowEpoch)
+  // U-15: a closed match is finished whatever its live-tracking state was, and
+  // an untracked closed match has no clock worth showing.
+  const displayedTrackingStatus = isClosed ? 'finished' : displayedDetail.tracking_status
+  const showElapsed = !isClosed || displayedElapsed > 0
   const lineupChangeCount = Number(displayedDetail.lineup_change_count || 0)
   const hasLineupAudit = lineupChangeCount > 0
 
   return (
-    <Stack spacing={2}>
-      <Stack spacing={0.5}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-          {t('dashboard.common.matchDetail.title')}
+    <Stack useFlexGap spacing={2}>
+      {/* U-15: the hosting dialog owns the title; only the subtitle lives here. */}
+      {showSubtitle && (
+        <Typography variant="body2" color="text.secondary">
+          {t('dashboard.common.matchDetail.subtitle')}
         </Typography>
-        {showSubtitle && (
-          <Typography variant="body2" color="text.secondary">
-            {t('dashboard.common.matchDetail.subtitle')}
-          </Typography>
-        )}
-      </Stack>
+      )}
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
         <Chip
@@ -408,16 +406,18 @@ export default function MatchDetailViewer({
         />
         <Chip
           size="small"
-          color={trackingChipColor(displayedDetail.tracking_status)}
-          label={trackingLabel(displayedDetail.tracking_status, t)}
+          color={trackingChipColor(displayedTrackingStatus)}
+          label={trackingLabel(displayedTrackingStatus, t)}
         />
-        <Chip
-          size="small"
-          variant="outlined"
-          label={t('dashboard.common.matchDetail.elapsed', {
-            value: formatElapsedDuration(displayedElapsed),
-          })}
-        />
+        {showElapsed && (
+          <Chip
+            size="small"
+            variant="outlined"
+            label={t('dashboard.common.matchDetail.elapsed', {
+              value: formatElapsedDuration(displayedElapsed),
+            })}
+          />
+        )}
         {displayedDetail.started_at_epoch ? (
           <Chip
             size="small"

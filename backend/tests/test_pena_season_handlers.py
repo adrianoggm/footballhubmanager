@@ -26,6 +26,7 @@ from core.application.queries.pena_season_query_handlers import (
 )
 from core.domain.errors import (
     InvalidPenaSeasonDataError,
+    InvalidSeasonPointsError,
     PenaSeasonAccessDeniedError,
     PenaSeasonDateOverlapError,
     PenaSeasonNotFoundError,
@@ -323,3 +324,57 @@ def test_delete_handler_propagates_errors():
         DeletePenaSeasonHandler(_FakeRepo(should_raise_access_denied=True)).handle(
             DeletePenaSeasonCommand(pena_guid="p", season_guid="s", admin_id=1)
         )
+
+
+@pytest.mark.parametrize(
+    "points",
+    [
+        {"points_win": -1},
+        {"points_draw": -3},
+        {"points_loss": -1},
+    ],
+)
+def test_create_handler_rejects_negative_points_without_persisting(points):
+    """PL-02: creating a season with negative points used to be accepted (201)."""
+    repo = _FakeRepo()
+    with pytest.raises(InvalidSeasonPointsError):
+        CreatePenaSeasonHandler(repo).handle(
+            CreatePenaSeasonCommand(
+                pena_guid="p",
+                admin_id=1,
+                start_date=date(2026, 9, 1),
+                end_date=date(2027, 6, 30),
+                **points,
+            )
+        )
+    assert repo.last_payload is None
+
+
+def test_update_handler_rejects_negative_points_without_persisting():
+    repo = _FakeRepo()
+    with pytest.raises(InvalidSeasonPointsError):
+        UpdatePenaSeasonHandler(repo).handle(
+            UpdatePenaSeasonCommand(
+                pena_guid="p",
+                season_guid="s",
+                admin_id=1,
+                points_loss=FieldUpdate.set(-1),
+            )
+        )
+    assert repo.last_payload is None
+
+
+def test_create_handler_accepts_zero_points():
+    repo = _FakeRepo()
+    CreatePenaSeasonHandler(repo).handle(
+        CreatePenaSeasonCommand(
+            pena_guid="p",
+            admin_id=1,
+            start_date=date(2026, 9, 1),
+            end_date=date(2027, 6, 30),
+            points_win=0,
+            points_draw=0,
+            points_loss=0,
+        )
+    )
+    assert repo.last_payload is not None

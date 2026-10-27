@@ -24,6 +24,12 @@ class InvalidPenaSeasonDataError(DomainError):
     code = "invalid_pena_season_data"
 
 
+class InvalidSeasonPointsError(InvalidPenaSeasonDataError):
+    """Season points (win/draw/loss) must be integers greater than or equal to 0."""
+
+    code = "invalid_season_points"
+
+
 class PenaSeasonPenaNotFoundError(DomainError):
     code = "pena_season_pena_not_found"
 
@@ -53,6 +59,12 @@ class PenaLabelsPenaNotFoundError(DomainError):
 
 class PenaLabelsAccessDeniedError(DomainError):
     code = "pena_labels_access_denied"
+
+
+class InvalidPenaPositionError(DomainError):
+    """The requested position is not one of the pena's configured position labels."""
+
+    code = "invalid_pena_position"
 
 
 # --- Player profile ---
@@ -125,6 +137,12 @@ class UserInvalidNationalityError(DomainError):
 
 class InvalidPenaAccountabilityDataError(DomainError):
     code = "invalid_pena_accountability_data"
+
+
+class PenaAccountabilityAmountOutOfRangeError(InvalidPenaAccountabilityDataError):
+    """An amount is negative/zero where not allowed, or above MAX_AMOUNT_CENTS."""
+
+    code = "pena_accountability_amount_out_of_range"
 
 
 class PenaAccountabilityPenaNotFoundError(DomainError):

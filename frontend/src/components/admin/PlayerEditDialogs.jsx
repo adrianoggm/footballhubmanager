@@ -5,37 +5,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  MenuItem,
   Stack,
   TextField,
 } from '@mui/material'
-import { translateLabel } from '../../i18n/labels.js'
-
-const hasLabel = (options, value) => {
-  const needle = String(value || '')
-    .trim()
-    .toLowerCase()
-  return options.some((option) => String(option || '').toLowerCase() === needle)
-}
-
-// Role/position select that keeps an out-of-catalog current value selectable
-// (legacy labels) while offering the pena's configured labels. Known default
-// labels are translated for display; values stay raw.
-function LabelSelect({ label, noneLabel, value, onChange, options, kind, t }) {
-  return (
-    <TextField select label={label} value={value} onChange={onChange} fullWidth>
-      <MenuItem value="">{noneLabel}</MenuItem>
-      {value && !hasLabel(options, value) && (
-        <MenuItem value={value}>{translateLabel(t, kind, value)}</MenuItem>
-      )}
-      {options.map((option) => (
-        <MenuItem key={option} value={option}>
-          {translateLabel(t, kind, option)}
-        </MenuItem>
-      ))}
-    </TextField>
-  )
-}
+import LabelSelect from '../common/LabelSelect.jsx'
 
 /**
  * Edit a player's season registration (role/position labels + W/D/L + quality).
@@ -65,9 +38,9 @@ export function EditSeasonPlayerDialog({
         </DialogContentText>
         <Stack spacing={1.5}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            {/* PL-04: every player has a role, so there is no "no role" option. */}
             <LabelSelect
               label={t('dashboard.admin.members.role')}
-              noneLabel={t('dashboard.admin.members.roleNone')}
               value={draft.role}
               onChange={onField('role')}
               options={penaLabels.role_labels}
@@ -165,9 +138,9 @@ export function EditMembershipDialog({
             fullWidth
           />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            {/* PL-04: every player has a role, so there is no "no role" option. */}
             <LabelSelect
               label={t('dashboard.admin.members.role')}
-              noneLabel={t('dashboard.admin.members.roleNone')}
               value={draft.role}
               onChange={onField('role')}
               options={penaLabels.role_labels}

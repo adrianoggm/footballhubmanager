@@ -13,10 +13,17 @@ import {
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useMemo, useState } from 'react'
-import { TX_TYPES, parseAmountToCents, todayIso } from './accountabilityHelpers.js'
+import {
+  AMOUNT_RULES,
+  MAX_TEXT_LENGTH,
+  TX_TYPES,
+  currencySymbol,
+  todayIso,
+  validateAmountInput,
+} from './accountabilityHelpers.js'
 
-// Peach accent shared with the Overview Quick Actions icons (design-system).
-const ACCENT = '#FCB491'
+// Accent shared with the Overview Quick Actions icons (theme.custom.tones.accentStrong).
+const accentOf = (theme) => theme.custom.tones.accentStrong
 
 const emptyDraft = () => ({
   type: TX_TYPES.INCOME,
@@ -28,23 +35,47 @@ const emptyDraft = () => ({
   player_guid: '',
 })
 
+const P = 'dashboard.admin.accountability'
+
+// Field -> validation message key (under `${P}.validation`) or null.
+const validateDraft = (draft) => {
+  const amount = validateAmountInput(draft.amount, AMOUNT_RULES.POSITIVE)
+  return {
+    cents: amount.cents,
+    errors: {
+      amount: amount.error,
+      concept: draft.concept.trim() ? null : 'conceptRequired',
+      occurred_on: draft.occurred_on ? null : 'dateRequired',
+    },
+  }
+}
+
 export default function NewTransactionCard({
   t,
   currency,
+  locale,
   playerOptions,
   categoryPresets,
   onRecord,
+  onInvalid,
   submitting,
 }) {
   const [draft, setDraft] = useState(emptyDraft)
+  const [errors, setErrors] = useState({})
 
   const selectedPlayer = useMemo(
     () => playerOptions.find((player) => player.guid === draft.player_guid) || null,
     [playerOptions, draft.player_guid]
   )
 
-  const setField = (field) => (event) =>
-    setDraft((current) => ({ ...current, [field]: event.target.value }))
+  const setField = (field) => (event) => {
+    const { value } = event.target
+    setDraft((current) => ({ ...current, [field]: value }))
+    setErrors((current) => ({ ...current, [field]: null }))
+  }
+
+  const errorProps = (field) =>
+    errors[field] ? { error: true, helperText: t(`${P}.validation.${errors[field]}`) } : {}
 
   const handleType = (_event, next) => {
     if (!next) {
@@ -59,15 +90,16 @@ export default function NewTransactionCard({
   }
 
   const handleSubmit = async () => {
-    const amountCents = parseAmountToCents(draft.amount)
-    const concept = draft.concept.trim()
-    if (amountCents === null || amountCents < 0 || !concept) {
+    const { cents, errors: nextErrors } = validateDraft(draft)
+    setErrors(nextErrors)
+    if (Object.values(nextErrors).some(Boolean)) {
+      onInvalid?.()
       return
     }
     const created = await onRecord({
       type: draft.type,
-      amount_cents: amountCents,
-      concept,
+      amount_cents: cents,
+      concept: draft.concept.trim(),
       occurred_on: draft.occurred_on,
       entity: draft.entity.trim() || null,
       category: draft.category.trim() || null,
@@ -75,6 +107,7 @@ export default function NewTransactionCard({
     })
     if (created) {
       setDraft(emptyDraft())
+      setErrors({})
     }
   }
 
@@ -82,16 +115,16 @@ export default function NewTransactionCard({
 
   return (
     <Card
-      sx={{
+      sx={(theme) => ({
         height: '100%',
-        // Match the Quick Actions peach accent on this card's text + labels.
-        '& .MuiInputLabel-root': { color: ACCENT },
-        '& .MuiFormHelperText-root': { color: alpha(ACCENT, 0.7) },
-      }}
+        // Match the Quick Actions accent on this card's text + labels.
+        '& .MuiInputLabel-root:not(.Mui-error)': { color: accentOf(theme) },
+        '& .MuiFormHelperText-root:not(.Mui-error)': { color: alpha(accentOf(theme), 0.7) },
+      })}
     >
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h6" sx={{ color: ACCENT }}>
+          <Typography variant="h6" sx={{ color: accentOf }}>
             {t('dashboard.admin.accountability.newTransaction')}
           </Typography>
 
@@ -121,14 +154,15 @@ export default function NewTransactionCard({
             type="number"
             value={draft.amount}
             onChange={setField('amount')}
-            inputProps={{ step: 0.01, min: 0 }}
+            inputProps={{ step: 0.01, min: 0.01 }}
             InputProps={{
               startAdornment: (
                 <Box component="span" sx={{ mr: 1, color: 'text.secondary' }}>
-                  {currency}
+                  {currencySymbol(currency, locale)}
                 </Box>
               ),
             }}
+            {...errorProps('amount')}
             fullWidth
           />
 
@@ -137,6 +171,7 @@ export default function NewTransactionCard({
             placeholder={t('dashboard.admin.accountability.entityPlaceholder')}
             value={draft.entity}
             onChange={setField('entity')}
+            inputProps={{ maxLength: MAX_TEXT_LENGTH }}
             fullWidth
           />
 
@@ -145,6 +180,8 @@ export default function NewTransactionCard({
             placeholder={t('dashboard.admin.accountability.conceptPlaceholder')}
             value={draft.concept}
             onChange={setField('concept')}
+            inputProps={{ maxLength: MAX_TEXT_LENGTH }}
+            {...errorProps('concept')}
             fullWidth
           />
 
@@ -190,6 +227,7 @@ export default function NewTransactionCard({
             InputLabelProps={{ shrink: true }}
             value={draft.occurred_on}
             onChange={setField('occurred_on')}
+            {...errorProps('occurred_on')}
             fullWidth
           />
 
@@ -200,15 +238,15 @@ export default function NewTransactionCard({
             startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
             fullWidth
             sx={(theme) => ({
-              // Peach fill with the component's dark-brown text (replaces the
+              // Accent fill with the paper-colored text (replaces the
               // orange gradient).
               backgroundImage: 'none',
-              backgroundColor: ACCENT,
+              backgroundColor: accentOf(theme),
               color: theme.palette.background.paper,
               boxShadow: 'none',
               '&:hover': {
                 backgroundImage: 'none',
-                backgroundColor: '#f2a074',
+                backgroundColor: theme.custom.tones.accentHover,
                 boxShadow: theme.custom?.shadows?.md,
               },
             })}

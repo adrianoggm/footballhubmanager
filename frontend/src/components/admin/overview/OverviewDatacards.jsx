@@ -17,6 +17,7 @@ function OverviewStatCard({ item }) {
   // Only short numeric values get the big size; names/text get a compact size.
   const numeric = /^[\d.,%+\s-]+$/.test(value)
   const iconName = ICONS[item.icon] || ICONS.players
+  const { surfaces, tones } = theme.custom
 
   return (
     <Paper
@@ -30,7 +31,7 @@ function OverviewStatCard({ item }) {
         alignItems: 'center',
         borderRadius: radius,
         border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.05 : 0.07)}`,
-        backgroundColor: '#45342C',
+        backgroundColor: surfaces.raised,
         px: '24px',
         py: '16px',
       }}
@@ -61,7 +62,7 @@ function OverviewStatCard({ item }) {
             letterSpacing: '0.06em',
             fontSize: '0.9rem',
             lineHeight: 1.25,
-            color: '#88736A',
+            color: tones.muted,
           }}
         >
           {item.label}
@@ -70,7 +71,7 @@ function OverviewStatCard({ item }) {
           sx={{
             fontFamily: '"Hanken Grotesk", sans-serif',
             fontWeight: 800,
-            color: '#F4EEE8',
+            color: tones.onRaised,
             lineHeight: 1.02,
             fontSize: numeric ? '2.35rem' : '1.3rem',
             letterSpacing: -0.5,

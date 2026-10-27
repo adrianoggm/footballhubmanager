@@ -64,6 +64,7 @@ from core.domain.errors import (
     InvalidPenaLabelsDataError,
     InvalidProfileImageError,
     PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
     PenaAccountabilityTransactionNotFoundError,
@@ -855,7 +856,8 @@ def test_get_pena_accountability_for_user_hides_data_by_transparency():
     assert response.total_balance_cents is None
     assert response.outstanding_dues_cents is None
     assert response.member_accounts == []
-    assert response.monthly_cashflow == []
+    # budget private: the cash flow only carries the (shared) expense side
+    assert all(item.income_cents is None for item in response.monthly_cashflow)
     # expenses_visibility=summary still exposes the expense total to users
     assert response.total_expense_cents == 3000
     assert response.my_account is not None
@@ -919,6 +921,7 @@ def test_get_pena_accountability_maps_not_found_error():
     ("error", "status_code", "detail"),
     [
         (InvalidPenaAccountabilityDataError(), 400, "Invalid accountability data"),
+        (PenaAccountabilityAmountOutOfRangeError(), 400, "Amount out of range"),
         (PenaAccountabilityPenaNotFoundError(), 404, "Pena not found"),
         (PenaAccountabilityAccessDeniedError(), 403, "Admin does not manage this pena"),
     ],
@@ -1037,3 +1040,132 @@ def test_accountability_mutations_map_not_found_errors(fn_name, error, status_co
 
     assert exc.value.status_code == status_code
     assert exc.value.detail == detail
+
+
+def _member_view_info(*, budget: str, expenses: str, note: str | None = None):
+    base = _accountability_info()
+    members = [
+        PenaAccountabilityMemberAccountInfo(
+            **{**item.__dict__, "note": note if note is not None else item.note}
+        )
+        for item in base.member_accounts
+    ]
+    return PenaAccountabilityInfo(
+        **{
+            **base.__dict__,
+            "budget_visibility": budget,
+            "expenses_visibility": expenses,
+            "member_accounts": members,
+        }
+    )
+
+
+def _get_as_member(info):
+    return penas_controller.get_pena_accountability(
+        "pena-1",
+        session=_session(user_type="user", user_id=9),
+        query_bus=_AccountabilityQueryBus(info, player_guid="player-1"),
+    )
+
+
+def test_member_cashflow_hides_expenses_when_expenses_private():
+    """MO-01: private expenses must not leak through the cash-flow chart or the balance."""
+    response = _get_as_member(_member_view_info(budget="full", expenses="private"))
+
+    assert response.monthly_cashflow, "income cash flow stays visible at budget=full"
+    assert all(item.expense_cents is None for item in response.monthly_cashflow)
+    assert [item.income_cents for item in response.monthly_cashflow] == [1000, 800]
+    assert response.total_expense_cents is None
+    # balance = opening + income - expenses would let a member derive expenses
+    assert response.total_balance_cents is None
+    assert response.balance_trend_pct is None
+    assert response.total_income_cents == 1800
+
+
+def test_member_cashflow_shows_expenses_only_when_budget_private():
+    """MO-14: expenses=summary still shares monthly expenses even with a private budget."""
+    response = _get_as_member(_member_view_info(budget="private", expenses="summary"))
+
+    assert [item.expense_cents for item in response.monthly_cashflow] == [500, 2500]
+    assert all(item.income_cents is None for item in response.monthly_cashflow)
+    assert response.total_expense_cents == 3000
+    assert response.total_balance_cents is None
+
+
+def test_member_sees_balance_when_budget_and_expenses_shared():
+    response = _get_as_member(_member_view_info(budget="summary", expenses="summary"))
+
+    assert response.total_balance_cents == 18_800
+    assert response.monthly_cashflow[0].expense_cents == 500
+
+
+def test_member_responses_never_include_admin_notes():
+    """MO-05: member-account notes are internal to admins."""
+    response = _get_as_member(_member_view_info(budget="full", expenses="full", note="Owes x"))
+
+    assert response.my_account is not None
+    assert response.my_account.note is None
+    assert response.member_accounts
+    assert all(item.note is None for item in response.member_accounts)
+
+
+def test_admin_response_keeps_member_notes():
+    info = _member_view_info(budget="private", expenses="private", note="Owes x")
+    response = penas_controller.get_pena_accountability(
+        "pena-1",
+        session=_session(user_type="admin", user_id=7),
+        query_bus=_AccountabilityQueryBus(info),
+    )
+
+    assert response.member_accounts[0].note == "Owes x"
+    assert response.monthly_cashflow[0].expense_cents == 500
+
+
+def _list_as(user_type, info, requested_type):
+    bus = _AccountabilityQueryBus(info, transaction_page=_transaction_page())
+    response = penas_controller.list_pena_transactions(
+        "pena-1",
+        page=1,
+        page_size=10,
+        type=requested_type,
+        session=_session(user_type=user_type, user_id=9),
+        query_bus=bus,
+    )
+    return response, bus
+
+
+def test_member_transactions_never_include_admin_notes():
+    """MO-05: transaction notes are hidden from the member ledger."""
+    response, _bus = _list_as("user", _member_view_info(budget="full", expenses="full"), None)
+
+    assert response.items[0].note is None
+
+
+def test_admin_transactions_keep_notes():
+    response, _bus = _list_as("admin", _accountability_info(), None)
+
+    assert response.items[0].note == "Invoice #99"
+
+
+def test_member_requesting_hidden_type_gets_empty_page():
+    """MO-13: ?type=expense with summary-only expenses returns nothing, not income."""
+    info = _member_view_info(budget="full", expenses="summary")
+    response, bus = _list_as("user", info, "expense")
+
+    assert response.total == 0
+    assert response.items == []
+    assert bus.last_transactions_query is None
+
+
+def test_member_without_type_lists_only_visible_types():
+    info = _member_view_info(budget="full", expenses="summary")
+    _response, bus = _list_as("user", info, None)
+
+    assert bus.last_transactions_query.type_filter == "income"
+
+
+def test_member_with_full_detail_can_filter_by_type():
+    info = _member_view_info(budget="full", expenses="full")
+    _response, bus = _list_as("user", info, "expense")
+
+    assert bus.last_transactions_query.type_filter == "expense"

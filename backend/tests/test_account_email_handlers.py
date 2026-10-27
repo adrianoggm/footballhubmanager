@@ -84,6 +84,7 @@ def test_change_email_normalizes_resets_verification_and_sends_link():
 
     assert result.email == "new@example.com"
     assert result.email_verified is False
+    assert result.verification_email_sent is True
     assert env.accounts.accounts[USER_REF].email_verified_at is None
     sent = env.mail.sent[0]
     assert sent.to == "new@example.com"
@@ -126,17 +127,41 @@ def test_change_email_propagates_conflict_and_sends_nothing():
     assert env.mail.sent == []
 
 
-def test_change_email_respects_cooldown():
+def test_change_email_within_cooldown_saves_address_but_defers_the_email():
+    # QA F8: a second change inside the resend window must still save the address;
+    # only the verification email is throttled (the user resends it later).
+    env = _Env(account(email=None))
+    handler = env.change()
+    first = handler.handle(ChangeAccountEmailCommand(USER_REF, "a@example.com", MailLanguage.ES))
+    assert first.verification_email_sent is True
+    env.clock.current += 30
+
+    second = handler.handle(ChangeAccountEmailCommand(USER_REF, "b@example.com", MailLanguage.ES))
+
+    assert second.email == "b@example.com"
+    assert second.email_verified is False
+    assert second.verification_email_sent is False
+    assert env.accounts.accounts[USER_REF].email == "b@example.com"
+    assert [m.to for m in env.mail.sent] == ["a@example.com"]
+    # The link mailed for the previous address no longer verifies the account.
+    with pytest.raises(InvalidAccountTokenError):
+        env.verify().handle(VerifyEmailCommand(env.last_raw_token()))
+
+    # Once the window is over the user can resend to the new address.
+    env.clock.current += 31
+    env.resend().handle(ResendEmailVerificationCommand(USER_REF, MailLanguage.ES))
+    assert [m.to for m in env.mail.sent] == ["a@example.com", "b@example.com"]
+
+
+def test_change_email_after_cooldown_sends_the_link_again():
     env = _Env(account(email=None))
     handler = env.change()
     handler.handle(ChangeAccountEmailCommand(USER_REF, "a@example.com", MailLanguage.ES))
-    env.clock.current += 30
+    env.clock.current += 61
 
-    with pytest.raises(AccountTokenCooldownError):
-        handler.handle(ChangeAccountEmailCommand(USER_REF, "b@example.com", MailLanguage.ES))
+    result = handler.handle(ChangeAccountEmailCommand(USER_REF, "b@example.com", MailLanguage.ES))
 
-    env.clock.current += 31
-    handler.handle(ChangeAccountEmailCommand(USER_REF, "b@example.com", MailLanguage.ES))
+    assert result.verification_email_sent is True
     assert [m.to for m in env.mail.sent] == ["a@example.com", "b@example.com"]
 
 

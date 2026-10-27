@@ -3,6 +3,8 @@
 export { default as ConfirmDialog } from './ConfirmDialog.jsx'
 export { default as EmptyState } from './EmptyState.jsx'
 export { default as ErrorState } from './ErrorState.jsx'
+export { default as HeaderIconButton } from './HeaderIconButton.jsx'
+export { default as LabelSelect } from './LabelSelect.jsx'
 export { default as LoadingState } from './LoadingState.jsx'
 export { default as LogoHorizontal } from './LogoHorizontal.jsx'
 export { default as PaginatedTable } from './PaginatedTable.jsx'
@@ -17,3 +19,5 @@ export {
   trackingLabel,
 } from './trackingStatus.js'
 export { getSurfaceGeometry } from './surfaceGeometry.js'
+export { stickyLastColumnSx } from './responsiveTable.js'
+export { touchTargetChipSx, touchTargetLinkSx, touchTargetSx } from './touchTarget.js'

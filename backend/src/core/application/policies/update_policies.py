@@ -35,3 +35,4 @@ class StandingsUpdatePolicy(str, Enum):
 class AmountSignPolicy(str, Enum):
     ALLOW_NEGATIVE = "allow_negative"
     REQUIRE_NON_NEGATIVE = "require_non_negative"
+    REQUIRE_POSITIVE = "require_positive"

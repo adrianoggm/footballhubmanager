@@ -11,8 +11,12 @@ from core.application.commands.pena_link_commands import (
     RegisterAndClaimPlayerCommand,
 )
 from core.application.models import ClaimLink, ClaimRegistration, PenaLinkToken
-from core.application.ports.pena_link_port import PenaLinkPort
-from core.domain.errors import InvalidLinkTokenError, InvalidRegistrationDataError
+from core.application.ports.pena_link_port import InvalidPositionLabelError, PenaLinkPort
+from core.domain.errors import (
+    InvalidLinkTokenError,
+    InvalidPenaPositionError,
+    InvalidRegistrationDataError,
+)
 
 
 class GeneratePenaLinkTokenHandler:
@@ -67,12 +71,15 @@ class LinkUserToPenaHandler:
         if normalized_position == "":
             normalized_position = None
 
-        self._repository.consume_token_for_user(
-            token=normalized_token,
-            account_id=command.account_id,
-            nickname=normalized_nickname,
-            position=normalized_position,
-        )
+        try:
+            self._repository.consume_token_for_user(
+                token=normalized_token,
+                account_id=command.account_id,
+                nickname=normalized_nickname,
+                position=normalized_position,
+            )
+        except InvalidPositionLabelError as exc:
+            raise InvalidPenaPositionError() from exc
 
 
 class RegisterAndClaimPlayerHandler:

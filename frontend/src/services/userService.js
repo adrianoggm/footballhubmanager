@@ -20,6 +20,10 @@ export class UserService {
     return httpClient.post(`${API_V1}/penas/link/consume`, payload)
   }
 
+  getPenaLabels(penaGuid) {
+    return httpClient.get(`${API_V1}/penas/${penaGuid}/labels`)
+  }
+
   getMyMembership(penaGuid) {
     return httpClient.get(`${API_V1}/players/me/penas/${penaGuid}`)
   }

@@ -76,4 +76,24 @@ describe('MatchTrackingTab', () => {
     expect(screen.getByText('dashboard.admin.matches.startTracking')).toBeInTheDocument()
     expect(screen.getByText('dashboard.admin.matches.stopTracking')).toBeInTheDocument()
   })
+
+  // MT-01: "-" must be disabled while the player's count for that metric is 0.
+  it('disables the decrement control when the player count is zero', () => {
+    const players = [{ player_guid: 'ana' }]
+    render(
+      <MatchTrackingTab
+        {...baseProps}
+        selectedMatchDetail={{
+          ...detail,
+          home_team: { ...detail.home_team, players },
+        }}
+        eventCountsByPlayer={new Map([['ana', { goal: 1, assist: 0 }]])}
+      />
+    )
+    const goalLabel = 'dashboard.admin.matches.eventTypes.goal - ana'
+    const assistLabel = 'dashboard.admin.matches.eventTypes.assist - ana'
+    expect(screen.getByRole('button', { name: `−1 ${goalLabel}` })).toBeEnabled()
+    expect(screen.getByRole('button', { name: `−1 ${assistLabel}` })).toBeDisabled()
+    expect(screen.getByRole('button', { name: `+1 ${assistLabel}` })).toBeEnabled()
+  })
 })

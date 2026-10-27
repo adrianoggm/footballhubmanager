@@ -69,7 +69,11 @@ def test_read_account_email_maps_result():
 
 
 def test_change_account_email_dispatches_command_with_language():
-    bus = _Bus(AccountEmailStatusResult(email="new@example.com", email_verified=False))
+    bus = _Bus(
+        AccountEmailStatusResult(
+            email="new@example.com", email_verified=False, verification_email_sent=True
+        )
+    )
 
     response = auth_controller.change_account_email(
         ChangeAccountEmailRequest(email="New@Example.com", lang="en"),
@@ -81,6 +85,23 @@ def test_change_account_email_dispatches_command_with_language():
         ChangeAccountEmailCommand(ref=_REF, email="New@Example.com", lang=MailLanguage.EN)
     ]
     assert response.email == "new@example.com"
+    assert response.verification_email_sent is True
+
+
+def test_change_account_email_reports_a_deferred_verification_email():
+    bus = _Bus(
+        AccountEmailStatusResult(
+            email="new@example.com", email_verified=False, verification_email_sent=False
+        )
+    )
+
+    response = auth_controller.change_account_email(
+        ChangeAccountEmailRequest(email="new@example.com", lang="es"),
+        session=_SESSION,
+        command_bus=bus,
+    )
+
+    assert response.verification_email_sent is False
 
 
 def test_resend_email_verification_returns_sent():

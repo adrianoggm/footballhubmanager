@@ -286,6 +286,14 @@ class MatchEventPlayerNotInMatchError(Exception):
     pass
 
 
+class MatchDateOutsideSeasonError(Exception):
+    """The match date falls outside the season start/end dates."""
+
+
+class MatchEventCountBelowZeroError(Exception):
+    """A negative event delta would take the player's count below zero."""
+
+
 class MatchReportClosedError(Exception):
     pass
 

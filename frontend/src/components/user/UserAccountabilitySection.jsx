@@ -20,13 +20,19 @@ import { useEffect, useMemo, useState } from 'react'
 import { userService } from '../../services/userService.js'
 import { LoadingState } from '../common'
 import {
+  memberLedgerTypes,
   resolveBudgetVisibility,
   resolveExpensesVisibility,
 } from '../common/accountabilityVisibility.js'
 import AccountabilityKpis from '../admin/accountability/AccountabilityKpis.jsx'
 import CashFlowDialog from '../admin/accountability/CashFlowDialog.jsx'
 import TransactionLedger from '../admin/accountability/TransactionLedger.jsx'
-import { createMoneyFormatter, formatMoney } from '../admin/accountability/accountabilityHelpers.js'
+import {
+  accountabilityErrorMessage,
+  createMoneyFormatter,
+  formatMoney,
+  toIntlLocale,
+} from '../admin/accountability/accountabilityHelpers.js'
 
 const PAGE_SIZE = 8
 
@@ -36,12 +42,28 @@ const visibilityTone = (level) =>
 const visibilityLabelKey = (scope) =>
   `dashboard.user.accountability.visibility${scope[0].toUpperCase()}${scope.slice(1)}`
 
-export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid, t }) {
+const A = 'dashboard.admin.accountability'
+
+// Ledger header/empty text for the types the member can list.
+const ledgerCopy = (types, t) => {
+  if (!types.length) {
+    return { emptyMessage: t(`${A}.ledgerDetailNotShared`) }
+  }
+  if (types.length === 1) {
+    const suffix = types[0] === 'income' ? 'Income' : 'Expense'
+    return { description: t(`${A}.ledgerDescription${suffix}`) }
+  }
+  return {}
+}
+
+export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid, language, t }) {
+  const locale = toIntlLocale(language)
   const [accountability, setAccountability] = useState(null)
   const [ledger, setLedger] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [filter, setFilter] = useState('all')
   const [cashflowOpen, setCashflowOpen] = useState(false)
 
   useEffect(() => {
@@ -62,7 +84,7 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
         }
       } catch (loadError) {
         if (active) {
-          setError(loadError?.message || t('dashboard.common.errors.generic'))
+          setError(accountabilityErrorMessage(loadError, t))
         }
       } finally {
         if (active) {
@@ -84,7 +106,11 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
     }
     ;(async () => {
       try {
-        const data = await userService.listPenaTransactions(penaGuid, { page, pageSize: PAGE_SIZE })
+        const data = await userService.listPenaTransactions(penaGuid, {
+          page,
+          pageSize: PAGE_SIZE,
+          type: filter === 'all' ? '' : filter,
+        })
         if (active) {
           setLedger(data)
         }
@@ -97,15 +123,21 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
     return () => {
       active = false
     }
-  }, [penaGuid, page])
+  }, [penaGuid, page, filter])
 
-  const formatter = useMemo(
-    () => createMoneyFormatter(accountability?.currency || 'EUR'),
-    [accountability?.currency]
-  )
+  const currency = accountability?.currency || 'EUR'
+  const formatter = useMemo(() => createMoneyFormatter(currency, locale), [currency, locale])
 
   const budgetVisibility = resolveBudgetVisibility(accountability)
   const expensesVisibility = resolveExpensesVisibility(accountability)
+  // Budget and expenses are shared independently: show whatever either level allows.
+  const nothingShared = budgetVisibility === 'private' && expensesVisibility === 'private'
+  const ledgerTypes = memberLedgerTypes(budgetVisibility, expensesVisibility)
+
+  const changeFilter = (next) => {
+    setFilter(next)
+    setPage(1)
+  }
   const myAccount = accountability?.my_account || null
   const members = accountability?.member_accounts || []
   const myNet = myAccount
@@ -113,7 +145,7 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
     : 0
 
   return (
-    <Stack spacing={2.5}>
+    <Stack useFlexGap spacing={2.5}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       {loading && !accountability ? <LoadingState /> : null}
 
@@ -141,7 +173,7 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
             />
           </Stack>
         </Box>
-        {budgetVisibility !== 'private' ? (
+        {!nothingShared ? (
           <Button
             variant="outlined"
             startIcon={
@@ -196,17 +228,21 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
         </Grid>
       </Grid>
 
-      {budgetVisibility === 'private' ? (
+      {nothingShared ? (
         <Alert severity="info">{t('dashboard.user.accountability.privateMessage')}</Alert>
       ) : (
-        <AccountabilityKpis data={accountability} formatter={formatter} t={t} />
+        <AccountabilityKpis data={accountability} formatter={formatter} locale={locale} t={t} />
       )}
 
       <TransactionLedger
         t={t}
         formatter={formatter}
+        locale={locale}
         page={ledger}
-        showFilter={false}
+        filter={filter}
+        onFilterChange={changeFilter}
+        filterTypes={ledgerTypes}
+        {...ledgerCopy(ledgerTypes, t)}
         readOnly
         onPrev={() => setPage((value) => Math.max(1, value - 1))}
         onNext={() => setPage((value) => value + 1)}
@@ -262,9 +298,11 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
         onClose={() => setCashflowOpen(false)}
         t={t}
         formatter={formatter}
+        currency={currency}
+        locale={locale}
         monthly={accountability?.monthly_cashflow || []}
-        openingBalanceCents={accountability?.opening_balance_cents || 0}
-        reserveCents={accountability?.reserve_cents || 0}
+        openingBalanceCents={accountability?.opening_balance_cents}
+        reserveCents={accountability?.reserve_cents}
       />
     </Stack>
   )
