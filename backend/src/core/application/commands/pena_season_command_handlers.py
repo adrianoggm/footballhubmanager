@@ -11,6 +11,7 @@ from core.application.models import PenaSeasonInfo
 from core.application.ports.pena_season_port import PenaSeasonPort, PenaSeasonResult
 from core.domain.errors import InvalidPenaSeasonDataError
 from core.domain.value_objects.season_date_range import SeasonDateRange
+from core.domain.value_objects.season_points import SeasonPoints, ensure_valid_season_points
 
 
 def _to_info(season: PenaSeasonResult) -> PenaSeasonInfo:
@@ -31,6 +32,7 @@ class CreatePenaSeasonHandler:
     def handle(self, command: CreatePenaSeasonCommand) -> PenaSeasonInfo:
         # Invariante de dominio: rango de fechas válido.
         SeasonDateRange(start_date=command.start_date, end_date=command.end_date)
+        SeasonPoints(win=command.points_win, draw=command.points_draw, loss=command.points_loss)
         created = self._repository.create_for_admin(
             pena_guid=command.pena_guid,
             admin_id=command.admin_id,
@@ -67,6 +69,9 @@ class UpdatePenaSeasonHandler:
             raise InvalidPenaSeasonDataError()
         if command.points_loss.is_set() and command.points_loss.value is None:
             raise InvalidPenaSeasonDataError()
+        for points in (command.points_win, command.points_draw, command.points_loss):
+            if points.is_set():
+                ensure_valid_season_points(points.value)
         if (
             command.start_date.is_set()
             and command.end_date.is_set()
