@@ -47,6 +47,7 @@ from core.application.ports.season_competition_port import (
     InvalidSeasonPlayerStatsError,
     MatchClockAlreadyStartedError,
     MatchClockNotRunningError,
+    MatchDateOutsideSeasonError,
     MatchDetailResult,
     MatchesPageResult,
     MatchEventCountBelowZeroError,
@@ -85,6 +86,7 @@ from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchDateOutsideSeasonError,
     SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
@@ -116,6 +118,7 @@ class _FakeRepo:
     should_raise_event_not_found: bool = False
     should_raise_event_player_not_in_match: bool = False
     should_raise_event_count_below_zero: bool = False
+    should_raise_match_date_outside_season: bool = False
     should_raise_match_report_closed: bool = False
     last_payload: dict | None = None
 
@@ -197,6 +200,8 @@ class _FakeRepo:
         )
 
     def create_match_for_admin(self, **kwargs) -> MatchResult:
+        if self.should_raise_match_date_outside_season:
+            raise MatchDateOutsideSeasonError()
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
         if self.should_raise_access_denied:
@@ -229,6 +234,8 @@ class _FakeRepo:
         return self._match()
 
     def create_match_with_lineups_for_admin(self, **kwargs) -> MatchDetailResult:
+        if self.should_raise_match_date_outside_season:
+            raise MatchDateOutsideSeasonError()
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
         if self.should_raise_access_denied:
@@ -265,6 +272,8 @@ class _FakeRepo:
         return self._detail()
 
     def update_match_for_admin(self, **kwargs) -> MatchDetailResult:
+        if self.should_raise_match_date_outside_season:
+            raise MatchDateOutsideSeasonError()
         if self.should_raise_pena_not_found:
             raise PenaNotFoundError()
         if self.should_raise_access_denied:
@@ -792,6 +801,9 @@ _ERROR_CASES = [
     ("event", "should_raise_match_report_closed", SeasonMatchReportClosedError),
     ("event", "should_raise_invalid_match_data", InvalidSeasonMatchDataError),
     ("event", "should_raise_event_count_below_zero", SeasonMatchEventCountBelowZeroError),
+    ("create", "should_raise_match_date_outside_season", SeasonMatchDateOutsideSeasonError),
+    ("with_lineups", "should_raise_match_date_outside_season", SeasonMatchDateOutsideSeasonError),
+    ("update", "should_raise_match_date_outside_season", SeasonMatchDateOutsideSeasonError),
     # delete_match_event_for_admin
     ("delete_event", "should_raise_pena_not_found", PenaSeasonPenaNotFoundError),
     ("delete_event", "should_raise_access_denied", PenaSeasonAccessDeniedError),

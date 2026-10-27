@@ -1,8 +1,11 @@
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from core.application.policies import FieldUpdate
 from core.application.ports.season_competition_port import (
+    MatchDateOutsideSeasonError,
     MatchEventCountBelowZeroError,
     MatchEventCreateData,
     MatchNotFoundError,
@@ -772,3 +775,110 @@ def test_create_match_event_for_admin_accepts_decrement_when_player_has_count():
 
     assert result == "detail-result"
     assert session.add.call_args.args[0].value_delta == -1
+
+
+def _season_repo(session):
+    repo = SqlAlchemySeasonMatchRepository(session)
+    season = SimpleNamespace(
+        id=55,
+        guid="season-guid",
+        start_date=date(2026, 9, 1),
+        end_date=date(2027, 6, 30),
+    )
+    repo._get_admin_season = lambda **kwargs: (SimpleNamespace(id=44, id_admin=7), season)
+    repo._get_pena = lambda _pena_guid: SimpleNamespace(id=44, id_admin=7)
+    repo._get_season = lambda *, pena_id, season_guid: season
+    repo._create_match_entities = Mock()
+    return repo
+
+
+@pytest.mark.parametrize("match_date", [date(2026, 8, 31), date(2027, 7, 1)])
+def test_create_match_with_lineups_for_admin_rejects_date_outside_season(match_date):
+    session = Mock()
+    repo = _season_repo(session)
+    repo._resolve_match_players = Mock(return_value=[])
+
+    with pytest.raises(MatchDateOutsideSeasonError):
+        repo.create_match_with_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=7,
+            match_date=match_date,
+            home_team_name=None,
+            away_team_name=None,
+            home_player_guids=["h1"],
+            away_player_guids=["a1"],
+        )
+
+    repo._create_match_entities.assert_not_called()
+    session.rollback.assert_called_once()
+    session.commit.assert_not_called()
+
+
+def test_create_match_for_admin_rejects_date_outside_season():
+    session = Mock()
+    repo = _season_repo(session)
+    repo._get_player = Mock()
+
+    with pytest.raises(MatchDateOutsideSeasonError):
+        repo.create_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=7,
+            home_player_guid="h1",
+            away_player_guid="a1",
+            match_date=date(2025, 1, 1),
+        )
+
+    repo._create_match_entities.assert_not_called()
+    session.rollback.assert_called_once()
+
+
+def test_update_match_for_admin_rejects_date_outside_season():
+    session = Mock()
+    repo = _season_repo(session)
+    football_match = SimpleNamespace(match_date=date(2026, 10, 1))
+    repo._get_locked_match_teams = lambda **kwargs: (
+        football_match,
+        SimpleNamespace(name="H"),
+        SimpleNamespace(name="A"),
+    )
+
+    with pytest.raises(MatchDateOutsideSeasonError):
+        repo.update_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=7,
+            match_date=FieldUpdate.set(date(2027, 7, 1)),
+            home_team_name=FieldUpdate.keep(),
+            away_team_name=FieldUpdate.keep(),
+        )
+
+    assert football_match.match_date == date(2026, 10, 1)
+    session.rollback.assert_called_once()
+    session.commit.assert_not_called()
+
+
+def test_create_match_with_lineups_for_admin_accepts_season_boundary_dates():
+    session = Mock()
+    repo = _season_repo(session)
+    repo._resolve_match_players = Mock(return_value=[])
+    repo._create_match_entities = Mock(
+        return_value=(SimpleNamespace(), SimpleNamespace(id=1), SimpleNamespace(id=2))
+    )
+    repo._add_open_team_players = Mock()
+    repo._build_match_detail_result = lambda **kwargs: "detail-result"
+
+    for match_date in (date(2026, 9, 1), date(2027, 6, 30)):
+        result = repo.create_match_with_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=7,
+            match_date=match_date,
+            home_team_name=None,
+            away_team_name=None,
+            home_player_guids=["h1"],
+            away_player_guids=["a1"],
+        )
+        assert result == "detail-result"

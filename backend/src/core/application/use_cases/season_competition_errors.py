@@ -86,6 +86,10 @@ class SeasonMatchEventPlayerNotInMatchError(Exception):
     pass
 
 
+class SeasonMatchDateOutsideSeasonError(Exception):
+    pass
+
+
 class SeasonMatchEventCountBelowZeroError(Exception):
     pass
 
