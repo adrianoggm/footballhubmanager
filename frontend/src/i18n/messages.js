@@ -546,6 +546,8 @@ export const messages = {
           nextMatchPlace: 'To be confirmed',
           rosterHome: 'Home',
           rosterAway: 'Away',
+          rosterPlayersOne: '{count} player',
+          rosterPlayersOther: '{count} players',
           // stat carousel
           statsTitle: 'Season Stats',
           statClassification: 'Classification',
@@ -1866,6 +1868,8 @@ export const messages = {
           nextMatchPlace: 'Por confirmar',
           rosterHome: 'Local',
           rosterAway: 'Visitante',
+          rosterPlayersOne: '{count} jugador',
+          rosterPlayersOther: '{count} jugadores',
           statsTitle: 'Estadísticas de temporada',
           statClassification: 'Clasificación',
           statGoalsByMatchday: 'Goles por jornada',

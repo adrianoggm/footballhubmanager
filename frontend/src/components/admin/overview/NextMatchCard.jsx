@@ -20,13 +20,14 @@ function MetaLine({ icon, children }) {
   )
 }
 
-function RosterRow({ label, labelColor, name, extra, chipBg }) {
+function RosterRow({ label, labelColor, count, chipBg, t }) {
   const chipSx = {
     bgcolor: chipBg,
     color: 'text.primary',
     fontWeight: 600,
     borderRadius: '4px',
   }
+  const players = Math.max(0, Number(count) || 0)
   return (
     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
       <Typography
@@ -42,14 +43,22 @@ function RosterRow({ label, labelColor, name, extra, chipBg }) {
       >
         {label}
       </Typography>
-      <Chip size="small" label={name} sx={chipSx} />
-      {extra > 0 ? <Chip size="small" label={`+${extra}`} sx={chipSx} /> : null}
+      <Chip
+        size="small"
+        label={t(
+          players === 1
+            ? 'dashboard.admin.overview.rosterPlayersOne'
+            : 'dashboard.admin.overview.rosterPlayersOther',
+          { count: players }
+        )}
+        sx={chipSx}
+      />
     </Stack>
   )
 }
 
-// ponytail: roster shows the two participants + a "+N" from the players count;
-// real per-side lineups + venue come from a later backend iteration (placeholder venue).
+// The match list summary only carries per-side player counts (no names), so the
+// call-up shows how many players each side has; venue is still a placeholder.
 export default function NextMatchCard({ match, t, formatDate }) {
   // home chip shares the warm Ranking/Recent surface; away is a darker, greyer tone
   const { surfaces, tones } = useTheme().custom
@@ -119,16 +128,16 @@ export default function NextMatchCard({ match, t, formatDate }) {
                 <RosterRow
                   label={t('dashboard.admin.overview.rosterHome')}
                   labelColor={tones.accent}
-                  name={match.home_team_name}
-                  extra={(match.home_players || 1) - 1}
+                  count={match.home_players}
                   chipBg={surfaces.chipHome}
+                  t={t}
                 />
                 <RosterRow
                   label={t('dashboard.admin.overview.rosterAway')}
                   labelColor={tones.muted}
-                  name={match.away_team_name}
-                  extra={(match.away_players || 1) - 1}
+                  count={match.away_players}
                   chipBg={surfaces.chipAway}
+                  t={t}
                 />
               </Stack>
             </Box>
