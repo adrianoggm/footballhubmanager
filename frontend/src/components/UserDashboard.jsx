@@ -27,6 +27,7 @@ import { readableTextColor } from '../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../theme/tokens.js'
 import { useForm } from '../hooks/useForm.js'
 import { translateRoleLabel } from '../i18n/labels.js'
+import { translateApiError } from '../i18n/apiErrors.js'
 import { useInsightsReport } from '../hooks/useInsightsReport.js'
 import { useMatchDetailDialog } from '../hooks/useMatchDetailDialog.js'
 import { useToast } from '../context/toastContext.js'
@@ -96,7 +97,8 @@ const mapDashboardErrorMessage = (error, t) => {
   if (raw.includes('failed to fetch') || raw.includes('network')) {
     return t('dashboard.common.errors.network')
   }
-  return error.message
+  // PL-09: known backend details (e.g. an expired join code) are translated.
+  return translateApiError(error, t) || error.message
 }
 
 const mapProfileImageErrorMessage = (error, t) => {
@@ -602,6 +604,8 @@ export default function UserDashboard({
       })
       resetJoinForm()
       await loadDashboard()
+      // PL-14: after joining, show the joined pena in "My penas".
+      handleNavigateToSection('membership')
     }, t('dashboard.user.noticeJoinedPena'))
   }
 
