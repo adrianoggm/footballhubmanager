@@ -62,7 +62,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
 
       <Grid item xs={12} md={7}>
         <Stack spacing={1.5}>
-          <Typography variant="h6" sx={{ color: '#C1ACA3' }}>
+          <Typography variant="h6" sx={{ color: (theme) => theme.custom.tones.heading }}>
             {t('dashboard.admin.overview.quickActionsTitle')}
           </Typography>
           <QuickActions actions={actions} t={t} />
@@ -71,7 +71,7 @@ export default function AdminOverviewSection({ state, actions, helpers }) {
 
       <Grid item xs={12} md={5}>
         {!selectedSeasonGuid ? (
-          <Card sx={{ height: '100%', backgroundColor: '#1E1E1E' }}>
+          <Card sx={{ height: '100%', backgroundColor: (theme) => theme.custom.surfaces.card }}>
             <CardContent>
               <EmptyState title={t('dashboard.admin.overview.selectSeasonToLoad')} dense />
             </CardContent>

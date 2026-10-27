@@ -1,20 +1,19 @@
 import { Box, Card, CardContent, Chip, Stack, Typography } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import { EmptyState } from '../../common'
 
-const HOME_CHIP_BG = '#41312A' // same warm surface as Ranking/Recent cards
-const AWAY_CHIP_BG = '#2A2826' // slightly darker, greyer tone for the away side
-
 function MetaLine({ icon, children }) {
+  const { tones } = useTheme().custom
   return (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <Box
         component="span"
         className="material-symbols-rounded"
-        sx={{ fontSize: 18, color: '#88736A' }}
+        sx={{ fontSize: 18, color: tones.muted }}
       >
         {icon}
       </Box>
-      <Typography variant="body2" sx={{ color: '#88736A' }}>
+      <Typography variant="body2" sx={{ color: tones.muted }}>
         {children}
       </Typography>
     </Stack>
@@ -52,15 +51,17 @@ function RosterRow({ label, labelColor, name, extra, chipBg }) {
 // ponytail: roster shows the two participants + a "+N" from the players count;
 // real per-side lineups + venue come from a later backend iteration (placeholder venue).
 export default function NextMatchCard({ match, t, formatDate }) {
+  // home chip shares the warm Ranking/Recent surface; away is a darker, greyer tone
+  const { surfaces, tones } = useTheme().custom
   return (
-    <Card sx={{ height: '100%', backgroundColor: '#1E1E1E' }}>
+    <Card sx={{ height: '100%', backgroundColor: surfaces.card }}>
       <CardContent>
         <Chip
           size="small"
           label={t('dashboard.admin.overview.nextMatchTitle')}
           sx={{
-            bgcolor: 'rgba(223, 159, 128, 0.14)',
-            color: '#DF9F80',
+            bgcolor: tones.accentSoftBg,
+            color: tones.accent,
             fontFamily: '"JetBrains Mono", monospace',
             fontSize: '0.62rem',
             letterSpacing: '0.06em',
@@ -81,7 +82,7 @@ export default function NextMatchCard({ match, t, formatDate }) {
               >
                 {match.home_team_name}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#88736A' }}>
+              <Typography variant="body2" sx={{ color: tones.muted }}>
                 {t('dashboard.admin.overview.versus')}
               </Typography>
               <Typography
@@ -108,7 +109,7 @@ export default function NextMatchCard({ match, t, formatDate }) {
                   fontSize: '0.62rem',
                   letterSpacing: '0.06em',
                   textTransform: 'uppercase',
-                  color: '#C1ACA3',
+                  color: tones.heading,
                   mb: 0.75,
                 }}
               >
@@ -117,17 +118,17 @@ export default function NextMatchCard({ match, t, formatDate }) {
               <Stack spacing={0.75}>
                 <RosterRow
                   label={t('dashboard.admin.overview.rosterHome')}
-                  labelColor="#DF9F80"
+                  labelColor={tones.accent}
                   name={match.home_team_name}
                   extra={(match.home_players || 1) - 1}
-                  chipBg={HOME_CHIP_BG}
+                  chipBg={surfaces.chipHome}
                 />
                 <RosterRow
                   label={t('dashboard.admin.overview.rosterAway')}
-                  labelColor="#88736A"
+                  labelColor={tones.muted}
                   name={match.away_team_name}
                   extra={(match.away_players || 1) - 1}
-                  chipBg={AWAY_CHIP_BG}
+                  chipBg={surfaces.chipAway}
                 />
               </Stack>
             </Box>
