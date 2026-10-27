@@ -850,7 +850,7 @@ export const messages = {
           actions: 'Actions',
           result: 'Result',
           resultSource: 'Update source',
-          finalScore: 'Final score',
+          finalScore: 'Final score: {score}',
           scoreFromStats: 'Set score from team/player stats.',
           scoreFromTracking: 'Preview from live tracking timeline.',
           manageStats: 'Manage stats',
@@ -997,7 +997,7 @@ export const messages = {
           moveToAway: 'To away',
           removeFromLineup: 'Remove',
           createDetailedMatch: 'Create Detailed Match',
-          matchCreated: 'Match {guid} created for {date}.',
+          matchCreated: 'Match {home} vs {away} created for {date}.',
           lineupHelperTitle: 'Lineup Helper',
           lineupHelperDescription:
             'Select players from the selected season roster to compose lineups.',
@@ -1157,6 +1157,8 @@ export const messages = {
           invalidPenaLabels:
             'Role and position labels are required. Use commas or line breaks to separate values.',
           selectedSeasonRequired: 'Select a season to complete this action',
+          matchDateRequired: 'Select a match date',
+          matchDateOutsideSeason: 'The match date must be within the season ({start} – {end})',
         },
       },
       user: {
@@ -2168,7 +2170,7 @@ export const messages = {
           actions: 'Acciones',
           result: 'Resultado',
           resultSource: 'Origen de actualización',
-          finalScore: 'Marcador final',
+          finalScore: 'Marcador final: {score}',
           scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
           scoreFromTracking: 'Vista previa desde la cronología del seguimiento en vivo.',
           manageStats: 'Editar estadísticas',
@@ -2316,7 +2318,7 @@ export const messages = {
           moveToAway: 'Mover a visitante',
           removeFromLineup: 'Quitar',
           createDetailedMatch: 'Crear partido detallado',
-          matchCreated: 'Partido {guid} creado para {date}.',
+          matchCreated: 'Partido {home} vs {away} creado para el {date}.',
           lineupHelperTitle: 'Asistente de alineación',
           lineupHelperDescription:
             'Selecciona jugadores de la plantilla de la temporada seleccionada para componer alineaciones.',
@@ -2480,6 +2482,9 @@ export const messages = {
           invalidPenaLabels:
             'Las etiquetas de rol y posición son obligatorias. Usa comas o saltos de línea para separarlas.',
           selectedSeasonRequired: 'Selecciona una temporada para completar esta acción',
+          matchDateRequired: 'Selecciona la fecha del partido',
+          matchDateOutsideSeason:
+            'La fecha del partido debe estar dentro de la temporada ({start} – {end})',
         },
       },
       user: {

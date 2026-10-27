@@ -77,7 +77,7 @@ const buildPlayerEventCounts = (events) => {
  * AdminMatchesSection; owns only presentation-local state (the live clock tick),
  * all data state stays in the dashboard and arrives via the section bundles.
  */
-export default function MatchEditorCard({ state, actions, helpers }) {
+export default function MatchEditorCard({ state, actions, helpers, inlineErrors = {} }) {
   const { t, formatDate, formatElapsedDuration, formatPlayerDisplayName } = helpers
   const [nowEpoch, setNowEpoch] = useState(() => Math.floor(Date.now() / 1000))
   const {
@@ -346,6 +346,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
               primaryEventPlayers={primaryEventPlayers}
               relatedEventPlayers={relatedEventPlayers}
               t={t}
+              inlineError={inlineErrors.tracking}
             />
           )}
 
@@ -361,6 +362,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
               loading={loading}
               matchStatsLoading={matchStatsLoading}
               t={t}
+              inlineError={inlineErrors.lineups}
             />
           )}
 
@@ -377,6 +379,7 @@ export default function MatchEditorCard({ state, actions, helpers }) {
               loading={loading}
               matchStatsLoading={matchStatsLoading}
               t={t}
+              inlineError={inlineErrors.stats}
             />
           )}
 

@@ -5,6 +5,8 @@ import {
   buildMatchStatsDraft,
   defaultMatchEventDraft,
   parseMatchEventElapsedDraft,
+  resetMatchFormAfterCreate,
+  validateMatchDate,
 } from './matchDrafts.js'
 
 describe('defaultMatchEventDraft', () => {
@@ -89,5 +91,57 @@ describe('parseMatchEventElapsedDraft', () => {
     expect(parseMatchEventElapsedDraft({ minute: '1', second: '60' }).isValid).toBe(false)
     expect(parseMatchEventElapsedDraft({ minute: '-1', second: '' }).isValid).toBe(false)
     expect(parseMatchEventElapsedDraft({ minute: '1.5', second: '' }).isValid).toBe(false)
+  })
+})
+
+// MT-02: a match without a date used to be sent as match_date:"" (422).
+describe('validateMatchDate', () => {
+  const season = { start_date: '2026-09-01', end_date: '2027-06-30' }
+
+  it('requires a date', () => {
+    expect(validateMatchDate('', season)).toBe('dashboard.admin.errors.matchDateRequired')
+    expect(validateMatchDate(null, season)).toBe('dashboard.admin.errors.matchDateRequired')
+    expect(validateMatchDate('   ', season)).toBe('dashboard.admin.errors.matchDateRequired')
+  })
+
+  it('rejects dates outside the season', () => {
+    expect(validateMatchDate('2026-08-31', season)).toBe(
+      'dashboard.admin.errors.matchDateOutsideSeason'
+    )
+    expect(validateMatchDate('2027-07-01', season)).toBe(
+      'dashboard.admin.errors.matchDateOutsideSeason'
+    )
+  })
+
+  it('accepts dates within the season, boundaries included', () => {
+    expect(validateMatchDate('2026-09-01', season)).toBeNull()
+    expect(validateMatchDate('2026-10-27', season)).toBeNull()
+    expect(validateMatchDate('2027-06-30', season)).toBeNull()
+  })
+
+  it('only checks presence when the season has no range', () => {
+    expect(validateMatchDate('2030-01-01', null)).toBeNull()
+  })
+})
+
+// MT-11: the create form must be cleared after a match is created so a second
+// click does not create a duplicate; the date is kept for the next match.
+describe('resetMatchFormAfterCreate', () => {
+  it('clears teams and lineups but keeps the date', () => {
+    expect(
+      resetMatchFormAfterCreate({
+        match_date: '2026-10-27',
+        home_team_name: 'Reds',
+        away_team_name: 'Blues',
+        home_player_guids: ['a'],
+        away_player_guids: ['b'],
+      })
+    ).toEqual({
+      match_date: '2026-10-27',
+      home_team_name: '',
+      away_team_name: '',
+      home_player_guids: [],
+      away_player_guids: [],
+    })
   })
 })

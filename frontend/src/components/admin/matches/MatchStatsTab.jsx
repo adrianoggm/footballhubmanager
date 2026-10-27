@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import { memo } from 'react'
 
+import InlineActionError from './InlineActionError.jsx'
 import { trackingChipColor, trackingLabel } from './trackingHelpers.js'
 
 const TeamStatsTable = memo(function TeamStatsTable({
@@ -109,6 +110,7 @@ export default function MatchStatsTab({
   loading,
   matchStatsLoading,
   t,
+  inlineError = '',
 }) {
   return (
     <Stack useFlexGap spacing={2}>
@@ -195,6 +197,8 @@ export default function MatchStatsTab({
           {t('dashboard.admin.matches.saveStats')}
         </Button>
       </Stack>
+
+      <InlineActionError message={inlineError} />
     </Stack>
   )
 }

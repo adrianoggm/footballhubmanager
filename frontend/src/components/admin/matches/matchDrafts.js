@@ -62,3 +62,32 @@ export const parseMatchEventElapsedDraft = (draft) => {
     value: minutes * 60 + seconds,
   }
 }
+
+/**
+ * Validate the create-match date before calling the API (MT-02): it is
+ * required and must fall inside the selected season (ISO strings compare
+ * lexicographically). Returns an i18n error key, or null when valid.
+ */
+export const validateMatchDate = (matchDate, season) => {
+  const iso = String(matchDate ?? '').trim()
+  if (!iso) {
+    return 'dashboard.admin.errors.matchDateRequired'
+  }
+  if (
+    (season?.start_date && iso < season.start_date) ||
+    (season?.end_date && iso > season.end_date)
+  ) {
+    return 'dashboard.admin.errors.matchDateOutsideSeason'
+  }
+  return null
+}
+
+// After a successful creation clear teams and lineups so a second click cannot
+// create a duplicate (MT-11); keep the date, the next match is often the same day.
+export const resetMatchFormAfterCreate = (form) => ({
+  ...form,
+  home_team_name: '',
+  away_team_name: '',
+  home_player_guids: [],
+  away_player_guids: [],
+})
