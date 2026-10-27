@@ -1,44 +1,61 @@
 import { useCallback, useState } from 'react'
 
-const defaultDateErrors = () => ({
-  start_date: '',
-  end_date: '',
-})
+import {
+  emptySeasonFormErrors,
+  hasSeasonFormErrors,
+  parsePointsInput,
+  validateSeasonForm,
+} from '../components/admin/seasonFormValidation.js'
 
-export function useAdminSeasons({ setSelectedSeasonForm, t }) {
-  const [selectedSeasonDateErrors, setSelectedSeasonDateErrors] = useState(defaultDateErrors)
+// Season create/edit form field handlers + validation. Both forms share the
+// same rules (seasonFormValidation.js). `selectedSeasonDateErrors` keeps its
+// historical name but now also carries the points errors.
+export function useAdminSeasons({ setSelectedSeasonForm, setSeasonForm, t }) {
+  const [selectedSeasonDateErrors, setSelectedSeasonDateErrors] = useState(emptySeasonFormErrors)
+  const [createSeasonErrors, setCreateSeasonErrors] = useState(emptySeasonFormErrors)
 
   const resetSelectedSeasonDateErrors = useCallback(() => {
-    setSelectedSeasonDateErrors(defaultDateErrors)
+    setSelectedSeasonDateErrors(emptySeasonFormErrors)
   }, [])
 
-  const onSelectedSeasonField = useCallback(
-    (name) => (event) => {
-      const value = name.startsWith('points_') ? Number(event.target.value) : event.target.value
-      setSelectedSeasonForm((prev) => ({ ...prev, [name]: value }))
-      if (name === 'start_date' || name === 'end_date') {
-        setSelectedSeasonDateErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev))
-      }
+  const resetCreateSeasonErrors = useCallback(() => {
+    setCreateSeasonErrors(emptySeasonFormErrors)
+  }, [])
+
+  const makeFieldHandler = useCallback(
+    (setForm, setErrors) => (name) => (event) => {
+      const raw = event.target.value
+      const value = name.startsWith('points_') ? parsePointsInput(raw) : raw
+      setForm((prev) => ({ ...prev, [name]: value }))
+      setErrors((prev) => (prev[name] ? { ...prev, [name]: '' } : prev))
     },
-    [setSelectedSeasonForm]
+    []
+  )
+
+  const onSelectedSeasonField = useCallback(
+    (name) => makeFieldHandler(setSelectedSeasonForm, setSelectedSeasonDateErrors)(name),
+    [makeFieldHandler, setSelectedSeasonForm]
+  )
+
+  const onCreateSeasonField = useCallback(
+    (name) => makeFieldHandler(setSeasonForm, setCreateSeasonErrors)(name),
+    [makeFieldHandler, setSeasonForm]
   )
 
   const validateSelectedSeasonForm = useCallback(
     (form) => {
-      const nextErrors = defaultDateErrors()
-
-      if (!form.start_date) {
-        nextErrors.start_date = t('dashboard.admin.errors.selectedSeasonStartDateRequired')
-      }
-      if (!form.end_date) {
-        nextErrors.end_date = t('dashboard.admin.errors.selectedSeasonEndDateRequired')
-      }
-      if (!nextErrors.start_date && !nextErrors.end_date && form.start_date > form.end_date) {
-        nextErrors.end_date = t('dashboard.admin.errors.invalidSeasonRange')
-      }
-
+      const nextErrors = validateSeasonForm(form, t)
       setSelectedSeasonDateErrors(nextErrors)
-      return !nextErrors.start_date && !nextErrors.end_date
+      return !hasSeasonFormErrors(nextErrors)
+    },
+    [t]
+  )
+
+  const validateCreateSeasonForm = useCallback(
+    (form) => {
+      const nextErrors = validateSeasonForm(form, t)
+      setCreateSeasonErrors(nextErrors)
+      return !hasSeasonFormErrors(nextErrors)
     },
     [t]
   )
@@ -48,5 +65,9 @@ export function useAdminSeasons({ setSelectedSeasonForm, t }) {
     onSelectedSeasonField,
     validateSelectedSeasonForm,
     resetSelectedSeasonDateErrors,
+    createSeasonErrors,
+    onCreateSeasonField,
+    validateCreateSeasonForm,
+    resetCreateSeasonErrors,
   }
 }
