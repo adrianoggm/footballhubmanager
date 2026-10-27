@@ -59,6 +59,7 @@ from core.domain.errors import (
     InvalidRegistrationDataError,
     InvalidSeasonInsightsDataError,
     PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityExpenseNotFoundError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
@@ -148,6 +149,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
     InvalidPenaAccountabilityDataError: (
         status.HTTP_400_BAD_REQUEST,
         "Invalid accountability data",
+    ),
+    PenaAccountabilityAmountOutOfRangeError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Amount out of range",
     ),
     PenaAccountabilityPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaAccountabilityAccessDeniedError: (

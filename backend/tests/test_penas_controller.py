@@ -64,6 +64,7 @@ from core.domain.errors import (
     InvalidPenaLabelsDataError,
     InvalidProfileImageError,
     PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
     PenaAccountabilityTransactionNotFoundError,
@@ -920,6 +921,7 @@ def test_get_pena_accountability_maps_not_found_error():
     ("error", "status_code", "detail"),
     [
         (InvalidPenaAccountabilityDataError(), 400, "Invalid accountability data"),
+        (PenaAccountabilityAmountOutOfRangeError(), 400, "Amount out of range"),
         (PenaAccountabilityPenaNotFoundError(), 404, "Pena not found"),
         (PenaAccountabilityAccessDeniedError(), 403, "Admin does not manage this pena"),
     ],

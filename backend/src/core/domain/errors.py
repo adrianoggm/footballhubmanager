@@ -133,6 +133,12 @@ class InvalidPenaAccountabilityDataError(DomainError):
     code = "invalid_pena_accountability_data"
 
 
+class PenaAccountabilityAmountOutOfRangeError(InvalidPenaAccountabilityDataError):
+    """An amount is negative/zero where not allowed, or above MAX_AMOUNT_CENTS."""
+
+    code = "pena_accountability_amount_out_of_range"
+
+
 class PenaAccountabilityPenaNotFoundError(DomainError):
     code = "pena_accountability_pena_not_found"
 

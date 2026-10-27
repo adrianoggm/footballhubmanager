@@ -15,10 +15,16 @@ from core.application.models import PenaAccountabilityInfo
 from core.application.policies import AmountSignPolicy
 from core.application.ports.pena_accountability_port import PenaAccountabilityPort
 from core.application.queries.pena_accountability_query_handlers import to_accountability_info
-from core.domain.errors import InvalidPenaAccountabilityDataError
+from core.domain.errors import (
+    InvalidPenaAccountabilityDataError,
+    PenaAccountabilityAmountOutOfRangeError,
+)
 
 VISIBILITY_LEVELS = {"private", "summary", "full"}
 TRANSACTION_TYPES = {"income", "expense"}
+# 99,999,999.99 in the pena currency: far above any real pena movement and well
+# inside the BIGINT columns, so absurd inputs fail with a 400 instead of a DB error.
+MAX_AMOUNT_CENTS = 9_999_999_999
 
 
 def _required_text(value: str | None, *, max_length: int) -> str:
@@ -66,8 +72,12 @@ def _amount(value: int | None, *, fallback: int, sign_policy: AmountSignPolicy) 
         return int(fallback)
     if not isinstance(value, int):
         raise InvalidPenaAccountabilityDataError()
+    if abs(value) > MAX_AMOUNT_CENTS:
+        raise PenaAccountabilityAmountOutOfRangeError()
     if sign_policy is AmountSignPolicy.REQUIRE_NON_NEGATIVE and value < 0:
-        raise InvalidPenaAccountabilityDataError()
+        raise PenaAccountabilityAmountOutOfRangeError()
+    if sign_policy is AmountSignPolicy.REQUIRE_POSITIVE and value <= 0:
+        raise PenaAccountabilityAmountOutOfRangeError()
     return value
 
 
@@ -155,7 +165,7 @@ class RecordTransactionHandler:
             admin_id=command.admin_id,
             type=transaction_type,
             amount_cents=_amount(
-                command.amount_cents, fallback=0, sign_policy=AmountSignPolicy.REQUIRE_NON_NEGATIVE
+                command.amount_cents, fallback=0, sign_policy=AmountSignPolicy.REQUIRE_POSITIVE
             ),
             concept=_required_text(command.concept, max_length=160),
             occurred_on=command.occurred_on,

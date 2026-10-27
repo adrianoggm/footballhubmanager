@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 import pytest
 from core.application.commands.pena_accountability_command_handlers import (
+    MAX_AMOUNT_CENTS,
     RecordTransactionHandler,
     RemoveMemberAccountHandler,
     RemoveTransactionHandler,
@@ -36,6 +37,7 @@ from core.application.queries.pena_accountability_query_handlers import (
 from core.domain.errors import (
     InvalidPenaAccountabilityDataError,
     PenaAccountabilityAccessDeniedError,
+    PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityMemberNotFoundError,
     PenaAccountabilityPenaNotFoundError,
     PenaAccountabilityTransactionNotFoundError,
@@ -485,3 +487,56 @@ def test_remove_transaction_propagates_not_found():
         RemoveTransactionHandler(_FakeRepo(should_raise_transaction_not_found=True)).handle(
             RemoveTransactionCommand(pena_guid="pena-guid", admin_id=1, transaction_guid="tx-x")
         )
+
+
+def _record(amount_cents):
+    return RecordTransactionHandler(_FakeRepo()).handle(
+        RecordTransactionCommand(
+            pena_guid="pena-guid",
+            admin_id=1,
+            type="income",
+            amount_cents=amount_cents,
+            concept="X",
+            occurred_on=date(2026, 1, 1),
+        )
+    )
+
+
+def test_record_transaction_rejects_absurd_amount():
+    """MO-04: 99999999999999999 overflowed the DB column and returned a 500."""
+    with pytest.raises(PenaAccountabilityAmountOutOfRangeError):
+        _record(99_999_999_999_999_999)
+
+
+def test_record_transaction_accepts_max_amount():
+    _record(MAX_AMOUNT_CENTS)
+
+
+def test_record_transaction_rejects_zero_amount():
+    """MO-03: a 0 EUR movement is meaningless and was being stored."""
+    with pytest.raises(PenaAccountabilityAmountOutOfRangeError):
+        _record(0)
+
+
+@pytest.mark.parametrize("field", ["debt_cents", "contribution_cents"])
+def test_upsert_member_rejects_absurd_amounts(field):
+    """MO-04: member debt/paid share the transaction upper bound."""
+    with pytest.raises(PenaAccountabilityAmountOutOfRangeError):
+        UpsertMemberAccountHandler(_FakeRepo()).handle(
+            UpsertMemberAccountCommand(
+                pena_guid="pena-guid",
+                admin_id=1,
+                player_guid="player-1",
+                **{field: 10**17},
+            )
+        )
+
+
+def test_upsert_member_still_accepts_zero():
+    repo = _FakeRepo()
+    UpsertMemberAccountHandler(repo).handle(
+        UpsertMemberAccountCommand(
+            pena_guid="pena-guid", admin_id=1, player_guid="p", debt_cents=0, contribution_cents=0
+        )
+    )
+    assert repo.last_call["debt_cents"] == 0
