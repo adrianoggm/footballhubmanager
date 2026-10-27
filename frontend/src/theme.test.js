@@ -85,6 +85,13 @@ describe('semantic surface + tone tokens (#70)', () => {
     )
   })
 
+  it('presets without controls keep the translucent input outline', () => {
+    const theme = createAppTheme('ember-dark')
+    expect(theme.custom.controls).toBeUndefined()
+    const fieldset = theme.components.MuiOutlinedInput.styleOverrides.root['& fieldset'].borderColor
+    expect(fieldset).toMatch(/^rgba\(/)
+  })
+
   it('ember keeps the original admin redesign values', () => {
     const { surfaces, tones, gradients } = createAppTheme('ember-dark').custom
     expect(surfaces).toEqual({

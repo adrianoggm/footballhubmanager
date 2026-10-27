@@ -932,14 +932,20 @@ const buildComponentOverrides = (palette, custom, preset) => {
           ),
           backdropFilter: 'blur(10px)',
           minHeight: 36,
+          // Presets may pin AA (>=3:1) field outlines via `custom.controls`;
+          // without it (Ember) the original translucent outline is kept.
           '& fieldset': {
-            borderColor: alpha(
-              isAccentedProfile ? palette.primary.light : palette.text.primary,
-              isDark ? 0.22 : 0.14
-            ),
+            borderColor:
+              custom.controls?.inputBorder ||
+              alpha(
+                isAccentedProfile ? palette.primary.light : palette.text.primary,
+                isDark ? 0.22 : 0.14
+              ),
           },
           '&:hover fieldset': {
-            borderColor: alpha(palette.text.primary, isDark ? 0.28 : 0.18),
+            borderColor:
+              custom.controls?.inputBorderHover ||
+              alpha(palette.text.primary, isDark ? 0.28 : 0.18),
           },
           '&.Mui-focused fieldset': {
             borderColor: palette.text.primary,
