@@ -131,4 +131,38 @@ describe('UserDashboard QA regressions', () => {
     expect(await screen.findByText('Membership in Pena Beta')).toBeInTheDocument()
     await waitFor(() => expect(userServiceMock.getMyMembership).toHaveBeenCalledWith('pB'))
   })
+
+  it("U-03: switching pena never requests data with the previous pena's season", async () => {
+    renderDashboard('matches')
+    await waitFor(() =>
+      expect(userServiceMock.listSeasonMatches).toHaveBeenCalledWith(
+        'pA',
+        'season-pA',
+        expect.anything()
+      )
+    )
+
+    await selectPenaFromSettings('Pena Beta')
+
+    await waitFor(() =>
+      expect(userServiceMock.listSeasonMatches).toHaveBeenCalledWith(
+        'pB',
+        'season-pB',
+        expect.anything()
+      )
+    )
+    expect(userServiceMock.listSeasonMatches).not.toHaveBeenCalledWith(
+      'pB',
+      'season-pA',
+      expect.anything()
+    )
+    expect(screen.queryByText(/season not found/i)).not.toBeInTheDocument()
+  })
 })
+
+async function selectPenaFromSettings(penaName) {
+  fireEvent.click(screen.getByText('settings').closest('button'))
+  const dialog = await screen.findByRole('dialog')
+  fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Current pena' }))
+  fireEvent.click(await screen.findByRole('option', { name: penaName }))
+}

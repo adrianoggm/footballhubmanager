@@ -159,6 +159,7 @@ export default function UserDashboard({
   } = useForm(defaultMembershipForm)
   const { values: joinForm, onField: onJoinField, reset: resetJoinForm } = useForm(defaultJoinForm)
   const [seasonList, setSeasonList] = useState([])
+  const [seasonListPenaGuid, setSeasonListPenaGuid] = useState('')
   const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
   const [standings, setStandings] = useState([])
   const [seasonMatches, setSeasonMatches] = useState([])
@@ -176,6 +177,11 @@ export default function UserDashboard({
     () => seasonList.find((item) => item.guid === selectedSeasonGuid) || null,
     [seasonList, selectedSeasonGuid]
   )
+  // U-03: right after a pena switch the season list (and selection) still
+  // belong to the previous pena until loadSeasonList resolves. Season-scoped
+  // loaders only use a season once it is confirmed for the selected pena.
+  const seasonContextGuid =
+    selectedSeason && seasonListPenaGuid === selectedPenaGuid ? selectedSeasonGuid : ''
 
   const {
     loading: insightsLoading,
@@ -360,6 +366,7 @@ export default function UserDashboard({
 
     const seasonItems = seasonsPage.items || []
     setSeasonList(seasonItems)
+    setSeasonListPenaGuid(penaGuid)
     const resolvedSeasonGuid = seasonItems.some((item) => item.guid === selectedSeasonGuid)
       ? selectedSeasonGuid
       : activeSeason?.guid || seasonItems[0]?.guid || ''
@@ -482,7 +489,7 @@ export default function UserDashboard({
       setSeasonDataLoading(false)
       return
     }
-    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+    if (!selectedPenaGuid || !seasonContextGuid || initializing) {
       setStandings([])
       setSeasonDataLoading(false)
       return
@@ -492,7 +499,7 @@ export default function UserDashboard({
     setSeasonDataLoading(true)
     ;(async () => {
       try {
-        await loadStandingsData(selectedPenaGuid, selectedSeasonGuid)
+        await loadStandingsData(selectedPenaGuid, seasonContextGuid)
       } catch (requestError) {
         if (!activeRequest) {
           return
@@ -513,14 +520,14 @@ export default function UserDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, initializing, activeNavSectionId])
+  }, [selectedPenaGuid, seasonContextGuid, initializing, activeNavSectionId])
 
   useEffect(() => {
     if (!shouldLoadSeasonMatches) {
       setSeasonMatches([])
       return
     }
-    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+    if (!selectedPenaGuid || !seasonContextGuid || initializing) {
       setSeasonMatches([])
       return
     }
@@ -528,7 +535,7 @@ export default function UserDashboard({
     let activeRequest = true
     ;(async () => {
       try {
-        await loadSeasonMatchesData(selectedPenaGuid, selectedSeasonGuid)
+        await loadSeasonMatchesData(selectedPenaGuid, seasonContextGuid)
       } catch (requestError) {
         if (!activeRequest) {
           return
@@ -545,7 +552,7 @@ export default function UserDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, initializing, activeNavSectionId])
+  }, [selectedPenaGuid, seasonContextGuid, initializing, activeNavSectionId])
 
   useEffect(() => {
     resetMatchDetailDialog()
