@@ -147,23 +147,33 @@ def _verify_schema_migrations() -> None:
     Migrations are applied out-of-band (the Kubernetes pre-upgrade Job runs the
     ``migrate`` command), never by the API process. Here we only verify: when
     ``STRICT_MIGRATION_CHECK`` is enabled we refuse to start against a stale schema
+    (pending migrations, or applied files whose checksum drifted)
     (fail fast and loud) instead of letting requests error at runtime; otherwise we
     log a warning. Any problem reaching the migration metadata is non-fatal.
     """
     try:
         from db_migrations import runner
 
-        migrations, applied = runner.status(engine)
+        report = runner.status(engine)
     except Exception as exc:
         logger.warning("Skipped schema migration check: %s", exc)
         return
 
-    pending = [migration.version for migration in migrations if migration.version not in applied]
-    if not pending:
-        logger.info("Schema is up to date (%s migration(s) applied).", len(applied))
+    problems: list[str] = []
+    if report.pending:
+        problems.append(
+            f"Pending schema migrations: {', '.join(report.pending)}. Apply the migrate job."
+        )
+    if report.drifted:
+        problems.append(
+            f"Schema migration checksum drift: {', '.join(report.drifted)} changed after "
+            "being applied."
+        )
+    if not problems:
+        logger.info("Schema is up to date (%s migration(s) applied).", len(report.applied))
         return
 
-    message = f"Pending schema migrations: {', '.join(pending)}. Apply the migrate job."
+    message = " ".join(problems)
     if _strict_migration_check():
         logger.error(message)
         raise RuntimeError(message)

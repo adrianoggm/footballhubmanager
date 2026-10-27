@@ -52,16 +52,18 @@ Tags produced per release: `{{version}}` (e.g. `1.2.0`), `{{major}}.{{minor}}` (
 - **Backend** is built from the **repository root** so the image bundles both the
   app code (`backend/src`) and the SQL migrations (`versioning/sql`) the runner
   applies. It is a single image with multiple roles via its entrypoint:
-  `serve` (default), `migrate`, `stamp [N]`, `status`.
+  `serve` (default), `migrate`, `stamp [N]`, `rollback N`, `status`.
 - **Frontend** is a static SPA served by nginx on `:8080`. It is backend-agnostic;
   the Ingress routes `/api` to the backend Service and everything else to the
   frontend (the SPA calls `/api/v1/...` relative to its own origin).
 
 ## Database migrations (the production flow)
 
-There is **no Alembic**. The schema is a forward-only series of
-`versioning/sql/versions/vN.sql` files. The runner (`backend/src/db_migrations`)
-tracks applied versions in `schema_migrations` and applies only the pending ones.
+There is **no Alembic**. The schema is a series of `versioning/sql/versions/vN.sql`
+files, each optionally paired with a `vN.down.sql` that reverts it (mandatory from
+v13 on). The runner (`backend/src/db_migrations`) tracks applied versions in
+`schema_migrations` (version, description, success, applied_at, checksum, error) and
+applies only the pending ones.
 
 > The MySQL docker-entrypoint init (`actual.sql`) **only runs on an empty data
 > volume**, so it cannot evolve a database that already holds production data.
@@ -84,9 +86,84 @@ flowchart TD
 
 | Action | In a container | Locally |
 |--------|----------------|---------|
-| Show applied/pending | `status` | `just db-status` |
+| Show applied/pending/drifted/failed | `status` | `just db-status` |
 | Apply pending | `migrate` | `just db-migrate` |
 | Baseline existing DB | `stamp [N]` | `just db-stamp [N]` |
+| Revert everything newer than vN | `rollback N` | `just db-rollback N` |
+
+`rollback` has no default target on purpose: you always name the version to go back to.
+
+### Backup before migrate
+
+**Production must be backed up before every `migrate`.** The Helm migrate Job does
+it for you: a `backup-db` initContainer runs `mysqldump --single-transaction` into
+`/backups/<db>-<UTC timestamp>.sql` before the `migrate` container starts, and a
+failed dump fails the Job, so the schema is never touched without a fresh dump.
+
+- Point `migrations.backup.existingClaim` at a PVC you created once
+  (`kubectl apply` a `PersistentVolumeClaim`, e.g. `footballhub-db-backups`). Without
+  it the dump lands in an `emptyDir` and is **discarded with the pod**.
+- Old dumps are not pruned automatically; clean the volume from time to time.
+- Restore: `mysql -h <host> -u <user> -p <db> < <dump>.sql`.
+- Outside Helm (manual runs), take a `mysqldump` or a provider snapshot yourself first.
+
+### Rolling back (`vN.down.sql`)
+
+`rollback N` reverts every **applied** version greater than `N`, newest first:
+
+1. **Precheck, all-or-nothing.** If any of those versions has no `vN.down.sql` (or
+   its `vN.sql` is gone), it prints which ones and executes **nothing**.
+2. Each down file then runs in its own transaction together with the deletion of its
+   `schema_migrations` row. The run stops at the first failing down and re-raises;
+   versions already reverted stay reverted.
+3. `rollback 0` is allowed only if every applied version has a down file (v1–v12
+   predate the rule and have none, so in practice you can roll back to v12 at most).
+
+Rolled-back versions are pending again; the next `migrate` re-applies them.
+
+> **Data loss warning.** A down file that drops a column or a table destroys the
+> data in it. Rollback restores the *schema*, not the data: restore from the
+> pre-migrate dump if you need the data back.
+
+> **MySQL DDL is not transactional.** MySQL auto-commits every DDL statement, so a
+> migration (or a down) that fails halfway is **not atomic**: the statements before
+> the failure stay applied. Inspect the schema and undo/finish by hand before
+> retrying.
+
+**Prefer expand/contract over rollbacks.** Write migrations so the *previous* app
+image still works on the *new* schema: add nullable columns / new tables first
+(expand), ship the code that uses them, and only drop the old things in a later
+release (contract). Then an app rollback is just redeploying the previous image, and
+a DB rollback is rarely needed.
+
+### Checksums and drift
+
+`migrate` and `stamp` store the sha256 of each applied `vN.sql` in
+`schema_migrations.checksum` (CRLF normalized to LF first, so Windows and Linux
+checkouts hash the same). The runner adds the `checksum`/`error` columns to an
+existing table on its own (`ALTER TABLE ... ADD COLUMN`).
+
+- Rows applied before checksums existed have `checksum = NULL`. They are **not**
+  reported; the next `migrate`/`stamp` backfills them from the current files.
+- `status` flags as **drift** (`[!]`) any applied version whose file no longer
+  matches the stored checksum, i.e. someone edited an applied migration.
+- The backend startup check treats drift like pending migrations: a warning, or a
+  refusal to boot when `STRICT_MIGRATION_CHECK` is on.
+- Fix: restore the original file and put the change in a new `vN.sql`. Never edit a
+  migration that has already run anywhere.
+
+### Failed migrations
+
+When a migration fails, its transaction rolls back and the runner then records, in
+a fresh transaction, a row with `success = 0` and the (truncated) error, and
+re-raises. `status` shows it as `[F]` with the error.
+
+- Only `success = 1` rows count as applied, so a failed version stays **pending**
+  (the startup check sees it as pending too).
+- **Retry rule:** fix the cause, then run `migrate` again. It retries the failed
+  version and, on success, replaces the failed row with a normal one. On MySQL
+  first undo/finish any DDL that did commit (see the warning above).
+- If you completed the change by hand instead, `stamp N` marks it applied.
 
 ### First rollout against an EXISTING production database
 
@@ -94,7 +171,8 @@ The current prod DB already has data and a schema (created from `actual.sql` and
 manual `vN.sql`). Running `migrate` blindly would try to re-apply versions that are
 physically present and fail. Do this **once**:
 
-1. Back up the database (snapshot / `mysqldump`).
+1. Back up the database (snapshot / `mysqldump`; the Helm Job does this when
+   `migrations.backup` is enabled).
 2. Baseline it so the runner knows what is already there:
    - If the schema matches the current head, `stamp` everything: `stamp`.
    - If it is at an older point, cap it: `stamp 9` (marks v1–v9 applied).
@@ -111,11 +189,17 @@ Either works:
 ### Authoring a new migration
 
 1. Add `versioning/sql/versions/vN.sql` (next number) with the `ALTER`/`CREATE`.
-2. Add the same change to `versioning/sql/actual.sql` (keeps the fast-init/dev path current).
-3. Update the relevant SQLAlchemy entity.
-4. Do **not** self-insert into `schema_migrations` in new files — the runner records
+2. Add `versioning/sql/versions/vN.down.sql` that reverts exactly that change
+   (**mandatory from v13 on**; a unit test fails otherwise). Test the round trip
+   locally: `just db-migrate`, `just db-rollback <N-1>`, `just db-migrate`.
+3. Add the same change to `versioning/sql/actual.sql` (keeps the fast-init/dev path
+   current) and add `('N', '<description>', 1)` to its `schema_migrations` insert.
+4. Update the relevant SQLAlchemy entity.
+5. Never edit a `vN.sql` once it has been applied anywhere: `status` reports it as
+   checksum drift. Put follow-up changes in a new version.
+6. Do **not** self-insert into `schema_migrations` in new files — the runner records
    each applied version (older files v1–v8 self-record; the runner upserts idempotently).
-5. Prefer idempotent DDL where practical. Note: MySQL auto-commits per DDL statement,
+7. Prefer expand/contract (see above) and idempotent DDL where practical. Note: MySQL auto-commits per DDL statement,
    so a multi-statement migration that fails midway cannot be fully rolled back —
    fix forward.
 

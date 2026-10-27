@@ -7,6 +7,9 @@ Images:
 Database: {{ if .Values.mysql.enabled }}in-cluster MySQL ({{ include "footballhub.dbHost" . }}){{ else }}external ({{ .Values.externalDatabase.host }}){{ end }}
 
 Migrations: {{ if .Values.migrations.enabled }}run as a pre-install/pre-upgrade hook ({{ .Values.migrations.args | toJson }}){{ else }}DISABLED{{ end }}
+{{- if and .Values.migrations.enabled .Values.migrations.backup.enabled }}
+Pre-migrate backup: mysqldump to {{ if .Values.migrations.backup.existingClaim }}PVC {{ .Values.migrations.backup.existingClaim }}{{ else }}an emptyDir (NOT kept: set migrations.backup.existingClaim){{ end }}
+{{- end }}
 
 {{- if and .Values.mysql.enabled .Values.migrations.enabled }}
 
