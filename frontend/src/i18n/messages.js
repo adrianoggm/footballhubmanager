@@ -1137,7 +1137,7 @@ export const messages = {
             'Lineups cannot be changed after the match clock starts or when timeline events already exist.',
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
-            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
+            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be between 0 and 10',
           invalidMatchEventElapsed:
             'Event time must use a valid minute and a second between 0 and 59.',
           invalidMatchEventDelta: 'Event action must be increase or decrease.',
@@ -2461,7 +2461,7 @@ export const messages = {
           invalidMatchResult:
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
-            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
+            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe estar entre 0 y 10',
           invalidMatchEventElapsed:
             'El tiempo del evento debe usar un minuto válido y un segundo entre 0 y 59.',
           invalidMatchEventDelta: 'La acción del evento debe ser incrementar o disminuir.',

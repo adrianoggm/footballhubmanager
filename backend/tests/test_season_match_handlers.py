@@ -954,3 +954,28 @@ def test_get_match_detail_maps_errors(repo, expected_error):
                 pena_guid="pena-guid", season_guid="season-guid", match_guid="match-guid"
             )
         )
+
+
+# MT-09: ratings live on a 0-10 scale (the insights radar uses scaleMax 10).
+@pytest.mark.parametrize("rating", [10.1, 11.0, 99.0])
+def test_update_stats_rejects_rating_above_ten(rating):
+    update = SeasonMatchStatsUpdate(
+        home_players=[
+            SeasonMatchPlayerStatsUpdate(
+                player_guid="home-player-guid", goals=0, assists=0, saves=0, rating=rating
+            )
+        ],
+        away_players=[
+            SeasonMatchPlayerStatsUpdate(
+                player_guid="away-player-guid", goals=0, assists=0, saves=0, rating=7.0
+            )
+        ],
+    )
+    repo = _FakeRepo()
+    with pytest.raises(InvalidSeasonMatchDataError):
+        UpdateSeasonMatchStatsHandler(repo).handle(
+            UpdateSeasonMatchStatsCommand(
+                pena_guid=_PENA, season_guid=_SEASON, match_guid=_MATCH, admin_id=9, update=update
+            )
+        )
+    assert repo.last_payload is None

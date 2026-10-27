@@ -12,6 +12,7 @@ import {
   buildMatchStatsDraft,
   defaultMatchEventDraft,
   parseMatchEventElapsedDraft,
+  parseStatsPayload,
 } from '../components/admin/matches/matchDrafts.js'
 import { useFetchWithStaleCheck } from './useFetchWithStaleCheck.js'
 
@@ -24,25 +25,6 @@ const MATCH_EVENT_TYPES_REQUIRING_PLAYER = new Set([
   'red_card',
   'sanction',
 ])
-
-const parseStatsPayload = (values) => {
-  const goals = Number(values.goals)
-  const assists = Number(values.assists)
-  const saves = Number(values.saves)
-  const rating = Number(values.rating)
-  const integers = [goals, assists, saves]
-  const invalidIntegers = integers.some((item) => !Number.isInteger(item) || item < 0)
-  if (invalidIntegers || Number.isNaN(rating) || rating < 0) {
-    return null
-  }
-  return {
-    player_guid: values.player_guid,
-    goals,
-    assists,
-    saves,
-    rating,
-  }
-}
 
 /**
  * Owns the admin match-tracking concern that was inlined in AdminDashboard:

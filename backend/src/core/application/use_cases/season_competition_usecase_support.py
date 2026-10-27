@@ -48,6 +48,8 @@ MATCH_EVENT_TYPES = {
 }
 MATCH_EVENT_PLAYER_REQUIRED_TYPES = MATCH_EVENT_TYPES - {"other"}
 MATCH_EVENT_TEAM_SIDES = {"home", "away", "neutral"}
+# Player match ratings use a 0-10 scale (insights radar scaleMax).
+MATCH_RATING_MAX = 10
 
 
 def validate_stat_value(update: FieldUpdate[int]) -> None:
@@ -122,6 +124,8 @@ def normalize_player_stats(
         if player_guid in seen_guids:
             raise InvalidSeasonMatchDataError()
         if item.goals < 0 or item.assists < 0 or item.saves < 0 or item.rating < 0:
+            raise InvalidSeasonMatchDataError()
+        if item.rating > MATCH_RATING_MAX:
             raise InvalidSeasonMatchDataError()
         seen_guids.add(player_guid)
         result.append(

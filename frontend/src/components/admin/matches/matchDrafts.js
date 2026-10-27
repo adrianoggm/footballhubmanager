@@ -91,3 +91,30 @@ export const resetMatchFormAfterCreate = (form) => ({
   home_player_guids: [],
   away_player_guids: [],
 })
+
+// Player match ratings use a 0-10 scale (insights radar scaleMax, API le=10).
+export const MATCH_RATING_MAX = 10
+
+/**
+ * Parse one stats-draft row into the API payload, or null when invalid:
+ * goals/assists/saves are integers >= 0 and rating is within 0..10 (MT-09).
+ */
+export const parseStatsPayload = (values) => {
+  const goals = Number(values.goals)
+  const assists = Number(values.assists)
+  const saves = Number(values.saves)
+  const rating = Number(values.rating)
+  const invalidIntegers = [goals, assists, saves].some(
+    (item) => !Number.isInteger(item) || item < 0
+  )
+  if (invalidIntegers || Number.isNaN(rating) || rating < 0 || rating > MATCH_RATING_MAX) {
+    return null
+  }
+  return {
+    player_guid: values.player_guid,
+    goals,
+    assists,
+    saves,
+    rating,
+  }
+}

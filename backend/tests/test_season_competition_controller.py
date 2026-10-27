@@ -1762,3 +1762,12 @@ def test_get_season_standings_maps_not_found_errors(error, detail):
 
     assert exc.value.status_code == 404
     assert exc.value.detail == detail
+
+
+# MT-09: ratings above 10 are rejected at the API boundary (422).
+def test_match_player_stats_request_bounds_rating_to_ten():
+    from pydantic import ValidationError
+
+    assert MatchPlayerStatsRequest(player_guid="p1", rating=10).rating == 10
+    with pytest.raises(ValidationError):
+        MatchPlayerStatsRequest(player_guid="p1", rating=10.5)

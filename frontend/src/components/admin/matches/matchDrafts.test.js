@@ -5,6 +5,7 @@ import {
   buildMatchStatsDraft,
   defaultMatchEventDraft,
   parseMatchEventElapsedDraft,
+  parseStatsPayload,
   resetMatchFormAfterCreate,
   validateMatchDate,
 } from './matchDrafts.js'
@@ -143,5 +144,35 @@ describe('resetMatchFormAfterCreate', () => {
       home_player_guids: [],
       away_player_guids: [],
     })
+  })
+})
+
+// MT-09: ratings are on a 0-10 scale.
+describe('parseStatsPayload', () => {
+  const row = (rating) => ({ player_guid: 'ana', goals: '1', assists: '0', saves: '2', rating })
+
+  it('parses a valid row into numbers', () => {
+    expect(parseStatsPayload(row('7.5'))).toEqual({
+      player_guid: 'ana',
+      goals: 1,
+      assists: 0,
+      saves: 2,
+      rating: 7.5,
+    })
+  })
+
+  it('accepts the 0 and 10 boundaries', () => {
+    expect(parseStatsPayload(row('0'))).not.toBeNull()
+    expect(parseStatsPayload(row('10'))).not.toBeNull()
+  })
+
+  it('rejects ratings above 10 or below 0', () => {
+    expect(parseStatsPayload(row('10.5'))).toBeNull()
+    expect(parseStatsPayload(row('-1'))).toBeNull()
+  })
+
+  it('rejects negative or fractional counters', () => {
+    expect(parseStatsPayload({ ...row('5'), goals: '-1' })).toBeNull()
+    expect(parseStatsPayload({ ...row('5'), saves: '1.5' })).toBeNull()
   })
 })
