@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { authController } from '../services/authController.js'
 
 // 'restoring' while we check the cookie on load, so the router can hold off
@@ -43,6 +43,12 @@ export function useAuth() {
     console.error('Auth error', error)
     setState((prev) => ({ ...prev, status: 'error', error }))
   }
+
+  const clearError = useCallback(() => {
+    setState((prev) =>
+      prev.error ? { ...prev, status: prev.session ? 'authenticated' : 'idle', error: null } : prev
+    )
+  }, [])
 
   const loginUser = async (credentials) => {
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
@@ -123,5 +129,6 @@ export function useAuth() {
     registerAdmin,
     claimPlayer,
     logout,
+    clearError,
   }
 }
