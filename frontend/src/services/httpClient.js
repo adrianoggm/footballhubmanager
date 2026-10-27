@@ -1,5 +1,35 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
+// One FastAPI validation entry ({ loc: ['body', 'field'], msg }) -> "field: msg".
+const validationEntryMessage = (entry) => {
+  if (typeof entry === 'string') {
+    return entry
+  }
+  const field = (entry?.loc || []).filter((part) => part !== 'body').join('.')
+  const msg = entry?.msg || ''
+  return field && msg ? `${field}: ${msg}` : msg || field
+}
+
+// Readable error message from an error payload. FastAPI 422 responses carry
+// `detail` as an array of validation entries; `new Error(array)` used to print
+// "[object Object]".
+export const errorMessageFromPayload = (payload, fallback) => {
+  if (!payload) {
+    return fallback
+  }
+  if (typeof payload === 'string') {
+    return payload
+  }
+  const { detail, message } = payload
+  if (Array.isArray(detail)) {
+    return detail.map(validationEntryMessage).filter(Boolean).join('; ') || fallback
+  }
+  if (detail && typeof detail === 'object') {
+    return validationEntryMessage(detail) || fallback
+  }
+  return detail || message || fallback
+}
+
 export class HttpClient {
   constructor(baseUrl = API_BASE) {
     this.baseUrl = baseUrl
@@ -37,17 +67,9 @@ export class HttpClient {
     }
 
     if (!response.ok) {
-      let message = response.statusText || 'Request failed'
-      if (payload) {
-        if (typeof payload === 'string') {
-          message = payload
-        } else if (payload.detail) {
-          message = payload.detail
-        } else if (payload.message) {
-          message = payload.message
-        }
-      }
-      const error = new Error(message)
+      const error = new Error(
+        errorMessageFromPayload(payload, response.statusText || 'Request failed')
+      )
       error.status = response.status
       error.payload = payload
       throw error
