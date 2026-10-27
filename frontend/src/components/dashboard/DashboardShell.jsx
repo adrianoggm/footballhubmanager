@@ -465,7 +465,7 @@ function DesktopNav({ brand, brandShort, navItems, activeNavId, onNavChange, rai
                 display: 'grid',
                 placeItems: 'center',
                 color: 'common.white',
-                background: 'linear-gradient(160deg, rgba(21,33,55,1) 0%, rgba(22,84,84,1) 85%)',
+                background: theme.custom.gradients.brand,
                 boxShadow: '0 12px 24px rgba(15, 23, 42, 0.2)',
               }}
             >
