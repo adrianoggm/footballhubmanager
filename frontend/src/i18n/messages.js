@@ -655,8 +655,21 @@ export const messages = {
           editAction: 'Edit labels',
           roleLabels: 'Role labels',
           positionLabels: 'Position labels',
-          inputHelper: 'Separate labels with commas or line breaks.',
+          inputHelper:
+            'Separate labels with commas or line breaks. Use rename to change a label without losing its players.',
           save: 'Save labels',
+          usage: { one: '{count} player', other: '{count} players' },
+          renameAction: 'Rename {label}',
+          renameField: 'New name for {label}',
+          renameApply: 'Apply',
+          renameCancel: 'Cancel',
+          renameInvalid: 'Use a non-empty name that is not already in the list',
+          removeTitle: 'Remove labels in use?',
+          removeDescription:
+            'These labels are assigned to players. Players with a removed role get the default member role; players with a removed position are left without position. To keep them, cancel and use rename instead.',
+          removeItem: '{label}: {usage}',
+          removeConfirm: 'Remove and save',
+          removeCancel: 'Back',
           currentCounts: 'Roles: {roles} | Positions: {positions}',
         },
         accountability: {
@@ -761,6 +774,10 @@ export const messages = {
           positionNone: 'No position',
           createGuest: 'Create Guest',
           createAndAdd: 'Create + Add To Season',
+          newPlayerTitle: 'New player',
+          requiredField: 'This field is required',
+          duplicateWarning: 'A player with the same name already exists: {players}.',
+          duplicateConfirm: 'Create it anyway',
         },
         members: {
           title: 'Pena Members',
@@ -823,7 +840,7 @@ export const messages = {
           sortStatusActive: 'Active first',
           sortStatusInactive: 'Inactive first',
           showingOfTotal: 'Showing {shown} of {total} players registered',
-          rowActionEdit: 'Edit player',
+          rowActionEdit: 'Edit membership',
           rowActionEditStats: 'Edit season stats',
           rowActionAddToSeason: 'Add to season',
           rowActionRemoveFromSeason: 'Remove from season',
@@ -1121,7 +1138,10 @@ export const messages = {
           claimLinkGenerated: 'Claim link generated',
           guestCreatedAdded: 'Guest created and added to selected season',
           guestCreated: 'Guest player created',
-          playersAdded: '{count} player{suffix} added to season',
+          playersAdded: {
+            one: '{count} player added to the season',
+            other: '{count} players added to the season',
+          },
           seasonPlayerUpdated: 'Season player updated',
           seasonPlayerRemoved: 'Player removed from season',
           membershipUpdatedByAdmin: 'Membership updated',
@@ -1157,6 +1177,8 @@ export const messages = {
           invalidPenaLabels:
             'Role and position labels are required. Use commas or line breaks to separate values.',
           selectedSeasonRequired: 'Select a season to complete this action',
+          seasonPointsRequired: 'Points are required',
+          seasonPointsInvalid: 'Use an integer greater than or equal to zero',
         },
       },
       user: {
@@ -1285,6 +1307,14 @@ export const messages = {
           nationality: 'Nationality',
         },
       },
+    },
+    apiErrors: {
+      seasonOverlap: 'The season dates overlap an existing season.',
+      seasonDateRange: 'The season start date must be before or equal to its end date.',
+      seasonData: 'The season data is not valid.',
+      seasonPoints: 'Season points must be integers greater than or equal to zero.',
+      guestPlayerData: 'Name, first surname and nationality are required to create the player.',
+      linkToken: 'This link or code is invalid or has expired.',
     },
     language: {
       label: 'Language',
@@ -1973,8 +2003,21 @@ export const messages = {
           editAction: 'Editar etiquetas',
           roleLabels: 'Etiquetas de rol',
           positionLabels: 'Etiquetas de posición',
-          inputHelper: 'Separa etiquetas por comas o saltos de línea.',
+          inputHelper:
+            'Separa etiquetas por comas o saltos de línea. Usa renombrar para cambiar una etiqueta sin perder sus jugadores.',
           save: 'Guardar etiquetas',
+          usage: { one: '{count} jugador', other: '{count} jugadores' },
+          renameAction: 'Renombrar {label}',
+          renameField: 'Nuevo nombre para {label}',
+          renameApply: 'Aplicar',
+          renameCancel: 'Cancelar',
+          renameInvalid: 'Usa un nombre no vacío que no esté ya en la lista',
+          removeTitle: '¿Eliminar etiquetas en uso?',
+          removeDescription:
+            'Estas etiquetas están asignadas a jugadores. Los jugadores con un rol eliminado pasan al rol de miembro por defecto; los que tengan una posición eliminada se quedan sin posición. Para conservarlos, vuelve atrás y usa renombrar.',
+          removeItem: '{label}: {usage}',
+          removeConfirm: 'Eliminar y guardar',
+          removeCancel: 'Volver',
           currentCounts: 'Roles: {roles} | Posiciones: {positions}',
         },
         accountability: {
@@ -2079,6 +2122,10 @@ export const messages = {
           positionNone: 'Sin posición',
           createGuest: 'Crear invitado',
           createAndAdd: 'Crear + añadir a temporada',
+          newPlayerTitle: 'Nuevo jugador',
+          requiredField: 'Este campo es obligatorio',
+          duplicateWarning: 'Ya existe un jugador con el mismo nombre: {players}.',
+          duplicateConfirm: 'Crearlo de todos modos',
         },
         members: {
           title: 'Miembros de la peña',
@@ -2141,7 +2188,7 @@ export const messages = {
           sortStatusActive: 'Activos primero',
           sortStatusInactive: 'Inactivos primero',
           showingOfTotal: 'Mostrando {shown} de {total} jugadores registrados',
-          rowActionEdit: 'Editar jugador',
+          rowActionEdit: 'Editar membresía',
           rowActionEditStats: 'Editar stats de temporada',
           rowActionAddToSeason: 'Añadir a temporada',
           rowActionRemoveFromSeason: 'Quitar de temporada',
@@ -2442,7 +2489,10 @@ export const messages = {
           claimLinkGenerated: 'Enlace de invitación generado',
           guestCreatedAdded: 'Invitado creado y añadido a la temporada seleccionada',
           guestCreated: 'Jugador invitado creado',
-          playersAdded: '{count} jugador{suffix} añadido a la temporada',
+          playersAdded: {
+            one: '{count} jugador añadido a la temporada',
+            other: '{count} jugadores añadidos a la temporada',
+          },
           seasonPlayerUpdated: 'Jugador de temporada actualizado',
           seasonPlayerRemoved: 'Jugador quitado de la temporada',
           membershipUpdatedByAdmin: 'Membresía actualizada',
@@ -2480,6 +2530,8 @@ export const messages = {
           invalidPenaLabels:
             'Las etiquetas de rol y posición son obligatorias. Usa comas o saltos de línea para separarlas.',
           selectedSeasonRequired: 'Selecciona una temporada para completar esta acción',
+          seasonPointsRequired: 'Los puntos son obligatorios',
+          seasonPointsInvalid: 'Usa un número entero mayor o igual que cero',
         },
       },
       user: {
@@ -2612,6 +2664,16 @@ export const messages = {
           nationality: 'Nacionalidad',
         },
       },
+    },
+    apiErrors: {
+      seasonOverlap: 'Las fechas de la temporada se solapan con otra temporada existente.',
+      seasonDateRange:
+        'La fecha de inicio de la temporada debe ser anterior o igual a la fecha de fin.',
+      seasonData: 'Los datos de la temporada no son válidos.',
+      seasonPoints: 'Los puntos de temporada deben ser enteros mayores o iguales a cero.',
+      guestPlayerData:
+        'El nombre, el primer apellido y la nacionalidad son obligatorios para crear el jugador.',
+      linkToken: 'Este enlace o código no es válido o ha caducado.',
     },
     language: {
       label: 'Idioma',
