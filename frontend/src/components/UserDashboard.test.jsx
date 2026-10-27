@@ -187,6 +187,18 @@ describe('UserDashboard QA regressions', () => {
 
     expect(await screen.findByRole('option', { name: '26/27 (Active)' })).toBeInTheDocument()
   })
+
+  it('U-16: header actions follow the admin order (refresh, settings, logout)', async () => {
+    renderDashboard('membership')
+    await screen.findByText('Membership in Pena Alpha')
+
+    const headerIcons = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent.trim())
+      .filter((text) => ['refresh', 'settings', 'logout'].includes(text))
+
+    expect(headerIcons).toEqual(['refresh', 'settings', 'logout'])
+  })
 })
 
 async function selectPenaFromSettings(penaName) {

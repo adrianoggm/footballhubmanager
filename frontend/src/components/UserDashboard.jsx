@@ -816,15 +816,6 @@ export default function UserDashboard({
               alignItems="center"
               justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
             >
-              <Tooltip title={t('dashboard.user.openSettings')}>
-                <span>
-                  <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
-                    <Box component="span" className="material-symbols-rounded">
-                      settings
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
               <Tooltip title={t('dashboard.common.refresh')}>
                 <span>
                   <IconButton
@@ -834,6 +825,15 @@ export default function UserDashboard({
                   >
                     <Box component="span" className="material-symbols-rounded">
                       refresh
+                    </Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('dashboard.user.openSettings')}>
+                <span>
+                  <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
+                    <Box component="span" className="material-symbols-rounded">
+                      settings
                     </Box>
                   </IconButton>
                 </span>
