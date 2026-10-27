@@ -506,6 +506,8 @@ export const messages = {
           w: 'W',
           d: 'D',
           l: 'L',
+          saves: 'Sv',
+          rating: 'Rtg',
           pts: 'Pts',
         },
         overview: {
@@ -1830,6 +1832,8 @@ export const messages = {
           w: 'V',
           d: 'E',
           l: 'D',
+          saves: 'Par',
+          rating: 'Val',
           pts: 'Pts',
         },
         overview: {

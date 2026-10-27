@@ -156,6 +156,8 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                     <TableCell align="right">{t('dashboard.admin.table.l')}</TableCell>
                     <TableCell align="right">{t('dashboard.admin.table.goals')}</TableCell>
                     <TableCell align="right">{t('dashboard.admin.table.assists')}</TableCell>
+                    <TableCell align="right">{t('dashboard.admin.table.saves')}</TableCell>
+                    <TableCell align="right">{t('dashboard.admin.table.rating')}</TableCell>
                     <TableCell align="right">{t('dashboard.admin.table.pts')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -203,12 +205,18 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                       <TableCell align="right">{player.losses}</TableCell>
                       <TableCell align="right">{player.goals ?? 0}</TableCell>
                       <TableCell align="right">{player.assists ?? 0}</TableCell>
+                      <TableCell align="right">{player.saves ?? 0}</TableCell>
+                      <TableCell align="right">
+                        {Number(player.average_rating) > 0
+                          ? formatDecimal(player.average_rating, 1)
+                          : '-'}
+                      </TableCell>
                       <TableCell align="right">{player.points}</TableCell>
                     </TableRow>
                   ))}
                   {!standings.length && (
                     <TableRow>
-                      <TableCell colSpan={10}>
+                      <TableCell colSpan={12}>
                         {t('dashboard.admin.standings.noSeasonPlayers')}
                       </TableCell>
                     </TableRow>
