@@ -12,3 +12,10 @@ export const resolveBudgetVisibility = (accountability) =>
 
 export const resolveExpensesVisibility = (accountability) =>
   normalizeVisibility(accountability?.expenses_visibility ?? accountability?.transparency?.expenses)
+
+// Ledger rows a member may list: income needs budget = full, expenses need
+// expenses = full (mirrors the backend AccountabilityAccess policy).
+export const memberLedgerTypes = (budgetVisibility, expensesVisibility) => [
+  ...(budgetVisibility === 'full' ? ['income'] : []),
+  ...(expensesVisibility === 'full' ? ['expense'] : []),
+]

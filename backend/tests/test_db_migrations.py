@@ -353,3 +353,19 @@ def test_legacy_table_gets_checksum_column_and_backfill(tmp_path):
     # ... and the next migrate backfills them from the current file.
     assert runner.migrate(engine, migrations_dir=tmp_path) == ["2"]
     assert _stored_checksums(engine)["1"] == runner.file_checksum(tmp_path / "v1.sql")
+
+
+def test_migrate_ignores_semicolons_inside_comments(tmp_path):
+    _write(
+        tmp_path,
+        "v1.sql",
+        "-- header; with a semicolon in the comment\n"
+        "CREATE TABLE t1 (id INTEGER);\n"
+        "-- another; comment\n"
+        "CREATE TABLE t2 (id INTEGER);\n",
+    )
+    engine = _engine()
+
+    assert runner.migrate(engine, tmp_path) == ["1"]
+    assert _table_exists(engine, "t1")
+    assert _table_exists(engine, "t2")

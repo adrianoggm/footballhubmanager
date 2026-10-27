@@ -15,8 +15,9 @@ class PenaAccountabilityMemberAccountResponse(BaseModel):
 class PenaMonthlyCashflowResponse(BaseModel):
     year: int
     month: int
-    income_cents: int
-    expense_cents: int
+    # Nulled out when the viewer may not see that side of the cash flow.
+    income_cents: int | None
+    expense_cents: int | None
 
 
 class PenaTransactionResponse(BaseModel):

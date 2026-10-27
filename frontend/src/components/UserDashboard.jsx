@@ -137,7 +137,7 @@ export default function UserDashboard({
   routeSectionId = '',
   onSectionChange = null,
 }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const { showToast } = useToast()
   const accountEmail = useAccountEmail()
   const [initializing, setInitializing] = useState(true)
@@ -887,6 +887,7 @@ export default function UserDashboard({
               <UserAccountabilitySection
                 penaGuid={selectedPenaGuid}
                 currentPlayerGuid={currentPlayerGuid}
+                language={language}
                 t={t}
               />
             </Suspense>

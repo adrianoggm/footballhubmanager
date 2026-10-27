@@ -7,6 +7,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { blurActiveElement } from './dialogFocus.js'
 
 const LEVELS = ['private', 'summary', 'full']
 
@@ -21,8 +22,13 @@ export default function TransparencyDialog({
   const levelLabel = (level) =>
     t(`dashboard.admin.accountability.level${level[0].toUpperCase()}${level.slice(1)}`)
 
+  const handleClose = () => {
+    blurActiveElement()
+    onClose()
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>{t('dashboard.admin.accountability.transparencyTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

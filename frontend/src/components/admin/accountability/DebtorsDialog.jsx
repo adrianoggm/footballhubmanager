@@ -12,6 +12,7 @@ import {
   Typography,
 } from '@mui/material'
 import { formatMoney } from './accountabilityHelpers.js'
+import { blurActiveElement } from './dialogFocus.js'
 
 /**
  * Breakdown behind the "Outstanding dues" KPI: who still owes, most in debt first.
@@ -21,8 +22,13 @@ export default function DebtorsDialog({ open, onClose, t, formatter, debtors }) 
   const rows = [...(debtors || [])].sort((a, b) => (b.debt_cents || 0) - (a.debt_cents || 0))
   const totalDebt = rows.reduce((sum, item) => sum + Number(item.debt_cents || 0), 0)
 
+  const handleClose = () => {
+    blurActiveElement()
+    onClose()
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>{t('dashboard.admin.accountability.debtorsTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

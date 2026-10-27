@@ -447,7 +447,7 @@ export default function AdminDashboard({
   routeSectionId = '',
   onSectionChange = null,
 }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const { showToast } = useToast()
   const accountEmail = useAccountEmail()
   const penaDataFetch = useFetchWithStaleCheck()
@@ -1823,6 +1823,7 @@ export default function AdminDashboard({
               <AdminAccountabilitySection
                 penaGuid={selectedPenaGuid}
                 players={adminPlayers.players}
+                language={language}
                 t={t}
                 formatPlayerDisplayName={formatPlayerDisplayName}
               />

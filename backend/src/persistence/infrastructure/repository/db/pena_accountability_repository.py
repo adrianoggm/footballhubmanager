@@ -192,13 +192,12 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
             occurred_on=occurred_on,
             id_player=player_id,
         )
-        self.session.add(transaction)
-
         # Dues integration: a member-linked income pays down that member's debt.
         if type == "income" and player_id is not None:
-            self._apply_income_to_member(
+            transaction.debt_applied_cents = self._apply_income_to_member(
                 pena_id=pena.id, player_id=player_id, amount_cents=amount_cents
             )
+        self.session.add(transaction)
 
         self.session.commit()
         return self._build_result(pena_id=pena.id)
@@ -230,6 +229,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
                 pena_id=pena.id,
                 player_id=transaction.id_player,
                 amount_cents=int(transaction.amount_cents or 0),
+                debt_applied_cents=int(transaction.debt_applied_cents or 0),
             )
 
         self.session.delete(transaction)
@@ -296,7 +296,8 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
             raise PenaAccountabilityMemberNotFoundError()
         return player
 
-    def _apply_income_to_member(self, *, pena_id: int, player_id: int, amount_cents: int) -> None:
+    def _apply_income_to_member(self, *, pena_id: int, player_id: int, amount_cents: int) -> int:
+        """Add the income to the member and pay down their debt; return the debt paid down."""
         account = self.session.execute(
             select(PenaMemberAccount)
             .where(
@@ -310,12 +311,16 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
                 id_pena=pena_id, id_player=player_id, debt_cents=0, contribution_cents=0
             )
             self.session.add(account)
+        current_debt = int(account.debt_cents or 0)
+        debt_applied = min(max(current_debt, 0), amount_cents)
         account.contribution_cents = int(account.contribution_cents or 0) + amount_cents
-        account.debt_cents = max(0, int(account.debt_cents or 0) - amount_cents)
+        account.debt_cents = current_debt - debt_applied
+        return debt_applied
 
     def _reverse_income_from_member(
-        self, *, pena_id: int, player_id: int, amount_cents: int
+        self, *, pena_id: int, player_id: int, amount_cents: int, debt_applied_cents: int
     ) -> None:
+        """Undo `_apply_income_to_member`: restore only the debt that income paid down."""
         account = self.session.execute(
             select(PenaMemberAccount)
             .where(
@@ -327,7 +332,7 @@ class SqlAlchemyPenaAccountabilityRepository(PenaAccountabilityPort):
         if account is None:
             return
         account.contribution_cents = max(0, int(account.contribution_cents or 0) - amount_cents)
-        account.debt_cents = int(account.debt_cents or 0) + amount_cents
+        account.debt_cents = int(account.debt_cents or 0) + debt_applied_cents
 
     @staticmethod
     def _display_name(player: Player, link: PenaPlayer | None) -> str:
