@@ -46,16 +46,19 @@ const TeamStatsTable = memo(function TeamStatsTable({
             const draft = (draftPlayers || []).find(
               (item) => item.player_guid === player.player_guid
             )
+            const playerName = formatPlayerDisplayName(player)
+            const inputLabel = (metric) =>
+              `${t(`dashboard.admin.matches.${metric}`)} - ${playerName}`
             return (
               <TableRow key={player.player_guid}>
-                <TableCell>{formatPlayerDisplayName(player)}</TableCell>
+                <TableCell>{playerName}</TableCell>
                 <TableCell>
                   <TextField
                     type="number"
                     size="small"
                     value={draft?.goals ?? '0'}
                     onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'goals')}
-                    inputProps={{ min: 0 }}
+                    inputProps={{ min: 0, 'aria-label': inputLabel('goals') }}
                     sx={{ maxWidth: 90 }}
                   />
                 </TableCell>
@@ -65,7 +68,7 @@ const TeamStatsTable = memo(function TeamStatsTable({
                     size="small"
                     value={draft?.assists ?? '0'}
                     onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'assists')}
-                    inputProps={{ min: 0 }}
+                    inputProps={{ min: 0, 'aria-label': inputLabel('assists') }}
                     sx={{ maxWidth: 90 }}
                   />
                 </TableCell>
@@ -75,7 +78,7 @@ const TeamStatsTable = memo(function TeamStatsTable({
                     size="small"
                     value={draft?.saves ?? '0'}
                     onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'saves')}
-                    inputProps={{ min: 0 }}
+                    inputProps={{ min: 0, 'aria-label': inputLabel('saves') }}
                     sx={{ maxWidth: 90 }}
                   />
                 </TableCell>
@@ -85,7 +88,7 @@ const TeamStatsTable = memo(function TeamStatsTable({
                     size="small"
                     value={draft?.rating ?? '0'}
                     onChange={onMatchStatsDraftField(teamKey, player.player_guid, 'rating')}
-                    inputProps={{ min: 0, step: 0.1 }}
+                    inputProps={{ min: 0, max: 10, step: 0.1, 'aria-label': inputLabel('rating') }}
                     sx={{ maxWidth: 90 }}
                   />
                 </TableCell>

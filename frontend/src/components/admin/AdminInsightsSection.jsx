@@ -46,6 +46,7 @@ import {
   YAxis,
 } from 'recharts'
 import { EmptyState, LoadingState } from '../common'
+import DateField from '../common/DateField.jsx'
 import { INSIGHT_ACCENTS } from '../../theme/tokens.js'
 
 const getDashboardGeometry = (theme) => ({
@@ -1140,25 +1141,21 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
               {t('dashboard.admin.standings.insightsScopeAllSeasons')}
             </MenuItem>
           </TextField>
-          <TextField
-            type="date"
+          <DateField
             size="small"
             label={t('dashboard.admin.standings.insightsDateFrom')}
             value={dateFrom}
-            onChange={(event) => setDateFrom(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ max: dateTo || undefined }}
-            sx={{ minWidth: 150 }}
+            onChange={setDateFrom}
+            maxIso={dateTo}
+            sx={{ minWidth: 170 }}
           />
-          <TextField
-            type="date"
+          <DateField
             size="small"
             label={t('dashboard.admin.standings.insightsDateTo')}
             value={dateTo}
-            onChange={(event) => setDateTo(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ min: dateFrom || undefined }}
-            sx={{ minWidth: 150 }}
+            onChange={setDateTo}
+            minIso={dateFrom}
+            sx={{ minWidth: 170 }}
           />
           {(dateFrom || dateTo) && (
             <Button onClick={clearDates} disabled={insightsLoading}>

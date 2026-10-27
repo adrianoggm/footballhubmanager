@@ -39,4 +39,13 @@ describe('MatchStatsTab', () => {
     const alert = screen.getByText('Rating must be between 0 and 10').closest('[role="alert"]')
     expect(alert).toHaveClass('MuiAlert-standardError')
   })
+
+  // MT-15: number inputs had no accessible name.
+  it('labels every stat input with the metric and the player', () => {
+    render(<MatchStatsTab {...baseProps} />)
+    for (const metric of ['Goals', 'Assists', 'Saves', 'Rating']) {
+      expect(screen.getByRole('spinbutton', { name: `${metric} - Ana` })).toBeInTheDocument()
+      expect(screen.getByRole('spinbutton', { name: `${metric} - Bea` })).toBeInTheDocument()
+    }
+  })
 })
