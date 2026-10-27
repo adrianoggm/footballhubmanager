@@ -19,3 +19,4 @@ export {
 } from './trackingStatus.js'
 export { getSurfaceGeometry } from './surfaceGeometry.js'
 export { stickyLastColumnSx } from './responsiveTable.js'
+export { touchTargetChipSx, touchTargetLinkSx, touchTargetSx } from './touchTarget.js'

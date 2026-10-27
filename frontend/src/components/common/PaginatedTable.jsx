@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { stickyLastColumnSx } from './responsiveTable.js'
+import { touchTargetSx } from './touchTarget.js'
 
 /**
  * Generic, self-paginating table. Centralizes the duplicated TablePagination
@@ -119,6 +120,7 @@ export default function PaginatedTable({
           onRowsPerPageChange={handleChangeRowsPerPage}
           rowsPerPageOptions={rowsPerPageOptions}
           labelRowsPerPage={labelRowsPerPage}
+          sx={{ '& .MuiTablePagination-actions .MuiIconButton-root': touchTargetSx }}
         />
       ) : null}
     </Box>
