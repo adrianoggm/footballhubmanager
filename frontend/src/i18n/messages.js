@@ -195,6 +195,7 @@ export const messages = {
     },
     app: {
       brand: 'footballhubmanager',
+      tagline: 'Run your pena: seasons, matches, standings and accounts.',
       auth: {
         sectionTitle: 'Authentication',
         sectionHint: 'Use this panel to sign in or create your account.',
@@ -204,7 +205,6 @@ export const messages = {
       },
       overview: {
         sectionTitle: 'Product overview',
-        sectionHint: 'Core value and capabilities for admins and players.',
         hero: 'Run your pena from invite to final standings in one place.',
         description:
           'footballhubmanager centralizes seasons, memberships, matches, and rankings with clear workflows for admins and players.',
@@ -1510,6 +1510,7 @@ export const messages = {
     },
     app: {
       brand: 'footballhubmanager',
+      tagline: 'Gestiona tu peña: temporadas, partidos, clasificación y cuentas.',
       auth: {
         sectionTitle: 'Autenticación',
         sectionHint: 'Usa este panel para iniciar sesión o crear tu cuenta.',
@@ -1519,7 +1520,6 @@ export const messages = {
       },
       overview: {
         sectionTitle: 'Resumen del producto',
-        sectionHint: 'Valor principal y capacidades para admins y jugadores.',
         hero: 'Gestiona tu peña desde la invitación hasta la tabla final en un solo lugar.',
         description:
           'footballhubmanager centraliza temporadas, membresías, partidos y clasificaciones con flujos claros para admins y jugadores.',
