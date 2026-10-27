@@ -34,6 +34,15 @@ export const resolveEmailNotice = (status) => {
   return null
 }
 
+/**
+ * i18n key for a successful email change. Inside the resend cooldown the backend
+ * still saves the address but defers the verification email.
+ */
+export const changeEmailSuccessKey = (result) =>
+  result && !result.email_verified && result.verification_email_sent === false
+    ? 'accountEmail.changedResendLater'
+    : 'accountEmail.changed'
+
 /** i18n key for an account-email request error (change / resend). */
 export const accountEmailErrorKey = (error) => {
   switch (error?.status) {

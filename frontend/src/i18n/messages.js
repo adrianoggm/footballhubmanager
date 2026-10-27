@@ -315,6 +315,8 @@ export const messages = {
       addAction: 'Add email',
       changeAction: 'Change email',
       changed: 'Email saved. Check your inbox to verify it.',
+      changedResendLater:
+        'Email saved. We just sent you another email, so wait a minute and use "Resend verification".',
       resent: 'Verification email sent. Check your inbox.',
       noticeMissing:
         'Your account has no email. Add one so you can recover your password if you forget it.',
@@ -1629,6 +1631,8 @@ export const messages = {
       addAction: 'Añadir email',
       changeAction: 'Cambiar email',
       changed: 'Email guardado. Revisa tu bandeja de entrada para verificarlo.',
+      changedResendLater:
+        'Email guardado. Acabamos de enviarte otro email, así que espera un minuto y pulsa "Reenviar verificación".',
       resent: 'Email de verificación enviado. Revisa tu bandeja de entrada.',
       noticeMissing:
         'Tu cuenta no tiene email. Añade uno para poder recuperar tu contraseña si la olvidas.',

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useI18n } from '../i18n/useI18n.js'
-import { accountEmailErrorKey, resolveEmailNotice } from '../services/accountEmailHelpers.js'
+import {
+  accountEmailErrorKey,
+  changeEmailSuccessKey,
+  resolveEmailNotice,
+} from '../services/accountEmailHelpers.js'
 import { authService } from '../services/authService.js'
 
 /**
@@ -32,13 +36,14 @@ export function useAccountEmail() {
     refresh()
   }, [refresh])
 
+  // successKey: an i18n key, or a function of the response returning one.
   const run = async (request, successKey) => {
     setSaving(true)
     setError('')
     setInfo('')
     try {
       const result = await request()
-      setInfo(t(successKey))
+      setInfo(t(typeof successKey === 'function' ? successKey(result) : successKey))
       return result
     } catch (requestError) {
       setError(t(accountEmailErrorKey(requestError)))
@@ -51,7 +56,7 @@ export function useAccountEmail() {
   const changeEmail = async (email) => {
     const result = await run(
       () => authService.changeAccountEmail({ email, lang: language }),
-      'accountEmail.changed'
+      changeEmailSuccessKey
     )
     if (result) {
       setStatus(result)
