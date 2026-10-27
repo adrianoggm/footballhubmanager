@@ -370,7 +370,7 @@ export default function MatchDetailViewer({
   const hasLineupAudit = lineupChangeCount > 0
 
   return (
-    <Stack spacing={2}>
+    <Stack useFlexGap spacing={2}>
       <Stack spacing={0.5}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
           {t('dashboard.common.matchDetail.title')}

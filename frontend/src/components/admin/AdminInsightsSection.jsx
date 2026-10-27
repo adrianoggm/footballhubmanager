@@ -1190,7 +1190,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
       )}
 
       {!insightsLoading && insightsReport && (
-        <Stack spacing={2.25}>
+        <Stack useFlexGap spacing={2.25}>
           <Grid container spacing={1.2}>
             <Grid item xs={12} sm={6} md={4} xl={2}>
               <InsightMetricCard
@@ -1298,7 +1298,7 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
           </Tabs>
 
           {activeInsightTab === 'trends' && (
-            <Stack spacing={2.25}>
+            <Stack useFlexGap spacing={2.25}>
               <Grid container spacing={2}>
                 <Grid item xs={12} lg={8}>
                   <Card

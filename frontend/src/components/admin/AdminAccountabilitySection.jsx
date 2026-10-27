@@ -218,7 +218,7 @@ export default function AdminAccountabilitySection({
   const members = accountability?.member_accounts || []
 
   return (
-    <Stack spacing={2.5} sx={{ width: '100%' }}>
+    <Stack useFlexGap spacing={2.5} sx={{ width: '100%' }}>
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"

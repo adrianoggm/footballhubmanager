@@ -113,7 +113,7 @@ export default function UserAccountabilitySection({ penaGuid, currentPlayerGuid,
     : 0
 
   return (
-    <Stack spacing={2.5}>
+    <Stack useFlexGap spacing={2.5}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       {loading && !accountability ? <LoadingState /> : null}
 

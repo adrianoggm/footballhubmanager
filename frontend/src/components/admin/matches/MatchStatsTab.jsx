@@ -111,7 +111,7 @@ export default function MatchStatsTab({
   t,
 }) {
   return (
-    <Stack spacing={2}>
+    <Stack useFlexGap spacing={2}>
       <Box>
         <Stack
           direction={{ xs: 'column', sm: 'row' }}

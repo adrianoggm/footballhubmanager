@@ -43,7 +43,7 @@ export default function CashFlowDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>{t('dashboard.admin.accountability.cashflowTitle')}</DialogTitle>
       <DialogContent>
-        <Stack spacing={2.5} sx={{ pt: 1 }}>
+        <Stack useFlexGap spacing={2.5} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
             {t('dashboard.admin.accountability.cashflowDescription')}
           </Typography>

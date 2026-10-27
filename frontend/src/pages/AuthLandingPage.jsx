@@ -83,7 +83,7 @@ export default function AuthLandingPage({ auth }) {
       </Grid>
 
       <Grid item xs={12} lg={7} xl={8}>
-        <Stack spacing={2.5}>
+        <Stack useFlexGap spacing={2.5}>
           <Paper
             elevation={0}
             sx={{

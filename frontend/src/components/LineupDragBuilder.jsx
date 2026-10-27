@@ -234,7 +234,7 @@ export default function LineupDragBuilder({
   ]
 
   return (
-    <Stack spacing={1.25}>
+    <Stack useFlexGap spacing={1.25}>
       {helperText && (
         <Typography variant="body2" color="text.secondary">
           {helperText}

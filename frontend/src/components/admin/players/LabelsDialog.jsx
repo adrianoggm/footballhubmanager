@@ -122,7 +122,7 @@ export default function LabelsDialog({
     >
       <DialogTitle sx={{ color: textColor }}>{t('dashboard.admin.labels.title')}</DialogTitle>
       <DialogContent dividers sx={{ borderColor: alpha(textColor, 0.12) }}>
-        <Stack spacing={2.5}>
+        <Stack useFlexGap spacing={2.5}>
           <Typography variant="body2" sx={{ color: muted }}>
             {t('dashboard.admin.labels.description')}
           </Typography>
