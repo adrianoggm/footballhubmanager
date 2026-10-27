@@ -1,4 +1,5 @@
 import { Box, Button, Stack, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 
 /**
  * Componente puro para renderizar un item de temporada en el historial
@@ -7,12 +8,17 @@ import { Box, Button, Stack, Typography } from '@mui/material'
 export function SeasonHistoryItem({ season, formatDate, t, isSelected, onSelect }) {
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
         p: 1.5,
         borderRadius: 2,
-        border: isSelected ? '1px solid rgba(25,118,210,0.35)' : '1px solid rgba(15,23,42,0.08)',
-        backgroundColor: 'rgba(255,255,255,0.6)',
-      }}
+        border: `1px solid ${
+          isSelected
+            ? alpha(theme.palette.secondary.main, 0.45)
+            : alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.12 : 0.08)
+        }`,
+        // theme surface instead of a translucent white that washed out dark presets
+        backgroundColor: theme.custom.surfaces.inset,
+      })}
     >
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
