@@ -6,3 +6,5 @@ class UpdatePenaLabelsRequest(BaseModel):
     position_labels: list[str]
     role_colors: dict[str, str] | None = None
     position_colors: dict[str, str] | None = None
+    role_renames: dict[str, str] | None = None
+    position_renames: dict[str, str] | None = None

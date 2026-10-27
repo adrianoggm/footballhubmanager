@@ -17,6 +17,7 @@ from core.domain.label_config import (
     MAX_LABELS,
     align_label_colors,
     clean_labels,
+    find_label,
     normalize_hex_color,
 )
 
@@ -56,6 +57,46 @@ def _normalize_colors(
     return align_label_colors(labels, configured_colors=sanitized, defaults=defaults)
 
 
+def _normalize_renames(
+    values: dict[str, str] | None,
+    *,
+    labels: list[str],
+) -> dict[str, str]:
+    """Validate ``old -> new`` renames: the target must be one of the new labels.
+
+    Entries whose old and new text only differ in case are still kept (they
+    canonicalize the stored casing); exact no-ops are dropped.
+    """
+    if values is None:
+        return {}
+    if not isinstance(values, dict):
+        raise InvalidPenaLabelsDataError()
+    renames: dict[str, str] = {}
+    for raw_old, raw_new in values.items():
+        old = str(raw_old or "").strip()
+        new = find_label(labels, str(raw_new or ""))
+        if not old or new is None:
+            raise InvalidPenaLabelsDataError()
+        if old == new:
+            continue
+        renames[old] = new
+    return renames
+
+
+def _carry_renamed_colors(
+    colors: dict[str, str] | None,
+    renames: dict[str, str],
+) -> dict[str, str] | None:
+    """A renamed label keeps its colour unless the caller sent one for the new text."""
+    if not colors or not renames:
+        return colors
+    carried = dict(colors)
+    for old, new in renames.items():
+        if new not in carried and old in carried:
+            carried[new] = carried[old]
+    return carried
+
+
 class UpdatePenaLabelsHandler:
     def __init__(self, repository: PenaLabelsPort) -> None:
         self._repository = repository
@@ -63,14 +104,16 @@ class UpdatePenaLabelsHandler:
     def handle(self, command: UpdatePenaLabelsCommand) -> PenaLabelsInfo:
         role_labels = _normalize_labels(command.role_labels)
         position_labels = _normalize_labels(command.position_labels)
+        role_renames = _normalize_renames(command.role_renames, labels=role_labels)
+        position_renames = _normalize_renames(command.position_renames, labels=position_labels)
         role_colors = _normalize_colors(
             labels=role_labels,
-            values=command.role_colors,
+            values=_carry_renamed_colors(command.role_colors, role_renames),
             defaults=DEFAULT_ROLE_LABEL_COLORS,
         )
         position_colors = _normalize_colors(
             labels=position_labels,
-            values=command.position_colors,
+            values=_carry_renamed_colors(command.position_colors, position_renames),
             defaults=DEFAULT_POSITION_LABEL_COLORS,
         )
         labels = self._repository.update_for_admin(
@@ -80,6 +123,8 @@ class UpdatePenaLabelsHandler:
             position_labels=position_labels,
             role_colors=role_colors,
             position_colors=position_colors,
+            role_renames=role_renames,
+            position_renames=position_renames,
         )
         return PenaLabelsInfo(
             role_labels=labels.role_labels,

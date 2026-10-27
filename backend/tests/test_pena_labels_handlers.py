@@ -53,6 +53,8 @@ class _FakeRepo:
         position_labels: list[str],
         role_colors: dict[str, str],
         position_colors: dict[str, str],
+        role_renames: dict[str, str],
+        position_renames: dict[str, str],
     ) -> PenaLabelsResult:
         if self.should_raise_not_found:
             raise PenaLabelsPenaNotFoundError()
@@ -66,6 +68,7 @@ class _FakeRepo:
             "role_colors": role_colors,
             "position_colors": position_colors,
         }
+        self.last_renames = {"role": role_renames, "position": position_renames}
         return PenaLabelsResult(
             role_labels=role_labels,
             position_labels=position_labels,
@@ -160,5 +163,37 @@ def test_update_handler_propagates_not_found_and_access_denied():
                 admin_id=1,
                 role_labels=["member"],
                 position_labels=["keeper"],
+            )
+        )
+
+
+def test_update_handler_forwards_renames_and_carries_the_old_colour():
+    repo = _FakeRepo()
+    UpdatePenaLabelsHandler(repo).handle(
+        UpdatePenaLabelsCommand(
+            pena_guid="pena-guid",
+            admin_id=1,
+            role_labels=["member"],
+            position_labels=["Delantero", "keeper"],
+            position_colors={"attacker": "#123456"},
+            position_renames={"attacker": "delantero"},
+        )
+    )
+
+    # The rename target resolves to the canonical label text...
+    assert repo.last_renames == {"role": {}, "position": {"attacker": "Delantero"}}
+    # ...and the renamed label keeps the colour it had (no default reset).
+    assert repo.last_update["position_colors"]["Delantero"] == "#123456"
+
+
+def test_update_handler_rejects_rename_to_a_label_not_in_the_catalog():
+    with pytest.raises(InvalidPenaLabelsDataError):
+        UpdatePenaLabelsHandler(_FakeRepo()).handle(
+            UpdatePenaLabelsCommand(
+                pena_guid="pena-guid",
+                admin_id=1,
+                role_labels=["member"],
+                position_labels=["keeper"],
+                position_renames={"attacker": "Delantero"},
             )
         )
