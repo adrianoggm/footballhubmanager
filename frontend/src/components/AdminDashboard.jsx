@@ -38,6 +38,7 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import { loadSeasonsWithActive } from '../services/seasonLookup.js'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
@@ -892,14 +893,8 @@ export default function AdminDashboard({
   const loadPenaData = async (penaGuid) =>
     penaDataFetch.run(async ({ isStale }) => {
       try {
-        const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
-          adminService.getActiveSeason(penaGuid).catch((requestError) => {
-            if (requestError.status === 404) {
-              return null
-            }
-            throw requestError
-          }),
-          adminService.listSeasons(penaGuid, { pageSize: 100 }),
+        const [{ activeSeason: active, seasonsPage }, penaPlayers, labels] = await Promise.all([
+          loadSeasonsWithActive(adminService, penaGuid),
           shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
           shouldLoadPenaLabels
             ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())

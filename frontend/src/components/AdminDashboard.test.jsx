@@ -94,6 +94,23 @@ describe('AdminDashboard (integration)', () => {
     expect(adminServiceMock.listSeasons).toHaveBeenCalledWith('p1', expect.anything())
   })
 
+  it('does not request the active season for a pena without seasons (F12)', async () => {
+    const empty = { items: [], total: 0, total_pages: 0, page: 1, page_size: 100 }
+    const original = adminServiceMock.listSeasons.getMockImplementation()
+    adminServiceMock.listSeasons.mockImplementation(async () => empty)
+    try {
+      renderDashboard('overview')
+      await waitFor(() =>
+        expect(adminServiceMock.listSeasons).toHaveBeenCalledWith('p1', expect.anything())
+      )
+      // Let the season-load chain settle before asserting nothing else was requested.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(adminServiceMock.getActiveSeason).not.toHaveBeenCalled()
+    } finally {
+      adminServiceMock.listSeasons.mockImplementation(original)
+    }
+  })
+
   it('gives the header icon buttons translated accessible names (F2)', async () => {
     renderDashboard('overview')
     expect(await screen.findByRole('button', { name: 'Logout' })).toBeInTheDocument()

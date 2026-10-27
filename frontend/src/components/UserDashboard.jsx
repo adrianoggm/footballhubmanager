@@ -32,6 +32,7 @@ import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
+import { loadSeasonsWithActive } from '../services/seasonLookup.js'
 import { userService } from '../services/userService.js'
 import { useAccountEmail } from '../hooks/useAccountEmail.js'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
@@ -344,15 +345,7 @@ export default function UserDashboard({
       return
     }
 
-    const [activeSeason, seasonsPage] = await Promise.all([
-      userService.getActiveSeason(penaGuid).catch((requestError) => {
-        if (requestError?.status === 404) {
-          return null
-        }
-        throw requestError
-      }),
-      userService.listSeasons(penaGuid, { pageSize: 100 }),
-    ])
+    const { activeSeason, seasonsPage } = await loadSeasonsWithActive(userService, penaGuid)
     if (isStale()) {
       return
     }
