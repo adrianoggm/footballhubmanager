@@ -226,7 +226,7 @@ export default function AdminAccountabilitySection({
         spacing={1.5}
       >
         <Box>
-          <Typography variant="h5" sx={{ color: '#F4EEE8' }}>
+          <Typography variant="h5" sx={{ color: (theme) => theme.custom.tones.onRaised }}>
             {t('dashboard.admin.accountability.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary">

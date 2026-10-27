@@ -15,8 +15,8 @@ import { alpha } from '@mui/material/styles'
 import { useMemo, useState } from 'react'
 import { TX_TYPES, parseAmountToCents, todayIso } from './accountabilityHelpers.js'
 
-// Peach accent shared with the Overview Quick Actions icons (design-system).
-const ACCENT = '#FCB491'
+// Accent shared with the Overview Quick Actions icons (theme.custom.tones.accentStrong).
+const accentOf = (theme) => theme.custom.tones.accentStrong
 
 const emptyDraft = () => ({
   type: TX_TYPES.INCOME,
@@ -82,16 +82,16 @@ export default function NewTransactionCard({
 
   return (
     <Card
-      sx={{
+      sx={(theme) => ({
         height: '100%',
-        // Match the Quick Actions peach accent on this card's text + labels.
-        '& .MuiInputLabel-root': { color: ACCENT },
-        '& .MuiFormHelperText-root': { color: alpha(ACCENT, 0.7) },
-      }}
+        // Match the Quick Actions accent on this card's text + labels.
+        '& .MuiInputLabel-root': { color: accentOf(theme) },
+        '& .MuiFormHelperText-root': { color: alpha(accentOf(theme), 0.7) },
+      })}
     >
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h6" sx={{ color: ACCENT }}>
+          <Typography variant="h6" sx={{ color: accentOf }}>
             {t('dashboard.admin.accountability.newTransaction')}
           </Typography>
 
@@ -200,15 +200,15 @@ export default function NewTransactionCard({
             startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
             fullWidth
             sx={(theme) => ({
-              // Peach fill with the component's dark-brown text (replaces the
+              // Accent fill with the paper-colored text (replaces the
               // orange gradient).
               backgroundImage: 'none',
-              backgroundColor: ACCENT,
+              backgroundColor: accentOf(theme),
               color: theme.palette.background.paper,
               boxShadow: 'none',
               '&:hover': {
                 backgroundImage: 'none',
-                backgroundColor: '#f2a074',
+                backgroundColor: theme.custom.tones.accentHover,
                 boxShadow: theme.custom?.shadows?.md,
               },
             })}

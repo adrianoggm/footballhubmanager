@@ -74,7 +74,7 @@ export default function AccountabilityKpis({ data, formatter, t }) {
       sub: expensesSub,
       subTone: 'neutral',
       icon: 'receipt_long',
-      accent: '#88736A',
+      accent: theme.custom.tones.muted,
     },
     {
       key: 'dues',
