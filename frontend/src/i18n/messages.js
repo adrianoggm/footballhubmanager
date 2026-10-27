@@ -1257,7 +1257,7 @@ export const messages = {
           player: 'Player',
           role: 'Role',
           position: 'Position',
-          played: 'PJ',
+          played: 'P',
           goals: 'G',
           assists: 'A',
           w: 'W',
