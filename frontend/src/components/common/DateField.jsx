@@ -1,3 +1,4 @@
+import TextField from '@mui/material/TextField'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -52,6 +53,11 @@ export default function DateField({
         minDate={toDayjs(minIso) || undefined}
         maxDate={toDayjs(maxIso) || undefined}
         disabled={disabled}
+        // Pass the app's TextField explicitly: the picker's built-in default
+        // resolved to a separate module instance in the Vite dev bundle and
+        // rendered with MUI's default (light) theme, leaving the date nearly
+        // invisible on dark presets (#70).
+        slots={{ textField: TextField }}
         slotProps={{
           textField: {
             size,
