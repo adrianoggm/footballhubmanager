@@ -65,7 +65,7 @@ function TrackingMetricControl({
             variant="text"
             color={color}
             onClick={onDecrease}
-            disabled={disabled}
+            disabled={disabled || clampTrackedValue(value) <= 0}
             aria-label={`−1 ${context}`}
             sx={{ minWidth: 0, flex: 1 }}
           >

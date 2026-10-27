@@ -40,6 +40,7 @@ import {
   isLiveTrackingStatus,
   isPausedTrackingStatus,
   resolveDisplayedElapsed,
+  resolveEventDelta,
   trackingChipColor,
   trackingLabel,
 } from './trackingHelpers.js'
@@ -56,7 +57,7 @@ const buildPlayerEventCounts = (events) => {
     if (!playerGuid || !QUICK_TRACKING_EVENT_TYPES.includes(eventType)) {
       return
     }
-    const valueDelta = Number(event?.value_delta || 1)
+    const valueDelta = resolveEventDelta(event)
     const current = byPlayer.get(playerGuid) || {
       goal: 0,
       assist: 0,
