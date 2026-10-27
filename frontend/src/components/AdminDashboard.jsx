@@ -23,8 +23,6 @@ import {
   TableContainer,
   TextField,
   Typography,
-  IconButton,
-  Tooltip,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
@@ -57,7 +55,7 @@ import {
   setUnionSize,
 } from './admin/matches/lineupHelpers.js'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
-import { ConfirmDialog, EmptyState } from './common'
+import { ConfirmDialog, EmptyState, HeaderIconButton } from './common'
 import { DashboardContext } from '../context/dashboardContext.js'
 import {
   DEFAULT_LABEL_COLOR,
@@ -1672,41 +1670,27 @@ export default function AdminDashboard({
               alignItems="center"
               justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
             >
-              <Tooltip title={t('dashboard.common.refreshData')}>
-                <span>
-                  <IconButton
-                    onClick={() => runAction(loadDashboard, '')}
-                    disabled={loading}
-                    color="text.secondary"
-                  >
-                    <Box component="span" className="material-symbols-rounded">
-                      refresh
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('dashboard.admin.openPenaSettings')}>
-                <span>
-                  <IconButton
-                    onClick={openPenaSettings}
-                    disabled={loading || !selectedPenaGuid}
-                    color="text.Secondary"
-                  >
-                    <Box component="span" className="material-symbols-rounded">
-                      settings
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('dashboard.common.logout')}>
-                <span>
-                  <IconButton onClick={onLogout} disabled={loading} color="error">
-                    <Box component="span" className="material-symbols-rounded">
-                      logout
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <HeaderIconButton
+                icon="refresh"
+                label={t('dashboard.common.refreshData')}
+                onClick={() => runAction(loadDashboard, '')}
+                disabled={loading}
+                color="text.secondary"
+              />
+              <HeaderIconButton
+                icon="settings"
+                label={t('dashboard.admin.openPenaSettings')}
+                onClick={openPenaSettings}
+                disabled={loading || !selectedPenaGuid}
+                color="text.Secondary"
+              />
+              <HeaderIconButton
+                icon="logout"
+                label={t('dashboard.common.logout')}
+                onClick={onLogout}
+                disabled={loading}
+                color="error"
+              />
             </Stack>
           </Stack>
         }

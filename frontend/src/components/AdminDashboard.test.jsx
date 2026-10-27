@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import '@testing-library/jest-dom/vitest'
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Integration safety net for dashboard hook extraction. We mount the real
@@ -92,6 +92,13 @@ describe('AdminDashboard (integration)', () => {
     await waitFor(() => expect(adminServiceMock.getActiveSeason).toHaveBeenCalledWith('p1'))
     expect(adminServiceMock.getPenas).toHaveBeenCalled()
     expect(adminServiceMock.listSeasons).toHaveBeenCalledWith('p1', expect.anything())
+  })
+
+  it('gives the header icon buttons translated accessible names (F2)', async () => {
+    renderDashboard('overview')
+    expect(await screen.findByRole('button', { name: 'Logout' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pena settings' })).toBeInTheDocument()
   })
 
   it('loads season standings for the overview section', async () => {

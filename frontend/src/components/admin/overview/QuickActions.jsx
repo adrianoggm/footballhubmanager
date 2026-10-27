@@ -54,6 +54,7 @@ function ActionTile({ icon, title, desc, onClick }) {
           <Box
             component="span"
             className="material-symbols-rounded"
+            aria-hidden="true"
             sx={{
               fontSize: 24,
               fontVariationSettings: "'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24",
