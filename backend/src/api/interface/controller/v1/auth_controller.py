@@ -75,7 +75,11 @@ def _account_ref(session: SessionData) -> AccountRef:
 
 
 def _account_email_response(result: AccountEmailStatusResult) -> AccountEmailResponse:
-    return AccountEmailResponse(email=result.email, email_verified=result.email_verified)
+    return AccountEmailResponse(
+        email=result.email,
+        email_verified=result.email_verified,
+        verification_email_sent=result.verification_email_sent,
+    )
 
 
 @router.post("/auth/login", response_model=LoginResponse)

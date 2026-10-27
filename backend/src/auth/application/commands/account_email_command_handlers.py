@@ -62,18 +62,31 @@ class ChangeAccountEmailHandler:
         if account.has_verified_email(email.value):
             return AccountEmailStatusResult(email=email.value, email_verified=True)
 
-        # Every change emails the target address, so it shares the resend throttle:
-        # otherwise the endpoint could be used to spam arbitrary inboxes.
-        self._cooldown.ensure_ready(self._tokens.last_issued_at(command.ref), self._clock.now())
         self._accounts.set_unverified_email(command.ref, email.value)
         logger.info(
             "📝 Email changed for %s account %s; verification pending",
             command.ref.account_type.value,
             account.guid,
         )
+        # The change is always saved; only the verification mail shares the resend
+        # throttle, so the endpoint cannot be used to spam arbitrary inboxes. Any
+        # link mailed for the previous address stops working (it no longer matches).
+        if self._cooldown.is_cooling_down(
+            self._tokens.last_issued_at(command.ref), self._clock.now()
+        ):
+            logger.info(
+                "🕐 Verification email for %s account %s deferred: cooldown active",
+                command.ref.account_type.value,
+                account.guid,
+            )
+            return AccountEmailStatusResult(
+                email=email.value, email_verified=False, verification_email_sent=False
+            )
         updated = _require_account(self._accounts, command.ref)
         self._issuer.issue(updated, command.lang)
-        return AccountEmailStatusResult(email=email.value, email_verified=False)
+        return AccountEmailStatusResult(
+            email=email.value, email_verified=False, verification_email_sent=True
+        )
 
 
 class ResendEmailVerificationHandler:

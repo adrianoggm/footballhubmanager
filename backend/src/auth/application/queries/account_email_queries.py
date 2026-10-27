@@ -14,3 +14,6 @@ class GetAccountEmailQuery:
 class AccountEmailStatusResult:
     email: str | None
     email_verified: bool
+    # Set by an email change: False when the verification mail was deferred by the
+    # resend cooldown (the address is saved anyway; the user resends it later).
+    verification_email_sent: bool = False
