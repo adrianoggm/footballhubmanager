@@ -65,7 +65,7 @@ export default function UserProfileSettingsDialog({
           <ProfileImageField
             value={profileForm.image_url}
             alt={profileDisplayName || t('dashboard.user.profileSettingsTitle')}
-            label={t('dashboard.common.profileImageLabel')}
+            label={t('dashboard.common.profilePhotoLabel')}
             helperText={t('dashboard.user.profileImageHint')}
             chooseLabel={t('dashboard.common.imageActions.choose')}
             replaceLabel={t('dashboard.common.imageActions.replace')}

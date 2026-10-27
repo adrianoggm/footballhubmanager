@@ -371,6 +371,7 @@ export const messages = {
         appearanceTitle: 'Appearance & language',
         identityPlaceholder: 'Crest',
         profileImageLabel: 'Pena shield',
+        profilePhotoLabel: 'Profile photo',
         imageEmpty: 'No image selected',
         imageActions: {
           choose: 'Choose image',
@@ -1685,6 +1686,7 @@ export const messages = {
         appearanceTitle: 'Apariencia e idioma',
         identityPlaceholder: 'Escudo',
         profileImageLabel: 'Escudo de la peña',
+        profilePhotoLabel: 'Foto de perfil',
         imageEmpty: 'No hay imagen seleccionada',
         imageActions: {
           choose: 'Elegir imagen',
