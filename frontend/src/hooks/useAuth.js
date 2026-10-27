@@ -15,23 +15,31 @@ const loggedOutState = {
   session: null,
 }
 
+const restoredState = (session) =>
+  session?.user_type ? { status: 'authenticated', error: null, session } : loggedOutState
+
 export function useAuth() {
   const [state, setState] = useState(restoringState)
 
   useEffect(() => {
     let active = true
-    authController.restore().then((session) => {
-      if (!active) {
-        return
-      }
-      if (session?.user_type) {
-        setState({ status: 'authenticated', error: null, session })
-      } else {
-        setState(loggedOutState)
-      }
-    })
+    authController
+      .restore()
+      .then((session) => active && setState(restoredState(session)))
+      // Only a 401 means "logged out"; otherwise the session is unknown (server
+      // or network down) and the app offers a retry instead of logging out.
+      .catch((error) => active && setState({ status: 'unavailable', error, session: null }))
     return () => {
       active = false
+    }
+  }, [])
+
+  const retryRestore = useCallback(async () => {
+    setState(restoringState)
+    try {
+      setState(restoredState(await authController.restore()))
+    } catch (error) {
+      setState({ status: 'unavailable', error, session: null })
     }
   }, [])
 
@@ -131,5 +139,6 @@ export function useAuth() {
     claimPlayer,
     logout,
     clearError,
+    retryRestore,
   }
 }

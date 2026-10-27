@@ -228,6 +228,9 @@ export const messages = {
           'Register as admin to create your competition, or as player to join a pena in seconds with an invite token.',
       },
       sessionIncomplete: 'Session metadata is incomplete. Please logout and login again.',
+      sessionUnavailable:
+        'We could not check your session because the server is not responding. Try again in a moment.',
+      retry: 'Try again',
     },
     auth: {
       titleLogin: 'Sign in to footballhubmanager',
@@ -1541,6 +1544,9 @@ export const messages = {
       },
       sessionIncomplete:
         'Los metadatos de sesión están incompletos. Cierra sesión y vuelve a iniciar.',
+      sessionUnavailable:
+        'No hemos podido comprobar tu sesión porque el servidor no responde. Inténtalo de nuevo en un momento.',
+      retry: 'Reintentar',
     },
     auth: {
       titleLogin: 'Inicia sesión en footballhubmanager',
