@@ -85,6 +85,54 @@ describe('semantic surface + tone tokens (#70)', () => {
     )
   })
 
+  it.each(AA_PRESET_IDS)('%s muted + secondary text are AA on every surface', (presetId) => {
+    const { palette, custom } = createAppTheme(presetId)
+    const { surfaces, tones } = custom
+    const bgs = [surfaces.card, surfaces.cardAlt, surfaces.raised, surfaces.inset]
+    for (const bg of [...bgs, palette.background.paper, palette.background.default]) {
+      expect(getContrastRatio(tones.muted, bg)).toBeGreaterThanOrEqual(4.5)
+      expect(getContrastRatio(palette.text.secondary, bg)).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it.each(AA_PRESET_IDS)('%s accent CTA gradient keeps its label AA', (presetId) => {
+    const { secondary } = createAppTheme(presetId).palette
+    for (const stop of [secondary.main, secondary.light, secondary.dark]) {
+      expect(getContrastRatio(secondary.contrastText, stop)).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it.each(AA_PRESET_IDS)('%s accent + status colours are AA as text on paper', (presetId) => {
+    const { palette } = createAppTheme(presetId)
+    for (const fg of [
+      palette.secondary.main,
+      palette.secondary.light,
+      palette.success.main,
+      palette.warning.main,
+      palette.error.main,
+      palette.info.main,
+    ]) {
+      expect(getContrastRatio(fg, palette.background.paper)).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it.each(AA_PRESET_IDS)('%s input outlines reach 3:1 (WCAG 1.4.11)', (presetId) => {
+    const { palette, custom } = createAppTheme(presetId)
+    expect(custom.controls.inputBorder).toBeTruthy()
+    for (const bg of [palette.background.paper, custom.surfaces.card]) {
+      expect(getContrastRatio(custom.controls.inputBorder, bg)).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it.each(AA_PRESET_IDS)('%s shares the ember type scale and radius', (presetId) => {
+    const ember = createAppTheme('ember-dark')
+    const theme = createAppTheme(presetId)
+    expect(theme.typography.fontFamily).toBe(ember.typography.fontFamily)
+    expect(theme.typography.h1.fontFamily).toBe(ember.typography.h1.fontFamily)
+    expect(theme.shape.borderRadius).toBe(ember.shape.borderRadius)
+    expect(theme.custom.styleProfile).toBe('accented')
+  })
+
   it('presets without controls keep the translucent input outline', () => {
     const theme = createAppTheme('ember-dark')
     expect(theme.custom.controls).toBeUndefined()
