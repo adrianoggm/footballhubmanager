@@ -1,4 +1,4 @@
-import { alpha, createTheme } from '@mui/material/styles'
+import { alpha, createTheme, getContrastRatio } from '@mui/material/styles'
 import { designTokens, INSIGHT_MATRIX_SCALES, MATRIX_CELL_TEXT_COLOR } from './theme/tokens.js'
 
 const DEFAULT_LIGHT_THEME_PRESET_ID = 'sand-light'
@@ -586,6 +586,14 @@ export const THEME_PRESETS = {
         accentSoftBg: 'rgba(223, 159, 128, 0.14)',
         onRaised: '#F4EEE8',
       },
+      // Approved redesign rating scale (proposal §4), brighter than Ember's
+      // status palette so the badges pop on the near-black page.
+      ratingBase: {
+        excellent: '#4fb3ff',
+        good: '#9aa66a',
+        fair: '#d0a24a',
+        poor: '#e0714f',
+      },
       radius: {
         none: 0,
         sm: '5px',
@@ -635,6 +643,79 @@ const hexToRgb = (hex) => {
   const g = (num >> 8) & 255
   const b = num & 255
   return `${r}, ${g}, ${b}`
+}
+
+// Linear blend of two #rrggbb colors (t=0 -> a, t=1 -> b).
+const mixHex = (a, b, t) => {
+  const [ra, ga, ba] = hexToRgb(a).split(',').map(Number)
+  const [rb, gb, bb] = hexToRgb(b).split(',').map(Number)
+  const channel = (x, y) =>
+    Math.round(x + (y - x) * t)
+      .toString(16)
+      .padStart(2, '0')
+  return `#${channel(ra, rb)}${channel(ga, gb)}${channel(ba, bb)}`
+}
+
+const RATING_DARK_TEXT = '#14100d'
+const RATING_LIGHT_TEXT = '#ffffff'
+
+// Dark or white text, whichever reads better on `background`.
+const onColor = (background) =>
+  getContrastRatio(background, RATING_DARK_TEXT) >= getContrastRatio(background, RATING_LIGHT_TEXT)
+    ? RATING_DARK_TEXT
+    : RATING_LIGHT_TEXT
+
+const swatch = (background) => ({ bg: background, fg: onColor(background) })
+
+// Rating scale (>=8 / 7–7.9 / 6–6.9 / <6) built from each preset's status
+// palette (info/success/warning/error), so badges follow the active theme.
+// Presets may pin their own scale via `custom.ratingBase`.
+const createRatingTokens = (preset) => {
+  const { palette } = preset
+  const base = {
+    excellent: palette.info.main,
+    good: palette.success.main,
+    fair: palette.warning.main,
+    poor: palette.error.main,
+    ...(preset.custom?.ratingBase || {}),
+  }
+  return Object.fromEntries(Object.entries(base).map(([bucket, color]) => [bucket, swatch(color)]))
+}
+
+// Win/draw/loss chips (FormDots). Draw is a neutral blend of the muted tone.
+const createFormTokens = (preset, rating) => {
+  const { palette, custom } = preset
+  const isDark = palette.mode === 'dark'
+  return {
+    win: swatch(palette.success.main),
+    draw: swatch(mixHex(custom.tones.muted, custom.surfaces.card, isDark ? 0.35 : 0.45)),
+    loss: rating.poor,
+  }
+}
+
+// App shell (sidebar, topbar, popovers) derived from the preset roles so every
+// preset gets the same structure as the approved Ember mockup.
+const createShellTokens = (preset) => {
+  const { palette, custom } = preset
+  const isDark = palette.mode === 'dark'
+  const pageBase = /^#[0-9a-f]{6}$/i.test(preset.pageBackground)
+    ? preset.pageBackground
+    : palette.background.default
+  const ink = custom.tones.onRaised
+  return {
+    pageBase,
+    sidebar: isDark
+      ? mixHex(pageBase, custom.surfaces.card, 0.25)
+      : mixHex(palette.background.default, custom.surfaces.card, 0.55),
+    topbar: alpha(pageBase, isDark ? 0.88 : 0.86),
+    control: isDark ? mixHex(pageBase, custom.surfaces.card, 0.7) : custom.surfaces.cardAlt,
+    popover: isDark ? mixHex(pageBase, custom.surfaces.card, 0.6) : custom.surfaces.card,
+    line: alpha(ink, isDark ? 0.08 : 0.11),
+    lineStrong: alpha(ink, isDark ? 0.14 : 0.2),
+    hover: alpha(ink, isDark ? 0.04 : 0.05),
+    cta: palette.secondary.main,
+    onCta: palette.secondary.contrastText,
+  }
 }
 
 const createCustomTokens = (preset) => {
@@ -736,9 +817,14 @@ const createCustomTokens = (preset) => {
     },
   }
 
+  const rating = createRatingTokens(preset)
+
   return {
     ...defaultTokens,
     ...preset.custom,
+    rating,
+    form: createFormTokens(preset, rating),
+    shell: createShellTokens(preset),
     radius: {
       ...defaultTokens.radius,
       ...(preset.custom?.radius || {}),

@@ -166,3 +166,26 @@ describe('semantic surface + tone tokens (#70)', () => {
     )
   })
 })
+
+describe('rating scale + form tokens (redesign F1)', () => {
+  it.each(ALL_PRESET_IDS)('%s rating badges keep AA text on every bucket', (presetId) => {
+    const { rating, form } = createAppTheme(presetId).custom
+    expect(Object.keys(rating).sort()).toEqual(['excellent', 'fair', 'good', 'poor'])
+    for (const { bg, fg } of [...Object.values(rating), ...Object.values(form)]) {
+      expect(getContrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('pins the approved Ember scale', () => {
+    const { rating } = createAppTheme('ember-dark').custom
+    expect(rating.excellent.bg).toBe('#4fb3ff')
+    expect(rating.poor.bg).toBe('#e0714f')
+  })
+
+  it.each(ALL_PRESET_IDS)('%s defines the shell surfaces', (presetId) => {
+    const { shell } = createAppTheme(presetId).custom
+    for (const key of ['sidebar', 'topbar', 'control', 'popover', 'line', 'lineStrong', 'cta']) {
+      expect(shell[key]).toBeTruthy()
+    }
+  })
+})
