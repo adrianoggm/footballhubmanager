@@ -115,20 +115,11 @@ def _split_statements(sql: str) -> list[str]:
     """Split a `.sql` file into individual statements.
 
     The DDL files use only simple `;`-terminated statements (no semicolons inside
-    string literals), so a plain split is safe. Fragments that are only comments
-    or whitespace are dropped; leading `--` comments on a real statement are kept
-    (databases ignore them).
+    string literals). Full-line `--` comments are dropped before splitting, so a
+    `;` inside a comment cannot cut a statement in half.
     """
-    statements: list[str] = []
-    for fragment in sql.split(";"):
-        body = "\n".join(
-            line
-            for line in fragment.splitlines()
-            if line.strip() and not line.strip().startswith("--")
-        ).strip()
-        if body:
-            statements.append(fragment.strip())
-    return statements
+    code = "\n".join(line for line in sql.splitlines() if not line.strip().startswith("--"))
+    return [fragment.strip() for fragment in code.split(";") if fragment.strip()]
 
 
 def ensure_table(conn: Connection) -> None:
