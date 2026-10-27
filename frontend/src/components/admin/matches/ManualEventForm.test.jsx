@@ -70,4 +70,36 @@ describe('ManualEventForm', () => {
     fireEvent.click(screen.getByText('dashboard.admin.matches.createEvent'))
     expect(handleCreateMatchEvent).toHaveBeenCalledTimes(1)
   })
+
+  // MT-10: the related player of a goal is informational; assists are tracked
+  // with their own event, so the form must say it is not counted as an assist.
+  it('explains that a goal related player is not counted as an assist', () => {
+    render(
+      <ManualEventForm
+        {...baseProps}
+        matchEventDraft={{ event_type: 'goal' }}
+        show={true}
+        onToggle={vi.fn()}
+        handleCreateMatchEvent={vi.fn()}
+      />
+    )
+    expect(
+      screen.getByText('dashboard.admin.matches.eventRelatedPlayerGoalHint')
+    ).toBeInTheDocument()
+  })
+
+  it('shows no assist hint for non-goal events', () => {
+    render(
+      <ManualEventForm
+        {...baseProps}
+        matchEventDraft={{ event_type: 'foul' }}
+        show={true}
+        onToggle={vi.fn()}
+        handleCreateMatchEvent={vi.fn()}
+      />
+    )
+    expect(
+      screen.queryByText('dashboard.admin.matches.eventRelatedPlayerGoalHint')
+    ).not.toBeInTheDocument()
+  })
 })

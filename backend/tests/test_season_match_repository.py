@@ -1,8 +1,12 @@
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from core.application.policies import FieldUpdate
 from core.application.ports.season_competition_port import (
+    MatchDateOutsideSeasonError,
+    MatchEventCountBelowZeroError,
     MatchEventCreateData,
     MatchNotFoundError,
     MatchPlayerStatsUpdateData,
@@ -686,3 +690,195 @@ def test_set_goalkeeper_rotation_for_admin_rejects_negative_interval():
         )
     session.rollback.assert_called_once()
     session.commit.assert_not_called()
+
+
+def _event_repo(session, existing_events):
+    repo = SqlAlchemySeasonMatchRepository(session)
+    football_match = SimpleNamespace(id=33, started_at_epoch=100, ended_at_epoch=None)
+    home_team_player = SimpleNamespace(id_team=1, id_player=11)
+    away_team_player = SimpleNamespace(id_team=2, id_player=22)
+    repo._get_locked_admin_match_bundle = lambda **kwargs: (
+        SimpleNamespace(id=44),
+        SimpleNamespace(guid="season-guid"),
+        football_match,
+        SimpleNamespace(id=1),
+        SimpleNamespace(id=2),
+    )
+    repo._load_locked_required_team_players = lambda **kwargs: (
+        [home_team_player],
+        [away_team_player],
+    )
+    repo._team_player_guid_map = lambda team_players: {
+        (
+            "home-player-guid" if team_players[0] is home_team_player else "away-player-guid"
+        ): team_players[0]
+    }
+    repo._resolve_event_player = lambda **kwargs: home_team_player
+    repo._resolve_related_event_player = lambda **kwargs: None
+    repo._resolve_event_elapsed_seconds = lambda football_match, provided_elapsed_seconds: 55
+    repo._list_locked_match_events = lambda **kwargs: existing_events
+    repo._now_epoch = lambda: 777
+    repo._build_match_detail_result = lambda **kwargs: "detail-result"
+    return repo
+
+
+def _decrement_goal_event() -> MatchEventCreateData:
+    return MatchEventCreateData(
+        event_type="goal",
+        team_side="home",
+        player_guid="home-player-guid",
+        related_player_guid=None,
+        note=None,
+        elapsed_seconds=None,
+        value_delta=-1,
+    )
+
+
+def test_create_match_event_for_admin_rejects_decrement_below_zero():
+    session = Mock()
+    repo = _event_repo(
+        session,
+        [
+            # Another player's goal and this player's save must not count.
+            SimpleNamespace(id_player=22, event_type="goal", value_delta=1),
+            SimpleNamespace(id_player=11, event_type="save", value_delta=1),
+        ],
+    )
+
+    with pytest.raises(MatchEventCountBelowZeroError):
+        repo.create_match_event_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=7,
+            event=_decrement_goal_event(),
+        )
+
+    session.add.assert_not_called()
+    session.rollback.assert_called_once()
+
+
+def test_create_match_event_for_admin_accepts_decrement_when_player_has_count():
+    session = Mock()
+    repo = _event_repo(
+        session,
+        [SimpleNamespace(id_player=11, event_type="goal", value_delta=1)],
+    )
+
+    result = repo.create_match_event_for_admin(
+        pena_guid="pena-guid",
+        season_guid="season-guid",
+        match_guid="match-guid",
+        admin_id=7,
+        event=_decrement_goal_event(),
+    )
+
+    assert result == "detail-result"
+    assert session.add.call_args.args[0].value_delta == -1
+
+
+def _season_repo(session):
+    repo = SqlAlchemySeasonMatchRepository(session)
+    season = SimpleNamespace(
+        id=55,
+        guid="season-guid",
+        start_date=date(2026, 9, 1),
+        end_date=date(2027, 6, 30),
+    )
+    repo._get_admin_season = lambda **kwargs: (SimpleNamespace(id=44, id_admin=7), season)
+    repo._get_pena = lambda _pena_guid: SimpleNamespace(id=44, id_admin=7)
+    repo._get_season = lambda *, pena_id, season_guid: season
+    repo._create_match_entities = Mock()
+    return repo
+
+
+@pytest.mark.parametrize("match_date", [date(2026, 8, 31), date(2027, 7, 1)])
+def test_create_match_with_lineups_for_admin_rejects_date_outside_season(match_date):
+    session = Mock()
+    repo = _season_repo(session)
+    repo._resolve_match_players = Mock(return_value=[])
+
+    with pytest.raises(MatchDateOutsideSeasonError):
+        repo.create_match_with_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=7,
+            match_date=match_date,
+            home_team_name=None,
+            away_team_name=None,
+            home_player_guids=["h1"],
+            away_player_guids=["a1"],
+        )
+
+    repo._create_match_entities.assert_not_called()
+    session.rollback.assert_called_once()
+    session.commit.assert_not_called()
+
+
+def test_create_match_for_admin_rejects_date_outside_season():
+    session = Mock()
+    repo = _season_repo(session)
+    repo._get_player = Mock()
+
+    with pytest.raises(MatchDateOutsideSeasonError):
+        repo.create_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=7,
+            home_player_guid="h1",
+            away_player_guid="a1",
+            match_date=date(2025, 1, 1),
+        )
+
+    repo._create_match_entities.assert_not_called()
+    session.rollback.assert_called_once()
+
+
+def test_update_match_for_admin_rejects_date_outside_season():
+    session = Mock()
+    repo = _season_repo(session)
+    football_match = SimpleNamespace(match_date=date(2026, 10, 1))
+    repo._get_locked_match_teams = lambda **kwargs: (
+        football_match,
+        SimpleNamespace(name="H"),
+        SimpleNamespace(name="A"),
+    )
+
+    with pytest.raises(MatchDateOutsideSeasonError):
+        repo.update_match_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            match_guid="match-guid",
+            admin_id=7,
+            match_date=FieldUpdate.set(date(2027, 7, 1)),
+            home_team_name=FieldUpdate.keep(),
+            away_team_name=FieldUpdate.keep(),
+        )
+
+    assert football_match.match_date == date(2026, 10, 1)
+    session.rollback.assert_called_once()
+    session.commit.assert_not_called()
+
+
+def test_create_match_with_lineups_for_admin_accepts_season_boundary_dates():
+    session = Mock()
+    repo = _season_repo(session)
+    repo._resolve_match_players = Mock(return_value=[])
+    repo._create_match_entities = Mock(
+        return_value=(SimpleNamespace(), SimpleNamespace(id=1), SimpleNamespace(id=2))
+    )
+    repo._add_open_team_players = Mock()
+    repo._build_match_detail_result = lambda **kwargs: "detail-result"
+
+    for match_date in (date(2026, 9, 1), date(2027, 6, 30)):
+        result = repo.create_match_with_lineups_for_admin(
+            pena_guid="pena-guid",
+            season_guid="season-guid",
+            admin_id=7,
+            match_date=match_date,
+            home_team_name=None,
+            away_team_name=None,
+            home_player_guids=["h1"],
+            away_player_guids=["a1"],
+        )
+        assert result == "detail-result"

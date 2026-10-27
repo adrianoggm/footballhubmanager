@@ -90,7 +90,7 @@ class MatchPlayerStatsRequest(BaseModel):
     goals: int = Field(default=0, ge=0)
     assists: int = Field(default=0, ge=0)
     saves: int = Field(default=0, ge=0)
-    rating: float = Field(default=0.0, ge=0)
+    rating: float = Field(default=0.0, ge=0, le=10)
 
 
 class MatchTeamStatsRequest(BaseModel):

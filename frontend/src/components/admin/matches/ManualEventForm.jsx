@@ -130,6 +130,11 @@ export default function ManualEventForm({
                 label={t('dashboard.admin.matches.eventRelatedPlayer')}
                 value={matchEventDraft?.related_player_guid || ''}
                 onChange={onMatchEventDraftField('related_player_guid')}
+                helperText={
+                  (matchEventDraft?.event_type || 'goal') === 'goal'
+                    ? t('dashboard.admin.matches.eventRelatedPlayerGoalHint')
+                    : undefined
+                }
               >
                 <MenuItem value="">
                   {t('dashboard.admin.matches.eventRelatedPlayerOptional')}

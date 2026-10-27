@@ -12,6 +12,7 @@ import {
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import DateField from '../../common/DateField.jsx'
 import { touchTargetChipSx } from '../../common/touchTarget.js'
+import InlineActionError from './InlineActionError.jsx'
 
 const toIsoDate = (date) => {
   const offset = date.getTimezoneOffset()
@@ -61,7 +62,7 @@ const isWithinRange = (iso, minIso, maxIso) =>
  * Extracted from AdminMatchesSection; state stays in the dashboard and arrives
  * through the same state/actions/helpers bundles.
  */
-export default function MatchCreateCard({ state, actions, helpers }) {
+export default function MatchCreateCard({ state, actions, helpers, inlineError = '' }) {
   const {
     selectedSeasonGuid,
     selectedSeason,
@@ -194,10 +195,14 @@ export default function MatchCreateCard({ state, actions, helpers }) {
           >
             {t('dashboard.admin.matches.createDetailedMatch')}
           </Button>
+          <InlineActionError message={inlineError} />
           {lastCreatedMatch && (
             <Alert severity="success">
               {t('dashboard.admin.matches.matchCreated', {
-                guid: lastCreatedMatch.guid,
+                home:
+                  lastCreatedMatch.home_team?.team_name || t('dashboard.admin.matches.homeLineup'),
+                away:
+                  lastCreatedMatch.away_team?.team_name || t('dashboard.admin.matches.awayLineup'),
                 date: formatDate(lastCreatedMatch.match_date),
               })}
             </Alert>

@@ -55,6 +55,7 @@ import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import AdminOverviewSection from './admin/AdminOverviewSection.jsx'
+import { resetMatchFormAfterCreate, validateMatchDate } from './admin/matches/matchDrafts.js'
 import {
   buildLineupPlayerOptions,
   formatPlayerDisplayName,
@@ -1371,6 +1372,18 @@ export default function AdminDashboard({
       setError(new Error(t('dashboard.admin.errors.selectedSeasonRequired')))
       return
     }
+    const matchDateError = validateMatchDate(matchForm.match_date, selectedSeason)
+    if (matchDateError) {
+      setError(
+        new Error(
+          t(matchDateError, {
+            start: formatDate(selectedSeason?.start_date),
+            end: formatDate(selectedSeason?.end_date),
+          })
+        )
+      )
+      return
+    }
     const homeLineup = normalizePlayerGuids(matchForm.home_player_guids)
     const awayLineup = normalizePlayerGuids(matchForm.away_player_guids)
     if (!homeLineup.length || !awayLineup.length) {
@@ -1394,6 +1407,7 @@ export default function AdminDashboard({
         },
       })
       setLastCreatedMatch(created)
+      setMatchForm(resetMatchFormAfterCreate)
       await Promise.all([
         loadStandings(selectedPenaGuid, selectedSeasonGuid),
         loadSeasonMatches(selectedPenaGuid, selectedSeasonGuid),
@@ -1500,6 +1514,7 @@ export default function AdminDashboard({
       matchForm,
       loading,
       lastCreatedMatch,
+      actionError: error ? errorMessage : '',
       seasonMatchesLoading,
       visibleSeasonMatches,
       selectedMatchGuid,

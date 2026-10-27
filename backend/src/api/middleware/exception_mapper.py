@@ -21,6 +21,7 @@ from core.application.use_cases.season_competition_errors import (
     InvalidSeasonMatchDataError,
     InvalidSeasonPlayerBatchDataError,
     InvalidSeasonPlayerUpdateDataError,
+    SeasonMatchDateOutsideSeasonError,
     SeasonMatchInvalidPlayersError,
     SeasonMatchLineupLockedError,
     SeasonMatchNotFoundError,
@@ -231,6 +232,10 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Player already has matches in this season",
     ),
     SeasonMatchNotFoundError: (status.HTTP_404_NOT_FOUND, "Match not found"),
+    SeasonMatchDateOutsideSeasonError: (
+        status.HTTP_400_BAD_REQUEST,
+        "The match date must fall within the season dates",
+    ),
     SeasonMatchPlayersNotInSeasonError: (
         status.HTTP_409_CONFLICT,
         "All called-up players must be registered in this season",

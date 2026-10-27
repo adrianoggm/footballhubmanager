@@ -1,6 +1,7 @@
 import { Alert, Button, Stack } from '@mui/material'
 
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
+import InlineActionError from './InlineActionError.jsx'
 
 export default function MatchLineupsTab({
   selectedMatchDetail,
@@ -13,6 +14,7 @@ export default function MatchLineupsTab({
   loading,
   matchStatsLoading,
   t,
+  inlineError = '',
 }) {
   return (
     <Stack spacing={2}>
@@ -55,6 +57,8 @@ export default function MatchLineupsTab({
           {t('dashboard.admin.matches.saveLineups')}
         </Button>
       </Stack>
+
+      <InlineActionError message={inlineError} />
     </Stack>
   )
 }

@@ -512,6 +512,8 @@ export const messages = {
           w: 'W',
           d: 'D',
           l: 'L',
+          saves: 'Sv',
+          rating: 'Rtg',
           pts: 'Pts',
         },
         overview: {
@@ -552,6 +554,8 @@ export const messages = {
           nextMatchPlace: 'To be confirmed',
           rosterHome: 'Home',
           rosterAway: 'Away',
+          rosterPlayersOne: '{count} player',
+          rosterPlayersOther: '{count} players',
           // stat carousel
           statsTitle: 'Season Stats',
           statClassification: 'Classification',
@@ -879,7 +883,7 @@ export const messages = {
           actions: 'Actions',
           result: 'Result',
           resultSource: 'Update source',
-          finalScore: 'Final score',
+          finalScore: 'Final score: {score}',
           scoreFromStats: 'Set score from team/player stats.',
           scoreFromTracking: 'Preview from live tracking timeline.',
           manageStats: 'Manage stats',
@@ -975,6 +979,8 @@ export const messages = {
           eventPlayerOptional: 'No player selected',
           eventRelatedPlayer: 'Related player',
           eventRelatedPlayerOptional: 'No related player',
+          eventRelatedPlayerGoalHint:
+            'Informational only: it does not count as an assist. Log the assist with an Assist event.',
           eventMinute: 'Minute',
           eventSecond: 'Second',
           eventNote: 'Note',
@@ -1026,7 +1032,7 @@ export const messages = {
           moveToAway: 'To away',
           removeFromLineup: 'Remove',
           createDetailedMatch: 'Create Detailed Match',
-          matchCreated: 'Match {guid} created for {date}.',
+          matchCreated: 'Match {home} vs {away} created for {date}.',
           lineupHelperTitle: 'Lineup Helper',
           lineupHelperDescription:
             'Select players from the selected season roster to compose lineups.',
@@ -1166,7 +1172,7 @@ export const messages = {
             'Lineups cannot be changed after the match clock starts or when timeline events already exist.',
           invalidMatchResult: 'Home and away scores must be numbers greater than or equal to zero',
           invalidMatchStats:
-            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be zero or higher',
+            'Goals/assists/saves must be integers greater than or equal to zero, and rating must be between 0 and 10',
           invalidMatchEventElapsed:
             'Event time must use a valid minute and a second between 0 and 59.',
           invalidMatchEventDelta: 'Event action must be increase or decrease.',
@@ -1186,6 +1192,8 @@ export const messages = {
           invalidPenaLabels:
             'Role and position labels are required. Use commas or line breaks to separate values.',
           selectedSeasonRequired: 'Select a season to complete this action',
+          matchDateRequired: 'Select a match date',
+          matchDateOutsideSeason: 'The match date must be within the season ({start} – {end})',
         },
       },
       user: {
@@ -1859,6 +1867,8 @@ export const messages = {
           w: 'V',
           d: 'E',
           l: 'D',
+          saves: 'Par',
+          rating: 'Val',
           pts: 'Pts',
         },
         overview: {
@@ -1897,6 +1907,8 @@ export const messages = {
           nextMatchPlace: 'Por confirmar',
           rosterHome: 'Local',
           rosterAway: 'Visitante',
+          rosterPlayersOne: '{count} jugador',
+          rosterPlayersOther: '{count} jugadores',
           statsTitle: 'Estadísticas de temporada',
           statClassification: 'Clasificación',
           statGoalsByMatchday: 'Goles por jornada',
@@ -1919,7 +1931,7 @@ export const messages = {
           versus: 'vs',
           rankingTitle: 'Ranking de rendimiento',
           rankingTop: 'Top {n}',
-          rankingLineItem: '{played}J · {wins}G · {draws}E · {points} PTS',
+          rankingLineItem: '{played}PJ · {wins}V · {draws}E · {points} PTS',
           recentMatchesTitle: 'Historial de partidos',
           recentMatchesLast: 'Últimos {n}',
           viewFullHistory: 'Ver historial completo',
@@ -2227,7 +2239,7 @@ export const messages = {
           actions: 'Acciones',
           result: 'Resultado',
           resultSource: 'Origen de actualización',
-          finalScore: 'Marcador final',
+          finalScore: 'Marcador final: {score}',
           scoreFromStats: 'Define el marcador desde estadísticas de equipo/jugadores.',
           scoreFromTracking: 'Vista previa desde la cronología del seguimiento en vivo.',
           manageStats: 'Editar estadísticas',
@@ -2324,6 +2336,8 @@ export const messages = {
           eventPlayerOptional: 'Sin jugador',
           eventRelatedPlayer: 'Jugador relacionado',
           eventRelatedPlayerOptional: 'Sin jugador relacionado',
+          eventRelatedPlayerGoalHint:
+            'Solo informativo: no cuenta como asistencia. Registra la asistencia con un evento Asistencia.',
           eventMinute: 'Minuto',
           eventSecond: 'Segundo',
           eventNote: 'Nota',
@@ -2375,7 +2389,7 @@ export const messages = {
           moveToAway: 'Mover a visitante',
           removeFromLineup: 'Quitar',
           createDetailedMatch: 'Crear partido detallado',
-          matchCreated: 'Partido {guid} creado para {date}.',
+          matchCreated: 'Partido {home} vs {away} creado para el {date}.',
           lineupHelperTitle: 'Asistente de alineación',
           lineupHelperDescription:
             'Selecciona jugadores de la plantilla de la temporada seleccionada para componer alineaciones.',
@@ -2518,7 +2532,7 @@ export const messages = {
           invalidMatchResult:
             'El marcador local y visitante debe ser un número mayor o igual a cero',
           invalidMatchStats:
-            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe ser cero o superior',
+            'Goles/asistencias/paradas deben ser enteros mayores o iguales a cero y la valoración debe estar entre 0 y 10',
           invalidMatchEventElapsed:
             'El tiempo del evento debe usar un minuto válido y un segundo entre 0 y 59.',
           invalidMatchEventDelta: 'La acción del evento debe ser incrementar o disminuir.',
@@ -2539,6 +2553,9 @@ export const messages = {
           invalidPenaLabels:
             'Las etiquetas de rol y posición son obligatorias. Usa comas o saltos de línea para separarlas.',
           selectedSeasonRequired: 'Selecciona una temporada para completar esta acción',
+          matchDateRequired: 'Selecciona la fecha del partido',
+          matchDateOutsideSeason:
+            'La fecha del partido debe estar dentro de la temporada ({start} – {end})',
         },
       },
       user: {

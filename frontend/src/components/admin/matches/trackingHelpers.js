@@ -37,12 +37,40 @@ export const resolveDisplayedElapsed = (matchDetail, nowEpoch) => {
   return Math.max(storedElapsed, liveElapsed)
 }
 
+// Match list rows do not carry the pause bookkeeping (total_paused_seconds /
+// paused_at_epoch), but their elapsed_seconds is already computed by the API at
+// load time. Rebase the start on that snapshot so resolveDisplayedElapsed keeps
+// ticking from it while live and stays frozen otherwise (MT-08).
+export const resolveListRowElapsed = (match, nowEpoch, loadedAtEpoch) => {
+  const storedElapsed = Number(match?.elapsed_seconds || 0)
+  if (!isLiveTrackingStatus(match?.tracking_status) || !match?.started_at_epoch) {
+    return storedElapsed
+  }
+  return resolveDisplayedElapsed(
+    {
+      tracking_status: match.tracking_status,
+      elapsed_seconds: storedElapsed,
+      started_at_epoch: loadedAtEpoch - storedElapsed,
+      total_paused_seconds: 0,
+      paused_at_epoch: null,
+    },
+    nowEpoch
+  )
+}
+
+// The API only accepts value_delta of +1/-1 and defaults it to 1, so only a
+// missing value falls back to 1; an explicit 0 stays 0.
+export const resolveEventDelta = (event) => Number(event?.value_delta ?? 1) || 0
+
+// Team score = sum of each scorer's clamped goal count, exactly like the
+// summary tab (MatchDetailViewer) and the backend close-out, so a stray "-1"
+// on a player without goals can never cancel another player's goal.
 export const buildTrackedTeamScore = (detail) => {
   if (!detail || detail.status === 'closed' || !(detail.events || []).length) {
     return null
   }
 
-  const totals = { home: 0, away: 0 }
+  const goalsByScorer = { home: new Map(), away: new Map() }
   ;(detail.events || []).forEach((event) => {
     if (String(event?.event_type || '').toLowerCase() !== 'goal') {
       return
@@ -51,11 +79,15 @@ export const buildTrackedTeamScore = (detail) => {
     if (!['home', 'away'].includes(teamSide)) {
       return
     }
-    totals[teamSide] += Number(event?.value_delta || 1)
+    const scorer = String(event?.player_guid || '')
+    const scorers = goalsByScorer[teamSide]
+    scorers.set(scorer, (scorers.get(scorer) || 0) + resolveEventDelta(event))
   })
 
+  const sumClamped = (scorers) =>
+    [...scorers.values()].reduce((total, goals) => total + clampTrackedValue(goals), 0)
   return {
-    home: clampTrackedValue(totals.home),
-    away: clampTrackedValue(totals.away),
+    home: sumClamped(goalsByScorer.home),
+    away: sumClamped(goalsByScorer.away),
   }
 }

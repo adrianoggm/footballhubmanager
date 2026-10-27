@@ -38,6 +38,12 @@ from core.application.ports.season_competition_port import (
     MatchClockNotRunningError as RepositoryMatchClockNotRunningError,
 )
 from core.application.ports.season_competition_port import (
+    MatchDateOutsideSeasonError as RepositoryMatchDateOutsideSeasonError,
+)
+from core.application.ports.season_competition_port import (
+    MatchEventCountBelowZeroError as RepositoryMatchEventCountBelowZeroError,
+)
+from core.application.ports.season_competition_port import (
     MatchEventNotFoundError as RepositoryMatchEventNotFoundError,
 )
 from core.application.ports.season_competition_port import (
@@ -84,6 +90,8 @@ from core.application.use_cases.season_competition_errors import (
     SeasonMatchClockAlreadyPausedError,
     SeasonMatchClockNotPausedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchDateOutsideSeasonError,
+    SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
@@ -127,6 +135,8 @@ class CreateSeasonMatchHandler:
             raise PenaSeasonAccessDeniedError() from exc
         except RepositorySeasonNotFoundError as exc:
             raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchDateOutsideSeasonError as exc:
+            raise SeasonMatchDateOutsideSeasonError() from exc
         except RepositorySamePlayerMatchError as exc:
             raise SeasonMatchInvalidPlayersError() from exc
         except RepositoryMatchPlayersNotInSeasonError as exc:
@@ -197,6 +207,8 @@ class CreateSeasonMatchWithLineupsHandler:
             raise PenaSeasonAccessDeniedError() from exc
         except RepositorySeasonNotFoundError as exc:
             raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchDateOutsideSeasonError as exc:
+            raise SeasonMatchDateOutsideSeasonError() from exc
         except RepositorySamePlayerMatchError as exc:
             raise SeasonMatchInvalidPlayersError() from exc
         except RepositoryMatchPlayersNotInSeasonError as exc:
@@ -289,6 +301,8 @@ class UpdateSeasonMatchHandler:
             raise PenaSeasonAccessDeniedError() from exc
         except RepositorySeasonNotFoundError as exc:
             raise PenaSeasonNotFoundError() from exc
+        except RepositoryMatchDateOutsideSeasonError as exc:
+            raise SeasonMatchDateOutsideSeasonError() from exc
         except RepositoryMatchNotFoundError as exc:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryInvalidMatchDataError as exc:
@@ -465,6 +479,8 @@ class CreateSeasonMatchEventHandler:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryMatchEventPlayerNotInMatchError as exc:
             raise SeasonMatchEventPlayerNotInMatchError() from exc
+        except RepositoryMatchEventCountBelowZeroError as exc:
+            raise SeasonMatchEventCountBelowZeroError() from exc
         except RepositoryMatchClockNotRunningError as exc:
             raise SeasonMatchClockNotRunningError() from exc
         except RepositoryMatchReportClosedError as exc:

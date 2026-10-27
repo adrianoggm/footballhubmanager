@@ -8,8 +8,10 @@ from core.application.ports.season_competition_port import (
     MatchClockAlreadyStartedError,
     MatchClockNotPausedError,
     MatchClockNotRunningError,
+    MatchDateOutsideSeasonError,
     MatchDetailResult,
     MatchesPageResult,
+    MatchEventCountBelowZeroError,
     MatchEventCreateData,
     MatchEventNotFoundError,
     MatchEventPlayerNotInMatchError,
@@ -78,6 +80,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             season_guid=season_guid,
             admin_id=admin_id,
         )
+        self._ensure_match_date_in_season(season, match_date)
         home_player = self._get_player(home_player_guid)
         away_player = self._get_player(away_player_guid)
         self._ensure_players_registered_in_season(
@@ -176,6 +179,8 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             self.session.rollback()
             raise MatchNotFoundError()
         football_match, home_team, away_team = bundle
+        if match_date.is_set():
+            self._ensure_match_date_in_season(season, match_date.value)
 
         if match_date.is_set():
             football_match.match_date = match_date.value
@@ -214,6 +219,7 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             season_guid=season_guid,
             admin_id=admin_id,
         )
+        self._ensure_match_date_in_season(season, match_date)
 
         home_players = self._resolve_match_players(
             pena_id=pena.id,
@@ -578,6 +584,15 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             player_guid=event.related_player_guid,
             players_by_guid=players_by_guid,
         )
+        if event.value_delta < 0 and primary_player is not None:
+            current_count = self._tracked_event_count(
+                events=self._list_locked_match_events(match_id=football_match.id),
+                player_id=int(primary_player.id_player),
+                event_type=event.event_type,
+            )
+            if current_count + event.value_delta < 0:
+                self.session.rollback()
+                raise MatchEventCountBelowZeroError()
 
         elapsed_seconds = self._resolve_event_elapsed_seconds(football_match, event.elapsed_seconds)
         match_event = FootballMatchEvent(
@@ -948,6 +963,11 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
         home_team = teams_by_id[football_match.id_home_team]
         away_team = teams_by_id[football_match.id_away_team]
         return football_match, home_team, away_team
+
+    def _ensure_match_date_in_season(self, season: Season, match_date: date) -> None:
+        if not season.start_date <= match_date <= season.end_date:
+            self.session.rollback()
+            raise MatchDateOutsideSeasonError()
 
     def _get_admin_season(
         self,
@@ -1493,6 +1513,20 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             preserved_by_player_id=preserved_by_player_id,
         )
         self.session.flush()
+
+    @staticmethod
+    def _tracked_event_count(
+        *,
+        events: list[FootballMatchEvent],
+        player_id: int,
+        event_type: str,
+    ) -> int:
+        return sum(
+            int(event.value_delta)
+            for event in events
+            if event.id_player == player_id
+            and str(event.event_type or "").strip().lower() == event_type
+        )
 
     @staticmethod
     def _apply_tracked_events_to_team_players(

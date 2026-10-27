@@ -376,9 +376,17 @@ class SqlAlchemySeasonPlayerRepository(SeasonPlayerPort):
                 func.coalesce(func.sum(TeamPlayer.goals), 0).label("goals"),
                 func.coalesce(func.sum(TeamPlayer.assists), 0).label("assists"),
                 func.coalesce(func.sum(TeamPlayer.saves), 0).label("saves"),
+                # Only rated appearances count: unrated players are stored as -1
+                # while the match is open and normalized to 0 when it is closed.
                 func.coalesce(
                     func.avg(
-                        case((FootballMatch.status == "closed", TeamPlayer.rating), else_=None)
+                        case(
+                            (
+                                and_(FootballMatch.status == "closed", TeamPlayer.rating > 0),
+                                TeamPlayer.rating,
+                            ),
+                            else_=None,
+                        )
                     ),
                     0,
                 ).label("average_rating"),

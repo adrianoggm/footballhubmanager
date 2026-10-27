@@ -11,7 +11,14 @@ import {
   Typography,
 } from '@mui/material'
 import { EmptyState, LoadingState, stickyLastColumnSx } from '../../common'
-import { trackingChipColor, trackingLabel } from './trackingHelpers.js'
+import { useEffect, useState } from 'react'
+import {
+  isLiveTrackingStatus,
+  resolveListRowElapsed,
+  trackingChipColor,
+  trackingLabel,
+} from './trackingHelpers.js'
+import { useNowEpoch } from './useNowEpoch.js'
 
 /**
  * Season matches table (status, tracking, result, manage/delete actions).
@@ -32,6 +39,16 @@ export default function MatchListCard({
   formatDate,
   formatElapsedDuration,
 }) {
+  const hasLiveMatch = visibleSeasonMatches.some((match) =>
+    isLiveTrackingStatus(match.tracking_status)
+  )
+  const nowEpoch = useNowEpoch(hasLiveMatch)
+  // Elapsed values in the list are a snapshot taken when it was (re)loaded.
+  const [loadedAtEpoch, setLoadedAtEpoch] = useState(nowEpoch)
+  useEffect(() => {
+    setLoadedAtEpoch(Math.floor(Date.now() / 1000))
+  }, [visibleSeasonMatches])
+
   return (
     <Stack spacing={2}>
       <Typography variant="h6">{t('dashboard.admin.matches.seasonMatchesTitle')}</Typography>
@@ -101,7 +118,9 @@ export default function MatchListCard({
                           label={trackingLabel(match.tracking_status, t)}
                         />
                         <Typography variant="caption" color="text.secondary">
-                          {formatElapsedDuration(match.elapsed_seconds)}
+                          {formatElapsedDuration(
+                            resolveListRowElapsed(match, nowEpoch, loadedAtEpoch)
+                          )}
                         </Typography>
                       </Stack>
                     </TableCell>
