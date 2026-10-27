@@ -45,6 +45,7 @@ import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
 import AccountEmailSettings from './account/AccountEmailSettings.jsx'
 import { useAccountEmail } from '../hooks/useAccountEmail.js'
+import { useDialogFocusReturn } from '../hooks/useDialogFocusReturn.js'
 import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
@@ -449,6 +450,7 @@ export default function AdminDashboard({
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
   const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
+  const penaSettingsFocusReturn = useDialogFocusReturn(penaSettingsOpen)
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
@@ -1874,6 +1876,7 @@ export default function AdminDashboard({
           onClose={() => setPenaSettingsOpen(false)}
           fullWidth
           maxWidth="sm"
+          {...penaSettingsFocusReturn}
         >
           <DialogTitle>{t('dashboard.admin.penaSettingsTitle')}</DialogTitle>
           <DialogContent>

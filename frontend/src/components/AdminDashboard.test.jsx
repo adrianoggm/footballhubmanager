@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import '@testing-library/jest-dom/vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Integration safety net for dashboard hook extraction. We mount the real
@@ -116,6 +117,26 @@ describe('AdminDashboard (integration)', () => {
     expect(await screen.findByRole('button', { name: 'Logout' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pena settings' })).toBeInTheDocument()
+  })
+
+  it('returns focus from the pena settings dialog without hitting aria-hidden (F9)', async () => {
+    const user = userEvent.setup()
+    renderDashboard('overview')
+    const opener = await screen.findByRole('button', { name: 'Pena settings' })
+    await waitFor(() => expect(opener).toBeEnabled())
+    const hiddenAtFocus = []
+    opener.addEventListener('focus', () =>
+      hiddenAtFocus.push(Boolean(opener.closest('[aria-hidden="true"]')))
+    )
+
+    await user.click(opener)
+    await screen.findByRole('dialog')
+    hiddenAtFocus.length = 0
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(opener).toHaveFocus())
+    expect(hiddenAtFocus).not.toContain(true)
   })
 
   it('loads season standings for the overview section', async () => {
