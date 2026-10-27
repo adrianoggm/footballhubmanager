@@ -19,7 +19,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { translateNationalityLabel } from '../i18n/labels.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { normalizeEmail } from '../services/accountEmailHelpers.js'
-import { normalizeNationalities } from '../services/catalogUtils.js'
+import { normalizeNationalities, pickDefaultNationality } from '../services/catalogUtils.js'
 import { httpClient } from '../services/httpClient.js'
 
 const initialUser = {
@@ -205,7 +205,7 @@ export default function AuthPanel({ auth }) {
           if (prev.nationality && items.includes(prev.nationality)) {
             return prev
           }
-          return { ...prev, nationality: items[0] }
+          return { ...prev, nationality: pickDefaultNationality(items) }
         })
       } catch {
         setNationalities([])

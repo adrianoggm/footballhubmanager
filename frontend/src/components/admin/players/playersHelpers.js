@@ -50,6 +50,79 @@ export function sortPlayers(players, sort, seasonRosterGuids) {
   return copy.sort(byName)
 }
 
+const labelKey = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+
+/**
+ * Deterministic default role of a membership (PL-04), mirroring the backend
+ * `default_role_label`: a membership always has a role, so there is no
+ * "no role" option. Players without an account prefer `guest` then `member`;
+ * with an account `member` then `guest`; otherwise the LAST (least privileged)
+ * label — never the first one (`president`).
+ */
+export function defaultRoleLabel(options, { hasAccount = false } = {}) {
+  const list = options || []
+  if (!list.length) return ''
+  const preferred = hasAccount ? ['member', 'guest'] : ['guest', 'member']
+  for (const key of preferred) {
+    const match = list.find((option) => labelKey(option) === key)
+    if (match) return match
+  }
+  return list[list.length - 1]
+}
+
+const identityKey = (player) =>
+  [player.name, player.surname1, player.nickname].map(labelKey).join('|')
+
+/**
+ * Existing players that the new player would duplicate (PL-06): same name and
+ * first surname, and the same nickname when both have one.
+ */
+export function findDuplicatePlayers(players, form) {
+  const name = labelKey(form?.name)
+  const surname1 = labelKey(form?.surname1)
+  if (!name || !surname1) return []
+  const nickname = labelKey(form?.nickname)
+  return (players || []).filter((player) => {
+    if (labelKey(player.name) !== name || labelKey(player.surname1) !== surname1) return false
+    const existingNickname = labelKey(player.nickname)
+    return !nickname || !existingNickname || existingNickname === nickname
+  })
+}
+
+const shortCode = (player) =>
+  String(player.guid || player.player_guid || '')
+    .replace(/-/g, '')
+    .slice(0, 6)
+    .toUpperCase()
+
+/**
+ * Returns a labeler that appends a distinguishing detail when several players
+ * share the same display name (PL-06): second surname / nationality and a short
+ * code derived from the GUID, which is always unique.
+ */
+export function buildPlayerLabeler(players, formatName) {
+  const counts = new Map()
+  ;(players || []).forEach((player) => {
+    const key = labelKey(formatName(player))
+    counts.set(key, (counts.get(key) || 0) + 1)
+  })
+  return (player) => {
+    const base = formatName(player)
+    if ((counts.get(labelKey(base)) || 0) < 2) return base
+    const details = [
+      player.surname2,
+      player.nationality,
+      shortCode(player) && `#${shortCode(player)}`,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    return details ? `${base} (${details})` : base
+  }
+}
+
 export function paginate(items, page, pageSize) {
   const list = items || []
   const total = list.length

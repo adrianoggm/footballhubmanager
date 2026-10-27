@@ -48,7 +48,6 @@ export default function AdminPlayersSection({
 }) {
   const theme = useTheme()
   const [addSeasonOpen, setAddSeasonOpen] = useState(false)
-  const [newPlayerOpen, setNewPlayerOpen] = useState(false)
   const [labelsOpen, setLabelsOpen] = useState(false)
 
   const { state, actions, toolbar, toolbarActions } = adminPlayers
@@ -137,7 +136,7 @@ export default function AdminPlayersSection({
           </Button>
           <Button
             variant="outlined"
-            onClick={() => setNewPlayerOpen(true)}
+            onClick={() => actions.openNewPlayerDialog()}
             startIcon={<HeaderIcon name="person_add" />}
             sx={headerButtonSx}
           >
@@ -204,8 +203,8 @@ export default function AdminPlayersSection({
       />
 
       <NewPlayerDialog
-        open={newPlayerOpen}
-        onClose={() => setNewPlayerOpen(false)}
+        open={state.newPlayerOpen}
+        onClose={actions.closeNewPlayerDialog}
         guestForm={state.guestForm}
         onGuestField={actions.onGuestField}
         nationalities={nationalities}
@@ -213,8 +212,9 @@ export default function AdminPlayersSection({
         positionOptions={positionOptions}
         onCreate={async (addToSeason) => {
           const ok = await actions.handleCreateGuestPlayer(addToSeason)
-          if (ok !== false) setNewPlayerOpen(false)
+          if (ok !== false) actions.closeNewPlayerDialog()
         }}
+        duplicateNames={state.duplicateNames}
         t={t}
       />
 
@@ -228,6 +228,9 @@ export default function AdminPlayersSection({
         draftPositionColors={state.draftPositionColors}
         onLabelsDraftField={actions.onLabelsDraftField}
         onLabelColorDraftChange={actions.onLabelColorDraftChange}
+        onRenameLabel={actions.onRenameLabel}
+        previousLabels={penaLabels}
+        players={adminPlayers.players}
         onSave={async () => {
           const ok = await actions.handleSavePenaLabels()
           if (ok !== false) setLabelsOpen(false)

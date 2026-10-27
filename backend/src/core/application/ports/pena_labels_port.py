@@ -22,4 +22,14 @@ class PenaLabelsPort(Protocol):
         position_labels: list[str],
         role_colors: dict[str, str],
         position_colors: dict[str, str],
-    ) -> PenaLabelsResult: ...
+        role_renames: dict[str, str],
+        position_renames: dict[str, str],
+    ) -> PenaLabelsResult:
+        """Replace the pena label catalogs.
+
+        ``*_renames`` map an existing label to its new text (``old -> new``); the
+        players using it keep it under the new name (and colour). Labels that
+        disappear without a rename follow the removal policy: removed roles fall
+        back to the membership's default role, removed positions become ``None``.
+        """
+        ...

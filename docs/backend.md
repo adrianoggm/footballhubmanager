@@ -121,6 +121,26 @@ API contracts expose GUIDs, not internal numeric IDs.
 
 - Example: `/api/v1/penas/{pena_guid}`
 
+## Role & Position Labels
+
+Role and position labels are pena-scoped data edited through `PUT /api/v1/penas/{pena_guid}/labels`.
+
+- **Every membership has a role.** There is no "no role" state: when a role is omitted (guest
+  creation, membership edit, join) the membership gets the pena's default role,
+  `core.domain.label_config.default_role_label`: `member` for players with an account, `guest`
+  for players without one (each falling back to the other), and otherwise the *last*
+  (least privileged) configured role. It is never the first label (`president`).
+- **Positions are optional** (`None` = no position).
+- **Rename** (`role_renames` / `position_renames`: `{"old": "new"}`): the label keeps its
+  identity. Players using it (memberships and the pena's season snapshots) move to the new text,
+  and the label keeps its colour.
+- **Removal** (a label disappears without a rename):
+  - role → its memberships and season snapshots fall back to the default role above;
+  - position → its players are left without position (`None`).
+
+The policy is implemented in `SqlAlchemyPenaLabelsRepository`; the admin labels dialog asks for
+confirmation (with the number of affected players) before removing a label in use.
+
 ## Environment Variables
 
 Source files:

@@ -34,6 +34,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
     selectedSeasonGuid,
     selectedSeasonForm,
     selectedSeasonDateErrors,
+    createSeasonErrors = {},
   } = state
   const {
     onSeasonField,
@@ -115,7 +116,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                         t={t}
                         form={selectedSeasonForm}
                         onChange={onSelectedSeasonField}
-                        dateErrors={selectedSeasonDateErrors}
+                        errors={selectedSeasonDateErrors}
                         disabled={loading}
                       />
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
@@ -146,6 +147,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                     t={t}
                     form={seasonForm}
                     onChange={onSeasonField}
+                    errors={createSeasonErrors}
                     disabled={loading}
                   />
 
@@ -213,6 +215,7 @@ export default function AdminSeasonsSection({ state, actions, helpers }) {
                   formatDate={formatDate}
                   t={t}
                   isSelected={selectedSeasonGuid === season.guid}
+                  isActive={Boolean(activeSeason) && activeSeason.guid === season.guid}
                   onSelect={() => handleSelectSeasonFromHistory(season.guid)}
                 />
               ))}

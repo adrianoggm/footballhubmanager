@@ -307,6 +307,8 @@ def update_pena_labels(
             position_labels=payload.position_labels,
             role_colors=payload.role_colors,
             position_colors=payload.position_colors,
+            role_renames=payload.role_renames,
+            position_renames=payload.position_renames,
         )
     )
     return PenaLabelsResponse(

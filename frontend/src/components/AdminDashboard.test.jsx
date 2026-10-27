@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import '@testing-library/jest-dom/vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -49,6 +49,8 @@ const { adminServiceMock } = vi.hoisted(() => {
       listPenaPlayers: vi.fn(async () => page([])),
       listSeasonPlayers: vi.fn(async () => page([])),
       getMatchInsights: vi.fn(async () => ({ items: [] })),
+      createGuestPlayer: vi.fn(async () => ({ player_guid: 'new' })),
+      registerSeasonPlayer: vi.fn(async () => ({})),
     },
   }
 })
@@ -152,5 +154,30 @@ describe('AdminDashboard (integration)', () => {
   it('loads the season roster/players when on the players section', async () => {
     renderDashboard('players')
     await waitFor(() => expect(adminServiceMock.listSeasonPlayers).toHaveBeenCalled())
+  })
+
+  it('opens the new-player form from the "Add guest" quick action instead of POSTing an empty guest (PL-01)', async () => {
+    const onSectionChange = vi.fn()
+    render(
+      <I18nProvider>
+        <ThemeModeProvider>
+          <ToastProvider>
+            <AdminDashboard
+              session={{ user_guid: 'admin-1', user_type: 'admin' }}
+              onLogout={vi.fn()}
+              routeSectionId="overview"
+              onSectionChange={onSectionChange}
+            />
+          </ToastProvider>
+        </ThemeModeProvider>
+      </I18nProvider>
+    )
+
+    const quickAction = await screen.findByText(/^(Add Guest|Añadir invitado)$/)
+    fireEvent.click(quickAction)
+
+    expect(adminServiceMock.createGuestPlayer).not.toHaveBeenCalled()
+    expect(adminServiceMock.registerSeasonPlayer).not.toHaveBeenCalled()
+    expect(onSectionChange).toHaveBeenCalledWith('players')
   })
 })

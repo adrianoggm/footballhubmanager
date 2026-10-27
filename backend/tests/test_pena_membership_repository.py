@@ -218,3 +218,55 @@ def test_create_guest_accepts_configured_position():
     )
 
     assert result.position == "defender"
+
+
+def _create_guest_without_role(repo):
+    return repo.create_guest_player_for_admin(
+        pena_guid="pena-100",
+        admin_id=1,
+        name="Guest",
+        surname1="Player",
+        surname2=None,
+        nationality="Spain",
+        nickname=None,
+        role=None,
+        position=None,
+    )
+
+
+def test_create_guest_without_role_never_defaults_to_the_top_role():
+    """PL-04: once ``guest`` is removed, an omitted role must not become president."""
+    db = _db_session()
+    _seed(db, stored=None)
+    # Roles ordered by hierarchy: president first, member already seeded (id 1).
+    db.get(PenaRole, 1).sort_order = 1
+    db.add(PenaRole(id=2, guid="role-2", id_pena=100, name="president", sort_order=0))
+    db.commit()
+    repo = SqlAlchemyPenaMembershipRepository(db)
+
+    result = _create_guest_without_role(repo)
+
+    assert result.role == "member"
+
+
+def test_create_guest_without_role_uses_guest_when_configured():
+    db = _db_session()
+    _seed(db, stored=None)
+    db.add(PenaRole(id=2, guid="role-2", id_pena=100, name="president", sort_order=-1))
+    db.add(PenaRole(id=3, guid="role-3", id_pena=100, name="guest", sort_order=5))
+    db.commit()
+    repo = SqlAlchemyPenaMembershipRepository(db)
+
+    assert _create_guest_without_role(repo).role == "guest"
+
+
+def test_create_guest_without_member_or_guest_role_uses_the_least_privileged_one():
+    db = _db_session()
+    _seed(db, stored=None)
+    db.get(PenaRole, 1).name = "socio"
+    db.get(PenaRole, 1).sort_order = 1
+    db.add(PenaRole(id=2, guid="role-2", id_pena=100, name="president", sort_order=0))
+    db.commit()
+    repo = SqlAlchemyPenaMembershipRepository(db)
+
+    assert _create_guest_without_role(repo).role == "socio"

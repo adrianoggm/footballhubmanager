@@ -59,6 +59,7 @@ from core.domain.errors import (
     InvalidProfileImageError,
     InvalidRegistrationDataError,
     InvalidSeasonInsightsDataError,
+    InvalidSeasonPointsError,
     PenaAccountabilityAccessDeniedError,
     PenaAccountabilityAmountOutOfRangeError,
     PenaAccountabilityExpenseNotFoundError,
@@ -184,6 +185,13 @@ EXCEPTION_STATUS_MAP: dict[type[Exception], ExceptionStatus] = {
         "Player is not linked to this pena",
     ),
     InvalidPenaSeasonDataError: (status.HTTP_400_BAD_REQUEST, "Invalid season data"),
+    # Subclass of InvalidPenaSeasonDataError: resolved first through the MRO, so
+    # the create/update endpoint overrides ("Invalid season date range") do not
+    # mislabel a points error.
+    InvalidSeasonPointsError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Season points must be non-negative integers",
+    ),
     PenaSeasonsPenaNotFoundError: (status.HTTP_404_NOT_FOUND, "Pena not found"),
     PenaSeasonsAccessDeniedError: (
         status.HTTP_403_FORBIDDEN,

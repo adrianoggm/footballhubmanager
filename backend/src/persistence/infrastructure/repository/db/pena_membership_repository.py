@@ -14,9 +14,9 @@ from core.application.ports.pena_membership_port import (
 from core.domain.label_config import (
     DEFAULT_POSITION_LABELS,
     DEFAULT_ROLE_LABELS,
+    default_role_label,
     find_label,
     parse_labels_payload,
-    pick_preferred_label,
 )
 from persistence.infrastructure.entity import Nationality, Pena, PenaPlayer, PenaRole, Player
 from sqlalchemy import select
@@ -279,10 +279,13 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
                 raise InvalidRoleLabelError()
             return matched.id
 
-        preferred = "member" if player.id_player_account is not None else "guest"
-        role_names = [item.name for item in roles] or list(DEFAULT_ROLE_LABELS)
-        resolved_name = pick_preferred_label(role_names, preferred) or preferred
-        matched = self._find_role_by_name(roles, resolved_name)
+        # PL-04: a membership always has a role; omitting it means the pena's
+        # deterministic default member role (never the first/top label).
+        resolved_name = default_role_label(
+            [item.name for item in roles],
+            has_account=player.id_player_account is not None,
+        )
+        matched = self._find_role_by_name(roles, resolved_name) if resolved_name else None
         return matched.id if matched else None
 
     def _resolve_position(
@@ -320,9 +323,10 @@ class SqlAlchemyPenaMembershipRepository(PenaMembershipPort):
                 if role.id == role_id:
                     return role.name
 
-        preferred = "member" if player.id_player_account is not None else "guest"
+        has_account = player.id_player_account is not None
         role_names = [item.name for item in roles] or list(DEFAULT_ROLE_LABELS)
-        return pick_preferred_label(role_names, preferred) or preferred
+        fallback = "member" if has_account else "guest"
+        return default_role_label(role_names, has_account=has_account) or fallback
 
     def _to_result(
         self,

@@ -16,6 +16,7 @@ import {
 import { alpha } from '@mui/material/styles'
 import { useState } from 'react'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
+import { translatePositionLabel, translateRoleLabel } from '../../../i18n/labels.js'
 import { SEASON_STATUS } from './playersHelpers.js'
 
 // Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
@@ -177,7 +178,7 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
                   sx={radioCheckboxSx}
                 />
               }
-              label={role}
+              label={translateRoleLabel(t, role)}
             />
           ))}
         </FormGroup>
@@ -198,7 +199,7 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
                   sx={radioCheckboxSx}
                 />
               }
-              label={position}
+              label={translatePositionLabel(t, position)}
             />
           ))}
         </FormGroup>

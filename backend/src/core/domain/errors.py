@@ -24,6 +24,12 @@ class InvalidPenaSeasonDataError(DomainError):
     code = "invalid_pena_season_data"
 
 
+class InvalidSeasonPointsError(InvalidPenaSeasonDataError):
+    """Season points (win/draw/loss) must be integers greater than or equal to 0."""
+
+    code = "invalid_season_points"
+
+
 class PenaSeasonPenaNotFoundError(DomainError):
     code = "pena_season_pena_not_found"
 

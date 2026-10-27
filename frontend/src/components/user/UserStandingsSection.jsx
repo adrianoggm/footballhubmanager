@@ -60,7 +60,9 @@ export default function UserStandingsSection({
                     size="small"
                     variant="outlined"
                     label={t('dashboard.user.yourPositionLabel', {
-                      position: currentStanding.position || '-',
+                      position: currentStanding.position
+                        ? translatePositionLabel(t, currentStanding.position)
+                        : '-',
                     })}
                   />
                   {currentStanding.role && (
