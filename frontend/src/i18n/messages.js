@@ -946,6 +946,8 @@ export const messages = {
           eventPlayerOptional: 'No player selected',
           eventRelatedPlayer: 'Related player',
           eventRelatedPlayerOptional: 'No related player',
+          eventRelatedPlayerGoalHint:
+            'Informational only: it does not count as an assist. Log the assist with an Assist event.',
           eventMinute: 'Minute',
           eventSecond: 'Second',
           eventNote: 'Note',
@@ -2267,6 +2269,8 @@ export const messages = {
           eventPlayerOptional: 'Sin jugador',
           eventRelatedPlayer: 'Jugador relacionado',
           eventRelatedPlayerOptional: 'Sin jugador relacionado',
+          eventRelatedPlayerGoalHint:
+            'Solo informativo: no cuenta como asistencia. Registra la asistencia con un evento Asistencia.',
           eventMinute: 'Minuto',
           eventSecond: 'Segundo',
           eventNote: 'Nota',
