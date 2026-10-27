@@ -14,6 +14,10 @@ case "${1:-serve}" in
     shift
     exec python -m db_migrations stamp "$@"
     ;;
+  rollback)
+    shift
+    exec python -m db_migrations rollback "$@"
+    ;;
   status)
     exec python -m db_migrations status
     ;;

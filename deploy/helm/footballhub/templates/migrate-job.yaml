@@ -34,6 +34,35 @@ spec:
               until nc -z {{ include "footballhub.dbHost" . }} {{ .Values.database.port }}; do
                 echo "waiting for database..."; sleep 2;
               done
+        {{- if .Values.migrations.backup.enabled }}
+        # Dump the database before touching the schema. If the dump fails the Job
+        # fails and migrate never runs. Rollback (down files) cannot restore data a
+        # migration dropped; this dump can.
+        - name: backup-db
+          image: {{ .Values.migrations.backup.image | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              file="/backups/${DB_NAME}-$(date -u +%Y%m%dT%H%M%SZ).sql"
+              echo "dumping ${DB_NAME} to ${file}"
+              mysqldump --host="${DB_HOST}" --port="${DB_PORT}" --user="${DB_USER}" \
+                --single-transaction --no-tablespaces "${DB_NAME}" > "${file}"
+              echo "backup written: ${file} ($(wc -c < "${file}") bytes)"
+          envFrom:
+            - configMapRef:
+                name: {{ include "footballhub.fullname" . }}-config
+          env:
+            - name: MYSQL_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "footballhub.dbSecretName" . }}
+                  key: {{ .Values.database.passwordSecretKey }}
+          volumeMounts:
+            - name: backups
+              mountPath: /backups
+        {{- end }}
       containers:
         - name: migrate
           image: {{ include "footballhub.backendImage" . | quote }}
@@ -46,4 +75,16 @@ spec:
             {{- include "footballhub.dbPasswordEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.migrations.resources | nindent 12 }}
+      {{- if .Values.migrations.backup.enabled }}
+      volumes:
+        - name: backups
+          {{- if .Values.migrations.backup.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.migrations.backup.existingClaim | quote }}
+          {{- else }}
+          # No claim configured: the dump only proves the DB is dumpable and is
+          # discarded with the pod. Set migrations.backup.existingClaim in prod.
+          emptyDir: {}
+          {{- end }}
+      {{- end }}
 {{- end }}

@@ -10,24 +10,32 @@ import json
 import logging
 import uuid
 from contextvars import ContextVar
+from enum import Enum
 
 _request_id: ContextVar[str] = ContextVar("request_id", default="-")
 
 
-class _Formatter(logging.Formatter):
-    def __init__(self, json_logs: bool):
+class LogFormat(str, Enum):
+    TEXT = "text"
+    JSON = "json"
+
+
+class _TextFormatter(logging.Formatter):
+    def __init__(self) -> None:
         super().__init__("%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s")
-        self._json = json_logs
 
     def format(self, record: logging.LogRecord) -> str:
         record.request_id = _request_id.get()
-        if not self._json:
-            return super().format(record)
+        return super().format(record)
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
         payload = {
             "ts": self.formatTime(record),
             "level": record.levelname,
             "logger": record.name,
-            "request_id": record.request_id,
+            "request_id": _request_id.get(),
             "msg": record.getMessage(),
         }
         if record.exc_info:
@@ -35,9 +43,15 @@ class _Formatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def configure_logging(*, json_logs: bool, level: int = logging.INFO) -> None:
+_FORMATTERS: dict[LogFormat, type[logging.Formatter]] = {
+    LogFormat.TEXT: _TextFormatter,
+    LogFormat.JSON: _JsonFormatter,
+}
+
+
+def configure_logging(*, log_format: LogFormat, level: int = logging.INFO) -> None:
     handler = logging.StreamHandler()
-    handler.setFormatter(_Formatter(json_logs))
+    handler.setFormatter(_FORMATTERS[log_format]())
     root = logging.getLogger()
     root.handlers[:] = [handler]
     root.setLevel(level)

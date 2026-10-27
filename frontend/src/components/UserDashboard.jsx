@@ -34,6 +34,8 @@ import { useI18n } from '../i18n/useI18n.js'
 import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { userService } from '../services/userService.js'
+import { useAccountEmail } from '../hooks/useAccountEmail.js'
+import AccountEmailNotice from './account/AccountEmailNotice.jsx'
 
 const UserAccountabilitySection = lazy(() => import('./user/UserAccountabilitySection.jsx'))
 const AdminInsightsSection = lazy(() => import('./admin/AdminInsightsSection.jsx'))
@@ -132,6 +134,7 @@ export default function UserDashboard({
 }) {
   const { t } = useI18n()
   const { showToast } = useToast()
+  const accountEmail = useAccountEmail()
   const [initializing, setInitializing] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -840,6 +843,7 @@ export default function UserDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
+        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openProfileSettings} />
 
         {visibleUserSectionId === 'join' && (
           <UserJoinSection
@@ -961,6 +965,7 @@ export default function UserDashboard({
           penas={penas}
           selectedPenaGuid={selectedPenaGuid}
           onSelectPena={setSelectedPenaGuid}
+          accountEmail={accountEmail}
         />
       </DashboardShell>
     </DashboardContext.Provider>

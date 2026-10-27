@@ -15,7 +15,7 @@ Closes #
 ## Checklist
 - [ ] Backend gate passes: `just check` (format-check + lint + unit tests)
 - [ ] Frontend gate passes (if touched): `just frontend-check` (prettier + eslint + build)
-- [ ] DB schema changes also added to `versioning/sql/actual.sql` **and** a new `versioning/sql/versions/vN.sql`
+- [ ] DB schema changes also added to `versioning/sql/actual.sql` **and** a new `versioning/sql/versions/vN.sql` + `vN.down.sql`
 - [ ] User-facing text added to `frontend/src/i18n/messages.js` in **both** EN and ES
 - [ ] Tests added/updated for the change
 - [ ] Kept `pena`/GUID API contracts intact (unless the task explicitly changes them)

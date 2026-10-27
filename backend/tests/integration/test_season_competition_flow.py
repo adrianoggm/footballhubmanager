@@ -49,7 +49,12 @@ def _unique(prefix: str) -> str:
 
 def _register_admin():
     username = _unique("admin")
-    payload = {"username": username, "password": "secret123456", "name": f"Pena {username}"}
+    payload = {
+        "username": username,
+        "password": "secret123456",
+        "name": f"Pena {username}",
+        "email": f"{username}@example.com",
+    }
     status, data = _request(
         "POST",
         f"{API_V1}/auth/admin/register",
@@ -65,6 +70,7 @@ def _register_user():
     payload = {
         "username": username,
         "password": "secret123456",
+        "email": f"{username}@example.com",
         "name": "UserName",
         "surname1": "SurnameOne",
         "surname2": "SurnameTwo",

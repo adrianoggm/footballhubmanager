@@ -48,6 +48,11 @@ db-migrate:
 db-stamp version="":
     {{venv_python}} backend/manage.py stamp {{version}}
 
+# Revert every applied migration newer than `version` using vN.down.sql files.
+# The target is required (no default) so nobody rolls back by accident: `just db-rollback 12`.
+db-rollback version:
+    {{venv_python}} backend/manage.py rollback {{version}}
+
 backend port="8000" host="127.0.0.1":
     {{venv_python}} -m uvicorn src.main:app --app-dir backend --host {{host}} --port {{port}} --reload
 

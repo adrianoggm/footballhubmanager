@@ -9,7 +9,7 @@ API docs:
 
 ## Access Model
 
-- Public: login/register and nationalities catalog.
+- Public: login/register, email verification, password recovery and nationalities catalog.
 - Authenticated user/admin with peña access: read flows (membership, seasons, standings, matches, insights).
 - Admin-only: write/management flows (season lifecycle, roster, match write operations, invite token generation).
 
@@ -20,6 +20,36 @@ API docs:
 - `POST /auth/register`
 - `POST /auth/admin/register`
 - `POST /auth/logout`
+- `GET /auth/session` (includes `email` and `email_verified`)
+
+Registration (user and admin) requires `email` and accepts an optional `lang` (`es` default,
+or `en`) for the verification email it sends.
+
+### Account email and password recovery (#154)
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| `GET` | `/auth/me/email` | session | `{email, email_verified}` |
+| `PUT` | `/auth/me/email` | session | `{email, lang}`. Stores it unverified and emails a verification link. 409 if another account of the same type uses it, 429 inside the cooldown |
+| `POST` | `/auth/me/email/verification` | session | `{lang}`. Resends the link (202). 409 if there is no email or it is already verified, 429 inside the cooldown |
+| `POST` | `/auth/email/verify` | public | `{token}`. 400 invalid/used, 410 expired. Only verifies if the account email still matches the one the link was sent to |
+| `POST` | `/auth/password/forgot` | public | `{email, lang}`. Always 202 with the same body. Emails one reset link per account type whose **verified** email matches |
+| `POST` | `/auth/password/reset/inspect` | public | `{token}` -> `{username, account_type, expires_at}`. 400 invalid/used, 410 expired. POST so the token stays out of access logs |
+| `POST` | `/auth/password/reset` | public | `{token, new_password}` (min 12 chars). Single use. Revokes every session of the account; no auto-login |
+
+Security notes:
+
+- Tokens are `secrets.token_urlsafe(32)`; only their sha256 is stored (`account_token`).
+- A new reset or verification link replaces the previous ones of the same kind for that account.
+- One email of each kind per account every `ACCOUNT_EMAIL_COOLDOWN_SECONDS` (default 60). The
+  forgot-password endpoint applies it silently; the authenticated endpoints answer 429.
+- Forgot-password never reveals whether an address exists: same status and body, and delivery
+  runs in a background thread so timing does not tell either.
+- Emails are normalized (trimmed, lowercase) and unique within each account table. The same
+  address may belong to one user account and one admin account.
+- Mail backend: `MAIL_BACKEND=console` (logs the email, dev only) or `smtp` (`SMTP_*`). Links
+  point to `APP_PUBLIC_URL`. TTLs: `PASSWORD_RESET_TOKEN_TTL_SECONDS` (3600),
+  `EMAIL_VERIFICATION_TOKEN_TTL_SECONDS` (86400).
 
 ## Catalogs
 

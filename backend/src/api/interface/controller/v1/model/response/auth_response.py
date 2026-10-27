@@ -15,3 +15,20 @@ class SessionResponse(BaseModel):
     expires_at: int
     user_guid: str
     user_type: str
+    email: str | None = None
+    email_verified: bool = False
+
+
+class AccountEmailResponse(BaseModel):
+    email: str | None
+    email_verified: bool
+
+
+class AuthStatusResponse(BaseModel):
+    status: str
+
+
+class PasswordResetTokenInfoResponse(BaseModel):
+    username: str
+    account_type: str
+    expires_at: int

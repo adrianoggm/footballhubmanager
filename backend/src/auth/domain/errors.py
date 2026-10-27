@@ -15,3 +15,42 @@ class AccessDeniedError(DomainError):
 
 class InvalidSessionTypeError(DomainError):
     code = "invalid_session_type"
+
+
+# --- Account email / recovery ---
+
+
+class MailDeliveryError(DomainError):
+    code = "mail_delivery_failed"
+
+
+class InvalidEmailError(DomainError):
+    code = "invalid_email"
+
+
+class AccountEmailInUseError(DomainError):
+    code = "account_email_in_use"
+
+
+class AccountEmailMissingError(DomainError):
+    code = "account_email_missing"
+
+
+class AccountEmailAlreadyVerifiedError(DomainError):
+    code = "account_email_already_verified"
+
+
+class AccountNotFoundError(DomainError):
+    code = "account_not_found"
+
+
+class AccountTokenCooldownError(DomainError):
+    code = "account_token_cooldown"
+
+
+class InvalidAccountTokenError(DomainError):
+    code = "invalid_account_token"
+
+
+class ExpiredAccountTokenError(DomainError):
+    code = "expired_account_token"
