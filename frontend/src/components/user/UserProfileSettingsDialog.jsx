@@ -14,6 +14,7 @@ import { useDialogFocusReturn } from '../../hooks/useDialogFocusReturn.js'
 import { translateNationalityLabel } from '../../i18n/labels.js'
 import ProfileImageField from '../ProfileImageField.jsx'
 import AppearanceSettings from '../dashboard/AppearanceSettings.jsx'
+import LegalFooterLinks from '../dashboard/LegalFooterLinks.jsx'
 import AccountEmailSettings from '../account/AccountEmailSettings.jsx'
 
 /**
@@ -113,6 +114,7 @@ export default function UserProfileSettingsDialog({
           )}
           {accountEmail && <Divider />}
           <AppearanceSettings />
+          <LegalFooterLinks />
         </Stack>
       </DialogContent>
       <DialogActions>

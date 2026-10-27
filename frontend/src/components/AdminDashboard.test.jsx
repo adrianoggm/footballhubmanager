@@ -114,17 +114,17 @@ describe('AdminDashboard (integration)', () => {
     }
   })
 
-  it('gives the header icon buttons translated accessible names (F2)', async () => {
+  it('gives the shell account actions translated accessible names (F2)', async () => {
     renderDashboard('overview')
     expect(await screen.findByRole('button', { name: 'Logout' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Pena settings' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings & profile' })).toBeInTheDocument()
   })
 
   it('returns focus from the pena settings dialog without hitting aria-hidden (F9)', async () => {
     const user = userEvent.setup()
     renderDashboard('overview')
-    const opener = await screen.findByRole('button', { name: 'Pena settings' })
+    const opener = await screen.findByRole('button', { name: 'Settings & profile' })
     await waitFor(() => expect(opener).toBeEnabled())
     const hiddenAtFocus = []
     opener.addEventListener('focus', () =>

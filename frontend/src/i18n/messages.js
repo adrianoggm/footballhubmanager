@@ -1425,6 +1425,7 @@ export const messages = {
       emailNotice: {
         missing: 'Add an email so you can recover your password.',
         unverified: 'Verify your email ({email}) so you can recover your password.',
+        unverifiedShort: 'Verify your email to be able to recover your password.',
         resend: 'Resend',
         dismiss: 'Dismiss',
       },
@@ -2899,6 +2900,7 @@ export const messages = {
       emailNotice: {
         missing: 'Añade un email para poder recuperar la contraseña.',
         unverified: 'Verifica tu email ({email}) para poder recuperar la contraseña.',
+        unverifiedShort: 'Verifica tu email para poder recuperar la contraseña.',
         resend: 'Reenviar',
         dismiss: 'Descartar',
       },

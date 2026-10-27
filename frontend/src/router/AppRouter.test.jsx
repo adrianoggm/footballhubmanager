@@ -161,13 +161,16 @@ describe('Dashboard selection across sections', { timeout: 20000 }, () => {
 
   it('U-02: keeps the admin reference season across sections', async () => {
     renderApp('/app/admin/overview', adminSession)
-    const seasonSelect = await screen.findByRole('combobox', {}, { timeout: 5000 })
-    await waitFor(() => expect(seasonSelect).toHaveTextContent('26/27'))
+    // Topbar season chip (redesign F1); its accessible name ends with the season.
+    const seasonChip = await screen.findByRole('button', { name: /: 2026\/27$/ }, { timeout: 5000 })
+    await waitFor(() => expect(seasonChip).toBeEnabled())
 
-    fireEvent.mouseDown(seasonSelect)
-    const listbox = await screen.findByRole('listbox')
-    fireEvent.click(within(listbox).getByText(/^24\/25/))
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('24/25'))
+    fireEvent.click(seasonChip)
+    const menu = await screen.findByRole('menu')
+    fireEvent.click(within(menu).getByText('2024/25'))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /: 2024\/25$/ })).toBeInTheDocument()
+    )
 
     navigateTo('/app/admin/players')
     await waitFor(() =>
@@ -177,7 +180,7 @@ describe('Dashboard selection across sections', { timeout: 20000 }, () => {
         expect.anything()
       )
     )
-    expect(screen.getByRole('combobox')).toHaveTextContent('24/25')
+    expect(screen.getByRole('button', { name: /: 2024\/25$/ })).toBeInTheDocument()
     expect(adminServiceMock.getPenas).toHaveBeenCalledTimes(1)
   })
 })
