@@ -13,13 +13,8 @@ import { alpha } from '@mui/material/styles'
 import { useEffect, useState } from 'react'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
 
-// Warm accountability palette (issue #147) — shared with StatCard / PlayerToolbar
-// / PlayerList so the Player Directory dialogs read as the same system rather
-// than inventing a new visual language.
-const SURFACE = '#45342C'
-const TEXT_COLOR = '#F4EEE8'
-const MUTED = '#88736A'
-const ACCENT = '#FCB491'
+// Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
+// Player Directory follows the active preset (Ember keeps the warm look, #70).
 
 // Local equivalent of matches/lineupHelpers.js#formatPlayerDisplayName — the
 // dialog contract (issue #147, task 7) does not thread that helper down here,
@@ -49,6 +44,11 @@ export default function ClaimLinkDialog({
   t,
 }) {
   const theme = useTheme()
+  const { surfaces, tones } = theme.custom
+  const surface = surfaces.raised
+  const textColor = tones.onRaised
+  const muted = tones.muted
+  const accent = tones.accentStrong
   const geometry = getSurfaceGeometry(theme)
   const [copied, setCopied] = useState(false)
 
@@ -74,12 +74,12 @@ export default function ClaimLinkDialog({
 
   const accentButtonSx = {
     backgroundImage: 'none',
-    backgroundColor: ACCENT,
+    backgroundColor: accent,
     color: theme.palette.background.paper,
     boxShadow: 'none',
     '&:hover': {
       backgroundImage: 'none',
-      backgroundColor: '#f2a074',
+      backgroundColor: tones.accentHover,
       boxShadow: theme.custom?.shadows?.md,
     },
   }
@@ -91,15 +91,15 @@ export default function ClaimLinkDialog({
       fullWidth
       maxWidth="sm"
       PaperProps={{
-        sx: { backgroundColor: SURFACE, color: TEXT_COLOR, borderRadius: geometry.surfaceRadius },
+        sx: { backgroundColor: surface, color: textColor, borderRadius: geometry.surfaceRadius },
       }}
     >
-      <DialogTitle sx={{ color: TEXT_COLOR }}>
+      <DialogTitle sx={{ color: textColor }}>
         {t('dashboard.admin.members.claimLinkTitle')}
       </DialogTitle>
-      <DialogContent dividers sx={{ borderColor: alpha(TEXT_COLOR, 0.12) }}>
+      <DialogContent dividers sx={{ borderColor: alpha(textColor, 0.12) }}>
         <Stack spacing={2}>
-          <Typography variant="body2" sx={{ color: MUTED }}>
+          <Typography variant="body2" sx={{ color: muted }}>
             {claimLinkPayload?.player
               ? t('dashboard.admin.members.claimLinkDescription', {
                   player: formatClaimPlayerName(claimLinkPayload.player),
@@ -114,7 +114,7 @@ export default function ClaimLinkDialog({
             multiline
           />
           {claimLinkPayload?.expires_at && (
-            <Typography variant="body2" sx={{ color: MUTED }}>
+            <Typography variant="body2" sx={{ color: muted }}>
               <strong>{t('dashboard.admin.overview.expiresLabel')}:</strong>{' '}
               {formatEpochSeconds(claimLinkPayload.expires_at)}
             </Typography>
@@ -127,7 +127,7 @@ export default function ClaimLinkDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: TEXT_COLOR }}>
+        <Button onClick={onClose} sx={{ color: textColor }}>
           {t('dashboard.common.matchDetail.closeAction')}
         </Button>
         <Button variant="contained" onClick={handleCopy} disabled={!claimUrl} sx={accentButtonSx}>

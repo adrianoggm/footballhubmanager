@@ -16,13 +16,8 @@ import { readableTextColor } from '../../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../../theme/tokens.js'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
 
-// Warm accountability palette (issue #147) — shared with StatCard / PlayerToolbar
-// / PlayerList so the Player Directory dialogs read as the same system rather
-// than inventing a new visual language.
-const SURFACE = '#45342C'
-const TEXT_COLOR = '#F4EEE8'
-const MUTED = '#88736A'
-const ACCENT = '#FCB491'
+// Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
+// Player Directory follows the active preset (Ember keeps the warm look, #70).
 
 const labelChipSx = (color) => {
   const background = color || DEFAULT_LABEL_COLOR
@@ -96,16 +91,21 @@ export default function LabelsDialog({
   t,
 }) {
   const theme = useTheme()
+  const { surfaces, tones } = theme.custom
+  const surface = surfaces.raised
+  const textColor = tones.onRaised
+  const muted = tones.muted
+  const accent = tones.accentStrong
   const geometry = getSurfaceGeometry(theme)
 
   const accentButtonSx = {
     backgroundImage: 'none',
-    backgroundColor: ACCENT,
+    backgroundColor: accent,
     color: theme.palette.background.paper,
     boxShadow: 'none',
     '&:hover': {
       backgroundImage: 'none',
-      backgroundColor: '#f2a074',
+      backgroundColor: tones.accentHover,
       boxShadow: theme.custom?.shadows?.md,
     },
   }
@@ -117,16 +117,16 @@ export default function LabelsDialog({
       fullWidth
       maxWidth="md"
       PaperProps={{
-        sx: { backgroundColor: SURFACE, color: TEXT_COLOR, borderRadius: geometry.surfaceRadius },
+        sx: { backgroundColor: surface, color: textColor, borderRadius: geometry.surfaceRadius },
       }}
     >
-      <DialogTitle sx={{ color: TEXT_COLOR }}>{t('dashboard.admin.labels.title')}</DialogTitle>
-      <DialogContent dividers sx={{ borderColor: alpha(TEXT_COLOR, 0.12) }}>
+      <DialogTitle sx={{ color: textColor }}>{t('dashboard.admin.labels.title')}</DialogTitle>
+      <DialogContent dividers sx={{ borderColor: alpha(textColor, 0.12) }}>
         <Stack spacing={2.5}>
-          <Typography variant="body2" sx={{ color: MUTED }}>
+          <Typography variant="body2" sx={{ color: muted }}>
             {t('dashboard.admin.labels.description')}
           </Typography>
-          <Typography variant="caption" sx={{ color: MUTED }}>
+          <Typography variant="caption" sx={{ color: muted }}>
             {t('dashboard.admin.labels.colorHelper')}
           </Typography>
 
@@ -170,7 +170,7 @@ export default function LabelsDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: TEXT_COLOR }}>
+        <Button onClick={onClose} sx={{ color: textColor }}>
           {t('dashboard.common.matchDetail.closeAction')}
         </Button>
         <Button variant="contained" onClick={onSave} sx={accentButtonSx}>

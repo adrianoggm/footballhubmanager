@@ -18,23 +18,18 @@ import { useState } from 'react'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
 import { SEASON_STATUS } from './playersHelpers.js'
 
-// Warm accountability palette (issue #147) — shared with StatCard /
-// AdminAccountabilitySection so the Player Directory toolbar reads as the
-// same system rather than inventing a new visual language.
-const SURFACE = '#45342C'
-const TEXT_COLOR = '#F4EEE8'
-const MUTED = '#88736A'
-const ACCENT = '#FCB491'
+// Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
+// Player Directory follows the active preset (Ember keeps the warm look, #70).
 
 const controlLabelSx = {
-  color: TEXT_COLOR,
+  color: (theme) => theme.custom.tones.onRaised,
   m: 0,
   '& .MuiFormControlLabel-label': { fontSize: '0.9rem' },
 }
 
 const radioCheckboxSx = {
-  color: MUTED,
-  '&.Mui-checked': { color: ACCENT },
+  color: (theme) => theme.custom.tones.muted,
+  '&.Mui-checked': { color: (theme) => theme.custom.tones.accentStrong },
 }
 
 const sectionLabelSx = {
@@ -42,7 +37,7 @@ const sectionLabelSx = {
   fontSize: '0.72rem',
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  color: MUTED,
+  color: (theme) => theme.custom.tones.muted,
   px: 2,
   pt: 1.5,
   pb: 0.5,
@@ -59,6 +54,11 @@ const toggleInArray = (list, value) =>
  */
 export default function PlayerToolbar({ toolbar, actions, roleOptions, positionOptions, t }) {
   const theme = useTheme()
+  const { surfaces, tones } = theme.custom
+  const surface = surfaces.raised
+  const textColor = tones.onRaised
+  const muted = tones.muted
+  const accent = tones.accentStrong
   const geometry = getSurfaceGeometry(theme)
   const [filtersAnchor, setFiltersAnchor] = useState(null)
   const [sortAnchor, setSortAnchor] = useState(null)
@@ -67,8 +67,8 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
   const positionFilter = toolbar.positionFilter || []
 
   const menuPaperSx = {
-    backgroundColor: SURFACE,
-    color: TEXT_COLOR,
+    backgroundColor: surface,
+    color: textColor,
     borderRadius: geometry.surfaceRadiusTight,
     minWidth: 260,
   }
@@ -121,7 +121,7 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
             <Box
               component="span"
               className="material-symbols-rounded"
-              sx={{ mr: 1, display: 'flex', color: MUTED, fontSize: 20 }}
+              sx={{ mr: 1, display: 'flex', color: muted, fontSize: 20 }}
             >
               search
             </Box>
@@ -182,7 +182,7 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
           ))}
         </FormGroup>
 
-        <Divider sx={{ borderColor: alpha(TEXT_COLOR, 0.12) }} />
+        <Divider sx={{ borderColor: alpha(textColor, 0.12) }} />
 
         <Typography sx={sectionLabelSx}>{t('dashboard.admin.directory.filterPosition')}</Typography>
         <FormGroup sx={{ px: 2, pb: 0.5 }}>
@@ -203,7 +203,7 @@ export default function PlayerToolbar({ toolbar, actions, roleOptions, positionO
           ))}
         </FormGroup>
 
-        <Divider sx={{ borderColor: alpha(TEXT_COLOR, 0.12) }} />
+        <Divider sx={{ borderColor: alpha(textColor, 0.12) }} />
 
         <Typography sx={sectionLabelSx}>{t('dashboard.admin.directory.filterStatus')}</Typography>
         <RadioGroup

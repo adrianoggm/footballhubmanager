@@ -17,12 +17,8 @@ import {
 } from '../../../i18n/labels.js'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
 
-// Warm accountability palette (issue #147) — shared with StatCard / PlayerToolbar
-// / PlayerList so the Player Directory dialogs read as the same system rather
-// than inventing a new visual language.
-const SURFACE = '#45342C'
-const TEXT_COLOR = '#F4EEE8'
-const ACCENT = '#FCB491'
+// Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
+// Player Directory follows the active preset (Ember keeps the warm look, #70).
 
 /**
  * Controlled dialog wrapping the "create guest player" form previously inline
@@ -42,16 +38,20 @@ export default function NewPlayerDialog({
   t,
 }) {
   const theme = useTheme()
+  const { surfaces, tones } = theme.custom
+  const surface = surfaces.raised
+  const textColor = tones.onRaised
+  const accent = tones.accentStrong
   const geometry = getSurfaceGeometry(theme)
 
   const accentButtonSx = {
     backgroundImage: 'none',
-    backgroundColor: ACCENT,
+    backgroundColor: accent,
     color: theme.palette.background.paper,
     boxShadow: 'none',
     '&:hover': {
       backgroundImage: 'none',
-      backgroundColor: '#f2a074',
+      backgroundColor: tones.accentHover,
       boxShadow: theme.custom?.shadows?.md,
     },
   }
@@ -63,11 +63,11 @@ export default function NewPlayerDialog({
       fullWidth
       maxWidth="sm"
       PaperProps={{
-        sx: { backgroundColor: SURFACE, color: TEXT_COLOR, borderRadius: geometry.surfaceRadius },
+        sx: { backgroundColor: surface, color: textColor, borderRadius: geometry.surfaceRadius },
       }}
     >
-      <DialogTitle sx={{ color: TEXT_COLOR }}>{t('dashboard.admin.guest.title')}</DialogTitle>
-      <DialogContent dividers sx={{ borderColor: alpha(TEXT_COLOR, 0.12) }}>
+      <DialogTitle sx={{ color: textColor }}>{t('dashboard.admin.guest.title')}</DialogTitle>
+      <DialogContent dividers sx={{ borderColor: alpha(textColor, 0.12) }}>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <TextField
             label={t('dashboard.admin.guest.name')}
@@ -148,13 +148,13 @@ export default function NewPlayerDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: TEXT_COLOR }}>
+        <Button onClick={onClose} sx={{ color: textColor }}>
           {t('dashboard.common.matchDetail.closeAction')}
         </Button>
         <Button
           variant="outlined"
           onClick={() => onCreate(false)}
-          sx={{ color: ACCENT, borderColor: ACCENT }}
+          sx={{ color: accent, borderColor: accent }}
         >
           {t('dashboard.admin.guest.createGuest')}
         </Button>

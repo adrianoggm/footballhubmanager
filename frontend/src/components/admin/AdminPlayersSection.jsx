@@ -1,4 +1,5 @@
 import { Box, Button, Stack, Typography } from '@mui/material'
+import { alpha, useTheme } from '@mui/material/styles'
 import { useState } from 'react'
 
 import { ConfirmDialog, StatCard } from '../common'
@@ -12,13 +13,14 @@ import PlayerToolbar from './players/PlayerToolbar.jsx'
 import { filterPlayers, paginate, sortPlayers } from './players/playersHelpers.js'
 
 const PAGE_SIZE = 10
-const ACCENT = '#FCB491'
-
-// Header action buttons share the peach accent used for nicknames / "add to season".
-const headerButtonSx = {
-  color: ACCENT,
-  borderColor: ACCENT,
-  '&:hover': { borderColor: ACCENT, backgroundColor: 'rgba(252, 180, 145, 0.08)' },
+// Header action buttons share the accent used for nicknames / "add to season".
+const headerButtonSx = (theme) => {
+  const accent = theme.custom.tones.accentStrong
+  return {
+    color: accent,
+    borderColor: accent,
+    '&:hover': { borderColor: accent, backgroundColor: alpha(accent, 0.08) },
+  }
 }
 
 const HeaderIcon = ({ name }) => (
@@ -44,6 +46,7 @@ export default function AdminPlayersSection({
   formatPlayerDisplayName,
   formatEpochSeconds,
 }) {
+  const theme = useTheme()
   const [addSeasonOpen, setAddSeasonOpen] = useState(false)
   const [newPlayerOpen, setNewPlayerOpen] = useState(false)
   const [labelsOpen, setLabelsOpen] = useState(false)
@@ -155,7 +158,7 @@ export default function AdminPlayersSection({
             label={t('dashboard.admin.directory.statRegisteredLabel')}
             value={adminPlayers.players.length}
             icon="groups"
-            accent={ACCENT}
+            accent={theme.custom.tones.accentStrong}
           />
         </Box>
       </Stack>
