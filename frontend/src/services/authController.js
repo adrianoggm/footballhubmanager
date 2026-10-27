@@ -45,14 +45,19 @@ export class AuthController {
 
   async restore() {
     // Repopulate session metadata from the HttpOnly cookie on app load. A 401
-    // (no/expired cookie) simply means "not logged in".
+    // (no/expired cookie) simply means "not logged in". Any other failure (429,
+    // 5xx, network) says nothing about the session, so it is kept and the error
+    // is rethrown for the caller to offer a retry.
     try {
       const session = await authService.session()
       sessionStore.setSession(session)
       return session
-    } catch {
-      sessionStore.clear()
-      return null
+    } catch (error) {
+      if (error?.status === 401) {
+        sessionStore.clear()
+        return null
+      }
+      throw error
     }
   }
 }

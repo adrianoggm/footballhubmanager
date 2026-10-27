@@ -195,6 +195,7 @@ export const messages = {
     },
     app: {
       brand: 'footballhubmanager',
+      tagline: 'Run your pena: seasons, matches, standings and accounts.',
       auth: {
         sectionTitle: 'Authentication',
         sectionHint: 'Use this panel to sign in or create your account.',
@@ -204,7 +205,6 @@ export const messages = {
       },
       overview: {
         sectionTitle: 'Product overview',
-        sectionHint: 'Core value and capabilities for admins and players.',
         hero: 'Run your pena from invite to final standings in one place.',
         description:
           'footballhubmanager centralizes seasons, memberships, matches, and rankings with clear workflows for admins and players.',
@@ -228,6 +228,9 @@ export const messages = {
           'Register as admin to create your competition, or as player to join a pena in seconds with an invite token.',
       },
       sessionIncomplete: 'Session metadata is incomplete. Please logout and login again.',
+      sessionUnavailable:
+        'We could not check your session because the server is not responding. Try again in a moment.',
+      retry: 'Try again',
     },
     auth: {
       titleLogin: 'Sign in to footballhubmanager',
@@ -315,6 +318,8 @@ export const messages = {
       addAction: 'Add email',
       changeAction: 'Change email',
       changed: 'Email saved. Check your inbox to verify it.',
+      changedResendLater:
+        'Email saved. We just sent you another email, so wait a minute and use "Resend verification".',
       resent: 'Verification email sent. Check your inbox.',
       noticeMissing:
         'Your account has no email. Add one so you can recover your password if you forget it.',
@@ -1506,6 +1511,7 @@ export const messages = {
     },
     app: {
       brand: 'footballhubmanager',
+      tagline: 'Gestiona tu peña: temporadas, partidos, clasificación y cuentas.',
       auth: {
         sectionTitle: 'Autenticación',
         sectionHint: 'Usa este panel para iniciar sesión o crear tu cuenta.',
@@ -1515,7 +1521,6 @@ export const messages = {
       },
       overview: {
         sectionTitle: 'Resumen del producto',
-        sectionHint: 'Valor principal y capacidades para admins y jugadores.',
         hero: 'Gestiona tu peña desde la invitación hasta la tabla final en un solo lugar.',
         description:
           'footballhubmanager centraliza temporadas, membresías, partidos y clasificaciones con flujos claros para admins y jugadores.',
@@ -1540,6 +1545,9 @@ export const messages = {
       },
       sessionIncomplete:
         'Los metadatos de sesión están incompletos. Cierra sesión y vuelve a iniciar.',
+      sessionUnavailable:
+        'No hemos podido comprobar tu sesión porque el servidor no responde. Inténtalo de nuevo en un momento.',
+      retry: 'Reintentar',
     },
     auth: {
       titleLogin: 'Inicia sesión en footballhubmanager',
@@ -1630,6 +1638,8 @@ export const messages = {
       addAction: 'Añadir email',
       changeAction: 'Cambiar email',
       changed: 'Email guardado. Revisa tu bandeja de entrada para verificarlo.',
+      changedResendLater:
+        'Email guardado. Acabamos de enviarte otro email, así que espera un minuto y pulsa "Reenviar verificación".',
       resent: 'Email de verificación enviado. Revisa tu bandeja de entrada.',
       noticeMissing:
         'Tu cuenta no tiene email. Añade uno para poder recuperar tu contraseña si la olvidas.',

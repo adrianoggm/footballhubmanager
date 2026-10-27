@@ -10,6 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { useDialogFocusReturn } from '../../hooks/useDialogFocusReturn.js'
 import { translateNationalityLabel } from '../../i18n/labels.js'
 import ProfileImageField from '../ProfileImageField.jsx'
 import AppearanceSettings from '../dashboard/AppearanceSettings.jsx'
@@ -38,8 +39,10 @@ export default function UserProfileSettingsDialog({
   accountEmail = null,
   focusEmail = false,
 }) {
+  const focusReturnProps = useDialogFocusReturn(open)
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" {...focusReturnProps}>
       <DialogTitle>{t('dashboard.user.profileSettingsTitle')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

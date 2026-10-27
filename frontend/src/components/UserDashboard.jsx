@@ -8,10 +8,9 @@ import {
   LinearProgress,
   Stack,
   Typography,
-  IconButton,
-  Tooltip,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { HeaderIconButton } from './common'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
@@ -38,6 +37,7 @@ import {
   resolvePreferredPenaGuid,
   storeSelectedPenaGuid,
 } from '../services/selectedPenaStore.js'
+import { loadSeasonsWithActive } from '../services/seasonLookup.js'
 import { userService } from '../services/userService.js'
 import { useAccountEmail } from '../hooks/useAccountEmail.js'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
@@ -357,15 +357,7 @@ export default function UserDashboard({
       return
     }
 
-    const [activeSeason, seasonsPage] = await Promise.all([
-      userService.getActiveSeason(penaGuid).catch((requestError) => {
-        if (requestError?.status === 404) {
-          return null
-        }
-        throw requestError
-      }),
-      userService.listSeasons(penaGuid, { pageSize: 100 }),
-    ])
+    const { activeSeason, seasonsPage } = await loadSeasonsWithActive(userService, penaGuid)
     if (isStale()) {
       return
     }
@@ -827,37 +819,27 @@ export default function UserDashboard({
               alignItems="center"
               justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
             >
-              <Tooltip title={t('dashboard.common.refresh')}>
-                <span>
-                  <IconButton
-                    onClick={() => runAction(loadDashboard)}
-                    disabled={loading}
-                    color="primary"
-                  >
-                    <Box component="span" className="material-symbols-rounded">
-                      refresh
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('dashboard.user.openSettings')}>
-                <span>
-                  <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
-                    <Box component="span" className="material-symbols-rounded">
-                      settings
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('dashboard.common.logout')}>
-                <span>
-                  <IconButton onClick={onLogout} disabled={loading} color="error">
-                    <Box component="span" className="material-symbols-rounded">
-                      logout
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <HeaderIconButton
+                icon="refresh"
+                label={t('dashboard.common.refresh')}
+                onClick={() => runAction(loadDashboard)}
+                disabled={loading}
+                color="primary"
+              />
+              <HeaderIconButton
+                icon="settings"
+                label={t('dashboard.user.openSettings')}
+                onClick={openProfileSettings}
+                disabled={loading}
+                color="primary"
+              />
+              <HeaderIconButton
+                icon="logout"
+                label={t('dashboard.common.logout')}
+                onClick={onLogout}
+                disabled={loading}
+                color="error"
+              />
             </Stack>
           </Stack>
         }

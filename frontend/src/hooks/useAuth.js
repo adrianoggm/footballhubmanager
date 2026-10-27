@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { authController } from '../services/authController.js'
 
 // 'restoring' while we check the cookie on load, so the router can hold off
@@ -15,23 +15,31 @@ const loggedOutState = {
   session: null,
 }
 
+const restoredState = (session) =>
+  session?.user_type ? { status: 'authenticated', error: null, session } : loggedOutState
+
 export function useAuth() {
   const [state, setState] = useState(restoringState)
 
   useEffect(() => {
     let active = true
-    authController.restore().then((session) => {
-      if (!active) {
-        return
-      }
-      if (session?.user_type) {
-        setState({ status: 'authenticated', error: null, session })
-      } else {
-        setState(loggedOutState)
-      }
-    })
+    authController
+      .restore()
+      .then((session) => active && setState(restoredState(session)))
+      // Only a 401 means "logged out"; otherwise the session is unknown (server
+      // or network down) and the app offers a retry instead of logging out.
+      .catch((error) => active && setState({ status: 'unavailable', error, session: null }))
     return () => {
       active = false
+    }
+  }, [])
+
+  const retryRestore = useCallback(async () => {
+    setState(restoringState)
+    try {
+      setState(restoredState(await authController.restore()))
+    } catch (error) {
+      setState({ status: 'unavailable', error, session: null })
     }
   }, [])
 
@@ -39,10 +47,17 @@ export function useAuth() {
     setState({ status: 'authenticated', error: null, session })
   }
 
+  // Auth failures (bad credentials, taken username...) are expected outcomes shown
+  // in the UI, so they are not logged to the console.
   const handleError = (error) => {
-    console.error('Auth error', error)
     setState((prev) => ({ ...prev, status: 'error', error }))
   }
+
+  const clearError = useCallback(() => {
+    setState((prev) =>
+      prev.error ? { ...prev, status: prev.session ? 'authenticated' : 'idle', error: null } : prev
+    )
+  }, [])
 
   const loginUser = async (credentials) => {
     setState((prev) => ({ ...prev, status: 'loading', error: null }))
@@ -123,5 +138,7 @@ export function useAuth() {
     registerAdmin,
     claimPlayer,
     logout,
+    clearError,
+    retryRestore,
   }
 }

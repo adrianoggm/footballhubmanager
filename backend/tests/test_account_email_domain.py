@@ -66,6 +66,26 @@ def test_composer_builds_bilingual_links():
     assert en.subject.endswith("reset your password")
 
 
+def test_composer_subjects_use_the_product_name():
+    # QA F10: mails must carry the same brand as the UI (i18n ``app.brand``).
+    composer = AccountEmailComposer("https://app.example.com")
+    for lang in MailLanguage:
+        verification = composer.email_verification(
+            to="a@example.com", username="ana", token="tok", ttl_seconds=3600, lang=lang
+        )
+        reset = composer.password_reset(
+            to="a@example.com",
+            username="ana",
+            account_type="user",
+            token="tok",
+            ttl_seconds=3600,
+            lang=lang,
+        )
+        for email in (verification, reset):
+            assert email.subject.startswith("footballhubmanager: ")
+            assert "PeñaHub" not in email.subject + email.body
+
+
 def test_composer_formats_minutes():
     composer = AccountEmailComposer("https://app.example.com")
     email = composer.password_reset(

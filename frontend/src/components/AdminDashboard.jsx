@@ -23,8 +23,6 @@ import {
   TableContainer,
   TextField,
   Typography,
-  IconButton,
-  Tooltip,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
@@ -45,12 +43,14 @@ import {
   resolvePreferredPenaGuid,
   storeSelectedPenaGuid,
 } from '../services/selectedPenaStore.js'
+import { loadSeasonsWithActive } from '../services/seasonLookup.js'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
 import AccountEmailSettings from './account/AccountEmailSettings.jsx'
 import { useAccountEmail } from '../hooks/useAccountEmail.js'
+import { useDialogFocusReturn } from '../hooks/useDialogFocusReturn.js'
 import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
@@ -62,7 +62,7 @@ import {
   setUnionSize,
 } from './admin/matches/lineupHelpers.js'
 import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
-import { ConfirmDialog, EmptyState } from './common'
+import { ConfirmDialog, EmptyState, HeaderIconButton } from './common'
 import { DashboardContext } from '../context/dashboardContext.js'
 import {
   DEFAULT_LABEL_COLOR,
@@ -456,6 +456,7 @@ export default function AdminDashboard({
   const [error, setError] = useState(null)
   const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
   const [focusEmailSetting, setFocusEmailSetting] = useState(false)
+  const penaSettingsFocusReturn = useDialogFocusReturn(penaSettingsOpen)
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
@@ -912,14 +913,8 @@ export default function AdminDashboard({
   const loadPenaData = async (penaGuid) =>
     penaDataFetch.run(async ({ isStale }) => {
       try {
-        const [active, seasonsPage, penaPlayers, labels] = await Promise.all([
-          adminService.getActiveSeason(penaGuid).catch((requestError) => {
-            if (requestError.status === 404) {
-              return null
-            }
-            throw requestError
-          }),
-          adminService.listSeasons(penaGuid, { pageSize: 100 }),
+        const [{ activeSeason: active, seasonsPage }, penaPlayers, labels] = await Promise.all([
+          loadSeasonsWithActive(adminService, penaGuid),
           shouldLoadHistoricalPlayers ? loadHistoricalPlayers(penaGuid) : Promise.resolve(null),
           shouldLoadPenaLabels
             ? adminService.getPenaLabels(penaGuid).catch(() => defaultPenaLabels())
@@ -1697,41 +1692,27 @@ export default function AdminDashboard({
               alignItems="center"
               justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
             >
-              <Tooltip title={t('dashboard.common.refreshData')}>
-                <span>
-                  <IconButton
-                    onClick={() => runAction(loadDashboard, '')}
-                    disabled={loading}
-                    color="text.secondary"
-                  >
-                    <Box component="span" className="material-symbols-rounded">
-                      refresh
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('dashboard.admin.openPenaSettings')}>
-                <span>
-                  <IconButton
-                    onClick={openPenaSettings}
-                    disabled={loading || !selectedPenaGuid}
-                    color="text.Secondary"
-                  >
-                    <Box component="span" className="material-symbols-rounded">
-                      settings
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title={t('dashboard.common.logout')}>
-                <span>
-                  <IconButton onClick={onLogout} disabled={loading} color="error">
-                    <Box component="span" className="material-symbols-rounded">
-                      logout
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
+              <HeaderIconButton
+                icon="refresh"
+                label={t('dashboard.common.refreshData')}
+                onClick={() => runAction(loadDashboard, '')}
+                disabled={loading}
+                color="text.secondary"
+              />
+              <HeaderIconButton
+                icon="settings"
+                label={t('dashboard.admin.openPenaSettings')}
+                onClick={openPenaSettings}
+                disabled={loading || !selectedPenaGuid}
+                color="text.Secondary"
+              />
+              <HeaderIconButton
+                icon="logout"
+                label={t('dashboard.common.logout')}
+                onClick={onLogout}
+                disabled={loading}
+                color="error"
+              />
             </Stack>
           </Stack>
         }
@@ -1920,6 +1901,7 @@ export default function AdminDashboard({
           onClose={() => setPenaSettingsOpen(false)}
           fullWidth
           maxWidth="sm"
+          {...penaSettingsFocusReturn}
         >
           <DialogTitle>{t('dashboard.admin.penaSettingsTitle')}</DialogTitle>
           <DialogContent>
