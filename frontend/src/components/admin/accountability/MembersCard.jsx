@@ -17,9 +17,33 @@ import {
   Typography,
 } from '@mui/material'
 import { useMemo, useState } from 'react'
-import { centsToAmountString, formatMoney, parseAmountToCents } from './accountabilityHelpers.js'
+import {
+  AMOUNT_RULES,
+  centsToAmountString,
+  formatMoney,
+  validateAmountInput,
+} from './accountabilityHelpers.js'
+
+const P = 'dashboard.admin.accountability'
+const MAX_NOTE_LENGTH = 255
 
 const emptyAdd = () => ({ player_guid: '', debt: '', contribution: '', note: '' })
+
+// Blank debt/paid mean 0 when adding a member; negatives and absurd values are errors.
+const validateAmounts = (draft) => {
+  const debt = validateAmountInput(draft.debt === '' ? '0' : draft.debt, AMOUNT_RULES.NON_NEGATIVE)
+  const contribution = validateAmountInput(
+    draft.contribution === '' ? '0' : draft.contribution,
+    AMOUNT_RULES.NON_NEGATIVE
+  )
+  return {
+    debtCents: debt.cents,
+    contributionCents: contribution.cents,
+    errors: { debt: debt.error, contribution: contribution.error },
+  }
+}
+
+const hasErrors = (errors) => Object.values(errors).some(Boolean)
 
 export default function MembersCard({
   t,
@@ -28,16 +52,41 @@ export default function MembersCard({
   playerOptions,
   onSave,
   onDelete,
+  onInvalid,
   saving,
 }) {
   const [editingGuid, setEditingGuid] = useState(null)
   const [editDraft, setEditDraft] = useState({ debt: '', contribution: '', note: '' })
+  const [editErrors, setEditErrors] = useState({})
   const [addDraft, setAddDraft] = useState(emptyAdd)
+  const [addErrors, setAddErrors] = useState({})
+
+  // Members that already have an account are edited in the table, not re-added
+  // (adding again silently overwrote their debt/paid).
+  const availableOptions = useMemo(() => {
+    const withAccount = new Set(members.map((member) => member.player_guid))
+    return playerOptions.filter((player) => !withAccount.has(player.guid))
+  }, [playerOptions, members])
 
   const selectedNewPlayer = useMemo(
-    () => playerOptions.find((player) => player.guid === addDraft.player_guid) || null,
-    [playerOptions, addDraft.player_guid]
+    () => availableOptions.find((player) => player.guid === addDraft.player_guid) || null,
+    [availableOptions, addDraft.player_guid]
   )
+
+  const errorProps = (errors, field) =>
+    errors[field] ? { error: true, helperText: t(`${P}.validation.${errors[field]}`) } : {}
+
+  const setAddField = (field) => (event) => {
+    const { value } = event.target
+    setAddDraft((current) => ({ ...current, [field]: value }))
+    setAddErrors((current) => ({ ...current, [field]: null }))
+  }
+
+  const setEditField = (field) => (event) => {
+    const { value } = event.target
+    setEditDraft((current) => ({ ...current, [field]: value }))
+    setEditErrors((current) => ({ ...current, [field]: null }))
+  }
 
   const beginEdit = (member) => {
     setEditingGuid(member.player_guid)
@@ -46,23 +95,25 @@ export default function MembersCard({
       contribution: centsToAmountString(member.contribution_cents),
       note: member.note || '',
     })
+    setEditErrors({})
   }
 
   const cancelEdit = () => {
     setEditingGuid(null)
+    setEditErrors({})
   }
 
   const commitEdit = async (member) => {
-    const debtCents = parseAmountToCents(editDraft.debt)
-    const contributionCents = parseAmountToCents(editDraft.contribution)
-    if (
-      debtCents === null ||
-      contributionCents === null ||
-      debtCents < 0 ||
-      contributionCents < 0
-    ) {
+    const debt = validateAmountInput(editDraft.debt, AMOUNT_RULES.NON_NEGATIVE)
+    const contribution = validateAmountInput(editDraft.contribution, AMOUNT_RULES.NON_NEGATIVE)
+    const errors = { debt: debt.error, contribution: contribution.error }
+    setEditErrors(errors)
+    if (hasErrors(errors)) {
+      onInvalid?.()
       return
     }
+    const debtCents = debt.cents
+    const contributionCents = contribution.cents
     const saved = await onSave(member.player_guid, {
       debt_cents: debtCents,
       contribution_cents: contributionCents,
@@ -77,14 +128,10 @@ export default function MembersCard({
     if (!addDraft.player_guid) {
       return
     }
-    const debtCents = parseAmountToCents(addDraft.debt || '0')
-    const contributionCents = parseAmountToCents(addDraft.contribution || '0')
-    if (
-      debtCents === null ||
-      contributionCents === null ||
-      debtCents < 0 ||
-      contributionCents < 0
-    ) {
+    const { debtCents, contributionCents, errors } = validateAmounts(addDraft)
+    setAddErrors(errors)
+    if (hasErrors(errors)) {
+      onInvalid?.()
       return
     }
     const saved = await onSave(addDraft.player_guid, {
@@ -94,6 +141,7 @@ export default function MembersCard({
     })
     if (saved) {
       setAddDraft(emptyAdd())
+      setAddErrors({})
     }
   }
 
@@ -106,17 +154,20 @@ export default function MembersCard({
             <Typography variant="body2" color="text.secondary">
               {t('dashboard.admin.accountability.membersDescription')}
             </Typography>
+            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
+              {t('dashboard.admin.accountability.membersManualHint')}
+            </Typography>
           </Box>
 
           {/* Add a member account */}
           <Stack
             direction={{ xs: 'column', md: 'row' }}
             spacing={1.5}
-            alignItems={{ md: 'center' }}
+            alignItems={{ md: 'flex-start' }}
           >
             <Autocomplete
               sx={{ flex: 2, minWidth: 180 }}
-              options={playerOptions}
+              options={availableOptions}
               value={selectedNewPlayer}
               getOptionLabel={(option) => option.label || ''}
               isOptionEqualToValue={(option, value) => option.guid === value.guid}
@@ -132,23 +183,30 @@ export default function MembersCard({
               label={t('dashboard.admin.accountability.debt')}
               type="number"
               value={addDraft.debt}
-              onChange={(event) =>
-                setAddDraft((current) => ({ ...current, debt: event.target.value }))
-              }
+              onChange={setAddField('debt')}
               inputProps={{ step: 0.01, min: 0 }}
+              {...errorProps(addErrors, 'debt')}
             />
             <TextField
               sx={{ flex: 1 }}
               label={t('dashboard.admin.accountability.paid')}
               type="number"
               value={addDraft.contribution}
-              onChange={(event) =>
-                setAddDraft((current) => ({ ...current, contribution: event.target.value }))
-              }
+              onChange={setAddField('contribution')}
               inputProps={{ step: 0.01, min: 0 }}
+              {...errorProps(addErrors, 'contribution')}
+            />
+            <TextField
+              sx={{ flex: 2 }}
+              label={t('dashboard.admin.accountability.note')}
+              helperText={t('dashboard.admin.accountability.noteHelp')}
+              value={addDraft.note}
+              onChange={setAddField('note')}
+              inputProps={{ maxLength: MAX_NOTE_LENGTH }}
             />
             <Button
               variant="contained"
+              sx={{ mt: { md: 1 } }}
               onClick={commitAdd}
               disabled={saving || !addDraft.player_guid}
             >
@@ -184,20 +242,34 @@ export default function MembersCard({
                       Number(member.contribution_cents || 0) - Number(member.debt_cents || 0)
                     return (
                       <TableRow key={member.player_guid}>
-                        <TableCell>{member.player_name || member.player_guid}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {member.player_name || member.player_guid}
+                          </Typography>
+                          {editing ? (
+                            <TextField
+                              size="small"
+                              label={t('dashboard.admin.accountability.note')}
+                              value={editDraft.note}
+                              onChange={setEditField('note')}
+                              inputProps={{ maxLength: MAX_NOTE_LENGTH }}
+                              sx={{ mt: 1, minWidth: 180 }}
+                            />
+                          ) : member.note ? (
+                            <Typography variant="caption" color="text.secondary">
+                              {member.note}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
                         <TableCell align="right">
                           {editing ? (
                             <TextField
                               size="small"
                               type="number"
                               value={editDraft.debt}
-                              onChange={(event) =>
-                                setEditDraft((current) => ({
-                                  ...current,
-                                  debt: event.target.value,
-                                }))
-                              }
+                              onChange={setEditField('debt')}
                               inputProps={{ step: 0.01, min: 0 }}
+                              {...errorProps(editErrors, 'debt')}
                               sx={{ width: 110 }}
                             />
                           ) : (
@@ -210,13 +282,9 @@ export default function MembersCard({
                               size="small"
                               type="number"
                               value={editDraft.contribution}
-                              onChange={(event) =>
-                                setEditDraft((current) => ({
-                                  ...current,
-                                  contribution: event.target.value,
-                                }))
-                              }
+                              onChange={setEditField('contribution')}
                               inputProps={{ step: 0.01, min: 0 }}
+                              {...errorProps(editErrors, 'contribution')}
                               sx={{ width: 110 }}
                             />
                           ) : (
