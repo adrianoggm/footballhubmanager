@@ -825,6 +825,16 @@ const buildComponentOverrides = (palette, custom, preset) => {
                           boxShadow: custom.shadows.lg,
                           backgroundImage: `linear-gradient(135deg, ${palette.secondary.dark || palette.secondary.main} 0%, ${palette.secondary.main} 100%)`,
                         },
+                        // Presets can drop the accent gradient on disabled
+                        // buttons so they read as disabled (Ember keeps it).
+                        ...(custom.controls?.containedDisabledImage
+                          ? {
+                              '&.Mui-disabled': {
+                                backgroundImage: custom.controls.containedDisabledImage,
+                                boxShadow: 'none',
+                              },
+                            }
+                          : {}),
                       }
                     : {
                         '&:hover': {
