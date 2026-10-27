@@ -33,6 +33,11 @@ import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
+import {
+  readStoredPenaGuid,
+  resolvePreferredPenaGuid,
+  storeSelectedPenaGuid,
+} from '../services/selectedPenaStore.js'
 import { userService } from '../services/userService.js'
 import { useAccountEmail } from '../hooks/useAccountEmail.js'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
@@ -435,8 +440,10 @@ export default function UserDashboard({
       setPenas(nextPenas)
       setNationalities(nextNationalities)
 
-      const preferredPena =
-        nextPenas.find((item) => item.guid === selectedPenaGuid)?.guid || nextPenas[0]?.guid || ''
+      const preferredPena = resolvePreferredPenaGuid(nextPenas, [
+        selectedPenaGuid,
+        readStoredPenaGuid('user', session?.user_guid),
+      ])
       setSelectedPenaGuid(preferredPena)
       if (preferredPena) {
         await Promise.all([loadMembership(preferredPena), loadSeasonList(preferredPena)])
@@ -463,6 +470,10 @@ export default function UserDashboard({
     loadDashboard()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    storeSelectedPenaGuid('user', session?.user_guid, selectedPenaGuid)
+  }, [selectedPenaGuid, session?.user_guid])
 
   useEffect(() => {
     if (!selectedPenaGuid || initializing) {

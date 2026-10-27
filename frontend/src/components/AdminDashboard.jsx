@@ -40,6 +40,11 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import {
+  readStoredPenaGuid,
+  resolvePreferredPenaGuid,
+  storeSelectedPenaGuid,
+} from '../services/selectedPenaStore.js'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
@@ -979,7 +984,10 @@ export default function AdminDashboard({
         setGuestForm((prev) => ({ ...prev, nationality: catalogNationalities[0] }))
       }
 
-      const defaultPena = selectedPenaGuid || penaItems[0]?.guid || ''
+      const defaultPena = resolvePreferredPenaGuid(penaItems, [
+        selectedPenaGuid,
+        readStoredPenaGuid('admin', session?.user_guid),
+      ])
       setSelectedPenaGuid(defaultPena)
 
       if (defaultPena) {
@@ -1025,6 +1033,10 @@ export default function AdminDashboard({
     loadDashboard()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    storeSelectedPenaGuid('admin', session?.user_guid, selectedPenaGuid)
+  }, [selectedPenaGuid, session?.user_guid])
 
   useEffect(() => {
     if (!selectedPenaGuid || initializing) {
