@@ -129,7 +129,9 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
             select(Pena.guid, Pena.name).where(Pena.id == link.id_pena)
         ).first()
         player = self.session.execute(
-            select(Player.guid, Player.name).where(Player.id == link.id_player)
+            select(Player.guid, Player.name, Player.surname1, Player.surname2).where(
+                Player.id == link.id_player
+            )
         ).first()
         if not pena or not player:
             raise InvalidLinkTokenError()
@@ -145,7 +147,10 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
             pena_guid=pena.guid,
             pena_name=pena.name,
             player_guid=player.guid,
-            player_name=player.name,
+            # Full name so the invitee recognises which guest player they adopt.
+            player_name=" ".join(
+                part for part in (player.name, player.surname1, player.surname2) if part
+            ),
             player_nickname=nickname,
             expires_at=link.expires_at,
         )

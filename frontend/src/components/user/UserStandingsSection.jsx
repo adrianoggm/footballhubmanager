@@ -15,7 +15,7 @@ import { alpha } from '@mui/material/styles'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
-import { EmptyState, LoadingState } from '../common'
+import { EmptyState, LoadingState, stickyLastColumnSx } from '../common'
 
 const labelChipSx = (color) => {
   const background = color || DEFAULT_LABEL_COLOR
@@ -91,7 +91,7 @@ export default function UserStandingsSection({
                 </Typography>
               )}
               <TableContainer>
-                <Table size="small" sx={{ minWidth: 760 }}>
+                <Table size="small" sx={{ minWidth: 760, ...stickyLastColumnSx }}>
                   <TableHead>
                     <TableRow>
                       <TableCell>{t('dashboard.user.table.rank')}</TableCell>

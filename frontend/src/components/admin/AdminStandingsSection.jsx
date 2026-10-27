@@ -21,6 +21,7 @@ import { Suspense, lazy } from 'react'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
 import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
+import { stickyLastColumnSx } from '../common/responsiveTable.js'
 
 const AdminInsightsSection = lazy(() => import('./AdminInsightsSection.jsx'))
 
@@ -144,7 +145,7 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
 
           {selectedSeasonGuid && (
             <TableContainer>
-              <Table size="small">
+              <Table size="small" sx={stickyLastColumnSx}>
                 <TableHead>
                   <TableRow>
                     <TableCell>{t('dashboard.admin.table.player')}</TableCell>

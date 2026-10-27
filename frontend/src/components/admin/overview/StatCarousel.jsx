@@ -26,7 +26,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { EmptyState } from '../../common'
+import { EmptyState, touchTargetSx } from '../../common'
 
 // Themed tooltip surface so labels/values stay readable on every preset.
 const tooltipStyles = (theme) => {
@@ -284,6 +284,7 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
           <Stack direction="row" spacing={0.5}>
             <IconButton
               size="small"
+              sx={touchTargetSx}
               onClick={() => go(-1)}
               aria-label={t('dashboard.admin.overview.carouselPrev')}
             >
@@ -291,6 +292,7 @@ export default function StatCarousel({ standings = [], allMatches = [], t }) {
             </IconButton>
             <IconButton
               size="small"
+              sx={touchTargetSx}
               onClick={() => go(1)}
               aria-label={t('dashboard.admin.overview.carouselNext')}
             >

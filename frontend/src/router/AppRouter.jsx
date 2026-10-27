@@ -1,9 +1,8 @@
 import { Box, LinearProgress } from '@mui/material'
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, BrowserRouter } from 'react-router-dom'
-import AdminLayout from '../layouts/AdminLayout.jsx'
+import { ADMIN_SECTION_IDS, USER_SECTION_IDS } from '../navigation/sitemap.js'
 import PublicLayout from '../layouts/PublicLayout.jsx'
-import UserLayout from '../layouts/UserLayout.jsx'
 import RequireAuth from './guards/RequireAuth.jsx'
 import RequireGuest from './guards/RequireGuest.jsx'
 import RequireRole from './guards/RequireRole.jsx'
@@ -16,18 +15,10 @@ const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage.jsx'))
 const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage.jsx'))
 const LegalPage = lazy(() => import('../pages/LegalPage.jsx'))
 const SessionIncompletePage = lazy(() => import('../pages/SessionIncompletePage.jsx'))
-const AdminOverviewPage = lazy(() => import('../pages/admin/AdminOverviewPage.jsx'))
-const AdminSeasonsPage = lazy(() => import('../pages/admin/AdminSeasonsPage.jsx'))
-const AdminAccountabilityPage = lazy(() => import('../pages/admin/AdminAccountabilityPage.jsx'))
-const AdminPlayersPage = lazy(() => import('../pages/admin/AdminPlayersPage.jsx'))
-const AdminMatchesPage = lazy(() => import('../pages/admin/AdminMatchesPage.jsx'))
-const AdminStandingsPage = lazy(() => import('../pages/admin/AdminStandingsPage.jsx'))
-const UserJoinPage = lazy(() => import('../pages/user/UserJoinPage.jsx'))
-const UserMembershipPage = lazy(() => import('../pages/user/UserMembershipPage.jsx'))
-const UserAccountabilityPage = lazy(() => import('../pages/user/UserAccountabilityPage.jsx'))
-const UserStandingsPage = lazy(() => import('../pages/user/UserStandingsPage.jsx'))
-const UserMatchesPage = lazy(() => import('../pages/user/UserMatchesPage.jsx'))
-const UserInsightsPage = lazy(() => import('../pages/user/UserInsightsPage.jsx'))
+// Each role dashboard is mounted once by its layout (sections are child routes
+// without their own element), so selection state survives navigation.
+const AdminLayout = lazy(() => import('../layouts/AdminLayout.jsx'))
+const UserLayout = lazy(() => import('../layouts/UserLayout.jsx'))
 
 function RouteLoader() {
   return (
@@ -97,63 +88,21 @@ export default function AppRouter({ auth, onLogout }) {
             />
 
             <Route path="/app/admin" element={<RequireRole session={auth.session} role="admin" />}>
-              <Route element={<AdminLayout />}>
+              <Route element={<AdminLayout session={auth.session} onLogout={onLogout} />}>
                 <Route index element={<Navigate to="overview" replace />} />
-                <Route
-                  path="overview"
-                  element={<AdminOverviewPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="seasons"
-                  element={<AdminSeasonsPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="accountability"
-                  element={<AdminAccountabilityPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="players"
-                  element={<AdminPlayersPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="matches"
-                  element={<AdminMatchesPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="standings"
-                  element={<AdminStandingsPage session={auth.session} onLogout={onLogout} />}
-                />
+                {ADMIN_SECTION_IDS.map((sectionId) => (
+                  <Route key={sectionId} path={sectionId} />
+                ))}
                 <Route path="*" element={<Navigate to="overview" replace />} />
               </Route>
             </Route>
 
             <Route path="/app/user" element={<RequireRole session={auth.session} role="user" />}>
-              <Route element={<UserLayout />}>
+              <Route element={<UserLayout session={auth.session} onLogout={onLogout} />}>
                 <Route index element={<Navigate to="membership" replace />} />
-                <Route
-                  path="join"
-                  element={<UserJoinPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="membership"
-                  element={<UserMembershipPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="accountability"
-                  element={<UserAccountabilityPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="standings"
-                  element={<UserStandingsPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="matches"
-                  element={<UserMatchesPage session={auth.session} onLogout={onLogout} />}
-                />
-                <Route
-                  path="insights"
-                  element={<UserInsightsPage session={auth.session} onLogout={onLogout} />}
-                />
+                {USER_SECTION_IDS.map((sectionId) => (
+                  <Route key={sectionId} path={sectionId} />
+                ))}
                 <Route path="*" element={<Navigate to="membership" replace />} />
               </Route>
             </Route>

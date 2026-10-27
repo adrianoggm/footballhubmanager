@@ -33,6 +33,11 @@ import { useToast } from '../context/toastContext.js'
 import { useI18n } from '../i18n/useI18n.js'
 import { USER_DASHBOARD_ANCHORS, resolveUserDashboardSections } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
+import {
+  readStoredPenaGuid,
+  resolvePreferredPenaGuid,
+  storeSelectedPenaGuid,
+} from '../services/selectedPenaStore.js'
 import { userService } from '../services/userService.js'
 import { useAccountEmail } from '../hooks/useAccountEmail.js'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
@@ -139,6 +144,7 @@ export default function UserDashboard({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
+  const [focusEmailSetting, setFocusEmailSetting] = useState(false)
 
   const [profile, setProfile] = useState(null)
   const {
@@ -159,6 +165,8 @@ export default function UserDashboard({
   } = useForm(defaultMembershipForm)
   const { values: joinForm, onField: onJoinField, reset: resetJoinForm } = useForm(defaultJoinForm)
   const [seasonList, setSeasonList] = useState([])
+  const [seasonListPenaGuid, setSeasonListPenaGuid] = useState('')
+  const [activeSeason, setActiveSeason] = useState(null)
   const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
   const [standings, setStandings] = useState([])
   const [seasonMatches, setSeasonMatches] = useState([])
@@ -166,6 +174,7 @@ export default function UserDashboard({
   const [insightsScope, setInsightsScope] = useState('selected_season')
   const seasonListRequestIdRef = useRef(0)
   const seasonDataRequestIdRef = useRef(0)
+  const seasonMatchesRequestIdRef = useRef(0)
 
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
@@ -176,6 +185,11 @@ export default function UserDashboard({
     () => seasonList.find((item) => item.guid === selectedSeasonGuid) || null,
     [seasonList, selectedSeasonGuid]
   )
+  // U-03: right after a pena switch the season list (and selection) still
+  // belong to the previous pena until loadSeasonList resolves. Season-scoped
+  // loaders only use a season once it is confirmed for the selected pena.
+  const seasonContextGuid =
+    selectedSeason && seasonListPenaGuid === selectedPenaGuid ? selectedSeasonGuid : ''
 
   const {
     loading: insightsLoading,
@@ -227,8 +241,6 @@ export default function UserDashboard({
       : ''
   }, [routeSectionId, userQuickNavSections])
   const visibleUserSectionId = activeNavSectionId || userQuickNavSections[0]?.id || 'membership'
-  const shouldLoadStandings = visibleUserSectionId === 'standings'
-  const shouldLoadSeasonMatches = visibleUserSectionId === 'matches'
   const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
   const currentStanding = useMemo(() => {
     if (!currentPlayerGuid || standings.length === 0) {
@@ -360,6 +372,8 @@ export default function UserDashboard({
 
     const seasonItems = seasonsPage.items || []
     setSeasonList(seasonItems)
+    setSeasonListPenaGuid(penaGuid)
+    setActiveSeason(activeSeason)
     const resolvedSeasonGuid = seasonItems.some((item) => item.guid === selectedSeasonGuid)
       ? selectedSeasonGuid
       : activeSeason?.guid || seasonItems[0]?.guid || ''
@@ -387,9 +401,9 @@ export default function UserDashboard({
   }
 
   const loadSeasonMatchesData = async (penaGuid, seasonGuid) => {
-    const requestId = seasonDataRequestIdRef.current + 1
-    seasonDataRequestIdRef.current = requestId
-    const isStale = () => requestId !== seasonDataRequestIdRef.current
+    const requestId = seasonMatchesRequestIdRef.current + 1
+    seasonMatchesRequestIdRef.current = requestId
+    const isStale = () => requestId !== seasonMatchesRequestIdRef.current
 
     if (!seasonGuid) {
       if (isStale()) {
@@ -428,8 +442,10 @@ export default function UserDashboard({
       setPenas(nextPenas)
       setNationalities(nextNationalities)
 
-      const preferredPena =
-        nextPenas.find((item) => item.guid === selectedPenaGuid)?.guid || nextPenas[0]?.guid || ''
+      const preferredPena = resolvePreferredPenaGuid(nextPenas, [
+        selectedPenaGuid,
+        readStoredPenaGuid('user', session?.user_guid),
+      ])
       setSelectedPenaGuid(preferredPena)
       if (preferredPena) {
         await Promise.all([loadMembership(preferredPena), loadSeasonList(preferredPena)])
@@ -458,6 +474,10 @@ export default function UserDashboard({
   }, [])
 
   useEffect(() => {
+    storeSelectedPenaGuid('user', session?.user_guid, selectedPenaGuid)
+  }, [selectedPenaGuid, session?.user_guid])
+
+  useEffect(() => {
     if (!selectedPenaGuid || initializing) {
       if (!selectedPenaGuid) {
         setMembership(null)
@@ -476,13 +496,10 @@ export default function UserDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid])
 
+  // U-04: standings and matches feed the always-visible header KPIs, so they
+  // load for every section (the dashboard stays mounted across sections).
   useEffect(() => {
-    if (!shouldLoadStandings) {
-      setStandings([])
-      setSeasonDataLoading(false)
-      return
-    }
-    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+    if (!selectedPenaGuid || !seasonContextGuid || initializing) {
       setStandings([])
       setSeasonDataLoading(false)
       return
@@ -492,7 +509,7 @@ export default function UserDashboard({
     setSeasonDataLoading(true)
     ;(async () => {
       try {
-        await loadStandingsData(selectedPenaGuid, selectedSeasonGuid)
+        await loadStandingsData(selectedPenaGuid, seasonContextGuid)
       } catch (requestError) {
         if (!activeRequest) {
           return
@@ -513,14 +530,10 @@ export default function UserDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, initializing, activeNavSectionId])
+  }, [selectedPenaGuid, seasonContextGuid, initializing])
 
   useEffect(() => {
-    if (!shouldLoadSeasonMatches) {
-      setSeasonMatches([])
-      return
-    }
-    if (!selectedPenaGuid || !selectedSeasonGuid || initializing) {
+    if (!selectedPenaGuid || !seasonContextGuid || initializing) {
       setSeasonMatches([])
       return
     }
@@ -528,7 +541,7 @@ export default function UserDashboard({
     let activeRequest = true
     ;(async () => {
       try {
-        await loadSeasonMatchesData(selectedPenaGuid, selectedSeasonGuid)
+        await loadSeasonMatchesData(selectedPenaGuid, seasonContextGuid)
       } catch (requestError) {
         if (!activeRequest) {
           return
@@ -545,7 +558,7 @@ export default function UserDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, selectedSeasonGuid, initializing, activeNavSectionId])
+  }, [selectedPenaGuid, seasonContextGuid, initializing])
 
   useEffect(() => {
     resetMatchDetailDialog()
@@ -568,6 +581,16 @@ export default function UserDashboard({
     setProfileSettingsOpen(true)
   }
 
+  const openEmailSettings = () => {
+    setFocusEmailSetting(true)
+    openProfileSettings()
+  }
+
+  const closeProfileSettings = () => {
+    setProfileSettingsOpen(false)
+    setFocusEmailSetting(false)
+  }
+
   const handleUpdateProfile = async () => {
     return runAction(async () => {
       const updatedProfile = await userService.updateMyProfile(profileForm)
@@ -585,7 +608,7 @@ export default function UserDashboard({
   const handleSaveProfileFromSettings = async () => {
     const saved = await handleUpdateProfile()
     if (saved) {
-      setProfileSettingsOpen(false)
+      closeProfileSettings()
     }
   }
 
@@ -716,17 +739,16 @@ export default function UserDashboard({
     },
     {
       label: t('dashboard.user.standingsTitle'),
-      value: shouldLoadStandings && currentStanding ? `#${currentStanding.rank}` : '-',
-      helper:
-        shouldLoadStandings && currentStanding
-          ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
-          : t('dashboard.user.notInStandingsYet'),
+      value: currentStanding ? `#${currentStanding.rank}` : '-',
+      helper: currentStanding
+        ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
+        : t('dashboard.user.notInStandingsYet'),
       helperLabel: t('dashboard.common.summaryMeta.points'),
       tone: 'info',
     },
     {
       label: t('dashboard.user.matchesTitle'),
-      value: shouldLoadSeasonMatches ? String(orderedSeasonMatches.length) : '-',
+      value: seasonContextGuid ? String(orderedSeasonMatches.length) : '-',
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.user.noMatchesForSeason'),
       helperLabel: t('dashboard.common.summaryMeta.season'),
       tone: 'warning',
@@ -754,12 +776,12 @@ export default function UserDashboard({
     seasons: seasonList,
     selectedSeasonGuid,
     selectedSeason,
-    activeSeason: null,
+    activeSeason: seasonListPenaGuid === selectedPenaGuid ? activeSeason : null,
     onSelectSeason: setSelectedSeasonGuid,
     labels: {
       pena: t('dashboard.user.selectedPena'),
       season: t('dashboard.user.selectedSeason'),
-      activeSuffix: '',
+      activeSuffix: t('dashboard.admin.seasonActiveSuffix'),
     },
   }
 
@@ -805,15 +827,6 @@ export default function UserDashboard({
               alignItems="center"
               justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
             >
-              <Tooltip title={t('dashboard.user.openSettings')}>
-                <span>
-                  <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
-                    <Box component="span" className="material-symbols-rounded">
-                      settings
-                    </Box>
-                  </IconButton>
-                </span>
-              </Tooltip>
               <Tooltip title={t('dashboard.common.refresh')}>
                 <span>
                   <IconButton
@@ -823,6 +836,15 @@ export default function UserDashboard({
                   >
                     <Box component="span" className="material-symbols-rounded">
                       refresh
+                    </Box>
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={t('dashboard.user.openSettings')}>
+                <span>
+                  <IconButton onClick={openProfileSettings} disabled={loading} color="primary">
+                    <Box component="span" className="material-symbols-rounded">
+                      settings
                     </Box>
                   </IconButton>
                 </span>
@@ -843,7 +865,7 @@ export default function UserDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openProfileSettings} />
+        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openEmailSettings} />
 
         {visibleUserSectionId === 'join' && (
           <UserJoinSection
@@ -862,6 +884,7 @@ export default function UserDashboard({
             penas={penas}
             selectedPenaGuid={selectedPenaGuid}
             selectedPena={selectedPena}
+            onSelectPena={setSelectedPenaGuid}
             membership={membership}
             membershipForm={membershipForm}
             onMembershipField={onMembershipField}
@@ -948,7 +971,7 @@ export default function UserDashboard({
 
         <UserProfileSettingsDialog
           open={profileSettingsOpen}
-          onClose={() => setProfileSettingsOpen(false)}
+          onClose={closeProfileSettings}
           onSave={handleSaveProfileFromSettings}
           loading={loading}
           profileForm={profileForm}
@@ -956,9 +979,7 @@ export default function UserDashboard({
           onProfileImageChange={(value) =>
             setProfileForm((prev) => ({ ...prev, image_url: value }))
           }
-          onProfileImageError={(error) =>
-            setError(new Error(mapProfileImageErrorMessage(error, t)))
-          }
+          formatProfileImageError={(error) => mapProfileImageErrorMessage(error, t)}
           profileDisplayName={profileDisplayName}
           nationalities={nationalities}
           t={t}
@@ -966,6 +987,7 @@ export default function UserDashboard({
           selectedPenaGuid={selectedPenaGuid}
           onSelectPena={setSelectedPenaGuid}
           accountEmail={accountEmail}
+          focusEmail={focusEmailSetting}
         />
       </DashboardShell>
     </DashboardContext.Provider>

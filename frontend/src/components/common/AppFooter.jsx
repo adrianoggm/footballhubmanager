@@ -3,6 +3,7 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { Link as RouterLink } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n.js'
 import { legalPath } from '../legal/legalDocuments.js'
+import { touchTargetLinkSx } from './touchTarget.js'
 
 const GITHUB_URL = 'https://github.com/adrianoggm/footballhubmanager'
 const LEGAL_LINKS = [
@@ -18,6 +19,7 @@ const footerLinkSx = {
   lineHeight: 1.6,
   transition: 'color 140ms ease',
   '&:hover': { color: 'secondary.main' },
+  ...touchTargetLinkSx,
 }
 
 /**

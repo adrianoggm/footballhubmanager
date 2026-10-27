@@ -30,9 +30,10 @@ The frontend is a role-based application, not only an auth playground.
   - `frontend/src/layouts/PublicLayout.jsx`
   - `frontend/src/layouts/AdminLayout.jsx`
   - `frontend/src/layouts/UserLayout.jsx`
-- Route feature pages:
-  - `frontend/src/pages/admin/*.jsx`
-  - `frontend/src/pages/user/*.jsx`
+- Role dashboards are mounted once by `AdminLayout` / `UserLayout` (via
+  `frontend/src/pages/*DashboardRoutePage.jsx`); section routes are element-less children that
+  only drive the URL, so the pena/season selection survives section navigation. The selected
+  pena is also remembered per user in `localStorage` (`services/selectedPenaStore.js`).
 - Frontend sitemap source of truth: `frontend/src/navigation/sitemap.js`
 - Auth and session state: `frontend/src/hooks/useAuth.js`
 - Dashboards:

@@ -164,7 +164,7 @@ def test_inspect_claim_token_returns_preview():
 
     assert info.pena_name == "Los Amigos"
     assert info.player_guid == "player-200"
-    assert info.player_name == "Ana"
+    assert info.player_name == "Ana Lopez"
     assert info.player_nickname == "Nani"
 
 

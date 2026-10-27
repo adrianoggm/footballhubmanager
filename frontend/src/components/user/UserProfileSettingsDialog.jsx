@@ -28,7 +28,7 @@ export default function UserProfileSettingsDialog({
   profileForm,
   onProfileField,
   onProfileImageChange,
-  onProfileImageError,
+  formatProfileImageError,
   profileDisplayName,
   nationalities,
   t,
@@ -36,6 +36,7 @@ export default function UserProfileSettingsDialog({
   selectedPenaGuid = '',
   onSelectPena = () => {},
   accountEmail = null,
+  focusEmail = false,
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -65,7 +66,7 @@ export default function UserProfileSettingsDialog({
           <ProfileImageField
             value={profileForm.image_url}
             alt={profileDisplayName || t('dashboard.user.profileSettingsTitle')}
-            label={t('dashboard.common.profileImageLabel')}
+            label={t('dashboard.common.profilePhotoLabel')}
             helperText={t('dashboard.user.profileImageHint')}
             chooseLabel={t('dashboard.common.imageActions.choose')}
             replaceLabel={t('dashboard.common.imageActions.replace')}
@@ -74,7 +75,7 @@ export default function UserProfileSettingsDialog({
             processingLabel={t('dashboard.common.imageActions.processing')}
             disabled={loading}
             onChange={onProfileImageChange}
-            onError={onProfileImageError}
+            formatError={formatProfileImageError}
           />
           <TextField
             label={t('dashboard.user.fields.name')}
@@ -104,7 +105,9 @@ export default function UserProfileSettingsDialog({
             ))}
           </TextField>
           <Divider />
-          {accountEmail && <AccountEmailSettings accountEmail={accountEmail} />}
+          {accountEmail && (
+            <AccountEmailSettings accountEmail={accountEmail} autoFocus={focusEmail} />
+          )}
           {accountEmail && <Divider />}
           <AppearanceSettings />
         </Stack>

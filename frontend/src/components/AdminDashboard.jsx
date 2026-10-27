@@ -40,6 +40,11 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import {
+  readStoredPenaGuid,
+  resolvePreferredPenaGuid,
+  storeSelectedPenaGuid,
+} from '../services/selectedPenaStore.js'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
@@ -450,6 +455,7 @@ export default function AdminDashboard({
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
   const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
+  const [focusEmailSetting, setFocusEmailSetting] = useState(false)
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
@@ -634,6 +640,18 @@ export default function AdminDashboard({
     })
     setPenaSettingsOpen(true)
   }
+
+  // U-12: the email notice opens settings straight on the email field.
+  const openEmailSettings = () => {
+    openPenaSettings()
+    setFocusEmailSetting(true)
+  }
+
+  useEffect(() => {
+    if (!penaSettingsOpen) {
+      setFocusEmailSetting(false)
+    }
+  }, [penaSettingsOpen])
 
   const shouldLoadHistoricalPlayers =
     activeSection === 'players' || activeSection === 'accountability'
@@ -979,7 +997,10 @@ export default function AdminDashboard({
         setGuestForm((prev) => ({ ...prev, nationality: catalogNationalities[0] }))
       }
 
-      const defaultPena = selectedPenaGuid || penaItems[0]?.guid || ''
+      const defaultPena = resolvePreferredPenaGuid(penaItems, [
+        selectedPenaGuid,
+        readStoredPenaGuid('admin', session?.user_guid),
+      ])
       setSelectedPenaGuid(defaultPena)
 
       if (defaultPena) {
@@ -1025,6 +1046,10 @@ export default function AdminDashboard({
     loadDashboard()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    storeSelectedPenaGuid('admin', session?.user_guid, selectedPenaGuid)
+  }, [selectedPenaGuid, session?.user_guid])
 
   useEffect(() => {
     if (!selectedPenaGuid || initializing) {
@@ -1713,7 +1738,7 @@ export default function AdminDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openPenaSettings} />
+        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openEmailSettings} />
 
         {!selectedPenaGuid && (
           <EmptyState
@@ -1926,11 +1951,11 @@ export default function AdminDashboard({
                 processingLabel={t('dashboard.common.imageActions.processing')}
                 disabled={loading}
                 onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
-                onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+                formatError={(error) => mapProfileImageErrorMessage(error, t)}
               />
 
               <Divider />
-              <AccountEmailSettings accountEmail={accountEmail} />
+              <AccountEmailSettings accountEmail={accountEmail} autoFocus={focusEmailSetting} />
               <Divider />
               <AppearanceSettings />
             </Stack>

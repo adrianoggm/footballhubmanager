@@ -1177,16 +1177,9 @@ export default function AdminInsightsSection({ state, actions, helpers }) {
 
       {insightsLoading && <LoadingState />}
 
+      {/* U-18: the toolbar button (with the date range) is the only refresh action. */}
       {!insightsLoading && !insightsReport && (
-        <EmptyState
-          dense
-          description={t('dashboard.admin.standings.insightsEmpty')}
-          action={
-            <Button variant="contained" onClick={onRefreshInsights} disabled={!selectedSeasonGuid}>
-              {t('dashboard.admin.standings.refreshInsights')}
-            </Button>
-          }
-        />
+        <EmptyState dense description={t('dashboard.admin.standings.insightsEmpty')} />
       )}
 
       {!insightsLoading && insightsReport && (

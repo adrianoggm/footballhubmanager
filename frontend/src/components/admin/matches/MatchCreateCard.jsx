@@ -11,6 +11,7 @@ import {
 } from '@mui/material'
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import DateField from '../../common/DateField.jsx'
+import { touchTargetChipSx } from '../../common/touchTarget.js'
 
 const toIsoDate = (date) => {
   const offset = date.getTimezoneOffset()
@@ -123,6 +124,7 @@ export default function MatchCreateCard({ state, actions, helpers }) {
                     key={quick.key}
                     label={quick.label}
                     size="small"
+                    sx={touchTargetChipSx}
                     variant={matchForm.match_date === quick.iso ? 'filled' : 'outlined'}
                     color={matchForm.match_date === quick.iso ? 'secondary' : 'default'}
                     disabled={!selectedSeasonGuid}
