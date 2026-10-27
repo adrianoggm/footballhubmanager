@@ -165,6 +165,7 @@ export default function UserDashboard({
   const { values: joinForm, onField: onJoinField, reset: resetJoinForm } = useForm(defaultJoinForm)
   const [seasonList, setSeasonList] = useState([])
   const [seasonListPenaGuid, setSeasonListPenaGuid] = useState('')
+  const [activeSeason, setActiveSeason] = useState(null)
   const [selectedSeasonGuid, setSelectedSeasonGuid] = useState('')
   const [standings, setStandings] = useState([])
   const [seasonMatches, setSeasonMatches] = useState([])
@@ -371,6 +372,7 @@ export default function UserDashboard({
     const seasonItems = seasonsPage.items || []
     setSeasonList(seasonItems)
     setSeasonListPenaGuid(penaGuid)
+    setActiveSeason(activeSeason)
     const resolvedSeasonGuid = seasonItems.some((item) => item.guid === selectedSeasonGuid)
       ? selectedSeasonGuid
       : activeSeason?.guid || seasonItems[0]?.guid || ''
@@ -763,12 +765,12 @@ export default function UserDashboard({
     seasons: seasonList,
     selectedSeasonGuid,
     selectedSeason,
-    activeSeason: null,
+    activeSeason: seasonListPenaGuid === selectedPenaGuid ? activeSeason : null,
     onSelectSeason: setSelectedSeasonGuid,
     labels: {
       pena: t('dashboard.user.selectedPena'),
       season: t('dashboard.user.selectedSeason'),
-      activeSuffix: '',
+      activeSuffix: t('dashboard.admin.seasonActiveSuffix'),
     },
   }
 

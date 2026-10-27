@@ -175,6 +175,18 @@ describe('UserDashboard QA regressions', () => {
     // "2" is shown by the My Penas KPI (2 penas) and by the Matches KPI (2 matches).
     await waitFor(() => expect(screen.getAllByText('2')).toHaveLength(2))
   })
+
+  it('U-08: the user season selector marks the active season', async () => {
+    renderDashboard('membership')
+    await screen.findByText('Membership in Pena Alpha')
+
+    const seasonSelect = screen
+      .getAllByRole('combobox')
+      .find((element) => element.textContent.includes('26/27'))
+    fireEvent.mouseDown(seasonSelect)
+
+    expect(await screen.findByRole('option', { name: '26/27 (Active)' })).toBeInTheDocument()
+  })
 })
 
 async function selectPenaFromSettings(penaName) {
