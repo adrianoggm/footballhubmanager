@@ -33,6 +33,7 @@ from core.application.queries.pena_accountability_query_handlers import (
     GetPenaAccountabilityHandler,
     GetPlayerGuidForAccountHandler,
     ListPenaTransactionsHandler,
+    to_accountability_info,
 )
 from core.domain.errors import (
     InvalidPenaAccountabilityDataError,
@@ -188,25 +189,6 @@ def test_get_handler_computes_kpis():
     assert result.membership_collected_pct == 38.5
     assert result.members_pending_count == 2
     assert result.expenses_this_month_count == 1
-    # net this month 700 vs prev 600 -> +16.7%
-    assert result.balance_trend_pct == 16.7
-
-
-def test_get_handler_trend_is_none_without_prior_month():
-    repo = _FakeRepo()
-    single_month = PenaAccountabilityResult(
-        **{
-            **repo._sample_result().__dict__,
-            "monthly_cashflow": [
-                PenaMonthlyCashflowResult(year=2026, month=1, income_cents=100, expense_cents=0)
-            ],
-        }
-    )
-    repo.get_for_pena = lambda *, pena_guid: single_month
-    result = GetPenaAccountabilityHandler(repo).handle(
-        GetPenaAccountabilityQuery(pena_guid="pena-guid")
-    )
-    assert result.balance_trend_pct is None
 
 
 def test_get_handler_propagates_not_found():
@@ -540,3 +522,55 @@ def test_upsert_member_still_accepts_zero():
         )
     )
     assert repo.last_call["debt_cents"] == 0
+
+
+def _trend_for(monthly, *, opening=10_000, today=date(2026, 1, 20)):
+    base = _FakeRepo._sample_result()
+    income = sum(item.income_cents for item in monthly)
+    expense = sum(item.expense_cents for item in monthly)
+    result = PenaAccountabilityResult(
+        **{
+            **base.__dict__,
+            "opening_balance_cents": opening,
+            "total_income_cents": income,
+            "total_expense_cents": expense,
+            "monthly_cashflow": monthly,
+        }
+    )
+    return to_accountability_info(result, today=today).balance_trend_pct
+
+
+def test_balance_trend_compares_balance_not_net_flow():
+    """MO-15: +1588.6% came from comparing this month's net flow with last month's.
+
+    Balance end of Dec = 10_000 + 1_000 - 400 = 10_600; now = 10_600 + 700 = 11_300.
+    """
+    monthly = [
+        PenaMonthlyCashflowResult(year=2025, month=12, income_cents=1_000, expense_cents=400),
+        PenaMonthlyCashflowResult(year=2026, month=1, income_cents=1_500, expense_cents=800),
+    ]
+    assert _trend_for(monthly) == 6.6
+
+
+def test_balance_trend_after_a_negative_month_is_bounded():
+    # Dec net -1_000, Jan net +2_000: old formula gave -300%; balance went 9_000 -> 11_000.
+    monthly = [
+        PenaMonthlyCashflowResult(year=2025, month=12, income_cents=0, expense_cents=1_000),
+        PenaMonthlyCashflowResult(year=2026, month=1, income_cents=2_000, expense_cents=0),
+    ]
+    assert _trend_for(monthly) == 22.2
+
+
+def test_balance_trend_is_zero_without_movements_this_month():
+    monthly = [
+        PenaMonthlyCashflowResult(year=2025, month=12, income_cents=1_000, expense_cents=400),
+    ]
+    assert _trend_for(monthly) == 0.0
+
+
+@pytest.mark.parametrize("opening", [0, -5_000])
+def test_balance_trend_is_none_without_positive_base(opening):
+    monthly = [
+        PenaMonthlyCashflowResult(year=2026, month=1, income_cents=1_500, expense_cents=0),
+    ]
+    assert _trend_for(monthly, opening=opening) is None

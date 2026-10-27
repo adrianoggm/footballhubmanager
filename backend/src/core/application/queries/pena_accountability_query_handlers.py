@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from core.application.models import (
     PenaAccountabilityInfo,
     PenaAccountabilityMemberAccountInfo,
@@ -23,14 +25,28 @@ MAX_TRANSACTION_PAGE_SIZE = 50
 VALID_TYPE_FILTERS = {"income", "expense"}
 
 
-def _pct_change(current: int, previous: int) -> float | None:
-    """Percentage change of `current` vs `previous`; None when there's no baseline."""
-    if previous == 0:
+def _balance_trend_pct(
+    *, total_balance: int, monthly: list[PenaMonthlyCashflowInfo], today: date
+) -> float | None:
+    """Balance now vs balance at the end of last month, in percent.
+
+    The previous balance is today's balance minus this calendar month's net flow.
+    A non-positive previous balance has no meaningful percentage -> None.
+    """
+    this_month_net = sum(
+        item.income_cents - item.expense_cents
+        for item in monthly
+        if item.year == today.year and item.month == today.month
+    )
+    previous_balance = total_balance - this_month_net
+    if previous_balance <= 0:
         return None
-    return round((current - previous) / abs(previous) * 100, 1)
+    return round(this_month_net / previous_balance * 100, 1)
 
 
-def to_accountability_info(result: PenaAccountabilityResult) -> PenaAccountabilityInfo:
+def to_accountability_info(
+    result: PenaAccountabilityResult, *, today: date | None = None
+) -> PenaAccountabilityInfo:
     members = [
         PenaAccountabilityMemberAccountInfo(
             player_guid=item.player_guid,
@@ -59,12 +75,9 @@ def to_accountability_info(result: PenaAccountabilityResult) -> PenaAccountabili
     total_debt = sum(item.debt_cents for item in members)
     total_contribution = sum(item.contribution_cents for item in members)
 
-    # Balance trend: this month's net cashflow vs last month's.
-    balance_trend_pct = None
-    if len(monthly) >= 2:
-        current_net = monthly[-1].income_cents - monthly[-1].expense_cents
-        previous_net = monthly[-2].income_cents - monthly[-2].expense_cents
-        balance_trend_pct = _pct_change(current_net, previous_net)
+    balance_trend_pct = _balance_trend_pct(
+        total_balance=total_balance, monthly=monthly, today=today or date.today()
+    )
 
     collected_base = total_contribution + total_debt
     membership_collected_pct = (
