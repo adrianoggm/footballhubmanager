@@ -285,6 +285,7 @@ create table if not exists pena_transaction (
   note         varchar(255) null,
   occurred_on  date not null,
   id_player    int null,
+  debt_applied_cents bigint not null default 0,
   created_at   timestamp not null default current_timestamp,
   updated_at   timestamp not null default current_timestamp on update current_timestamp,
   unique key uq_pena_transaction_guid (guid),
@@ -413,5 +414,6 @@ insert into schema_migrations (version, description, success) values
   ('10', 'football match goalkeeper rotation', 1),
   ('11', 'pena link token player claim', 1),
   ('12', 'pena transaction unified ledger', 1),
-  ('13', 'account email and tokens', 1)
+  ('13', 'account email and tokens', 1),
+  ('14', 'pena transaction debt applied', 1)
 on duplicate key update description=values(description), success=values(success);

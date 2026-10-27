@@ -29,6 +29,10 @@ class PenaTransaction(GuidMixin, Base):
     occurred_on: Mapped[date] = mapped_column(Date, nullable=False)
     # Optional link to a member: an income tagged to a player pays down their dues.
     id_player: Mapped[int | None] = mapped_column(ForeignKey("player.id"))
+    # How much of the member's debt this income actually paid down (debt is floored
+    # at 0, so an overpayment applies less than amount_cents). Deleting the income
+    # restores exactly this much debt.
+    debt_applied_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     created_at: Mapped[DateTime] = mapped_column(
         DateTime,
         nullable=False,
