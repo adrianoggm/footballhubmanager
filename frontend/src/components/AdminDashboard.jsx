@@ -455,6 +455,7 @@ export default function AdminDashboard({
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState(null)
   const [penaSettingsOpen, setPenaSettingsOpen] = useState(false)
+  const [focusEmailSetting, setFocusEmailSetting] = useState(false)
 
   const [penas, setPenas] = useState([])
   const [selectedPenaGuid, setSelectedPenaGuid] = useState('')
@@ -639,6 +640,18 @@ export default function AdminDashboard({
     })
     setPenaSettingsOpen(true)
   }
+
+  // U-12: the email notice opens settings straight on the email field.
+  const openEmailSettings = () => {
+    openPenaSettings()
+    setFocusEmailSetting(true)
+  }
+
+  useEffect(() => {
+    if (!penaSettingsOpen) {
+      setFocusEmailSetting(false)
+    }
+  }, [penaSettingsOpen])
 
   const shouldLoadHistoricalPlayers =
     activeSection === 'players' || activeSection === 'accountability'
@@ -1725,7 +1738,7 @@ export default function AdminDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openPenaSettings} />
+        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openEmailSettings} />
 
         {!selectedPenaGuid && (
           <EmptyState
@@ -1942,7 +1955,7 @@ export default function AdminDashboard({
               />
 
               <Divider />
-              <AccountEmailSettings accountEmail={accountEmail} />
+              <AccountEmailSettings accountEmail={accountEmail} autoFocus={focusEmailSetting} />
               <Divider />
               <AppearanceSettings />
             </Stack>

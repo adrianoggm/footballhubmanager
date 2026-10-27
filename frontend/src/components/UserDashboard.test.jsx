@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // Player dashboard regressions from the QA pass (U-xx). The real UserDashboard
 // is mounted against a mocked userService holding two peñas, each with its own
 // season, so cross-peña requests are detectable.
-const { userServiceMock } = vi.hoisted(() => {
+const { userServiceMock, authServiceMock } = vi.hoisted(() => {
   const page = (items = []) => ({
     items,
     total: items.length,
@@ -24,6 +24,9 @@ const { userServiceMock } = vi.hoisted(() => {
     is_active: true,
   })
   return {
+    authServiceMock: {
+      getAccountEmail: vi.fn(async () => ({ email: 'player@example.com', email_verified: true })),
+    },
     userServiceMock: {
       page,
       seasonFor,
@@ -78,11 +81,7 @@ const { userServiceMock } = vi.hoisted(() => {
 })
 
 vi.mock('../services/userService.js', () => ({ userService: userServiceMock }))
-vi.mock('../services/authService.js', () => ({
-  authService: {
-    getAccountEmail: vi.fn(async () => ({ email: 'player@example.com', email_verified: true })),
-  },
-}))
+vi.mock('../services/authService.js', () => ({ authService: authServiceMock }))
 
 import { I18nProvider } from '../i18n/I18nProvider.jsx'
 import { ThemeModeProvider } from '../theme/ThemeModeProvider.jsx'
@@ -198,6 +197,17 @@ describe('UserDashboard QA regressions', () => {
       .filter((text) => ['refresh', 'settings', 'logout'].includes(text))
 
     expect(headerIcons).toEqual(['refresh', 'settings', 'logout'])
+  })
+
+  it('U-12: "Add email" opens settings with the email field focused', async () => {
+    authServiceMock.getAccountEmail.mockResolvedValueOnce({ email: null, email_verified: false })
+    renderDashboard('membership')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add email' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const emailInput = within(dialog).getByLabelText('Email')
+    await waitFor(() => expect(emailInput).toHaveFocus())
   })
 })
 

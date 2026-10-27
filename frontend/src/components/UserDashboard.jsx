@@ -144,6 +144,7 @@ export default function UserDashboard({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
+  const [focusEmailSetting, setFocusEmailSetting] = useState(false)
 
   const [profile, setProfile] = useState(null)
   const {
@@ -580,6 +581,16 @@ export default function UserDashboard({
     setProfileSettingsOpen(true)
   }
 
+  const openEmailSettings = () => {
+    setFocusEmailSetting(true)
+    openProfileSettings()
+  }
+
+  const closeProfileSettings = () => {
+    setProfileSettingsOpen(false)
+    setFocusEmailSetting(false)
+  }
+
   const handleUpdateProfile = async () => {
     return runAction(async () => {
       const updatedProfile = await userService.updateMyProfile(profileForm)
@@ -597,7 +608,7 @@ export default function UserDashboard({
   const handleSaveProfileFromSettings = async () => {
     const saved = await handleUpdateProfile()
     if (saved) {
-      setProfileSettingsOpen(false)
+      closeProfileSettings()
     }
   }
 
@@ -854,7 +865,7 @@ export default function UserDashboard({
       >
         {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openProfileSettings} />
+        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openEmailSettings} />
 
         {visibleUserSectionId === 'join' && (
           <UserJoinSection
@@ -960,7 +971,7 @@ export default function UserDashboard({
 
         <UserProfileSettingsDialog
           open={profileSettingsOpen}
-          onClose={() => setProfileSettingsOpen(false)}
+          onClose={closeProfileSettings}
           onSave={handleSaveProfileFromSettings}
           loading={loading}
           profileForm={profileForm}
@@ -976,6 +987,7 @@ export default function UserDashboard({
           selectedPenaGuid={selectedPenaGuid}
           onSelectPena={setSelectedPenaGuid}
           accountEmail={accountEmail}
+          focusEmail={focusEmailSetting}
         />
       </DashboardShell>
     </DashboardContext.Provider>

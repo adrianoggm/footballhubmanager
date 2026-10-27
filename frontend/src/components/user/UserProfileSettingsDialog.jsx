@@ -36,6 +36,7 @@ export default function UserProfileSettingsDialog({
   selectedPenaGuid = '',
   onSelectPena = () => {},
   accountEmail = null,
+  focusEmail = false,
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -104,7 +105,9 @@ export default function UserProfileSettingsDialog({
             ))}
           </TextField>
           <Divider />
-          {accountEmail && <AccountEmailSettings accountEmail={accountEmail} />}
+          {accountEmail && (
+            <AccountEmailSettings accountEmail={accountEmail} autoFocus={focusEmail} />
+          )}
           {accountEmail && <Divider />}
           <AppearanceSettings />
         </Stack>
