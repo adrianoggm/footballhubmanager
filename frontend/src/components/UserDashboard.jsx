@@ -862,6 +862,7 @@ export default function UserDashboard({
             penas={penas}
             selectedPenaGuid={selectedPenaGuid}
             selectedPena={selectedPena}
+            onSelectPena={setSelectedPenaGuid}
             membership={membership}
             membershipForm={membershipForm}
             onMembershipField={onMembershipField}

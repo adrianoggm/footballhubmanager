@@ -11,6 +11,7 @@ export default function UserMembershipSection({
   penas,
   selectedPenaGuid,
   selectedPena,
+  onSelectPena = null,
   membership,
   membershipForm,
   onMembershipField,
@@ -44,6 +45,12 @@ export default function UserMembershipSection({
                 label={pena.name}
                 color={pena.guid === selectedPenaGuid ? 'secondary' : 'default'}
                 variant={pena.guid === selectedPenaGuid ? 'filled' : 'outlined'}
+                aria-pressed={pena.guid === selectedPenaGuid}
+                onClick={
+                  onSelectPena && pena.guid !== selectedPenaGuid && !loading
+                    ? () => onSelectPena(pena.guid)
+                    : undefined
+                }
               />
             ))}
             {!penas.length && <Chip label={t('dashboard.user.noPenasLinked')} />}
