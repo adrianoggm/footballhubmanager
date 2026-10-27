@@ -163,9 +163,6 @@ export default function LineupDragBuilder({
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {player.label}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {player.guid}
-            </Typography>
           </Box>
           {!disabled && (
             <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
