@@ -18,3 +18,4 @@ export {
   trackingLabel,
 } from './trackingStatus.js'
 export { getSurfaceGeometry } from './surfaceGeometry.js'
+export { stickyLastColumnSx } from './responsiveTable.js'

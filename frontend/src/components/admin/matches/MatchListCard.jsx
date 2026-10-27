@@ -10,7 +10,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
-import { EmptyState, LoadingState } from '../../common'
+import { EmptyState, LoadingState, stickyLastColumnSx } from '../../common'
 import { trackingChipColor, trackingLabel } from './trackingHelpers.js'
 
 /**
@@ -47,7 +47,7 @@ export default function MatchListCard({
       )}
       {selectedSeasonGuid && !seasonMatchesLoading && visibleSeasonMatches.length > 0 && (
         <TableContainer>
-          <Table size="small" sx={{ minWidth: 760 }}>
+          <Table size="small" sx={{ minWidth: 760, ...stickyLastColumnSx }}>
             <TableHead>
               <TableRow>
                 <TableCell>{t('dashboard.admin.matches.date')}</TableCell>

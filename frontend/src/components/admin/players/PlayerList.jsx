@@ -23,6 +23,7 @@ import { useState } from 'react'
 import { translatePositionLabel, translateRoleLabel } from '../../../i18n/labels.js'
 import { readableTextColor } from '../../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../../theme/tokens.js'
+import { stickyLastColumnSx } from '../../common/responsiveTable.js'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
 import { isInSeason } from './playersHelpers.js'
 
@@ -140,7 +141,7 @@ export default function PlayerList({
       <CardContent>
         <Stack spacing={1.5}>
           <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small">
+            <Table size="small" sx={stickyLastColumnSx}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={headerCellSx}>{t('dashboard.admin.table.player')}</TableCell>
