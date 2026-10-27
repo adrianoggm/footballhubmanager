@@ -18,7 +18,7 @@ function Dialog() {
       profileForm={{ name: '', surname1: '', surname2: '', nationality: '', image_url: '' }}
       onProfileField={() => vi.fn()}
       onProfileImageChange={vi.fn()}
-      onProfileImageError={vi.fn()}
+      formatProfileImageError={(error) => error.message}
       profileDisplayName="Alvaro Garcia"
       nationalities={[]}
       t={t}

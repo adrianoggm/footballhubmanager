@@ -1938,7 +1938,7 @@ export default function AdminDashboard({
                 processingLabel={t('dashboard.common.imageActions.processing')}
                 disabled={loading}
                 onChange={(value) => setPenaProfileDraft((prev) => ({ ...prev, image_url: value }))}
-                onError={(error) => setError(new Error(mapProfileImageErrorMessage(error, t)))}
+                formatError={(error) => mapProfileImageErrorMessage(error, t)}
               />
 
               <Divider />

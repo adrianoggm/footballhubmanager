@@ -15,9 +15,12 @@ export default function ProfileImageField({
   disabled = false,
   onChange,
   onError,
+  // Maps a rejected file's error to the message shown under the field (U-11).
+  formatError = (error) => error?.message || '',
 }) {
   const inputRef = useRef(null)
   const [processing, setProcessing] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const hasValue = Boolean(String(value || '').trim())
 
   const handleOpenPicker = () => {
@@ -28,6 +31,7 @@ export default function ProfileImageField({
   }
 
   const handleRemove = () => {
+    setErrorMessage('')
     onChange?.('')
   }
 
@@ -39,10 +43,12 @@ export default function ProfileImageField({
     }
 
     setProcessing(true)
+    setErrorMessage('')
     try {
       const prepared = await prepareProfileImageFile(file)
       onChange?.(prepared.dataUrl)
     } catch (error) {
+      setErrorMessage(formatError(error))
       onError?.(error)
     } finally {
       setProcessing(false)
@@ -118,6 +124,11 @@ export default function ProfileImageField({
           <Typography variant="caption" color="text.secondary">
             {processing ? processingLabel : helperText}
           </Typography>
+          {errorMessage && !processing ? (
+            <Typography variant="caption" color="error" role="alert">
+              {errorMessage}
+            </Typography>
+          ) : null}
         </Stack>
       </Stack>
     </Stack>

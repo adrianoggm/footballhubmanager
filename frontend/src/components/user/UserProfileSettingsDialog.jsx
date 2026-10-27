@@ -28,7 +28,7 @@ export default function UserProfileSettingsDialog({
   profileForm,
   onProfileField,
   onProfileImageChange,
-  onProfileImageError,
+  formatProfileImageError,
   profileDisplayName,
   nationalities,
   t,
@@ -74,7 +74,7 @@ export default function UserProfileSettingsDialog({
             processingLabel={t('dashboard.common.imageActions.processing')}
             disabled={loading}
             onChange={onProfileImageChange}
-            onError={onProfileImageError}
+            formatError={formatProfileImageError}
           />
           <TextField
             label={t('dashboard.user.fields.name')}

@@ -968,9 +968,7 @@ export default function UserDashboard({
           onProfileImageChange={(value) =>
             setProfileForm((prev) => ({ ...prev, image_url: value }))
           }
-          onProfileImageError={(error) =>
-            setError(new Error(mapProfileImageErrorMessage(error, t)))
-          }
+          formatProfileImageError={(error) => mapProfileImageErrorMessage(error, t)}
           profileDisplayName={profileDisplayName}
           nationalities={nationalities}
           t={t}
