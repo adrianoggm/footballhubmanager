@@ -12,7 +12,8 @@ from auth.domain.models.outgoing_email import OutgoingEmail
 VERIFY_EMAIL_PATH = "/verify-email/"
 RESET_PASSWORD_PATH = "/reset-password/"
 
-_APP_NAME = "PeñaHub"
+# Same brand the UI shows (frontend i18n `app.brand`).
+_APP_NAME = "footballhubmanager"
 
 
 @dataclass(frozen=True)
