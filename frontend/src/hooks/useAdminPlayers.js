@@ -4,6 +4,11 @@ import { adminService } from '../services/adminService.js'
 import { formatPlayerDisplayName } from '../components/admin/matches/lineupHelpers.js'
 import { useForm } from './useForm.js'
 import { useI18n } from '../i18n/useI18n.js'
+import { translatePlural } from '../i18n/plural.js'
+import {
+  defaultRoleLabel,
+  findDuplicatePlayers,
+} from '../components/admin/players/playersHelpers.js'
 
 // Small pure helpers duplicated from AdminDashboard.jsx (module-scope, no
 // component state) so this hook doesn't need to import from the component
@@ -46,19 +51,6 @@ const hasLabel = (options, value) => {
         .trim()
         .toLowerCase() === needle
   )
-}
-
-const pickPreferredLabel = (options, preferred) => {
-  if (!(options || []).length) {
-    return ''
-  }
-  const preferredLabel = (options || []).find(
-    (item) =>
-      String(item || '')
-        .trim()
-        .toLowerCase() === String(preferred || '').toLowerCase()
-  )
-  return preferredLabel || options[0] || ''
 }
 
 /**
@@ -110,6 +102,7 @@ export function useAdminPlayers({
   draftPositionColors,
   onLabelsDraftField,
   onLabelColorDraftChange,
+  onRenameLabel,
   handleSavePenaLabels,
 
   // Guest-creation form: owned by AdminDashboard.
@@ -159,6 +152,28 @@ export function useAdminPlayers({
   } = useForm(defaultMembershipDraft)
   // { kind: 'season' | 'membership', player } | null
   const [confirmState, setConfirmState] = useState(null)
+  // New-player dialog: owned here (not by the lazy section) so the overview
+  // "Add guest" quick action can open it before navigating (PL-01).
+  const [newPlayerOpen, setNewPlayerOpen] = useState(false)
+
+  const duplicateNames = useMemo(
+    () => findDuplicatePlayers(historicalPlayers, guestForm).map(formatPlayerDisplayName),
+    [historicalPlayers, guestForm]
+  )
+
+  const openNewPlayerDialog = ({ asGuest = false } = {}) => {
+    if (asGuest) {
+      setGuestForm((prev) => ({
+        ...prev,
+        role: defaultRoleLabel(penaLabels.role_labels, { hasAccount: false }),
+      }))
+    }
+    setNewPlayerOpen(true)
+  }
+
+  const closeNewPlayerDialog = () => {
+    setNewPlayerOpen(false)
+  }
 
   const registeredSeasonPlayerGuids = useMemo(
     () => new Set((seasonRoster || []).map((player) => player.player_guid)),
@@ -213,10 +228,7 @@ export function useAdminPlayers({
         await loadPenaData(selectedPenaGuid)
         succeeded = true
       },
-      t('dashboard.admin.notices.playersAdded', {
-        count: totalSelected,
-        suffix: totalSelected === 1 ? '' : language === 'es' ? 'es' : 's',
-      })
+      translatePlural(t, language, 'dashboard.admin.notices.playersAdded', totalSelected)
     )
     return succeeded
   }
@@ -232,7 +244,7 @@ export function useAdminPlayers({
         ])
         await loadPenaData(selectedPenaGuid)
       },
-      t('dashboard.admin.notices.playersAdded', { count: 1, suffix: '' })
+      translatePlural(t, language, 'dashboard.admin.notices.playersAdded', 1)
     )
   }
 
@@ -316,6 +328,10 @@ export function useAdminPlayers({
       setError(new Error(t('dashboard.admin.errors.selectedSeasonRequired')))
       return false
     }
+    // Never POST an empty guest (PL-01/PL-11): the dialog shows the field errors.
+    if (!String(guestForm.name || '').trim() || !String(guestForm.surname1 || '').trim()) {
+      return false
+    }
     let succeeded = false
     await runAction(
       async () => {
@@ -338,7 +354,7 @@ export function useAdminPlayers({
         setGuestForm((prev) => ({
           ...defaultGuestForm(),
           nationality: prev.nationality || 'Spain',
-          role: pickPreferredLabel(penaLabels.role_labels, 'guest'),
+          role: defaultRoleLabel(penaLabels.role_labels, { hasAccount: false }),
         }))
         await loadPenaData(selectedPenaGuid)
         if (registerInSelectedSeason && selectedSeasonGuid) {
@@ -490,6 +506,8 @@ export function useAdminPlayers({
     guestForm,
     nationalities,
     claimLinkPayload,
+    newPlayerOpen,
+    duplicateNames,
   }
 
   const actions = {
@@ -506,7 +524,10 @@ export function useAdminPlayers({
     onCloseClaimLink,
     onLabelsDraftField,
     onLabelColorDraftChange,
+    onRenameLabel,
     handleSavePenaLabels,
+    openNewPlayerDialog,
+    closeNewPlayerDialog,
   }
 
   return {

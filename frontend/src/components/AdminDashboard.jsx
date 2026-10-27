@@ -40,6 +40,10 @@ import { useI18n } from '../i18n/useI18n.js'
 import { ADMIN_DASHBOARD_SITEMAP } from '../navigation/sitemap.js'
 import { compareMatchInsightSummaries } from '../services/matchInsights.js'
 import { adminService } from '../services/adminService.js'
+import { translateApiError } from '../i18n/apiErrors.js'
+import { formatIsoDate } from '../utils/dateFormat.js'
+import { defaultRoleLabel } from './admin/players/playersHelpers.js'
+import { effectiveRenames, recordRename, renameLabelInText } from './admin/players/labelsHelpers.js'
 import ProfileImageField from './ProfileImageField.jsx'
 import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
@@ -201,6 +205,9 @@ const defaultLabelsDraft = (labels = defaultPenaLabels()) => ({
   position_labels: (labels.position_labels || []).join(', '),
   role_colors: { ...(labels.role_colors || {}) },
   position_colors: { ...(labels.position_colors || {}) },
+  // PL-03: pending in-place renames, `{ originalLabel: newLabel }`.
+  role_renames: {},
+  position_renames: {},
 })
 
 const normalizeLabelList = (value) => {
@@ -273,19 +280,6 @@ const defaultLabelFilters = () => ({
   position: [],
 })
 
-const pickPreferredLabel = (options, preferred) => {
-  if (!(options || []).length) {
-    return ''
-  }
-  const preferredLabel = (options || []).find(
-    (item) =>
-      String(item || '')
-        .trim()
-        .toLowerCase() === String(preferred || '').toLowerCase()
-  )
-  return preferredLabel || options[0] || ''
-}
-
 const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
   overview: 'dashboard.admin.heroSections.overview',
   seasons: 'dashboard.admin.heroSections.seasons',
@@ -295,13 +289,8 @@ const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
   standings: 'dashboard.admin.heroSections.standings',
 }
 
-const formatDate = (value) => {
-  if (!value) {
-    return '-'
-  }
-  const asDate = new Date(`${value}T00:00:00`)
-  return asDate.toLocaleDateString()
-}
+// PL-20: DD/MM/YYYY everywhere, matching the DateField inputs.
+const formatDate = formatIsoDate
 
 const formatEpochSeconds = (value) => {
   if (!value) {
@@ -376,7 +365,8 @@ const mapDashboardErrorMessage = (error, t) => {
   if (raw.includes('failed to fetch') || raw.includes('network')) {
     return t('dashboard.common.errors.network')
   }
-  return error.message
+  // PL-09: known backend details are shown translated instead of raw English.
+  return translateApiError(error, t) || error.message
 }
 
 const mapProfileImageErrorMessage = (error, t) => {
@@ -467,11 +457,7 @@ export default function AdminDashboard({
 
   // Form/draft state via the shared useForm hook. `setValues` is aliased to the
   // legacy setter names so the existing reset/merge call sites stay unchanged.
-  const {
-    values: seasonForm,
-    setValues: setSeasonForm,
-    onField: onSeasonFormField,
-  } = useForm(defaultSeasonForm)
+  const { values: seasonForm, setValues: setSeasonForm } = useForm(defaultSeasonForm)
   const [importPreviousSeasonRoster, setImportPreviousSeasonRoster] = useState(true)
   const [importSourceSeasonGuid, setImportSourceSeasonGuid] = useState('')
   const [selectedSeasonForm, setSelectedSeasonForm] = useState(defaultSeasonForm)
@@ -665,13 +651,15 @@ export default function AdminDashboard({
     onSelectedSeasonField,
     validateSelectedSeasonForm,
     resetSelectedSeasonDateErrors,
+    createSeasonErrors,
+    onCreateSeasonField: onSeasonField,
+    validateCreateSeasonForm,
+    resetCreateSeasonErrors,
   } = useAdminSeasons({
     setSelectedSeasonForm,
+    setSeasonForm,
     t,
   })
-
-  const onSeasonField = (name) =>
-    onSeasonFormField(name, name.startsWith('points_') ? Number : undefined)
 
   const onMatchFormLineupsChange = ({ homePlayerGuids, awayPlayerGuids }) => {
     setMatchForm((prev) => ({
@@ -690,6 +678,26 @@ export default function AdminDashboard({
         [label]: color,
       },
     }))
+  }
+
+  // PL-03: rename a label in place, keeping its colour; the backend moves the
+  // players using it to the new name.
+  const onRenameLabel = (kind, oldLabel, newLabel) => {
+    setLabelsDraft((prev) => {
+      const colorsKey = `${kind}_colors`
+      const colors = { ...(prev[colorsKey] || {}) }
+      const color = colors[oldLabel]
+      delete colors[oldLabel]
+      if (color) {
+        colors[newLabel] = color
+      }
+      return {
+        ...prev,
+        [`${kind}_labels`]: renameLabelInText(prev[`${kind}_labels`], oldLabel, newLabel),
+        [colorsKey]: colors,
+        [`${kind}_renames`]: recordRename(prev[`${kind}_renames`], oldLabel, newLabel),
+      }
+    })
   }
 
   const onStandingsFilterField = (name) => (event) => {
@@ -739,6 +747,8 @@ export default function AdminDashboard({
         position_labels: positionLabels,
         role_colors: roleColors,
         position_colors: positionColors,
+        role_renames: effectiveRenames(labelsDraft.role_renames, roleLabels),
+        position_renames: effectiveRenames(labelsDraft.position_renames, positionLabels),
       })
       const updated = sanitizePenaLabels(updatedRaw)
       setPenaLabels(updated)
@@ -747,7 +757,7 @@ export default function AdminDashboard({
         ...prev,
         role: hasLabel(updated.role_labels, prev.role)
           ? prev.role
-          : pickPreferredLabel(updated.role_labels, 'guest'),
+          : defaultRoleLabel(updated.role_labels, { hasAccount: false }),
         position: hasLabel(updated.position_labels, prev.position) ? prev.position : '',
       }))
       adminPlayers.syncMembershipDraftLabels(updated)
@@ -756,9 +766,18 @@ export default function AdminDashboard({
         position: pruneFilterValues(standingsFilters.position, updated.position_labels),
       }
       setStandingsFilters(nextStandingsFilters)
-      if (selectedSeasonGuid) {
-        await loadStandings(selectedPenaGuid, selectedSeasonGuid, nextStandingsFilters)
-      }
+      // PL-03: renames/removals change players' role/position server-side;
+      // refresh the directory (and the season roster) so the table is not stale.
+      const [refreshedPlayers] = await Promise.all([
+        loadHistoricalPlayersForPena(selectedPenaGuid),
+        selectedSeasonGuid
+          ? loadSeasonRoster(selectedPenaGuid, selectedSeasonGuid).then(setSeasonRoster)
+          : Promise.resolve(),
+        selectedSeasonGuid
+          ? loadStandings(selectedPenaGuid, selectedSeasonGuid, nextStandingsFilters)
+          : Promise.resolve(),
+      ])
+      adminPlayers.refreshHistoricalPlayers(refreshedPlayers || [])
       succeeded = true
     }, t('dashboard.admin.notices.labelsUpdated'))
     return succeeded
@@ -928,7 +947,7 @@ export default function AdminDashboard({
             ...prev,
             role: hasLabel(nextLabels.role_labels, prev.role)
               ? prev.role
-              : pickPreferredLabel(nextLabels.role_labels, 'guest'),
+              : defaultRoleLabel(nextLabels.role_labels, { hasAccount: false }),
             position: hasLabel(nextLabels.position_labels, prev.position) ? prev.position : '',
           }))
         }
@@ -954,7 +973,7 @@ export default function AdminDashboard({
           ...prev,
           role: hasLabel(nextLabels.role_labels, prev.role)
             ? prev.role
-            : pickPreferredLabel(nextLabels.role_labels, 'guest'),
+            : defaultRoleLabel(nextLabels.role_labels, { hasAccount: false }),
         }))
       } catch (requestError) {
         if (isStale()) {
@@ -1066,7 +1085,7 @@ export default function AdminDashboard({
             ...prev,
             role: hasLabel(labels.role_labels, prev.role)
               ? prev.role
-              : pickPreferredLabel(labels.role_labels, 'guest'),
+              : defaultRoleLabel(labels.role_labels, { hasAccount: false }),
             position: hasLabel(labels.position_labels, prev.position) ? prev.position : '',
           }))
           adminPlayers.syncMembershipDraftLabels(labels)
@@ -1241,8 +1260,13 @@ export default function AdminDashboard({
     if (!selectedPenaGuid) {
       return
     }
+    // PL-02/PL-07/PL-08: same rules as the edit form, before hitting the API.
+    if (!validateCreateSeasonForm(seasonForm)) {
+      return
+    }
     await runAction(async () => {
       const createdSeason = await adminService.createSeason(selectedPenaGuid, seasonForm)
+      resetCreateSeasonErrors()
 
       let importedCount = 0
       if (importPreviousSeasonRoster && importSourceSeasonGuid) {
@@ -1300,17 +1324,8 @@ export default function AdminDashboard({
     if (!selectedPenaGuid || !selectedSeasonGuid) {
       return
     }
+    // Dates and points (required integers >= 0) are validated per field.
     if (!validateSelectedSeasonForm(selectedSeasonForm)) {
-      return
-    }
-    const pointsValues = [
-      selectedSeasonForm.points_win,
-      selectedSeasonForm.points_draw,
-      selectedSeasonForm.points_loss,
-    ]
-    const pointsValid = pointsValues.every((item) => Number.isInteger(item) && item >= 0)
-    if (!pointsValid) {
-      setError(new Error(t('dashboard.admin.errors.invalidSeasonPoints')))
       return
     }
     await runAction(async () => {
@@ -1452,6 +1467,7 @@ export default function AdminDashboard({
     draftPositionColors,
     onLabelsDraftField,
     onLabelColorDraftChange,
+    onRenameLabel,
     handleSavePenaLabels,
     guestForm,
     setGuestForm,
@@ -1748,7 +1764,12 @@ export default function AdminDashboard({
               onGenerateJoinCode: handleGenerateJoinCode,
               onOpenMatchDetail: handleOpenOverviewMatchDetail,
               onAddPlayer: () => handleSectionChange('players'),
-              onAddGuest: () => adminPlayers.actions.handleCreateGuestPlayer(true),
+              // PL-01: open the new-player form preset to guest instead of
+              // POSTing an empty guest.
+              onAddGuest: () => {
+                adminPlayers.actions.openNewPlayerDialog({ asGuest: true })
+                handleSectionChange('players')
+              },
               onAddFunds: () => handleSectionChange('accountability'),
               onAddExpenses: () => handleSectionChange('accountability'),
               onStandings: () => handleSectionChange('standings'),
@@ -1780,6 +1801,7 @@ export default function AdminDashboard({
                 selectedSeasonGuid,
                 selectedSeasonForm,
                 selectedSeasonDateErrors,
+                createSeasonErrors,
               }}
               actions={{
                 onSeasonField,
