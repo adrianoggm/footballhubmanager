@@ -39,8 +39,9 @@ export function useAuth() {
     setState({ status: 'authenticated', error: null, session })
   }
 
+  // Auth failures (bad credentials, taken username...) are expected outcomes shown
+  // in the UI, so they are not logged to the console.
   const handleError = (error) => {
-    console.error('Auth error', error)
     setState((prev) => ({ ...prev, status: 'error', error }))
   }
 

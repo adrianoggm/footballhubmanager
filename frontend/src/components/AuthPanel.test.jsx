@@ -119,4 +119,16 @@ describe('AuthPanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: /register|registro/i }))
     expect(screen.queryByText(credentialsError)).not.toBeInTheDocument()
   })
+
+  it('does not log expected auth failures to the console (F12)', async () => {
+    authControllerMock.loginAdmin.mockRejectedValue(invalidCredentials())
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.type(await usernameInput(), 'root')
+    await user.type(passwordInput(), 'wrong-password{Enter}')
+    await screen.findByText(credentialsError)
+
+    expect(consoleError).not.toHaveBeenCalledWith('Auth error', expect.anything())
+  })
 })
