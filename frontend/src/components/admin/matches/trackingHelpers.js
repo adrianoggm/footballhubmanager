@@ -37,6 +37,27 @@ export const resolveDisplayedElapsed = (matchDetail, nowEpoch) => {
   return Math.max(storedElapsed, liveElapsed)
 }
 
+// Match list rows do not carry the pause bookkeeping (total_paused_seconds /
+// paused_at_epoch), but their elapsed_seconds is already computed by the API at
+// load time. Rebase the start on that snapshot so resolveDisplayedElapsed keeps
+// ticking from it while live and stays frozen otherwise (MT-08).
+export const resolveListRowElapsed = (match, nowEpoch, loadedAtEpoch) => {
+  const storedElapsed = Number(match?.elapsed_seconds || 0)
+  if (!isLiveTrackingStatus(match?.tracking_status) || !match?.started_at_epoch) {
+    return storedElapsed
+  }
+  return resolveDisplayedElapsed(
+    {
+      tracking_status: match.tracking_status,
+      elapsed_seconds: storedElapsed,
+      started_at_epoch: loadedAtEpoch - storedElapsed,
+      total_paused_seconds: 0,
+      paused_at_epoch: null,
+    },
+    nowEpoch
+  )
+}
+
 // The API only accepts value_delta of +1/-1 and defaults it to 1, so only a
 // missing value falls back to 1; an explicit 0 stays 0.
 export const resolveEventDelta = (event) => Number(event?.value_delta ?? 1) || 0
