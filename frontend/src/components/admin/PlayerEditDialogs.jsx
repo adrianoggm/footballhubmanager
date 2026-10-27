@@ -38,9 +38,9 @@ export function EditSeasonPlayerDialog({
         </DialogContentText>
         <Stack spacing={1.5}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            {/* PL-04: every player has a role, so there is no "no role" option. */}
             <LabelSelect
               label={t('dashboard.admin.members.role')}
-              noneLabel={t('dashboard.admin.members.roleNone')}
               value={draft.role}
               onChange={onField('role')}
               options={penaLabels.role_labels}
@@ -138,9 +138,9 @@ export function EditMembershipDialog({
             fullWidth
           />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            {/* PL-04: every player has a role, so there is no "no role" option. */}
             <LabelSelect
               label={t('dashboard.admin.members.role')}
-              noneLabel={t('dashboard.admin.members.roleNone')}
               value={draft.role}
               onChange={onField('role')}
               options={penaLabels.role_labels}

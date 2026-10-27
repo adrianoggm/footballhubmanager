@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
+import { buildPlayerLabeler } from './playersHelpers.js'
 
 // Admin palette (issue #147) comes from theme.custom.surfaces/tones so the
 // Player Directory follows the active preset (Ember keeps the warm look, #70).
@@ -44,6 +45,8 @@ export default function AddSeasonPlayersDialog({
   const geometry = getSurfaceGeometry(theme)
 
   const options = availablePlayers || []
+  // PL-06: players sharing a display name get a distinguishing detail.
+  const playerLabel = buildPlayerLabeler(options, formatPlayerDisplayName)
   const guids = selectedGuids || []
   const selectedPlayers = guids
     .map((guid) => options.find((player) => player.guid === guid))
@@ -80,7 +83,7 @@ export default function AddSeasonPlayersDialog({
             options={options}
             value={selectedPlayers}
             onChange={(_event, nextPlayers) => onSelect(nextPlayers.map((player) => player.guid))}
-            getOptionLabel={(option) => formatPlayerDisplayName(option)}
+            getOptionLabel={playerLabel}
             isOptionEqualToValue={(option, value) => option.guid === value.guid}
             disabled={!options.length}
             filterSelectedOptions

@@ -1,15 +1,19 @@
 import {
+  Alert,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   MenuItem,
   Stack,
   TextField,
   useTheme,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
+import { useEffect, useState } from 'react'
 import {
   translateNationalityLabel,
   translatePositionLabel,
@@ -25,6 +29,11 @@ import { getSurfaceGeometry } from '../../common/surfaceGeometry.js'
  * in AdminPlayersSection (issue #147, task 7). Purely presentational: all
  * field state lives in `guestForm`/`onGuestField` and both submit paths go
  * through `onCreate(addToSeason)` — the caller (task 8) owns the mutation.
+ *
+ * QA fixes: name and first surname are validated per field before submitting
+ * (PL-11); a possible duplicate (`duplicateNames`) must be acknowledged before
+ * creating (PL-06); there is no "no role" option because a membership always
+ * has a role — the form is preset with the pena default role (PL-04).
  */
 export default function NewPlayerDialog({
   open,
@@ -35,8 +44,38 @@ export default function NewPlayerDialog({
   roleOptions,
   positionOptions,
   onCreate,
+  duplicateNames = [],
   t,
 }) {
+  const [submitted, setSubmitted] = useState(false)
+  const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setSubmitted(false)
+      setDuplicateAcknowledged(false)
+    }
+  }, [open])
+
+  const requiredError = (name) =>
+    submitted && !String(guestForm[name] || '').trim()
+      ? t('dashboard.admin.guest.requiredField')
+      : ''
+  const nameError = requiredError('name')
+  const surname1Error = requiredError('surname1')
+  const hasDuplicates = duplicateNames.length > 0
+  const blockedByDuplicate = hasDuplicates && !duplicateAcknowledged
+
+  const handleCreate = (addToSeason) => {
+    setSubmitted(true)
+    const missingRequired =
+      !String(guestForm.name || '').trim() || !String(guestForm.surname1 || '').trim()
+    if (missingRequired || blockedByDuplicate) {
+      return
+    }
+    onCreate(addToSeason)
+  }
+
   const theme = useTheme()
   const { surfaces, tones } = theme.custom
   const surface = surfaces.raised
@@ -66,19 +105,27 @@ export default function NewPlayerDialog({
         sx: { backgroundColor: surface, color: textColor, borderRadius: geometry.surfaceRadius },
       }}
     >
-      <DialogTitle sx={{ color: textColor }}>{t('dashboard.admin.guest.title')}</DialogTitle>
+      <DialogTitle sx={{ color: textColor }}>
+        {t('dashboard.admin.guest.newPlayerTitle')}
+      </DialogTitle>
       <DialogContent dividers sx={{ borderColor: alpha(textColor, 0.12) }}>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <TextField
             label={t('dashboard.admin.guest.name')}
             value={guestForm.name}
             onChange={onGuestField('name')}
+            required
+            error={Boolean(nameError)}
+            helperText={nameError || undefined}
             fullWidth
           />
           <TextField
             label={t('dashboard.admin.guest.surname1')}
             value={guestForm.surname1}
             onChange={onGuestField('surname1')}
+            required
+            error={Boolean(surname1Error)}
+            helperText={surname1Error || undefined}
             fullWidth
           />
           <TextField
@@ -123,7 +170,6 @@ export default function NewPlayerDialog({
               onChange={onGuestField('role')}
               fullWidth
             >
-              <MenuItem value="">{t('dashboard.admin.guest.roleNone')}</MenuItem>
               {(roleOptions || []).map((roleLabel) => (
                 <MenuItem key={roleLabel} value={roleLabel}>
                   {translateRoleLabel(t, roleLabel)}
@@ -145,6 +191,22 @@ export default function NewPlayerDialog({
               ))}
             </TextField>
           </Stack>
+          {hasDuplicates && (
+            <Alert severity="warning">
+              {t('dashboard.admin.guest.duplicateWarning', { players: duplicateNames.join(', ') })}
+              <FormControlLabel
+                sx={{ display: 'flex', mt: 0.5 }}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={duplicateAcknowledged}
+                    onChange={(event) => setDuplicateAcknowledged(event.target.checked)}
+                  />
+                }
+                label={t('dashboard.admin.guest.duplicateConfirm')}
+              />
+            </Alert>
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -153,12 +215,18 @@ export default function NewPlayerDialog({
         </Button>
         <Button
           variant="outlined"
-          onClick={() => onCreate(false)}
+          onClick={() => handleCreate(false)}
+          disabled={blockedByDuplicate}
           sx={{ color: accent, borderColor: accent }}
         >
           {t('dashboard.admin.guest.createGuest')}
         </Button>
-        <Button variant="contained" onClick={() => onCreate(true)} sx={accentButtonSx}>
+        <Button
+          variant="contained"
+          onClick={() => handleCreate(true)}
+          disabled={blockedByDuplicate}
+          sx={accentButtonSx}
+        >
           {t('dashboard.admin.guest.createAndAdd')}
         </Button>
       </DialogActions>
