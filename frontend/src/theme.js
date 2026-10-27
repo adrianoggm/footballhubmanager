@@ -179,6 +179,27 @@ export const THEME_PRESETS = {
     typography: createSpaceTypography(),
     pageBackground:
       'radial-gradient(960px 560px at 92% 6%, rgba(19, 132, 119, 0.14) 0%, rgba(19, 132, 119, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(183, 121, 31, 0.14) 0%, rgba(183, 121, 31, 0) 52%), linear-gradient(180deg, #f4f1e8 0%, #f1eee5 100%)',
+    custom: {
+      surfaces: {
+        card: '#fffdf8',
+        cardAlt: '#f7f4ec',
+        raised: '#edf3f3',
+        inset: '#f4f1e8',
+        chipHome: '#dbe8ee',
+        chipAway: '#ece8de',
+        tooltip: '#ffffff',
+      },
+      tones: {
+        heading: '#2c3a4f',
+        muted: '#566375',
+        subtle: '#4a5668',
+        accent: '#0d6d65',
+        accentStrong: '#115e59',
+        accentHover: '#0d6d65',
+        accentSoftBg: alpha('#0d6d65', 0.12),
+        onRaised: '#0f172a',
+      },
+    },
   },
   'paper-light': {
     id: 'paper-light',
@@ -227,6 +248,27 @@ export const THEME_PRESETS = {
     typography: createSpaceTypography(),
     pageBackground:
       'radial-gradient(900px 520px at 100% 0%, rgba(194, 106, 28, 0.12) 0%, rgba(194, 106, 28, 0) 55%), radial-gradient(920px 540px at 0% 100%, rgba(2, 132, 199, 0.1) 0%, rgba(2, 132, 199, 0) 52%), linear-gradient(180deg, #fafbfd 0%, #f4f7fb 100%)',
+    custom: {
+      surfaces: {
+        card: '#ffffff',
+        cardAlt: '#f8fafc',
+        raised: '#eef2f7',
+        inset: '#f4f6fa',
+        chipHome: '#f6e7d8',
+        chipAway: '#e8edf3',
+        tooltip: '#ffffff',
+      },
+      tones: {
+        heading: '#334155',
+        muted: '#576476',
+        subtle: '#4b5563',
+        accent: '#9a500d',
+        accentStrong: '#8a4811',
+        accentHover: '#9a500d',
+        accentSoftBg: alpha('#c26a1c', 0.12),
+        onRaised: '#111827',
+      },
+    },
   },
   'coast-light': {
     id: 'coast-light',
@@ -275,6 +317,27 @@ export const THEME_PRESETS = {
     typography: createSpaceTypography(),
     pageBackground:
       'radial-gradient(980px 540px at 90% 0%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0) 56%), radial-gradient(940px 540px at 0% 100%, rgba(12, 139, 122, 0.14) 0%, rgba(12, 139, 122, 0) 54%), linear-gradient(180deg, #eff8f8 0%, #eaf3f5 100%)',
+    custom: {
+      surfaces: {
+        card: '#fbfeff',
+        cardAlt: '#f3fafb',
+        raised: '#e6f3f5',
+        inset: '#eef7f8',
+        chipHome: '#d7eef1',
+        chipAway: '#e9eef1',
+        tooltip: '#ffffff',
+      },
+      tones: {
+        heading: '#22394d',
+        muted: '#4f6a7a',
+        subtle: '#3f5a6b',
+        accent: '#0a7466',
+        accentStrong: '#0b6458',
+        accentHover: '#0a7466',
+        accentSoftBg: alpha('#0c8b7a', 0.12),
+        onRaised: '#10212f',
+      },
+    },
   },
   'midnight-dark': {
     id: 'midnight-dark',
@@ -323,6 +386,27 @@ export const THEME_PRESETS = {
     typography: createSpaceTypography(),
     pageBackground:
       'radial-gradient(960px 560px at 92% 6%, rgba(53, 185, 171, 0.14) 0%, rgba(53, 185, 171, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 52%), linear-gradient(180deg, #0c121a 0%, #0a1017 100%)',
+    custom: {
+      surfaces: {
+        card: '#141c26',
+        cardAlt: '#1a2c38',
+        raised: '#1b2e38',
+        inset: '#0f1820',
+        chipHome: '#1f3a47',
+        chipAway: '#1a222c',
+        tooltip: '#0d151d',
+      },
+      tones: {
+        heading: '#b9c7d6',
+        muted: '#94a2b3',
+        subtle: '#a5b2c2',
+        accent: '#4fc9bb',
+        accentStrong: '#79ddd2',
+        accentHover: '#5fd0c3',
+        accentSoftBg: alpha('#4fc9bb', 0.14),
+        onRaised: '#eef2f7',
+      },
+    },
   },
   'forest-dark': {
     id: 'forest-dark',
@@ -371,6 +455,27 @@ export const THEME_PRESETS = {
     typography: createSpaceTypography(),
     pageBackground:
       'radial-gradient(960px 560px at 92% 6%, rgba(32, 180, 134, 0.16) 0%, rgba(32, 180, 134, 0) 58%), radial-gradient(920px 560px at 0% 100%, rgba(56, 189, 248, 0.12) 0%, rgba(56, 189, 248, 0) 52%), linear-gradient(180deg, #0c1512 0%, #0a110f 100%)',
+    custom: {
+      surfaces: {
+        card: '#131d1a',
+        cardAlt: '#183029',
+        raised: '#1a3530',
+        inset: '#0e1714',
+        chipHome: '#1c3a32',
+        chipAway: '#1a2220',
+        tooltip: '#0c1512',
+      },
+      tones: {
+        heading: '#b4cdc3',
+        muted: '#8fa89e',
+        subtle: '#a6bdb3',
+        accent: '#3fcb9c',
+        accentStrong: '#6dd8b5',
+        accentHover: '#4fd1a6',
+        accentSoftBg: alpha('#3fcb9c', 0.14),
+        onRaised: '#ecf8f1',
+      },
+    },
   },
   'ember-dark': {
     id: 'ember-dark',
@@ -423,6 +528,27 @@ export const THEME_PRESETS = {
     typography: createSystemTypography(),
     pageBackground: '#090909',
     custom: {
+      // Ember is the reference look of the admin redesign (#144/#147): these
+      // values are the original hex literals and must stay pixel-identical.
+      surfaces: {
+        card: '#1E1E1E',
+        cardAlt: '#41312A',
+        raised: '#45342C',
+        inset: '#261812',
+        chipHome: '#41312A',
+        chipAway: '#2A2826',
+        tooltip: '#261812',
+      },
+      tones: {
+        heading: '#C1ACA3',
+        muted: '#88736A',
+        subtle: '#A8938A',
+        accent: '#DF9F80',
+        accentStrong: '#FCB491',
+        accentHover: '#f2a074',
+        accentSoftBg: 'rgba(223, 159, 128, 0.14)',
+        onRaised: '#F4EEE8',
+      },
       radius: {
         none: 0,
         sm: '5px',
@@ -430,6 +556,7 @@ export const THEME_PRESETS = {
         full: 9999,
       },
       gradients: {
+        brand: 'linear-gradient(160deg, rgba(21,33,55,1) 0%, rgba(22,84,84,1) 85%)',
         cardDepth1:
           'radial-gradient(ellipse 600px 400px at 40% 40%, rgba(61, 61, 65, 0.12) 0%, rgba(4, 4, 6, 0) 60%)',
         cardDepthBig:
@@ -508,6 +635,12 @@ const createCustomTokens = (preset) => {
       },
     },
     gradients: {
+      // Brand badge (dashboard rail): a deep tone of the preset into its secondary hue.
+      brand: `linear-gradient(160deg, ${
+        mode === 'dark'
+          ? palette.alternate?.dark || palette.background.default
+          : palette.primary.main
+      } 0%, ${palette.secondary?.dark || palette.primary.dark} 85%)`,
       cardDepth1:
         mode === 'dark'
           ? `radial-gradient(ellipse 680px 420px at 18% 0%, rgba(${primaryRgb}, 0.12) 0%, rgba(${primaryRgb}, 0) 58%)`
@@ -589,6 +722,10 @@ const createCustomTokens = (preset) => {
         ...(preset.custom?.dashboard?.shadows || {}),
       },
     },
+    // Semantic admin surfaces/tones: every preset defines the full set (see
+    // THEME_PRESETS[*].custom); theme.test.js enforces keys + WCAG contrast.
+    surfaces: { ...(preset.custom?.surfaces || {}) },
+    tones: { ...(preset.custom?.tones || {}) },
     gradients: {
       ...defaultTokens.gradients,
       ...(preset.custom?.gradients || {}),
