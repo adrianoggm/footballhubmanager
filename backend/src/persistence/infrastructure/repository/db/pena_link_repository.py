@@ -21,9 +21,9 @@ from core.domain.errors import (
 from core.domain.label_config import (
     DEFAULT_POSITION_LABELS,
     DEFAULT_ROLE_LABELS,
+    default_role_label,
     find_label,
     parse_labels_payload,
-    pick_preferred_label,
 )
 from persistence.infrastructure.entity import (
     FootballMatchEvent,
@@ -341,7 +341,8 @@ class SqlAlchemyPenaLinkRepository(PenaLinkPort):
                     ).scalars()
                 )
                 role_options = [role.name for role in roles] or list(DEFAULT_ROLE_LABELS)
-                default_role = pick_preferred_label(role_options, "member") or "member"
+                # The joining player always has an account -> member-first default.
+                default_role = default_role_label(role_options, has_account=True) or "member"
                 default_role_id = next(
                     (role.id for role in roles if role.name.casefold() == default_role.casefold()),
                     roles[0].id if roles else None,
