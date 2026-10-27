@@ -10,7 +10,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { centsToAmount, formatMoney, monthLabel } from './accountabilityHelpers.js'
+import {
+  centsToAmount,
+  createAxisMoneyFormatter,
+  formatMoney,
+  monthLabel,
+} from './accountabilityHelpers.js'
+import { blurActiveElement } from './dialogFocus.js'
+
+const isMissing = (value) => value === null || value === undefined
 
 function Figure({ label, value }) {
   return (
@@ -23,24 +31,45 @@ function Figure({ label, value }) {
   )
 }
 
+/**
+ * Monthly income vs expenses. For members either side may arrive as null (not
+ * shared); that series is left out of the chart. Opening balance / reserve are
+ * only shown when present.
+ */
 export default function CashFlowDialog({
   open,
   onClose,
   t,
   formatter,
+  currency,
+  locale,
   monthly,
   openingBalanceCents,
   reserveCents,
 }) {
   const theme = useTheme()
-  const data = (monthly || []).map((row) => ({
-    label: monthLabel(row.year, row.month),
-    income: centsToAmount(row.income_cents),
-    expense: centsToAmount(row.expense_cents),
+  const rows = monthly || []
+  const showIncome = rows.some((row) => !isMissing(row.income_cents))
+  const showExpense = rows.some((row) => !isMissing(row.expense_cents))
+  const data = rows.map((row) => ({
+    label: monthLabel(row.year, row.month, locale),
+    income: isMissing(row.income_cents) ? null : centsToAmount(row.income_cents),
+    expense: isMissing(row.expense_cents) ? null : centsToAmount(row.expense_cents),
   }))
+  const axisFormatter = createAxisMoneyFormatter(currency, locale)
+
+  const figures = [
+    { key: 'opening', label: 'openingBalance', cents: openingBalanceCents },
+    { key: 'reserve', label: 'reserveFund', cents: reserveCents },
+  ].filter((figure) => !isMissing(figure.cents))
+
+  const handleClose = () => {
+    blurActiveElement()
+    onClose()
+  }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>{t('dashboard.admin.accountability.cashflowTitle')}</DialogTitle>
       <DialogContent>
         <Stack useFlexGap spacing={2.5} sx={{ pt: 1 }}>
@@ -48,22 +77,20 @@ export default function CashFlowDialog({
             {t('dashboard.admin.accountability.cashflowDescription')}
           </Typography>
 
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Figure
-                label={t('dashboard.admin.accountability.openingBalance')}
-                value={formatMoney(formatter, openingBalanceCents)}
-              />
+          {figures.length ? (
+            <Grid container spacing={2}>
+              {figures.map((figure) => (
+                <Grid key={figure.key} item xs={6}>
+                  <Figure
+                    label={t(`dashboard.admin.accountability.${figure.label}`)}
+                    value={formatMoney(formatter, figure.cents)}
+                  />
+                </Grid>
+              ))}
             </Grid>
-            <Grid item xs={6}>
-              <Figure
-                label={t('dashboard.admin.accountability.reserveFund')}
-                value={formatMoney(formatter, reserveCents)}
-              />
-            </Grid>
-          </Grid>
+          ) : null}
 
-          {data.length ? (
+          {data.length && (showIncome || showExpense) ? (
             <Box sx={{ width: '100%', height: 300 }}>
               <ResponsiveContainer>
                 <BarChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
@@ -76,7 +103,11 @@ export default function CashFlowDialog({
                     dataKey="label"
                     tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                   />
-                  <YAxis tick={{ fontSize: 12, fill: theme.palette.text.secondary }} width={72} />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
+                    tickFormatter={(value) => axisFormatter.format(value)}
+                    width={72}
+                  />
                   <Tooltip
                     formatter={(value) => formatter.format(value)}
                     contentStyle={{
@@ -86,18 +117,22 @@ export default function CashFlowDialog({
                     }}
                   />
                   <Legend />
-                  <Bar
-                    dataKey="income"
-                    name={t('dashboard.admin.accountability.income')}
-                    fill={theme.palette.success.main}
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="expense"
-                    name={t('dashboard.admin.accountability.expense')}
-                    fill={theme.palette.error.main}
-                    radius={[4, 4, 0, 0]}
-                  />
+                  {showIncome ? (
+                    <Bar
+                      dataKey="income"
+                      name={t('dashboard.admin.accountability.income')}
+                      fill={theme.palette.success.main}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ) : null}
+                  {showExpense ? (
+                    <Bar
+                      dataKey="expense"
+                      name={t('dashboard.admin.accountability.expense')}
+                      fill={theme.palette.error.main}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ) : null}
                 </BarChart>
               </ResponsiveContainer>
             </Box>

@@ -668,11 +668,12 @@ export const messages = {
           kpiBalance: 'Total balance',
           kpiBalanceTrend: '{pct} vs last month',
           kpiFees: 'Membership fees',
-          kpiFeesCollected: '{pct}% collected',
+          kpiFeesCollected: '{pct} collected',
           kpiExpenses: 'Total expenses',
           kpiExpensesMonth: '{count} this month',
           kpiDues: 'Outstanding dues',
-          kpiDuesPending: '{count} members pending',
+          kpiDuesPendingOne: '{count} member pending',
+          kpiDuesPendingOther: '{count} members pending',
           // New transaction form
           newTransaction: 'New transaction',
           income: 'Income',
@@ -692,6 +693,9 @@ export const messages = {
           // Ledger
           ledgerTitle: 'Transaction ledger',
           ledgerDescription: 'Detailed history of all movements.',
+          ledgerDescriptionIncome: 'Detailed history of income movements.',
+          ledgerDescriptionExpense: 'Detailed history of expense movements.',
+          ledgerDetailNotShared: 'The admins have not shared the movement details.',
           filterAll: 'All',
           noTransactions: 'No transactions recorded yet.',
           colDate: 'Date',
@@ -705,6 +709,10 @@ export const messages = {
           // Members
           membersTitle: 'Member accounts',
           membersDescription: 'Track what each member owes and has paid. Toggle a row to edit it.',
+          membersManualHint:
+            'Debt and paid are manual adjustments: they do not create ledger movements or change the balance. To register a payment, record an income linked to the member.',
+          note: 'Internal note',
+          noteHelp: 'Only admins see it',
           member: 'Member',
           debt: 'Debt',
           paid: 'Paid',
@@ -745,6 +753,21 @@ export const messages = {
             transactionDeleted: 'Transaction removed',
             memberSaved: 'Member account saved',
             memberDeleted: 'Member account removed',
+          },
+          validation: {
+            amountRequired: 'Enter an amount',
+            amountPositive: 'The amount must be greater than 0',
+            amountNegative: 'The amount cannot be negative',
+            amountTooLarge: 'The amount is too large (max. 99,999,999.99)',
+            conceptRequired: 'Enter a concept',
+            dateRequired: 'Choose a date',
+          },
+          errors: {
+            amountOutOfRange: 'The amount is out of the allowed range.',
+            invalidData: 'Some data is not valid. Check the form and try again.',
+            memberNotFound: 'That member no longer belongs to the pena.',
+            transactionNotFound: 'That transaction no longer exists.',
+            accessDenied: 'You do not manage this pena.',
           },
         },
         guest: {
@@ -1986,11 +2009,12 @@ export const messages = {
           kpiBalance: 'Balance total',
           kpiBalanceTrend: '{pct} vs mes anterior',
           kpiFees: 'Cuotas de socios',
-          kpiFeesCollected: '{pct}% cobrado',
+          kpiFeesCollected: '{pct} cobrado',
           kpiExpenses: 'Gastos totales',
           kpiExpensesMonth: '{count} este mes',
           kpiDues: 'Deuda pendiente',
-          kpiDuesPending: '{count} socios pendientes',
+          kpiDuesPendingOne: '{count} socio pendiente',
+          kpiDuesPendingOther: '{count} socios pendientes',
           // Formulario de nuevo movimiento
           newTransaction: 'Nuevo movimiento',
           income: 'Ingreso',
@@ -2010,6 +2034,10 @@ export const messages = {
           // Libro de movimientos
           ledgerTitle: 'Libro de movimientos',
           ledgerDescription: 'Historial detallado de todos los movimientos.',
+          ledgerDescriptionIncome: 'Historial detallado de los ingresos.',
+          ledgerDescriptionExpense: 'Historial detallado de los gastos.',
+          ledgerDetailNotShared:
+            'Los administradores no han compartido el detalle de los movimientos.',
           filterAll: 'Todos',
           noTransactions: 'Aún no hay movimientos registrados.',
           colDate: 'Fecha',
@@ -2024,6 +2052,10 @@ export const messages = {
           membersTitle: 'Cuentas de socios',
           membersDescription:
             'Controla lo que debe y ha pagado cada socio. Activa una fila para editarla.',
+          membersManualHint:
+            'Deuda y pagado son ajustes manuales: no crean movimientos ni cambian el balance. Para registrar un pago, añade un ingreso vinculado al socio.',
+          note: 'Nota interna',
+          noteHelp: 'Solo la ven los administradores',
           member: 'Miembro',
           debt: 'Deuda',
           paid: 'Pagado',
@@ -2063,6 +2095,21 @@ export const messages = {
             transactionDeleted: 'Movimiento eliminado',
             memberSaved: 'Cuenta de miembro guardada',
             memberDeleted: 'Cuenta de miembro eliminada',
+          },
+          validation: {
+            amountRequired: 'Introduce un importe',
+            amountPositive: 'El importe debe ser mayor que 0',
+            amountNegative: 'El importe no puede ser negativo',
+            amountTooLarge: 'El importe es demasiado alto (máx. 99.999.999,99)',
+            conceptRequired: 'Introduce un concepto',
+            dateRequired: 'Elige una fecha',
+          },
+          errors: {
+            amountOutOfRange: 'El importe está fuera del rango permitido.',
+            invalidData: 'Hay datos no válidos. Revisa el formulario e inténtalo de nuevo.',
+            memberNotFound: 'Ese socio ya no pertenece a la peña.',
+            transactionNotFound: 'Ese movimiento ya no existe.',
+            accessDenied: 'No administras esta peña.',
           },
         },
         guest: {

@@ -6,6 +6,7 @@ import {
   DialogContentText,
   DialogTitle,
 } from '@mui/material'
+import { blurActiveElement } from './dialogFocus.js'
 
 /**
  * Minimal confirmation gate for destructive actions. `open` is derived from the
@@ -20,15 +21,24 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }) {
+  const handleClose = () => {
+    blurActiveElement()
+    onClose()
+  }
+  const handleConfirm = () => {
+    blurActiveElement()
+    onConfirm()
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{cancelLabel}</Button>
-        <Button color="error" variant="contained" onClick={onConfirm}>
+        <Button onClick={handleClose}>{cancelLabel}</Button>
+        <Button color="error" variant="contained" onClick={handleConfirm}>
           {confirmLabel}
         </Button>
       </DialogActions>
