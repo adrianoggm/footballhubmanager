@@ -38,6 +38,9 @@ from core.application.ports.season_competition_port import (
     MatchClockNotRunningError as RepositoryMatchClockNotRunningError,
 )
 from core.application.ports.season_competition_port import (
+    MatchEventCountBelowZeroError as RepositoryMatchEventCountBelowZeroError,
+)
+from core.application.ports.season_competition_port import (
     MatchEventNotFoundError as RepositoryMatchEventNotFoundError,
 )
 from core.application.ports.season_competition_port import (
@@ -84,6 +87,7 @@ from core.application.use_cases.season_competition_errors import (
     SeasonMatchClockAlreadyPausedError,
     SeasonMatchClockNotPausedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
@@ -465,6 +469,8 @@ class CreateSeasonMatchEventHandler:
             raise SeasonMatchNotFoundError() from exc
         except RepositoryMatchEventPlayerNotInMatchError as exc:
             raise SeasonMatchEventPlayerNotInMatchError() from exc
+        except RepositoryMatchEventCountBelowZeroError as exc:
+            raise SeasonMatchEventCountBelowZeroError() from exc
         except RepositoryMatchClockNotRunningError as exc:
             raise SeasonMatchClockNotRunningError() from exc
         except RepositoryMatchReportClosedError as exc:

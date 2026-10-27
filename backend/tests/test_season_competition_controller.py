@@ -72,6 +72,7 @@ from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
@@ -1033,6 +1034,11 @@ def test_create_season_match_event_success():
             SeasonMatchEventPlayerNotInMatchError(),
             409,
             "Event players must belong to the selected match",
+        ),
+        (
+            SeasonMatchEventCountBelowZeroError(),
+            400,
+            "The player has no recorded events of this type to remove",
         ),
     ],
 )

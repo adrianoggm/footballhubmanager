@@ -286,6 +286,10 @@ class MatchEventPlayerNotInMatchError(Exception):
     pass
 
 
+class MatchEventCountBelowZeroError(Exception):
+    """A negative event delta would take the player's count below zero."""
+
+
 class MatchReportClosedError(Exception):
     pass
 

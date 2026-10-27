@@ -49,6 +49,7 @@ from core.application.ports.season_competition_port import (
     MatchClockNotRunningError,
     MatchDetailResult,
     MatchesPageResult,
+    MatchEventCountBelowZeroError,
     MatchEventNotFoundError,
     MatchEventPlayerNotInMatchError,
     MatchLineupLockedError,
@@ -84,6 +85,7 @@ from core.application.use_cases.season_competition_errors import (
     PenaSeasonPenaNotFoundError,
     SeasonMatchAlreadyStartedError,
     SeasonMatchClockNotRunningError,
+    SeasonMatchEventCountBelowZeroError,
     SeasonMatchEventNotFoundError,
     SeasonMatchEventPlayerNotInMatchError,
     SeasonMatchInvalidPlayersError,
@@ -113,6 +115,7 @@ class _FakeRepo:
     should_raise_match_clock_not_running: bool = False
     should_raise_event_not_found: bool = False
     should_raise_event_player_not_in_match: bool = False
+    should_raise_event_count_below_zero: bool = False
     should_raise_match_report_closed: bool = False
     last_payload: dict | None = None
 
@@ -360,6 +363,8 @@ class _FakeRepo:
             raise MatchClockNotRunningError()
         if self.should_raise_event_player_not_in_match:
             raise MatchEventPlayerNotInMatchError()
+        if self.should_raise_event_count_below_zero:
+            raise MatchEventCountBelowZeroError()
         if self.should_raise_match_report_closed:
             raise MatchReportClosedError()
         if self.should_raise_invalid_match_data:
@@ -786,6 +791,7 @@ _ERROR_CASES = [
     ("event", "should_raise_match_clock_not_running", SeasonMatchClockNotRunningError),
     ("event", "should_raise_match_report_closed", SeasonMatchReportClosedError),
     ("event", "should_raise_invalid_match_data", InvalidSeasonMatchDataError),
+    ("event", "should_raise_event_count_below_zero", SeasonMatchEventCountBelowZeroError),
     # delete_match_event_for_admin
     ("delete_event", "should_raise_pena_not_found", PenaSeasonPenaNotFoundError),
     ("delete_event", "should_raise_access_denied", PenaSeasonAccessDeniedError),

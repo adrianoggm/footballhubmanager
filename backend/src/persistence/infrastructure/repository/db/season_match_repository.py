@@ -10,6 +10,7 @@ from core.application.ports.season_competition_port import (
     MatchClockNotRunningError,
     MatchDetailResult,
     MatchesPageResult,
+    MatchEventCountBelowZeroError,
     MatchEventCreateData,
     MatchEventNotFoundError,
     MatchEventPlayerNotInMatchError,
@@ -578,6 +579,15 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             player_guid=event.related_player_guid,
             players_by_guid=players_by_guid,
         )
+        if event.value_delta < 0 and primary_player is not None:
+            current_count = self._tracked_event_count(
+                events=self._list_locked_match_events(match_id=football_match.id),
+                player_id=int(primary_player.id_player),
+                event_type=event.event_type,
+            )
+            if current_count + event.value_delta < 0:
+                self.session.rollback()
+                raise MatchEventCountBelowZeroError()
 
         elapsed_seconds = self._resolve_event_elapsed_seconds(football_match, event.elapsed_seconds)
         match_event = FootballMatchEvent(
@@ -1493,6 +1503,20 @@ class SqlAlchemySeasonMatchRepository(SeasonMatchPort):
             preserved_by_player_id=preserved_by_player_id,
         )
         self.session.flush()
+
+    @staticmethod
+    def _tracked_event_count(
+        *,
+        events: list[FootballMatchEvent],
+        player_id: int,
+        event_type: str,
+    ) -> int:
+        return sum(
+            int(event.value_delta)
+            for event in events
+            if event.id_player == player_id
+            and str(event.event_type or "").strip().lower() == event_type
+        )
 
     @staticmethod
     def _apply_tracked_events_to_team_players(
