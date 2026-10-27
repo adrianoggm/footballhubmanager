@@ -172,6 +172,7 @@ export default function UserDashboard({
   const [insightsScope, setInsightsScope] = useState('selected_season')
   const seasonListRequestIdRef = useRef(0)
   const seasonDataRequestIdRef = useRef(0)
+  const seasonMatchesRequestIdRef = useRef(0)
 
   const selectedPena = useMemo(
     () => penas.find((item) => item.guid === selectedPenaGuid) || null,
@@ -238,8 +239,6 @@ export default function UserDashboard({
       : ''
   }, [routeSectionId, userQuickNavSections])
   const visibleUserSectionId = activeNavSectionId || userQuickNavSections[0]?.id || 'membership'
-  const shouldLoadStandings = visibleUserSectionId === 'standings'
-  const shouldLoadSeasonMatches = visibleUserSectionId === 'matches'
   const currentPlayerGuid = asText(profile?.guid || session?.user_guid).trim()
   const currentStanding = useMemo(() => {
     if (!currentPlayerGuid || standings.length === 0) {
@@ -399,9 +398,9 @@ export default function UserDashboard({
   }
 
   const loadSeasonMatchesData = async (penaGuid, seasonGuid) => {
-    const requestId = seasonDataRequestIdRef.current + 1
-    seasonDataRequestIdRef.current = requestId
-    const isStale = () => requestId !== seasonDataRequestIdRef.current
+    const requestId = seasonMatchesRequestIdRef.current + 1
+    seasonMatchesRequestIdRef.current = requestId
+    const isStale = () => requestId !== seasonMatchesRequestIdRef.current
 
     if (!seasonGuid) {
       if (isStale()) {
@@ -494,12 +493,9 @@ export default function UserDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPenaGuid])
 
+  // U-04: standings and matches feed the always-visible header KPIs, so they
+  // load for every section (the dashboard stays mounted across sections).
   useEffect(() => {
-    if (!shouldLoadStandings) {
-      setStandings([])
-      setSeasonDataLoading(false)
-      return
-    }
     if (!selectedPenaGuid || !seasonContextGuid || initializing) {
       setStandings([])
       setSeasonDataLoading(false)
@@ -531,13 +527,9 @@ export default function UserDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, seasonContextGuid, initializing, activeNavSectionId])
+  }, [selectedPenaGuid, seasonContextGuid, initializing])
 
   useEffect(() => {
-    if (!shouldLoadSeasonMatches) {
-      setSeasonMatches([])
-      return
-    }
     if (!selectedPenaGuid || !seasonContextGuid || initializing) {
       setSeasonMatches([])
       return
@@ -563,7 +555,7 @@ export default function UserDashboard({
       activeRequest = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPenaGuid, seasonContextGuid, initializing, activeNavSectionId])
+  }, [selectedPenaGuid, seasonContextGuid, initializing])
 
   useEffect(() => {
     resetMatchDetailDialog()
@@ -734,17 +726,16 @@ export default function UserDashboard({
     },
     {
       label: t('dashboard.user.standingsTitle'),
-      value: shouldLoadStandings && currentStanding ? `#${currentStanding.rank}` : '-',
-      helper:
-        shouldLoadStandings && currentStanding
-          ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
-          : t('dashboard.user.notInStandingsYet'),
+      value: currentStanding ? `#${currentStanding.rank}` : '-',
+      helper: currentStanding
+        ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
+        : t('dashboard.user.notInStandingsYet'),
       helperLabel: t('dashboard.common.summaryMeta.points'),
       tone: 'info',
     },
     {
       label: t('dashboard.user.matchesTitle'),
-      value: shouldLoadSeasonMatches ? String(orderedSeasonMatches.length) : '-',
+      value: seasonContextGuid ? String(orderedSeasonMatches.length) : '-',
       helper: selectedSeason ? selectedSeasonLabel : t('dashboard.user.noMatchesForSeason'),
       helperLabel: t('dashboard.common.summaryMeta.season'),
       tone: 'warning',

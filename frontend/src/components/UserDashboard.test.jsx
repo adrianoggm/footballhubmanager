@@ -158,6 +158,23 @@ describe('UserDashboard QA regressions', () => {
     )
     expect(screen.queryByText(/season not found/i)).not.toBeInTheDocument()
   })
+
+  it('U-04: header standings/matches KPIs are filled outside their own sections', async () => {
+    renderDashboard('membership')
+    await screen.findByText('Membership in Pena Alpha')
+
+    expect(await screen.findByText('#1')).toBeInTheDocument()
+    expect(await screen.findByText('Your points: 7', { exact: false })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(userServiceMock.listSeasonMatches).toHaveBeenCalledWith(
+        'pA',
+        'season-pA',
+        expect.anything()
+      )
+    )
+    // "2" is shown by the My Penas KPI (2 penas) and by the Matches KPI (2 matches).
+    await waitFor(() => expect(screen.getAllByText('2')).toHaveLength(2))
+  })
 })
 
 async function selectPenaFromSettings(penaName) {
