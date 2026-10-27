@@ -24,3 +24,19 @@ describe.each(['en', 'es'])('match messages (%s)', (language) => {
     expect(text).not.toContain('90d9408b-guid')
   })
 })
+
+// MT-14: "G" read as goals; wins use the same letter as the standings header.
+describe.each(['en', 'es'])('overview ranking line (%s)', (language) => {
+  const t = createTestT(language)
+
+  it('abbreviates wins and played like the standings table', () => {
+    const line = t('dashboard.admin.overview.rankingLineItem', {
+      played: 2,
+      wins: 1,
+      draws: 1,
+      points: 4,
+    })
+    expect(line).toContain(`1${t('dashboard.admin.table.w')} `)
+    expect(line).toContain(`2${t('dashboard.admin.table.played')} `)
+  })
+})

@@ -29,17 +29,19 @@ export default function RecentMatchesCard({ matches = [], t, onOpenMatchDetail, 
           <Typography variant="h6" sx={{ color: tones.heading }}>
             {t('dashboard.admin.overview.recentMatchesTitle')}
           </Typography>
-          <Typography
-            variant="caption"
-            sx={{
-              fontFamily: '"IBM Plex Mono", monospace',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: tones.accent,
-            }}
-          >
-            {t('dashboard.admin.overview.recentMatchesLast', { n: 3 })}
-          </Typography>
+          {recent.length ? (
+            <Typography
+              variant="caption"
+              sx={{
+                fontFamily: '"IBM Plex Mono", monospace',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: tones.accent,
+              }}
+            >
+              {t('dashboard.admin.overview.recentMatchesLast', { n: recent.length })}
+            </Typography>
+          ) : null}
         </Stack>
 
         {recent.length ? (

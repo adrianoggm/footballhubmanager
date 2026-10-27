@@ -1896,7 +1896,7 @@ export const messages = {
           versus: 'vs',
           rankingTitle: 'Ranking de rendimiento',
           rankingTop: 'Top {n}',
-          rankingLineItem: '{played}J · {wins}G · {draws}E · {points} PTS',
+          rankingLineItem: '{played}PJ · {wins}V · {draws}E · {points} PTS',
           recentMatchesTitle: 'Historial de partidos',
           recentMatchesLast: 'Últimos {n}',
           viewFullHistory: 'Ver historial completo',
