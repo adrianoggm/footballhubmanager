@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import { Suspense, lazy } from 'react'
 import { translatePositionLabel, translateRoleLabel } from '../../i18n/labels.js'
+import { readableTextColor } from '../../theme/contrastText.js'
 import { DEFAULT_LABEL_COLOR } from '../../theme/tokens.js'
 
 const AdminInsightsSection = lazy(() => import('./AdminInsightsSection.jsx'))
@@ -171,7 +172,7 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                             label={translateRoleLabel(t, player.role)}
                             sx={{
                               backgroundColor: player.role_color || DEFAULT_LABEL_COLOR,
-                              color: '#fff',
+                              color: readableTextColor(player.role_color || DEFAULT_LABEL_COLOR),
                             }}
                           />
                         ) : (
@@ -185,7 +186,9 @@ export default function AdminStandingsSection({ state, actions, helpers }) {
                             label={translatePositionLabel(t, player.position)}
                             sx={{
                               backgroundColor: player.position_color || DEFAULT_LABEL_COLOR,
-                              color: '#fff',
+                              color: readableTextColor(
+                                player.position_color || DEFAULT_LABEL_COLOR
+                              ),
                             }}
                           />
                         ) : (
