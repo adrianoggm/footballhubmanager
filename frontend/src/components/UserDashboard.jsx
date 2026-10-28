@@ -1,21 +1,13 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  LinearProgress,
-  Stack,
-  Typography,
-} from '@mui/material'
+import { Alert, Box } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
-import { HeaderIconButton } from './common'
-import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
+import { SkeletonSection } from './common'
 import { resolveDashboardIdentityImageUrl } from './dashboard/dashboardIdentity.js'
 import DashboardShell from './dashboard/DashboardShell.jsx'
 import MatchDetailDialog from './dashboard/MatchDetailDialog.jsx'
-import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
+import DashboardShellSkeleton from './dashboard/shell/DashboardShellSkeleton.jsx'
+import { formatSeasonLong } from './dashboard/shell/shellLogic.js'
+import { USER_JOIN_NAV, USER_MOBILE_NAV, USER_SHELL_NAV } from '../navigation/shellNav.js'
+import { translatePlural } from '../i18n/plural.js'
 import UserJoinSection from './user/UserJoinSection.jsx'
 import UserProfileSettingsDialog from './user/UserProfileSettingsDialog.jsx'
 import UserMatchesSection from './user/UserMatchesSection.jsx'
@@ -115,22 +107,7 @@ const mapProfileImageErrorMessage = (error, t) => {
 }
 
 function SectionLoader() {
-  return (
-    <Card sx={{ width: '100%' }}>
-      <CardContent>
-        <LinearProgress />
-      </CardContent>
-    </Card>
-  )
-}
-
-const USER_HERO_SUBTITLE_KEY_BY_SECTION = {
-  join: 'dashboard.user.heroSections.join',
-  membership: 'dashboard.user.heroSections.membership',
-  accountability: 'dashboard.user.heroSections.accountability',
-  standings: 'dashboard.user.heroSections.standings',
-  matches: 'dashboard.user.heroSections.matches',
-  insights: 'dashboard.user.heroSections.insights',
+  return <SkeletonSection />
 }
 
 export default function UserDashboard({
@@ -702,62 +679,85 @@ export default function UserDashboard({
     .filter(Boolean)
     .join(' ')
 
-  const userNavItems = userQuickNavSections.map((section) => ({
-    id: section.id,
-    label: t(section.titleKey),
-    icon: section.id,
-  }))
-  const activeUserSection =
-    userQuickNavSections.find((section) => section.id === visibleUserSectionId) ||
-    userQuickNavSections[0] ||
-    null
-  const activeUserSectionLabel = activeUserSection
-    ? t(activeUserSection.titleKey)
-    : t('dashboard.user.panelTitle')
-  const activeUserHeroSubtitle = t(
-    USER_HERO_SUBTITLE_KEY_BY_SECTION[activeUserSection?.id] || 'dashboard.user.heroSubtitle'
-  )
+  // Shell navigation (redesign F1): fixed order; sections that need a peña or
+  // a season stay visible but disabled until they are available.
+  const availableUserSectionIds = new Set(userQuickNavSections.map((section) => section.id))
+  const userNavItems = USER_SHELL_NAV.map((navEntry) => {
+    const available = availableUserSectionIds.has(navEntry.id)
+    return {
+      ...navEntry,
+      label: t(navEntry.labelKey),
+      disabled: !available,
+      disabledReason: available
+        ? ''
+        : t(
+            selectedPenaGuid ? 'dashboard.user.noSeasonsAvailable' : 'dashboard.user.noPenasLinked'
+          ),
+    }
+  })
+  const userJoinItem = {
+    ...USER_JOIN_NAV,
+    label: t(USER_JOIN_NAV.labelKey),
+    onClick: () => handleNavigateToSection('join'),
+  }
+  const activeUserSectionLabel =
+    visibleUserSectionId === 'join'
+      ? userJoinItem.label
+      : userNavItems.find((item) => item.id === visibleUserSectionId)?.label ||
+        t('dashboard.user.panelTitle')
 
-  const userSummaryCards = [
+  const userPenaOptions = penas.map((pena) => ({
+    guid: pena.guid,
+    name: pena.name,
+    imageUrl: resolveDashboardIdentityImageUrl(pena),
+    meta: t('shell.rolePlayer'),
+  }))
+  const userCommandItems = [
     {
-      label: t('dashboard.user.myPenasTitle'),
-      value: String(penas.length),
-      helper: selectedPena?.name || t('dashboard.user.noPenasLinked'),
-      helperLabel: t('dashboard.common.summaryMeta.activePena'),
-      tone: 'secondary',
+      id: 'joinPena',
+      group: 'actions',
+      label: userJoinItem.label,
+      icon: 'link',
+      onSelect: userJoinItem.onClick,
     },
-    {
-      label: t('dashboard.user.selectedSeason'),
-      value: selectedSeason ? selectedSeasonLabel : '-',
-      helper: selectedPena ? selectedPena.name : t('dashboard.user.noPenasLinked'),
-      helperLabel: t('dashboard.common.summaryMeta.activePena'),
-      tone: 'primary',
-    },
-    {
-      label: t('dashboard.user.standingsTitle'),
-      value: currentStanding ? `#${currentStanding.rank}` : '-',
-      helper: currentStanding
-        ? t('dashboard.user.yourPointsLabel', { points: currentStanding.points })
-        : t('dashboard.user.notInStandingsYet'),
-      helperLabel: t('dashboard.common.summaryMeta.points'),
-      tone: 'info',
-    },
-    {
-      label: t('dashboard.user.matchesTitle'),
-      value: seasonContextGuid ? String(orderedSeasonMatches.length) : '-',
-      helper: selectedSeason ? selectedSeasonLabel : t('dashboard.user.noMatchesForSeason'),
-      helperLabel: t('dashboard.common.summaryMeta.season'),
-      tone: 'warning',
-    },
+    ...orderedSeasonMatches.map((match) => ({
+      id: match.guid,
+      group: 'matches',
+      searchOnly: true,
+      icon: 'calendar',
+      label: t('shell.palette.matchItem', {
+        date: formatDate(match.match_date),
+        home: match.home_team_name || '',
+        away: match.away_team_name || '',
+        score: `${match.home_score ?? 0}–${match.away_score ?? 0}`,
+      }),
+      onSelect: () => {
+        handleNavigateToSection('matches')
+        handleOpenMatchDetail(match.guid)
+      },
+    })),
+    ...standings.map((row) => ({
+      id: row.player_guid,
+      group: 'players',
+      searchOnly: true,
+      icon: 'users',
+      label: row.nickname || row.player_name || [row.name, row.surname1].filter(Boolean).join(' '),
+      onSelect: () => handleNavigateToSection('standings'),
+    })),
+    ...(penas.length > 1
+      ? userPenaOptions.map((pena) => ({
+          id: pena.guid,
+          group: 'penas',
+          searchOnly: true,
+          icon: 'home',
+          label: pena.name,
+          onSelect: () => setSelectedPenaGuid(pena.guid),
+        }))
+      : []),
   ]
 
   if (initializing) {
-    return (
-      <Stack spacing={2}>
-        <Typography variant="h5">{t('dashboard.user.loadingTitle')}</Typography>
-        <LinearProgress />
-      </Stack>
-    )
+    return <DashboardShellSkeleton label={t('dashboard.user.loadingTitle')} />
   }
 
   // Selection state stays owned here; exposed through context so the shared
@@ -784,74 +784,54 @@ export default function UserDashboard({
   return (
     <DashboardContext.Provider value={dashboardContextValue}>
       <DashboardShell
-        brand={t('app.brand')}
-        brandShort="FH"
-        railLabel={t('dashboard.user.panelTitle')}
         navItems={userNavItems}
-        activeNavId={activeNavSectionId}
+        activeNavId={visibleUserSectionId}
         onNavChange={handleNavigateToSection}
-        title={activeNavSectionId !== 'overview' ? activeUserSectionLabel : ''}
-        subtitle={activeNavSectionId !== 'overview' ? activeUserHeroSubtitle : ''}
-        headerAside={
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={2}
-            alignItems={{ xs: 'stretch', md: 'center' }}
-            justifyContent="space-between"
-            sx={{ width: '100%' }}
-          >
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-              <DashboardIdentitySlot
-                name={selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')}
-                subtitle={profileDisplayName || ''}
-                imageUrl={
-                  resolveDashboardIdentityImageUrl(selectedPena) ||
-                  resolveDashboardIdentityImageUrl(profile)
-                }
-                imageAlt={
-                  selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle')
-                }
-              />
-              <PenaSeasonSelector />
-            </Stack>
-
-            <Stack
-              direction="row"
-              spacing={0.6}
-              flexWrap="wrap"
-              useFlexGap
-              alignItems="center"
-              justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-            >
-              <HeaderIconButton
-                icon="refresh"
-                label={t('dashboard.common.refresh')}
-                onClick={() => runAction(loadDashboard)}
-                disabled={loading}
-                color="primary"
-              />
-              <HeaderIconButton
-                icon="settings"
-                label={t('dashboard.user.openSettings')}
-                onClick={openProfileSettings}
-                disabled={loading}
-                color="primary"
-              />
-              <HeaderIconButton
-                icon="logout"
-                label={t('dashboard.common.logout')}
-                onClick={onLogout}
-                disabled={loading}
-                color="error"
-              />
-            </Stack>
-          </Stack>
+        extraGroup={{ title: t('shell.penasGroup'), items: [userJoinItem] }}
+        mobileNav={USER_MOBILE_NAV.map((item) => ({ ...item, label: t(item.labelKey) }))}
+        title={activeUserSectionLabel}
+        breadcrumb={selectedPena?.name || ''}
+        mobileSubtitle={[selectedPena?.name, formatSeasonLong(selectedSeason)]
+          .filter(Boolean)
+          .join(' · ')}
+        penaSwitcher={{
+          pena: {
+            name: selectedPena?.name || profileDisplayName || t('dashboard.user.panelTitle'),
+            imageUrl:
+              resolveDashboardIdentityImageUrl(selectedPena) ||
+              resolveDashboardIdentityImageUrl(profile),
+            meta: [
+              t('shell.rolePlayer'),
+              translatePlural(t, language, 'shell.penasCount', penas.length),
+            ].join(' · '),
+          },
+          penas: userPenaOptions,
+          selectedPenaGuid,
+          onSelectPena: setSelectedPenaGuid,
+          switchable: true,
+          footerActions: [
+            { id: 'join', label: userJoinItem.label, icon: 'plus', onClick: userJoinItem.onClick },
+          ],
+        }}
+        commandItems={userCommandItems}
+        account={{
+          onOpenSettings: openProfileSettings,
+          settingsDisabled: loading,
+          onRefresh: () => runAction(loadDashboard),
+          refreshLabel: t('dashboard.common.refreshData'),
+          onLogout,
+          logoutLabel: t('dashboard.common.logout'),
+          loading,
+        }}
+        notice={
+          <AccountEmailNotice
+            accountEmail={accountEmail}
+            onOpenSettings={openEmailSettings}
+            userGuid={session?.user_guid}
+          />
         }
-        summaryCards={userSummaryCards}
       >
-        {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openEmailSettings} />
 
         {visibleUserSectionId === 'join' && (
           <UserJoinSection

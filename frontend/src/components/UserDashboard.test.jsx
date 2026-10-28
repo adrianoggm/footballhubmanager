@@ -115,7 +115,9 @@ function renderDashboard(sectionId = 'membership') {
   }
 }
 
-describe('UserDashboard QA regressions', () => {
+// Generous timeout: the first mount pays the lazy MUI/shell import cost when
+// the whole suite runs in parallel.
+describe('UserDashboard QA regressions', { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.localStorage.clear()
@@ -141,7 +143,7 @@ describe('UserDashboard QA regressions', () => {
       )
     )
 
-    await selectPenaFromSettings('Pena Beta')
+    await selectPenaFromSwitcher('Pena Beta')
 
     await waitFor(() =>
       expect(userServiceMock.listSeasonMatches).toHaveBeenCalledWith(
@@ -158,12 +160,10 @@ describe('UserDashboard QA regressions', () => {
     expect(screen.queryByText(/season not found/i)).not.toBeInTheDocument()
   })
 
-  it('U-04: header standings/matches KPIs are filled outside their own sections', async () => {
+  it('U-04 / 5.9: no repeated KPI cards, but standings and matches still load for every section', async () => {
     renderDashboard('membership')
     await screen.findByText('Membership in Pena Alpha')
 
-    expect(await screen.findByText('#1')).toBeInTheDocument()
-    expect(await screen.findByText('Your points: 7', { exact: false })).toBeInTheDocument()
     await waitFor(() =>
       expect(userServiceMock.listSeasonMatches).toHaveBeenCalledWith(
         'pA',
@@ -171,32 +171,54 @@ describe('UserDashboard QA regressions', () => {
         expect.anything()
       )
     )
-    // "2" is shown by the My Penas KPI (2 penas) and by the Matches KPI (2 matches).
-    await waitFor(() => expect(screen.getAllByText('2')).toHaveLength(2))
+    await waitFor(() => expect(userServiceMock.listStandings).toHaveBeenCalled())
+    expect(screen.queryByText('#1')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your points: 7', { exact: false })).not.toBeInTheDocument()
   })
 
-  it('U-08: the user season selector marks the active season', async () => {
+  it('U-08: the user season chip marks the active season', async () => {
     renderDashboard('membership')
     await screen.findByText('Membership in Pena Alpha')
 
-    const seasonSelect = screen
-      .getAllByRole('combobox')
-      .find((element) => element.textContent.includes('26/27'))
-    fireEvent.mouseDown(seasonSelect)
+    fireEvent.click(screen.getByRole('button', { name: /: 2026\/27$/ }))
 
-    expect(await screen.findByRole('option', { name: '26/27 (Active)' })).toBeInTheDocument()
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getByRole('menuitem', { name: /2026\/27\s*Active/ })).toBeInTheDocument()
   })
 
-  it('U-16: header actions follow the admin order (refresh, settings, logout)', async () => {
+  it('U-16: settings, refresh and logout stay reachable from the shell (admin parity)', async () => {
     renderDashboard('membership')
     await screen.findByText('Membership in Pena Alpha')
 
-    const headerIcons = screen
-      .getAllByRole('button')
-      .map((button) => button.textContent.trim())
-      .filter((text) => ['refresh', 'settings', 'logout'].includes(text))
+    expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings & profile' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument()
+  })
 
-    expect(headerIcons).toEqual(['refresh', 'settings', 'logout'])
+  it('switches pena from the sidebar switcher, which also offers "Join a pena"', async () => {
+    const onSectionChange = vi.fn()
+    render(
+      <I18nProvider>
+        <ThemeModeProvider>
+          <ToastProvider>
+            <UserDashboard
+              session={session}
+              onLogout={vi.fn()}
+              routeSectionId="membership"
+              onSectionChange={onSectionChange}
+            />
+          </ToastProvider>
+        </ThemeModeProvider>
+      </I18nProvider>
+    )
+    await screen.findByText('Membership in Pena Alpha')
+
+    fireEvent.click(screen.getByRole('button', { name: /Switch pena/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Join a pena' }))
+    expect(onSectionChange).toHaveBeenCalledWith('join')
+
+    await selectPenaFromSwitcher('Pena Beta')
+    expect(await screen.findByText('Membership in Pena Beta')).toBeInTheDocument()
   })
 
   it('U-12: "Add email" opens settings with the email field focused', async () => {
@@ -211,9 +233,9 @@ describe('UserDashboard QA regressions', () => {
   })
 })
 
-async function selectPenaFromSettings(penaName) {
-  fireEvent.click(screen.getByText('settings').closest('button'))
-  const dialog = await screen.findByRole('dialog')
-  fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Current pena' }))
-  fireEvent.click(await screen.findByRole('option', { name: penaName }))
+// Peña switching moved from the settings dialog to the sidebar switcher (F1).
+async function selectPenaFromSwitcher(penaName) {
+  fireEvent.click(screen.getByRole('button', { name: /Switch pena/ }))
+  const popover = await screen.findByRole('presentation')
+  fireEvent.click(within(popover).getByRole('button', { name: new RegExp(penaName) }))
 }

@@ -12,6 +12,7 @@ import {
 import LineupDragBuilder from '../../LineupDragBuilder.jsx'
 import DateField from '../../common/DateField.jsx'
 import { touchTargetChipSx } from '../../common/touchTarget.js'
+import { SHELL_TARGETS } from '../../dashboard/shell/focusTarget.js'
 import InlineActionError from './InlineActionError.jsx'
 
 const toIsoDate = (date) => {
@@ -79,7 +80,7 @@ export default function MatchCreateCard({ state, actions, helpers, inlineError =
   const { t, formatDate } = helpers
 
   return (
-    <Card>
+    <Card id={SHELL_TARGETS.createMatch} sx={{ scrollMarginTop: 72 }}>
       <CardContent>
         <Stack spacing={2}>
           <Typography variant="h6">{t('dashboard.admin.matches.title')}</Typography>

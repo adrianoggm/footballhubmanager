@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useMemo, useState } from 'react'
+import { SHELL_TARGETS } from '../../dashboard/shell/focusTarget.js'
 import {
   AMOUNT_RULES,
   MAX_TEXT_LENGTH,
@@ -115,8 +116,10 @@ export default function NewTransactionCard({
 
   return (
     <Card
+      id={SHELL_TARGETS.newTransaction}
       sx={(theme) => ({
         height: '100%',
+        scrollMarginTop: 72,
         // Match the Quick Actions accent on this card's text + labels.
         '& .MuiInputLabel-root:not(.Mui-error)': { color: accentOf(theme) },
         '& .MuiFormHelperText-root:not(.Mui-error)': { color: alpha(accentOf(theme), 0.7) },

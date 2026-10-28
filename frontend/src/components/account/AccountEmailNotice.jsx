@@ -1,59 +1,118 @@
-import { Alert, Button, Stack, useMediaQuery } from '@mui/material'
-import { useTheme } from '@mui/material/styles'
+import { Box, Button, IconButton, Typography } from '@mui/material'
+import { alpha, useTheme } from '@mui/material/styles'
 import { useState } from 'react'
 import { useI18n } from '../../i18n/useI18n.js'
 import { EMAIL_NOTICE } from '../../services/accountEmailHelpers.js'
+import {
+  dismissEmailNotice,
+  emailNoticeFingerprint,
+  isEmailNoticeDismissed,
+} from '../../services/emailNoticeDismissal.js'
+import ShellIcon from '../dashboard/shell/ShellIcon.jsx'
 
 /**
- * Non-blocking dashboard notice shown while the account has no email or has not
- * verified it (password recovery needs a verified email). Dismissible for the
- * current view only; it comes back on the next load until the email is verified.
+ * Non-blocking one-line notice under the dashboard topbar while the account has
+ * no email or has not verified it (password recovery needs a verified email).
+ * Dismissal is remembered per account (localStorage) until the email state
+ * changes.
  */
-export default function AccountEmailNotice({ accountEmail, onOpenSettings }) {
+export default function AccountEmailNotice({ accountEmail, onOpenSettings, userGuid = '' }) {
   const { t } = useI18n()
-  const [dismissed, setDismissed] = useState(false)
-  // U-10: on phones the action buttons would squeeze the message into a sliver;
-  // there they stack under the full-width text instead of sitting beside it.
   const theme = useTheme()
-  const isPhone = useMediaQuery(theme.breakpoints.down('sm'))
+  const shell = theme.custom?.shell || {}
+  const tones = theme.custom?.tones || {}
   const { notice, saving, error, info } = accountEmail
+  const fingerprint = emailNoticeFingerprint(notice, accountEmail.email)
+  const [dismissedFingerprint, setDismissedFingerprint] = useState(null)
 
-  if (!notice || dismissed) {
+  if (
+    !notice ||
+    dismissedFingerprint === fingerprint ||
+    isEmailNoticeDismissed(userGuid, fingerprint)
+  ) {
     return null
   }
 
   const isMissing = notice === EMAIL_NOTICE.MISSING
+  const actionSx = {
+    minHeight: 28,
+    py: 0,
+    px: 0.75,
+    fontWeight: 700,
+    color: tones.accent,
+    whiteSpace: 'nowrap',
+  }
 
-  const actions = (
-    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-      {!isMissing && (
+  const dismiss = () => {
+    dismissEmailNotice(userGuid, fingerprint)
+    setDismissedFingerprint(fingerprint)
+  }
+
+  return (
+    <Box
+      role="status"
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        px: { xs: 2, md: 3.5 },
+        py: 0.5,
+        minHeight: 38,
+        fontSize: '0.8rem',
+        color: tones.subtle,
+        bgcolor: alpha(shell.sidebar || theme.palette.background.default, 0.6),
+        borderBottom: `1px solid ${shell.line}`,
+      }}
+    >
+      <ShellIcon name="bell" size={15} />
+      <Typography
+        component="span"
+        sx={{ fontSize: 'inherit', minWidth: 0, flexShrink: 1, overflowWrap: 'anywhere' }}
+      >
+        {error || info || (isMissing ? t('shell.emailNotice.missing') : null)}
+        {!error && !info && !isMissing ? (
+          <>
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              {t('shell.emailNotice.unverified', { email: accountEmail.email })}
+            </Box>
+            {/* Phones: the short copy keeps the notice to two lines. */}
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+              {t('shell.emailNotice.unverifiedShort')}
+            </Box>
+          </>
+        ) : null}
+      </Typography>
+      {!isMissing ? (
         <Button
-          color="inherit"
           size="small"
           disabled={saving}
           onClick={() => accountEmail.resendVerification()}
+          aria-label={t('accountEmail.resend')}
+          sx={actionSx}
         >
-          {t('accountEmail.resend')}
+          {t('shell.emailNotice.resend')}
         </Button>
-      )}
-      <Button color="inherit" size="small" onClick={onOpenSettings}>
+      ) : null}
+      <Button
+        size="small"
+        onClick={onOpenSettings}
+        sx={{
+          ...actionSx,
+          // Phones keep one action; "Change email" stays reachable in settings.
+          display: isMissing ? 'inline-flex' : { xs: 'none', sm: 'inline-flex' },
+        }}
+      >
         {isMissing ? t('accountEmail.addAction') : t('accountEmail.changeAction')}
       </Button>
-    </Stack>
-  )
-
-  return (
-    <Alert
-      severity={isMissing ? 'warning' : 'info'}
-      onClose={() => setDismissed(true)}
-      action={isPhone ? undefined : actions}
-      sx={{ '& .MuiAlert-message': { flex: 1, minWidth: 0, overflowWrap: 'break-word' } }}
-    >
-      {isMissing
-        ? t('accountEmail.noticeMissing')
-        : t('accountEmail.noticeUnverified', { email: accountEmail.email })}
-      {(error || info) && <div>{error || info}</div>}
-      {isPhone && <Stack sx={{ mt: 1 }}>{actions}</Stack>}
-    </Alert>
+      <Box sx={{ flex: 1 }} />
+      <IconButton
+        size="small"
+        aria-label={t('shell.emailNotice.dismiss')}
+        onClick={dismiss}
+        sx={{ color: tones.muted, flex: 'none' }}
+      >
+        <ShellIcon name="close" size={15} />
+      </IconButton>
+    </Box>
   )
 }

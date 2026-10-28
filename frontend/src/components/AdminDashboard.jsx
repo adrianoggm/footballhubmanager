@@ -2,27 +2,14 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   Divider,
-  Grid,
-  LinearProgress,
   MenuItem,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TableContainer,
   TextField,
-  Typography,
 } from '@mui/material'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useAdminPlayers } from '../hooks/useAdminPlayers.js'
@@ -49,7 +36,6 @@ import { formatIsoDate } from '../utils/dateFormat.js'
 import { defaultRoleLabel } from './admin/players/playersHelpers.js'
 import { effectiveRenames, recordRename, renameLabelInText } from './admin/players/labelsHelpers.js'
 import ProfileImageField from './ProfileImageField.jsx'
-import { DashboardIdentitySlot } from './dashboard/DashboardShell.jsx'
 import AppearanceSettings from './dashboard/AppearanceSettings.jsx'
 import AccountEmailNotice from './account/AccountEmailNotice.jsx'
 import AccountEmailSettings from './account/AccountEmailSettings.jsx'
@@ -66,8 +52,18 @@ import {
   normalizePlayerGuids,
   setUnionSize,
 } from './admin/matches/lineupHelpers.js'
-import PenaSeasonSelector from './dashboard/PenaSeasonSelector.jsx'
-import { ConfirmDialog, EmptyState, HeaderIconButton } from './common'
+import { revealShellTarget, SHELL_TARGETS } from './dashboard/shell/focusTarget.js'
+import { formatSeasonLong } from './dashboard/shell/shellLogic.js'
+import DashboardShellSkeleton from './dashboard/shell/DashboardShellSkeleton.jsx'
+import LegalFooterLinks from './dashboard/LegalFooterLinks.jsx'
+import { ConfirmDialog, EmptyState, SkeletonSection } from './common'
+import {
+  ADMIN_MOBILE_NAV,
+  ADMIN_MORE_NAV_IDS,
+  ADMIN_SHELL_NAV,
+  ADMIN_SHORTCUT_ACTION_IDS,
+} from '../navigation/shellNav.js'
+import { translatePlural } from '../i18n/plural.js'
 import { DashboardContext } from '../context/dashboardContext.js'
 import {
   DEFAULT_LABEL_COLOR,
@@ -286,15 +282,6 @@ const defaultLabelFilters = () => ({
   position: [],
 })
 
-const ADMIN_HERO_SUBTITLE_KEY_BY_SECTION = {
-  overview: 'dashboard.admin.heroSections.overview',
-  seasons: 'dashboard.admin.heroSections.seasons',
-  accountability: 'dashboard.admin.heroSections.accountability',
-  players: 'dashboard.admin.heroSections.players',
-  matches: 'dashboard.admin.heroSections.matches',
-  standings: 'dashboard.admin.heroSections.standings',
-}
-
 // PL-20: DD/MM/YYYY everywhere, matching the DateField inputs.
 const formatDate = formatIsoDate
 
@@ -384,13 +371,7 @@ const mapProfileImageErrorMessage = (error, t) => {
 }
 
 function SectionLoader() {
-  return (
-    <Card sx={{ width: '100%' }}>
-      <CardContent>
-        <LinearProgress />
-      </CardContent>
-    </Card>
-  )
+  return <SkeletonSection />
 }
 
 const collectPagedItems = async (fetchPage, { maxConcurrent = 3 } = {}) => {
@@ -1574,12 +1555,14 @@ export default function AdminDashboard({
     },
   }
 
-  const adminNavItems = adminSections.map((section) => {
-    const locked = Boolean(section.requiresSeason) && !hasSeason
+  // Shell navigation in the redesign order (frequency of use); the sitemap
+  // still owns ids, paths and the season gating.
+  const adminNavItems = ADMIN_SHELL_NAV.map((navEntry) => {
+    const section = adminSections.find((item) => item.id === navEntry.id)
+    const locked = Boolean(section?.requiresSeason) && !hasSeason
     return {
-      id: section.id,
-      label: t(section.titleKey),
-      icon: section.id,
+      ...navEntry,
+      label: t(section?.titleKey || navEntry.id),
       disabled: locked,
       disabledReason: locked ? t('dashboard.admin.navLockedNoSeason') : '',
     }
@@ -1588,9 +1571,124 @@ export default function AdminDashboard({
   const activeAdminSectionLabel = activeAdminSection
     ? t(activeAdminSection.titleKey)
     : t('dashboard.admin.panelTitle')
-  const activeAdminHeroSubtitle = t(
-    ADMIN_HERO_SUBTITLE_KEY_BY_SECTION[activeSection] || 'dashboard.admin.heroSubtitle'
-  )
+
+  // Create shortcuts: navigate to the section and bring its existing create UI
+  // into view (the forms themselves are redesigned by the section phases).
+  const createActionsById = {
+    newMatch: {
+      id: 'newMatch',
+      label: t('shell.actions.newMatch'),
+      icon: 'plus',
+      shortcut: 'N P',
+      onClick: () => {
+        handleSectionChange('matches')
+        if (hasSeason) {
+          revealShellTarget(SHELL_TARGETS.createMatch)
+        }
+      },
+    },
+    newTransaction: {
+      id: 'newTransaction',
+      label: t('shell.actions.newTransaction'),
+      icon: 'coin',
+      shortcut: 'N M',
+      onClick: () => {
+        handleSectionChange('accountability')
+        revealShellTarget(SHELL_TARGETS.newTransaction)
+      },
+    },
+    newPlayer: {
+      id: 'newPlayer',
+      label: t('shell.actions.newPlayer'),
+      icon: 'userPlus',
+      onClick: () => {
+        adminPlayers.actions.openNewPlayerDialog()
+        handleSectionChange('players')
+      },
+    },
+    invitePlayers: {
+      id: 'invitePlayers',
+      label: t('shell.actions.invitePlayers'),
+      icon: 'share',
+      onClick: () => {
+        handleSectionChange('overview')
+        handleGenerateJoinCode()
+      },
+    },
+  }
+  const adminCreateActions = selectedPenaGuid ? Object.values(createActionsById) : []
+  const primaryActionBySection = {
+    overview: createActionsById.newMatch,
+    matches: createActionsById.newMatch,
+    players: createActionsById.newPlayer,
+    accountability: createActionsById.newTransaction,
+  }
+  const primaryAction = selectedPenaGuid ? primaryActionBySection[activeSection] || null : null
+
+  const adminPlayerCount = selectedSeasonGuid && !seasonRosterLoading ? seasonRoster.length : null
+  const adminPenaMeta = (pena) =>
+    [
+      t('shell.roleAdmin'),
+      pena?.guid === selectedPenaGuid && adminPlayerCount !== null
+        ? translatePlural(t, language, 'shell.playersCount', adminPlayerCount)
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  const penaOptions = penas.map((pena) => ({
+    guid: pena.guid,
+    name: pena.name,
+    imageUrl: resolveDashboardIdentityImageUrl(pena),
+    meta: adminPenaMeta(pena),
+  }))
+
+  const commandPlayers = new Map()
+  ;[...seasonRoster, ...adminPlayers.players].forEach((player) => {
+    const guid = player.player_guid || player.guid
+    if (guid && !commandPlayers.has(guid)) {
+      commandPlayers.set(guid, player)
+    }
+  })
+  const adminCommandItems = [
+    ...visibleSeasonMatches.map((match) => ({
+      id: match.guid,
+      group: 'matches',
+      searchOnly: true,
+      icon: 'calendar',
+      label: t('shell.palette.matchItem', {
+        date: formatDate(match.match_date),
+        home: match.home_team_name || '',
+        away: match.away_team_name || '',
+        score: `${match.home_score ?? 0}–${match.away_score ?? 0}`,
+      }),
+      onSelect: () => {
+        handleSectionChange('matches')
+        handleOpenMatchStats(match.guid)
+      },
+    })),
+    ...[...commandPlayers.entries()].map(([guid, player]) => ({
+      id: guid,
+      group: 'players',
+      searchOnly: true,
+      icon: 'users',
+      label: formatPlayerDisplayName(player),
+      sublabel:
+        typeof player.goals === 'number'
+          ? translatePlural(t, language, 'shell.palette.playerGoals', player.goals)
+          : '',
+      onSelect: () => handleSectionChange('players'),
+    })),
+    ...(penas.length > 1
+      ? penaOptions.map((pena) => ({
+          id: pena.guid,
+          group: 'penas',
+          searchOnly: true,
+          icon: 'home',
+          label: pena.name,
+          onSelect: () => setSelectedPenaGuid(pena.guid),
+        }))
+      : []),
+  ]
 
   // Overview datacards favor actionable season-ops info over restating context that is
   // already visible in the header (pena name, selectors). Rendered only on the Overview
@@ -1644,12 +1742,7 @@ export default function AdminDashboard({
   ]
 
   if (initializing) {
-    return (
-      <Stack spacing={2}>
-        <Typography variant="h5">{t('dashboard.admin.panelTitle')}</Typography>
-        <LinearProgress />
-      </Stack>
-    )
+    return <DashboardShellSkeleton label={t('dashboard.admin.panelTitle')} />
   }
 
   // Guided fallback shown when a season-dependent section is reached without a season.
@@ -1690,67 +1783,56 @@ export default function AdminDashboard({
   return (
     <DashboardContext.Provider value={dashboardContextValue}>
       <DashboardShell
-        brand={t('app.brand')}
-        brandShort="FH"
-        railLabel={t('dashboard.admin.panelTitle')}
         navItems={adminNavItems}
         activeNavId={activeSection}
         onNavChange={handleSectionChange}
-        title={!['overview', 'players'].includes(activeSection) ? activeAdminSectionLabel : ''}
-        subtitle={!['overview', 'players'].includes(activeSection) ? activeAdminHeroSubtitle : ''}
-        headerAside={
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={2}
-            alignItems={{ xs: 'stretch', md: 'center' }}
-            justifyContent="space-between"
-            sx={{ width: '100%' }}
-          >
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-              <DashboardIdentitySlot
-                name={selectedPena?.name || t('dashboard.admin.panelTitle')}
-                imageUrl={resolveDashboardIdentityImageUrl(selectedPena)}
-                imageAlt={selectedPena?.name || t('dashboard.admin.panelTitle')}
-              />
-              <PenaSeasonSelector />
-            </Stack>
-
-            <Stack
-              direction="row"
-              spacing={0.6}
-              flexWrap="wrap"
-              useFlexGap
-              alignItems="center"
-              justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-            >
-              <HeaderIconButton
-                icon="refresh"
-                label={t('dashboard.common.refreshData')}
-                onClick={() => runAction(loadDashboard, '')}
-                disabled={loading}
-                color="text.secondary"
-              />
-              <HeaderIconButton
-                icon="settings"
-                label={t('dashboard.admin.openPenaSettings')}
-                onClick={openPenaSettings}
-                disabled={loading || !selectedPenaGuid}
-                color="text.Secondary"
-              />
-              <HeaderIconButton
-                icon="logout"
-                label={t('dashboard.common.logout')}
-                onClick={onLogout}
-                disabled={loading}
-                color="error"
-              />
-            </Stack>
-          </Stack>
+        extraGroup={{
+          title: t('shell.shortcutsGroup'),
+          items: adminCreateActions.filter((action) =>
+            ADMIN_SHORTCUT_ACTION_IDS.includes(action.id)
+          ),
+        }}
+        createActions={adminCreateActions}
+        mobileNav={ADMIN_MOBILE_NAV.map((item) => ({ ...item, label: t(item.labelKey) }))}
+        moreNavIds={ADMIN_MORE_NAV_IDS}
+        title={activeAdminSectionLabel}
+        breadcrumb={selectedPena?.name || ''}
+        mobileSubtitle={[selectedPena?.name, formatSeasonLong(selectedSeason)]
+          .filter(Boolean)
+          .join(' · ')}
+        primaryAction={primaryAction}
+        penaSwitcher={{
+          pena: {
+            name: selectedPena?.name || t('dashboard.admin.panelTitle'),
+            imageUrl: resolveDashboardIdentityImageUrl(selectedPena),
+            meta: adminPenaMeta(selectedPena),
+          },
+          penas: penaOptions,
+          selectedPenaGuid,
+          onSelectPena: setSelectedPenaGuid,
+          // Admins with a single peña just see its info (no switcher).
+          switchable: penas.length > 1,
+        }}
+        commandItems={adminCommandItems}
+        account={{
+          onOpenSettings: openPenaSettings,
+          settingsDisabled: loading || !selectedPenaGuid,
+          onRefresh: () => runAction(loadDashboard, ''),
+          refreshLabel: t('dashboard.common.refreshData'),
+          onLogout,
+          logoutLabel: t('dashboard.common.logout'),
+          loading,
+        }}
+        onManageSeasons={() => handleSectionChange('seasons')}
+        notice={
+          <AccountEmailNotice
+            accountEmail={accountEmail}
+            onOpenSettings={openEmailSettings}
+            userGuid={session?.user_guid}
+          />
         }
       >
-        {loading && <LinearProgress />}
         {error && <Alert severity="error">{errorMessage}</Alert>}
-        <AccountEmailNotice accountEmail={accountEmail} onOpenSettings={openEmailSettings} />
 
         {!selectedPenaGuid && (
           <EmptyState
@@ -1978,6 +2060,7 @@ export default function AdminDashboard({
               <AccountEmailSettings accountEmail={accountEmail} autoFocus={focusEmailSetting} />
               <Divider />
               <AppearanceSettings />
+              <LegalFooterLinks />
             </Stack>
           </DialogContent>
           <DialogActions>

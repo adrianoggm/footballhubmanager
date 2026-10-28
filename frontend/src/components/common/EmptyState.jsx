@@ -3,10 +3,11 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { getSurfaceGeometry } from './surfaceGeometry.js'
 
 /**
- * Copy-agnostic empty / zero-data placeholder. The caller passes already
- * translated strings and (optionally) an action node (e.g. a Button) and an icon.
+ * Copy-agnostic empty / zero-data / error placeholder: icon, one sentence and
+ * one action (proposal §4). The caller passes already translated strings and
+ * (optionally) an action node (e.g. a Button) and an icon.
  *
- * Props: icon?, title, description?, action?, dense?
+ * Props: icon?, title, description?, action?, dense?, tone? ('neutral' | 'error')
  */
 export default function EmptyState({
   icon = null,
@@ -14,17 +15,29 @@ export default function EmptyState({
   description = '',
   action = null,
   dense = false,
+  tone = 'neutral',
 }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const geometry = getSurfaceGeometry(theme)
+  const isError = tone === 'error'
+  const accent = isError ? theme.palette.error.main : theme.custom?.tones?.accent
+  const iconBg = isError
+    ? alpha(theme.palette.error.main, 0.14)
+    : theme.custom?.tones?.accentSoftBg || alpha(theme.palette.text.primary, isDark ? 0.08 : 0.05)
 
   return (
     <Paper
       elevation={0}
+      role={isError ? 'alert' : undefined}
       sx={{
         borderRadius: geometry.surfaceRadius,
-        border: `1px dashed ${alpha(theme.palette.text.primary, isDark ? 0.18 : 0.14)}`,
+        border: `1px dashed ${
+          isError
+            ? alpha(theme.palette.error.main, 0.4)
+            : theme.custom?.shell?.lineStrong ||
+              alpha(theme.palette.text.primary, isDark ? 0.18 : 0.14)
+        }`,
         background: alpha(theme.palette.background.paper, isDark ? 0.4 : 0.55),
         px: dense ? 2 : 3,
         py: dense ? 2.5 : 4,
@@ -39,8 +52,8 @@ export default function EmptyState({
               borderRadius: geometry.controlRadius,
               display: 'grid',
               placeItems: 'center',
-              color: 'text.secondary',
-              bgcolor: alpha(theme.palette.text.primary, isDark ? 0.08 : 0.05),
+              color: accent || 'text.secondary',
+              bgcolor: iconBg,
             }}
           >
             {icon}
